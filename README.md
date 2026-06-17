@@ -118,8 +118,11 @@ Variables de entorno requeridas:
 |----------|-----|
 | `DATABASE_URL` | Conexión pooled a PostgreSQL (Supabase + Prisma) |
 | `DIRECT_URL` | Conexión directa para migraciones de Prisma |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave pública (cliente) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clave de servicio (solo servidor; Storage y tareas admin) |
 
-> 🔑 Las credenciales de Supabase Auth y Storage se agregarán en fases posteriores del roadmap.
+> 🔑 Las credenciales de Supabase Auth se usan en §2.3; Storage ya está operativo (§2.2).
 
 ### Base de datos
 
