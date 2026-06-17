@@ -11,6 +11,10 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "db:verify": "pnpm dlx tsx scripts/verify-db-connections.ts",
+    "storage:setup": "pnpm dlx tsx scripts/setup-storage-buckets.ts",
+    "storage:verify": "pnpm dlx tsx scripts/verify-storage.ts",
+    "auth:verify": "pnpm dlx tsx scripts/verify-auth.ts",
     "postinstall": "prisma generate"
   },
   "pnpm": {

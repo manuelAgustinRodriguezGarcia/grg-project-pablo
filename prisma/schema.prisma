@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +8,68 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  CONSULTA
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CatalogStatus {
+  ACTIVE
+  INACTIVE
+  HIDDEN
+}
+
+/// Perfil local sincronizado con Supabase Auth (`auth.users.id` → `User.id`).
+model User {
+  id           String     @id @db.Uuid
+  name         String
+  email        String     @unique
+  role         UserRole   @default(CONSULTA)
+  status       UserStatus @default(ACTIVE)
+  lastAccessAt DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  auditLogs AuditLog[]
+
+  @@index([status])
+}
+
+/// Catálogo visible en el directorio privado (estructura mínima Fase 2).
+model Catalog {
+  id             String        @id @default(cuid())
+  name           String
+  description    String?
+  coverImagePath String?
+  status         CatalogStatus @default(ACTIVE)
+  order          Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([status])
+  @@index([order])
+}
+
+/// Registro de operaciones importantes (login, CRUD, importaciones, etc.).
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?  @db.Uuid
+  action     String
+  entityType String
+  entityId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
