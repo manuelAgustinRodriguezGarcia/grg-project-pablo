@@ -1,3 +1,5 @@
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/server/services/audit.constants";
+import { auditService } from "@/server/services/audit.service";
 import {
   BUCKET_CONFIGS,
   DEFAULT_SIGNED_URL_EXPIRY_SECONDS,
@@ -19,7 +21,11 @@ export async function uploadFile(
   const path = normalizeStoragePath(input.path);
   const body = Buffer.isBuffer(input.body)
     ? input.body
-    : Buffer.from(input.body);
+    : Buffer.from(
+        input.body instanceof ArrayBuffer
+          ? new Uint8Array(input.body)
+          : input.body,
+      );
 
   validateUpload(
     input.bucket,
@@ -38,12 +44,23 @@ export async function uploadFile(
     throw new StorageError(`Error al subir archivo: ${error.message}`);
   }
 
-  return {
+  const result = {
     bucket: input.bucket,
     path,
     sizeBytes: body.byteLength,
     contentType: input.contentType,
   };
+
+  if (input.auditContext) {
+    auditService.logOperationSafe({
+      userId: input.auditContext.userId,
+      action: AUDIT_ACTIONS.FILE_UPLOADED,
+      entityType: AUDIT_ENTITY_TYPES.STORAGE_FILE,
+      entityId: `${input.bucket}/${path}`,
+    });
+  }
+
+  return result;
 }
 
 export async function createSignedDownloadUrl(

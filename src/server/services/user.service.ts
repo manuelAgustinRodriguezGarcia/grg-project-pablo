@@ -2,6 +2,8 @@ import type { User, UserRole } from "@/generated/prisma/client";
 import { requireRole } from "@/server/auth";
 import { userRepository } from "@/server/repositories/user.repository";
 import { getSupabaseAdminClient } from "@/server/storage/supabase-admin";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
+import { auditService } from "./audit.service";
 import { UserError } from "./user.errors";
 
 export type CreateUserInput = {
@@ -41,7 +43,7 @@ export class UserService {
   }
 
   async createUser(input: CreateUserInput): Promise<User> {
-    await requireRole("ADMIN");
+    const { profile: admin } = await requireRole("ADMIN");
 
     const existing = await userRepository.findByEmail(input.email);
     if (existing) {
@@ -74,17 +76,26 @@ export class UserService {
       );
     }
 
-    return userRepository.upsertFromAuth({
+    const user = await userRepository.upsertFromAuth({
       id: authUser.id,
       email: input.email,
       name: input.name,
       role: input.role,
       status: "ACTIVE",
     });
+
+    auditService.logOperationSafe({
+      userId: admin.id,
+      action: AUDIT_ACTIONS.USER_CREATED,
+      entityType: AUDIT_ENTITY_TYPES.USER,
+      entityId: user.id,
+    });
+
+    return user;
   }
 
   async updateUser(input: UpdateUserInput): Promise<User> {
-    await requireRole("ADMIN");
+    const { profile: admin } = await requireRole("ADMIN");
 
     const target = await userRepository.findById(input.id);
     if (!target) {
@@ -106,10 +117,19 @@ export class UserService {
       throw mapAuthProviderError(error.message);
     }
 
-    return userRepository.updateProfile(input.id, {
+    const user = await userRepository.updateProfile(input.id, {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.role !== undefined ? { role: input.role } : {}),
     });
+
+    auditService.logOperationSafe({
+      userId: admin.id,
+      action: AUDIT_ACTIONS.USER_UPDATED,
+      entityType: AUDIT_ENTITY_TYPES.USER,
+      entityId: user.id,
+    });
+
+    return user;
   }
 
   async deactivateUser(userId: string): Promise<User> {
@@ -140,11 +160,18 @@ export class UserService {
       throw mapAuthProviderError(error.message);
     }
 
+    auditService.logOperationSafe({
+      userId: admin.id,
+      action: AUDIT_ACTIONS.USER_DEACTIVATED,
+      entityType: AUDIT_ENTITY_TYPES.USER,
+      entityId: profile.id,
+    });
+
     return profile;
   }
 
   async activateUser(userId: string): Promise<User> {
-    await requireRole("ADMIN");
+    const { profile: admin } = await requireRole("ADMIN");
 
     const target = await userRepository.findById(userId);
     if (!target) {
@@ -155,7 +182,16 @@ export class UserService {
       return target;
     }
 
-    return userRepository.setStatus(userId, "ACTIVE");
+    const user = await userRepository.setStatus(userId, "ACTIVE");
+
+    auditService.logOperationSafe({
+      userId: admin.id,
+      action: AUDIT_ACTIONS.USER_ACTIVATED,
+      entityType: AUDIT_ENTITY_TYPES.USER,
+      entityId: user.id,
+    });
+
+    return user;
   }
 }
 
