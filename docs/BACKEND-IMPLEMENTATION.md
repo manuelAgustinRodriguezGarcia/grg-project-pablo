@@ -50,11 +50,11 @@
 | Proyecto Next.js | ✅ | Next.js 16.2.9, React 19, TypeScript |
 | Estructura de carpetas | ✅ | `src/app`, `src/features`, `src/server`, `src/shared`, `src/ui` con placeholders |
 | Prisma | ✅ | Modelos Fase 2 (`User`, `Catalog`, `AuditLog`), migración inicial aplicada |
-| Supabase (dependencias) | 🚧 | `@supabase/ssr` y `@supabase/supabase-js` instalados; Storage ✅ (§2.2); Auth ✅ (§2.3) |
-| Variables de entorno | 🚧 | `DATABASE_URL`, `DIRECT_URL` y credenciales Supabase en `.env`; opcional `NEXT_PUBLIC_APP_URL` para enlaces de recuperación |
+| Supabase | ✅ | Auth (§2.3), Storage privado (§2.2), `@supabase/ssr` + `@supabase/supabase-js` |
+| Variables de entorno | ✅ | `DATABASE_URL`, `DIRECT_URL`, credenciales Supabase en `.env`; opcional `NEXT_PUBLIC_APP_URL` |
 | Base de datos | ✅ | Migración `20260617182823_init_user_catalog_audit_log` en Supabase |
 | Autenticación | ✅ | Módulo `src/server/auth/`, middleware, guards, Server Actions (§2.3) |
-| Servicios / repositorios | 🚧 | `UserRepository` + `UserService` (§2.4); resto pendiente |
+| Servicios / repositorios | ✅ | `UserRepository`, `UserService`, `CatalogRepository`, `DirectoryService`, `AuditRepository`, `AuditService` |
 | UI de aplicación | ⏳ | Página inicial por defecto de Next.js |
 
 ### 1.3 Archivos backend existentes
@@ -71,8 +71,14 @@ src/server/database/prisma.ts → singleton PrismaClient con PrismaPg adapter
 src/server/storage/             → cliente admin, validación MIME/tamaño, URLs firmadas
 src/server/auth/                → sesión SSR, AuthService, guards, middleware helpers
 src/server/repositories/user.repository.ts → perfil local sincronizado con Supabase Auth
+src/server/repositories/catalog.repository.ts → consultas de catálogos activos
+src/server/repositories/audit.repository.ts → persistencia de AuditLog
 src/server/services/user.service.ts   → CRUD de usuarios (solo ADMIN)
+src/server/services/directory.service.ts → directorio automático de catálogos
+src/server/services/audit.service.ts → registro de operaciones importantes
 src/features/users/                   → schemas Zod, tipos y Server Actions de usuarios
+src/features/directory/types/         → tipos del directorio de catálogos
+src/app/api/admin/directory/route.ts  → GET directorio privado
 src/middleware.ts               → protección /admin y /api/admin, refresh de sesión
 src/features/auth/              → schemas Zod, Server Actions (login, logout, reset)
 src/app/auth/callback/route.ts  → intercambio de código OAuth/recuperación
@@ -84,7 +90,7 @@ src/app/admin/layout.tsx        → layout protegido con requireAuthOrRedirect
 | Fase | Estado PRD/README | Enfoque backend |
 |------|-------------------|-----------------|
 | 1 — Análisis y definición | ✅ Completada | Documentación de dominio, columnas, equivalencias, filtros |
-| 2 — Base del sistema | 🚧 En curso | DB ✅, Storage ✅, Auth ✅, Usuarios ✅, directorio |
+| 2 — Base del sistema | ✅ Completada | DB ✅, Storage ✅, Auth ✅, Usuarios ✅, Directorio ✅, Auditoría ✅ |
 | 3 — Catálogos y secciones | ⏳ Pendiente | CRUD, columnas dinámicas, registros |
 | 4 — Importador | ⏳ Pendiente | Excel, mapeo, publicación segura |
 | 5 — Imágenes | ⏳ Pendiente | Extracción, ZIP, asociación, miniaturas |
@@ -459,7 +465,7 @@ Las tres estructuras coexisten en las mismas tablas (`CatalogRecord` + JSONB).
 | `RecordService` | 3, 6 |
 | `UploadedFileService` | 4, 8 |
 | `EquivalenceService` | 6, 7 |
-| `AuditService` | 2+ (progresivo) |
+| `AuditService` | 2 (base), 3+ (catálogos e importación) |
 
 ---
 
@@ -591,7 +597,7 @@ Documentar y validar con Pablo el significado de columnas, equivalencias, filtro
 
 ### Fase 2 — Base del sistema
 
-**Estado:** 🚧 En curso
+**Estado:** ✅ Completada (2026-06-18)
 
 **Depende de:** Fase 1
 
@@ -671,6 +677,7 @@ Establecer la infraestructura: base de datos, storage, autenticación, usuarios 
 | Públicas (auth) | `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/callback` |
 | Protegidas | `/admin/*`, `/api/admin/*` |
 | API de sesión | `GET /api/admin/session` — perfil del usuario autenticado |
+| API de directorio | `GET /api/admin/directory` — catálogos activos del directorio privado |
 
 **Variables de entorno:**
 
@@ -771,39 +778,139 @@ Supabase Auth admin.signOut(userId, 'global')
 - [x] Validadores Zod en `src/features/users/schemas/`
 - [x] Server Actions en `src/features/users/actions/`
 
-#### 2.5 Directorio (PRD §10, RF-004)
+#### 2.5 Directorio (PRD §10, RF-004) ✅
 
-- [ ] `DirectoryService` — listar catálogos activos ordenados
-- [ ] Endpoint / action: obtener directorio con metadatos:
-  - Nombre, descripción, imagen, cantidad de secciones, fecha de última actualización, estado offline (placeholder hasta Fase 9)
-- [ ] El directorio se genera automáticamente; no requiere hoja índice manual
+**Estado:** Completada (2026-06-18)
 
-#### 2.6 Auditoría (RNF §38.2)
+| Entregable | Resultado |
+|------------|-----------|
+| `CatalogRepository` | Listado de catálogos con `status = ACTIVE`, ordenados por `order` y `name` |
+| `DirectoryService` | Mapeo a DTO con metadatos del directorio |
+| Route Handler | `GET /api/admin/directory` — lectura para ADMIN y CONSULTA |
+| Tipos frontend | `src/features/directory/types/directory.types.ts` |
 
-- [ ] `AuditService` — registrar operaciones importantes:
-  - Login / logout
-  - Creación/edición/eliminación de catálogos (cuando existan)
-  - Subidas de archivos
-  - Publicaciones de importación
+**API principal (`src/server/services/directory.service.ts`):**
 
-#### 2.7 Requerimientos funcionales cubiertos
+- `getDirectory()` — exige `requireAuth()`; devuelve catálogos activos con metadatos
 
-| ID | Requerimiento |
-|----|---------------|
-| RF-001 | Autenticación |
-| RF-002 | Roles |
-| RF-003 | Landing pública (backend: rutas públicas sin datos de catálogos) |
-| RF-004 | Directorio automático |
+**Metadatos por catálogo:**
 
-#### 2.8 Criterio de completitud
+- Nombre, descripción, orden
+- `coverImageUrl` — URL firmada desde bucket `product-images` si `coverImagePath` está definido
+- `sectionCount` — `0` hasta Fase 3 (`CatalogSection`)
+- `updatedAt` — última modificación del catálogo
+- `offlineSync.status` — `"unavailable"` (placeholder Fase 9)
 
-- Usuario ADMIN y CONSULTA pueden autenticarse (Supabase Auth + perfil `User`)
-- Rutas `/admin` bloqueadas sin sesión (middleware + layout)
-- APIs `/api/admin/*` responden 401 sin sesión
-- Directorio responde con catálogos activos (aunque esté vacío inicialmente) — pendiente §2.5
-- Storage privado operativo con subida de prueba (`pnpm storage:verify`)
-- Auth verificable con `pnpm auth:verify`
-- Migración inicial aplicada en Supabase
+**Convención de imagen:** `Catalog.coverImagePath` almacena la ruta relativa dentro del bucket `product-images`.
+
+**Flujo:**
+
+```text
+Cliente autenticado → GET /api/admin/directory
+      │
+      ▼
+DirectoryService.getDirectory (requireAuth)
+      │
+      ▼
+CatalogRepository.findActiveOrdered
+      │
+      ├── Por cada catálogo: URL firmada opcional de coverImagePath
+      └── Respuesta { catalogs, generatedAt }
+```
+
+- [x] `DirectoryService` + `CatalogRepository`
+- [x] `GET /api/admin/directory` con metadatos del PRD §10
+- [x] Directorio generado automáticamente desde catálogos activos (sin hoja índice manual)
+
+#### 2.6 Auditoría (RNF §38.2) ✅
+
+**Estado:** Completada (2026-06-18)
+
+| Entregable | Resultado |
+|------------|-----------|
+| `AuditRepository` | Persistencia en tabla `AuditLog` |
+| `AuditService` | `logOperation()` / `logOperationSafe()` — no bloqueante |
+| Constantes | `audit.constants.ts` — acciones y tipos de entidad tipados |
+| Integración auth | Login y logout registrados en `AuthService` |
+| Integración usuarios | CRUD de usuarios registrado en `UserService` |
+| Integración storage | `uploadFile()` con `auditContext` opcional |
+
+**Operaciones registradas (Fase 2):**
+
+| Acción | Entidad | Origen |
+|--------|---------|--------|
+| `USER_LOGIN` | `User` | `AuthService.signInWithPassword` |
+| `USER_LOGOUT` | `User` | `AuthService.signOut` |
+| `USER_CREATED` | `User` | `UserService.createUser` |
+| `USER_UPDATED` | `User` | `UserService.updateUser` |
+| `USER_ACTIVATED` | `User` | `UserService.activateUser` |
+| `USER_DEACTIVATED` | `User` | `UserService.deactivateUser` |
+| `FILE_UPLOADED` | `StorageFile` | `uploadFile()` con `auditContext` |
+
+**Constantes reservadas (Fase 3+):** `CATALOG_CREATED`, `CATALOG_UPDATED`, `CATALOG_DELETED`, `IMPORT_PUBLISHED`.
+
+**Semántica de fallo:** un error al escribir en `AuditLog` no interrumpe la operación principal (log en consola).
+
+- [x] `AuditService` + `AuditRepository`
+- [x] Login / logout
+- [x] Subidas de archivos (con contexto de auditoría)
+- [ ] Creación/edición/eliminación de catálogos — pendiente Fase 3
+- [ ] Publicaciones de importación — pendiente Fase 4
+
+#### 2.7 Requerimientos funcionales cubiertos ✅
+
+**Estado:** Completada (2026-06-18)
+
+Todos los RF de alcance backend en Fase 2 están implementados. Detalle en §10 (mapeo global).
+
+| ID | Requerimiento (PRD) | Componente backend | Verificación |
+|----|---------------------|--------------------|--------------|
+| RF-001 | Autenticación (PRD §9) | `AuthService`, Server Actions en `src/features/auth/`, callback `/auth/callback`, middleware | `pnpm auth:verify` |
+| RF-002 | Roles (`ADMIN` \| `CONSULTA`) | `UserService`, `requireRole()`, CRUD de usuarios (solo ADMIN) | Guards en actions y servicios |
+| RF-003 | Landing pública | Rutas `/` y `/auth/*` sin API de catálogos; solo `/admin` y `/api/admin` exigen sesión | `src/middleware.ts`, `src/server/auth/config.ts` |
+| RF-004 | Directorio automático (PRD §10) | `DirectoryService`, `GET /api/admin/directory` | Catálogos `ACTIVE` ordenados; lista vacía válida |
+
+**Requerimientos no funcionales cubiertos en Fase 2 (parcial — ver §11):**
+
+| Área | Alcance Fase 2 | Referencia |
+|------|----------------|------------|
+| Seguridad (RNF §38.2) | Middleware en rutas privadas, Storage privado, validación MIME/tamaño, `AuditLog` | §2.2, §2.3, §2.6 |
+| Compatibilidad (RNF §38.3) | Route Handlers y Server Actions con respuestas JSON tipadas | `docs/ENDPOINTS.md` |
+
+**Documentación para frontend:** [`docs/ENDPOINTS.md`](./ENDPOINTS.md) — auth, usuarios, directorio y convenciones de integración.
+
+#### 2.8 Criterio de completitud ✅
+
+**Estado:** Completada (2026-06-18)
+
+| Criterio | Resultado | Evidencia |
+|----------|-----------|-----------|
+| Autenticación ADMIN y CONSULTA | ✅ | Supabase Auth + perfil `User` sincronizado (§2.3) |
+| Rutas `/admin` bloqueadas sin sesión | ✅ | Middleware + `requireAuthOrRedirect` en layout |
+| APIs `/api/admin/*` → 401 sin sesión | ✅ | `src/middleware.ts` |
+| Directorio con catálogos activos (vacío OK) | ✅ | `GET /api/admin/directory` (§2.5) |
+| Operaciones críticas en `AuditLog` | ✅ | Login, logout, usuarios, subidas con contexto (§2.6) |
+| Storage privado operativo | ✅ | `pnpm storage:verify` (2026-06-18) |
+| Auth verificable | ✅ | `pnpm auth:verify` (2026-06-18) |
+| Migración inicial en Supabase | ✅ | `20260617182823_init_user_catalog_audit_log`; `pnpm db:verify` (2026-06-18) |
+
+- [x] Usuario ADMIN y CONSULTA pueden autenticarse (Supabase Auth + perfil `User`)
+- [x] Rutas `/admin` bloqueadas sin sesión (middleware + layout)
+- [x] APIs `/api/admin/*` responden 401 sin sesión
+- [x] Directorio responde con catálogos activos (aunque esté vacío inicialmente) — `GET /api/admin/directory`
+- [x] Operaciones importantes registradas en `AuditLog` (login, logout, usuarios, subidas con contexto)
+- [x] Storage privado operativo con subida de prueba (`pnpm storage:verify`)
+- [x] Auth verificable con `pnpm auth:verify`
+- [x] Migración inicial aplicada en Supabase (`pnpm db:verify`)
+
+#### Salida hacia Fase 3
+
+- Infraestructura base operativa: DB, Storage, Auth, usuarios, directorio y auditoría inicial
+- Modelo `Catalog` listo para CRUD y relación con secciones (`CatalogSection`)
+- `CatalogRepository` reutilizable; ampliar con operaciones de escritura en Fase 3
+- Constantes de auditoría reservadas para catálogos (`CATALOG_*`) — integrar en `CatalogService`
+- `sectionCount` en directorio pasará a reflejar secciones reales al implementar §3.3
+- Referencia de integración frontend: [`docs/ENDPOINTS.md`](./ENDPOINTS.md)
 
 ---
 
@@ -1387,42 +1494,42 @@ Validación con datos reales, hardening, documentación operativa y despliegue.
 
 ## 10. Requerimientos funcionales (mapeo backend)
 
-| ID | Requerimiento | Fase | Componente principal |
-|----|---------------|------|----------------------|
-| RF-001 | Autenticación | 2 | `AuthService`, Supabase Auth, middleware |
-| RF-002 | Roles | 2 | `UserService`, guards de rol |
-| RF-003 | Landing pública | 2 | Rutas públicas sin API de catálogos |
-| RF-004 | Directorio automático | 2 | `DirectoryService` |
-| RF-005 | Gestión de catálogos | 3 | `CatalogService` |
-| RF-006 | Gestión de secciones | 3 | `SectionService` |
-| RF-007 | Subida de Excel | 4 | Route Handler upload, `UploadedFileService` |
-| RF-008 | Respaldo | 4 | Storage + `UploadedFile` |
-| RF-009 | Análisis de hojas | 4 | `ExcelStructureService` |
-| RF-010 | Selección de hojas | 4 | `CatalogImportService` |
-| RF-011 | Detección de columnas | 4 | `ExcelStructureService` |
-| RF-012 | Mapeo | 4 | `CatalogImportService` |
-| RF-013 | Campos dinámicos | 3–4 | JSONB en `CatalogRecord` |
-| RF-014 | Fórmulas | 4 | `ExcelStructureService` (valor calculado) |
-| RF-015 | Sin macros | 4 | Validación en importador |
-| RF-016 | Imágenes embebidas | 5 | `ImageExtractionService` |
-| RF-017 | Imágenes externas | 5 | `ImageMatchingService` |
-| RF-018 | Imágenes múltiples | 5 | `ProductImage` |
-| RF-019 | Revisión de imágenes | 5 | API de revisión |
-| RF-020 | Gestión manual | 6 | `RecordService` |
-| RF-021 | Equivalencias | 6–7 | `EquivalenceService` |
-| RF-022 | Normalización | 7 | `search/normalize.ts` |
-| RF-023 | Búsqueda por sección | 7 | `SearchService` |
-| RF-024 | Búsqueda por catálogo | 7 | `SearchService` |
-| RF-025 | Búsqueda global | 7 | `SearchService` |
-| RF-026 | Origen del resultado | 7 | Respuesta de búsqueda |
-| RF-027 | Filtros por sección | 7 | `FilterService` |
-| RF-028 | Filtros globales | 7 | `FilterService`, `GlobalFieldMapping` |
-| RF-029 | Archivos subidos | 8 | `UploadedFileService` |
-| RF-030 | Reimportación | 8 | `CatalogImportService` |
-| RF-031 | Publicación segura | 4 | Estados `ImportJob` |
-| RF-032 | Consulta offline | 9 | `OfflineSyncService` |
-| RF-033 | Bloqueo offline | 9 | Guards de mutación |
-| RF-034 | Sincronización | 9 | `OfflineSyncManifest`, endpoints sync |
+| ID | Requerimiento | Fase | Estado | Componente principal |
+|----|---------------|------|--------|----------------------|
+| RF-001 | Autenticación | 2 | ✅ | `AuthService`, Supabase Auth, middleware |
+| RF-002 | Roles | 2 | ✅ | `UserService`, guards de rol |
+| RF-003 | Landing pública | 2 | ✅ | Rutas públicas sin API de catálogos |
+| RF-004 | Directorio automático | 2 | ✅ | `DirectoryService`, `GET /api/admin/directory` |
+| RF-005 | Gestión de catálogos | 3 | ⏳ | `CatalogService` |
+| RF-006 | Gestión de secciones | 3 | ⏳ | `SectionService` |
+| RF-007 | Subida de Excel | 4 | ⏳ | Route Handler upload, `UploadedFileService` |
+| RF-008 | Respaldo | 4 | ⏳ | Storage + `UploadedFile` |
+| RF-009 | Análisis de hojas | 4 | ⏳ | `ExcelStructureService` |
+| RF-010 | Selección de hojas | 4 | ⏳ | `CatalogImportService` |
+| RF-011 | Detección de columnas | 4 | ⏳ | `ExcelStructureService` |
+| RF-012 | Mapeo | 4 | ⏳ | `CatalogImportService` |
+| RF-013 | Campos dinámicos | 3–4 | ⏳ | JSONB en `CatalogRecord` |
+| RF-014 | Fórmulas | 4 | ⏳ | `ExcelStructureService` (valor calculado) |
+| RF-015 | Sin macros | 4 | ⏳ | Validación en importador |
+| RF-016 | Imágenes embebidas | 5 | ⏳ | `ImageExtractionService` |
+| RF-017 | Imágenes externas | 5 | ⏳ | `ImageMatchingService` |
+| RF-018 | Imágenes múltiples | 5 | ⏳ | `ProductImage` |
+| RF-019 | Revisión de imágenes | 5 | ⏳ | API de revisión |
+| RF-020 | Gestión manual | 6 | ⏳ | `RecordService` |
+| RF-021 | Equivalencias | 6–7 | ⏳ | `EquivalenceService` |
+| RF-022 | Normalización | 7 | ⏳ | `search/normalize.ts` |
+| RF-023 | Búsqueda por sección | 7 | ⏳ | `SearchService` |
+| RF-024 | Búsqueda por catálogo | 7 | ⏳ | `SearchService` |
+| RF-025 | Búsqueda global | 7 | ⏳ | `SearchService` |
+| RF-026 | Origen del resultado | 7 | ⏳ | Respuesta de búsqueda |
+| RF-027 | Filtros por sección | 7 | ⏳ | `FilterService` |
+| RF-028 | Filtros globales | 7 | ⏳ | `FilterService`, `GlobalFieldMapping` |
+| RF-029 | Archivos subidos | 8 | ⏳ | `UploadedFileService` |
+| RF-030 | Reimportación | 8 | ⏳ | `CatalogImportService` |
+| RF-031 | Publicación segura | 4 | ⏳ | Estados `ImportJob` |
+| RF-032 | Consulta offline | 9 | ⏳ | `OfflineSyncService` |
+| RF-033 | Bloqueo offline | 9 | ⏳ | Guards de mutación |
+| RF-034 | Sincronización | 9 | ⏳ | `OfflineSyncManifest`, endpoints sync |
 
 ---
 
@@ -1457,6 +1564,17 @@ Validación con datos reales, hardening, documentación operativa y despliegue.
 ---
 
 ## 12. Criterios de aceptación
+
+### 12.0 Base del sistema (Fase 2)
+
+Completados — ver §2.8 y [`docs/ENDPOINTS.md`](./ENDPOINTS.md).
+
+- [x] Autenticación con roles ADMIN y CONSULTA
+- [x] Rutas privadas protegidas (middleware + layout)
+- [x] Storage privado con validación y URLs firmadas
+- [x] Directorio automático desde catálogos activos
+- [x] Auditoría de operaciones críticas (auth, usuarios, subidas)
+- [x] Scripts de verificación (`db:verify`, `auth:verify`, `storage:verify`)
 
 ### 12.1 Catálogos
 

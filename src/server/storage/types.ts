@@ -24,6 +24,10 @@ export interface UploadFileInput {
   /** Nombre original para validar extensión y sanitizar si se construye la ruta. */
   originalFilename?: string;
   upsert?: boolean;
+  /** Si se indica, registra la subida en AuditLog. */
+  auditContext?: {
+    userId: string;
+  };
 }
 
 export interface UploadFileResult {

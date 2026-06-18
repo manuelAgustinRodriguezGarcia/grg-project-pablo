@@ -1,5 +1,7 @@
 import type { UserRole } from "@/generated/prisma/client";
 import { userRepository } from "@/server/repositories/user.repository";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/server/services/audit.constants";
+import { auditService } from "@/server/services/audit.service";
 import {
   AUTH_CALLBACK_PATH,
   AUTH_RESET_PASSWORD_PATH,
@@ -103,15 +105,35 @@ export class AuthService {
 
     await userRepository.touchLastAccess(authUser.id);
 
+    auditService.logOperationSafe({
+      userId: profile.id,
+      action: AUDIT_ACTIONS.USER_LOGIN,
+      entityType: AUDIT_ENTITY_TYPES.USER,
+      entityId: profile.id,
+    });
+
     return { supabaseUser: authUser, profile };
   }
 
   async signOut(): Promise<SignOutResult> {
     const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     const { error } = await supabase.auth.signOut();
 
     if (error) {
       throw new AuthError(error.message, "AUTH_PROVIDER_ERROR");
+    }
+
+    if (user) {
+      auditService.logOperationSafe({
+        userId: user.id,
+        action: AUDIT_ACTIONS.USER_LOGOUT,
+        entityType: AUDIT_ENTITY_TYPES.USER,
+        entityId: user.id,
+      });
     }
 
     return {

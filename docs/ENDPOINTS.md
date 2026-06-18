@@ -1,7 +1,7 @@
 # ENDPOINTS — Referencia para frontend
 
 > Documento derivado de las tareas **completadas** en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) (Fase 2: base del sistema).  
-> Última actualización: 2026-06-17.
+> Última actualización: 2026-06-18.
 
 ---
 
@@ -10,6 +10,8 @@
 - [Convenciones generales](#convenciones-generales)
 - [Autenticación y sesión](#autenticación-y-sesión)
 - [Gestión de usuarios (panel admin)](#gestión-de-usuarios-panel-admin)
+- [Directorio de catálogos](#directorio-de-catálogos)
+- [Auditoría (backend interno)](#auditoría-backend-interno)
 - [Rutas de la aplicación (no API)](#rutas-de-la-aplicación-no-api)
 - [Pendiente de implementación](#pendiente-de-implementación)
 
@@ -396,6 +398,90 @@ Desactiva un usuario y cierra todas sus sesiones activas en Supabase.
 
 ---
 
+## Directorio de catálogos
+
+**Fase:** 2.5 Directorio (RF-004)  
+**Uso en frontend:** pantalla principal post-login (`/admin`) con tarjetas de catálogos activos.
+
+### `GET /api/admin/directory`
+
+Lista automáticamente los catálogos activos del directorio privado con metadatos para tarjetas.
+
+| | |
+|---|---|
+| **Auth** | Sesión válida (cookie) |
+| **Rol mínimo** | Cualquier usuario autenticado y activo (`ADMIN` o `CONSULTA`) |
+
+**Respuesta 200**
+
+```json
+{
+  "catalogs": [
+    {
+      "id": "clx...",
+      "name": "Rulemanes",
+      "description": "Catálogo de rulemanes",
+      "coverImageUrl": "https://...signed...",
+      "sectionCount": 0,
+      "updatedAt": "2026-06-18T12:00:00.000Z",
+      "order": 0,
+      "offlineSync": {
+        "status": "unavailable"
+      }
+    }
+  ],
+  "generatedAt": "2026-06-18T12:00:00.000Z"
+}
+```
+
+| Campo | Descripción |
+|-------|-------------|
+| `coverImageUrl` | URL firmada temporal si el catálogo tiene `coverImagePath` en bucket `product-images`; `null` si no hay imagen o falla la firma |
+| `sectionCount` | Cantidad de secciones; `0` hasta Fase 3 (`CatalogSection`) |
+| `offlineSync.status` | Placeholder `"unavailable"` hasta Fase 9 (modo offline) |
+| `generatedAt` | Momento en que se generó el directorio en el servidor |
+
+**Respuesta 401**
+
+```json
+{ "error": "No autenticado" }
+```
+
+**Ejemplo (cliente)**
+
+```ts
+const res = await fetch("/api/admin/directory");
+if (res.ok) {
+  const { catalogs, generatedAt } = await res.json();
+}
+```
+
+**Implementación:** `src/app/api/admin/directory/route.ts`  
+**Tipos:** `src/features/directory/types/directory.types.ts`
+
+> Solo se incluyen catálogos con `status = ACTIVE`, ordenados por `order` ascendente. Nuevos catálogos activos aparecen automáticamente sin cambios de código.
+
+---
+
+## Auditoría (backend interno)
+
+**Fase:** 2.6 Auditoría (RNF §38.2)
+
+No hay endpoint REST de consulta de logs en esta fase. El backend registra operaciones importantes en la tabla `AuditLog` de forma interna.
+
+**Eventos registrados actualmente:**
+
+| Acción | Cuándo |
+|--------|--------|
+| `USER_LOGIN` | Inicio de sesión exitoso |
+| `USER_LOGOUT` | Cierre de sesión |
+| `USER_CREATED` / `USER_UPDATED` / `USER_ACTIVATED` / `USER_DEACTIVATED` | Gestión de usuarios (ADMIN) |
+| `FILE_UPLOADED` | Subida vía `uploadFile()` cuando se pasa `auditContext: { userId }` |
+
+Los fallos al escribir en `AuditLog` no interrumpen la operación principal.
+
+---
+
 ## Rutas de la aplicación (no API)
 
 Rutas relevantes para el frontend; no exponen JSON pero definen la navegación.
@@ -417,7 +503,6 @@ Las siguientes áreas están documentadas en el plan backend pero **aún no tien
 
 | Área | Fase | Referencia |
 |------|------|------------|
-| Directorio de catálogos | 2.5 | `DirectoryService` — listado de catálogos activos |
 | Catálogos y secciones | 3 | CRUD, columnas dinámicas, registros paginados |
 | Importador Excel | 4 | Upload multipart, análisis, publicación |
 | Imágenes de producto | 5 | Extracción, asociación, URLs firmadas |
@@ -435,4 +520,5 @@ Cuando se implementen nuevas fases, este documento debe ampliarse con las seccio
 - Plan backend: [`docs/BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md)
 - Schemas de validación auth: [`src/features/auth/schemas/auth.schemas.ts`](../src/features/auth/schemas/auth.schemas.ts)
 - Schemas de validación usuarios: [`src/features/users/schemas/user.schemas.ts`](../src/features/users/schemas/user.schemas.ts)
+- Tipos del directorio: [`src/features/directory/types/directory.types.ts`](../src/features/directory/types/directory.types.ts)
 - Configuración de rutas protegidas: [`src/server/auth/config.ts`](../src/server/auth/config.ts)
