@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { AdminPlaceholder } from "@/features/admin/components/AdminPlaceholder";
+import { CatalogNavigator } from "@/features/catalog/components/CatalogNavigator";
+import { mockCatalogs } from "@/features/catalog/data/mockCatalogNavigator.data";
 
 export const metadata: Metadata = {
   title: "Catálogos | Admin Rothamel Repuestos",
 };
 
 export default function AdminCatalogosPage() {
-  return <AdminPlaceholder />;
+  return <CatalogNavigator catalogs={mockCatalogs} />;
 }
