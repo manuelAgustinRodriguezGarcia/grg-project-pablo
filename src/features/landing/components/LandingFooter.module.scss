@@ -1,0 +1,152 @@
+@use "../styles/variables" as *;
+
+.footer {
+  background: linear-gradient(135deg, $navy-footer-start 0%, $navy-footer-end 100%);
+  color: $white;
+  padding: clamp(2.5rem, 5vw, 3.5rem) $section-padding-x 1.5rem;
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2rem;
+  align-items: center;
+  max-width: $container-max;
+  margin: 0 auto;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba($white, 0.12);
+}
+
+.brandGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.socialCol {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.socialLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: rgba($white, 0.1);
+  color: $white;
+  transition: background-color 0.2s ease;
+
+  &:focus-visible {
+    outline: 2px solid $green;
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgba($white, 0.2);
+    }
+  }
+}
+
+.socialIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.bottomBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  max-width: $container-max;
+  margin: 1.5rem auto 0;
+}
+
+.copyright {
+  font-size: 0.85rem;
+  color: rgba($white, 0.7);
+}
+
+.developer {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.developerLabel {
+  font-size: 0.8rem;
+  color: rgba($white, 0.65);
+}
+
+.grgLogoLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.5rem;
+  border-radius: $radius-md;
+  transition: transform 0.35s ease;
+
+  &:focus-visible {
+    outline: 2px solid $green;
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-4px);
+
+      .grgLogo {
+        opacity: 1;
+      }
+    }
+  }
+}
+
+.grgLogo {
+  display: block;
+  width: clamp(3.375rem, 5.25vw, 4.3125rem);
+  height: auto;
+  object-fit: contain;
+  opacity: 0.9;
+  transition: opacity 0.35s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grgLogoLink {
+    transition: none;
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        transform: none;
+      }
+    }
+  }
+
+  .grgLogo {
+    transition: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .inner {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+
+  .socialCol {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .bottomBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,164 @@
+@use "../styles/variables" as *;
+
+$hero-image-src: "/images/rothamel-hero.webp";
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: $bg-light;
+  padding: clamp(2.5rem, 5vw, 4rem) $section-padding-x clamp(3rem, 6vw, 5rem);
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(2rem, 4vw, 3.5rem);
+  align-items: center;
+  min-height: clamp(22rem, 50vh, 32rem);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+  max-width: 34rem;
+}
+
+.heading {
+  font-family: $font-sans;
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: $navy;
+}
+
+.description {
+  margin-top: 1.25rem;
+  font-size: clamp(1rem, 1.5vw, 1.125rem);
+  line-height: 1.7;
+  color: $text-muted;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 2rem;
+  padding: 0.9rem 1.75rem;
+  border-radius: 999px;
+  background: $green;
+  color: $white;
+  font-family: $font-sans;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 2px solid transparent;
+  box-shadow: 0 6px 20px rgba($green, 0.35);
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus-visible {
+    outline: 2px solid $navy;
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: $green-hover;
+      box-shadow: 0 8px 24px rgba($green, 0.4);
+      transform: translateY(-1px);
+    }
+  }
+}
+
+.ctaIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.visual {
+  position: relative;
+  height: 100%;
+  min-height: clamp(16rem, 35vw, 24rem);
+}
+
+.imagePanel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  border-radius: $radius-xl;
+  background-color: $navy;
+  background-image:
+    linear-gradient(
+      135deg,
+      rgba($navy, 0.92) 0%,
+      rgba($navy-dark, 0.85) 45%,
+      rgba($green, 0.35) 100%
+    ),
+    url(#{$hero-image-src});
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: $shadow-soft;
+  clip-path: polygon(8% 0, 100% 0, 100% 100%, 0 100%);
+  overflow: hidden;
+}
+
+.imageOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    160deg,
+    rgba($navy-dark, 0.15) 0%,
+    rgba($navy, 0.45) 100%
+  );
+}
+
+.accentStripSide {
+  position: absolute;
+  bottom: -0.5rem;
+  left: -1rem;
+  width: 5rem;
+  height: 5rem;
+  border-radius: $radius-md;
+  background: $green;
+  opacity: 0.85;
+  z-index: -1;
+}
+
+@media (max-width: 900px) {
+  .inner {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .visual {
+    order: -1;
+    min-height: 14rem;
+  }
+
+  .imagePanel {
+    clip-path: none;
+    border-radius: $radius-lg;
+  }
+
+  .accentStripSide {
+    display: none;
+  }
+
+  .cta {
+    width: 100%;
+    max-width: 22rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .cta {
+    max-width: none;
+    width: 100%;
+  }
+}

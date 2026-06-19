@@ -1,0 +1,104 @@
+@use "../styles/variables" as *;
+@use "../styles/animations" as *;
+
+.section {
+  padding: $section-padding-y $section-padding-x;
+  background: $white;
+  border-top: 1px solid $border-soft;
+  border-bottom: 1px solid $border-soft;
+}
+
+.header {
+  padding-bottom: 2rem;
+}
+
+.carouselWrapper {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+
+  &:hover .track {
+    animation-play-state: paused;
+  }
+}
+
+.fadeLeft,
+.fadeRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(2rem, 8vw, 6rem);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.fadeLeft {
+  left: 0;
+  background: linear-gradient(90deg, $white 0%, transparent 100%);
+}
+
+.fadeRight {
+  right: 0;
+  background: linear-gradient(270deg, $white 0%, transparent 100%);
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  gap: clamp(2rem, 4vw, 4rem);
+  width: max-content;
+  padding: 1rem 0;
+  list-style: none;
+  animation: brandScroll 45s linear infinite;
+}
+
+.brandItem {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: clamp(7rem, 12vw, 10rem);
+  padding: 0.75rem 1.25rem;
+  border-radius: $radius-md;
+  border: 1px solid $border-soft;
+  background: $bg-light;
+  box-shadow: $shadow-card;
+}
+
+.brandText {
+  font-family: $font-sans;
+  font-size: clamp(0.85rem, 1.2vw, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: $navy;
+  white-space: nowrap;
+}
+
+.brandImage {
+  width: auto;
+  height: auto;
+  max-height: 2.5rem;
+  object-fit: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: $container-max;
+    margin: 0 auto;
+    padding: 0;
+    gap: 1rem;
+  }
+
+  .carouselWrapper {
+    overflow: visible;
+  }
+
+  .fadeLeft,
+  .fadeRight {
+    display: none;
+  }
+}

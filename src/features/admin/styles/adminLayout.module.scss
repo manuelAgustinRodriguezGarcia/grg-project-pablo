@@ -1,0 +1,31 @@
+@use "./variables" as *;
+
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background: $bg-content;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+  background: $bg-content;
+}
+
+@media (max-width: 768px) {
+  .shell {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell,
+  .content {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

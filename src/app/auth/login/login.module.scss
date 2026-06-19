@@ -1,0 +1,66 @@
+@use "../../../features/auth/styles/variables" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  background: $bg-page;
+  color: $text-body;
+  font-family: $font-sans;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: calc(100vh - $header-height);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 0.84fr 1fr;
+  flex: 1;
+  min-height: calc(100vh - $header-height);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  padding-top: clamp(2rem, 5vw, 4rem);
+  padding-bottom: clamp(2rem, 5vw, 4rem);
+  padding-left: clamp(2rem, 5vw, 4rem);
+  padding-right: max(#{$section-padding-x}, calc((100vw - #{$container-max}) / 2));
+  background: $bg-page;
+}
+
+.formWrap {
+  width: 100%;
+  max-width: 26rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .split {
+    grid-template-columns: 1fr;
+    min-height: calc(100vh - $header-height);
+  }
+
+  .content {
+    align-items: center;
+    padding-top: 2rem;
+    padding-right: $section-padding-x;
+  }
+
+  .formWrap {
+    justify-content: center;
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .formWrap {
+    justify-content: stretch;
+  }
+}

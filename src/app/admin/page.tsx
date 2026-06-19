@@ -1,14 +1,5 @@
-import { requireAuthOrRedirect } from "@/server/auth";
+import { AdminPlaceholder } from "@/features/admin/components/AdminPlaceholder";
 
-export default async function AdminPage() {
-  const { profile } = await requireAuthOrRedirect("/admin");
-
-  return (
-    <main>
-      <h1>Panel de administración</h1>
-      <p>
-        Sesión activa: {profile.name} ({profile.role})
-      </p>
-    </main>
-  );
+export default function AdminPage() {
+  return <AdminPlaceholder />;
 }

@@ -1,0 +1,48 @@
+@use "../styles/variables" as *;
+
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 100%;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.card {
+  width: 100%;
+  max-width: 42rem;
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+  border-radius: $radius-lg;
+  border: 1px solid rgba($navy, 0.08);
+  background: $white;
+  box-shadow: 0 4px 24px rgba($navy, 0.06);
+  animation: adminFadeIn 0.35s ease-out both;
+}
+
+.text {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(1rem, 2.5vw, 1.15rem);
+  line-height: 1.6;
+  color: $navy-light;
+  text-align: center;
+}
+
+@keyframes adminFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}

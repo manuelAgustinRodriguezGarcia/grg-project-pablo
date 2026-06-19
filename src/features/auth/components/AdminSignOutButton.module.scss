@@ -1,0 +1,92 @@
+@use "../styles/variables" as *;
+@use "../../admin/styles/variables" as admin;
+
+.form {
+  display: flex;
+  justify-content: center;
+}
+
+.formSidebar {
+  display: flex;
+  width: 100%;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid $border-soft;
+  border-radius: 999px;
+  background: $white;
+  color: $navy;
+  font-family: $font-sans;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: $shadow-card;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+
+  &:focus-visible {
+    outline: 2px solid $navy;
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgba($navy, 0.2);
+      background: rgba($navy, 0.04);
+    }
+  }
+}
+
+.buttonSidebar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 1px solid admin.$border;
+  border-radius: 999px;
+  background: rgba(admin.$white, 0.06);
+  color: admin.$text-light;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+
+  &:focus-visible {
+    outline: 2px solid admin.$white;
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgba(admin.$white, 0.12);
+      color: admin.$white;
+    }
+  }
+}
+
+.icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .buttonSidebar {
+    transition: none;
+  }
+}
+
