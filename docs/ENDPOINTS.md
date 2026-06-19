@@ -1,6 +1,6 @@
 # ENDPOINTS — Referencia para frontend
 
-> Documento derivado de las tareas **completadas** en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) (Fase 2: base del sistema), alineado con [`PRD.md`](./PRD.md) y la integración frontend del PR #3.  
+> Documento derivado de las tareas **completadas** en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) (Fases 2–3.2), alineado con [`PRD.md`](./PRD.md) y la integración frontend del PR #3.  
 > Última actualización: 2026-06-19.
 
 ---
@@ -11,6 +11,7 @@
 - [Alineación con el PRD](#alineación-con-el-prd)
 - [Autenticación y sesión](#autenticación-y-sesión)
 - [Gestión de usuarios (panel admin)](#gestión-de-usuarios-panel-admin)
+- [Gestión de catálogos (panel admin)](#gestión-de-catálogos-panel-admin)
 - [Directorio de catálogos](#directorio-de-catálogos)
 - [Auditoría (backend interno)](#auditoría-backend-interno)
 - [Rutas de la aplicación (no API)](#rutas-de-la-aplicación-no-api)
@@ -89,7 +90,9 @@ Variable relevante: `NEXT_PUBLIC_APP_URL` (enlaces de recuperación de contrase�
 Catálogo → Carpeta → Producto
 ```
 
-**Estado del modelo de datos (Fase 3.1):** tablas Prisma `Catalog`, `CatalogFolder`, `FolderColumn` y `Product` implementadas con relaciones en cascada y campos `visibleToNormalUser` en catálogo, carpeta y columna. Las APIs de gestión y lectura (CRUD, listados paginados, navegación) siguen pendientes en tareas 3.2–3.8.
+**Estado del modelo de datos (Fase 3.1):** tablas Prisma `Catalog`, `CatalogFolder`, `FolderColumn` y `Product` implementadas con relaciones en cascada y campos `visibleToNormalUser` en catálogo, carpeta y columna.
+
+**Estado de gestión admin (Fase 3.2):** CRUD de catálogos vía Server Actions (solo `ADMIN`). Carpetas, productos, navegación y filtrado de visibilidad en lecturas GET siguen pendientes (3.3–3.8).
 
 El panel privado (PRD §12) navega con sidebar:
 
@@ -496,10 +499,238 @@ Desactiva un usuario y cierra todas sus sesiones activas en Supabase.
 
 ---
 
+## Gestión de catálogos (panel admin)
+
+**Fase backend:** 3.2 · **RF:** RF-006, RF-010 (PRD §14.1–§14.3)  
+**Uso en frontend:** pantalla de catálogos (`/admin/catalogos`). Solo rol `ADMIN`. **UI pendiente** — las Server Actions están listas para integrar.
+
+Todas las acciones importan desde `@/features/catalog/actions/catalog.actions`.
+
+### Tipo de respuesta común
+
+```ts
+type CatalogActionResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; code?: string };
+```
+
+### Tipo `CatalogListItem`
+
+```ts
+{
+  id: string;
+  name: string;
+  description: string | null;
+  coverImagePath: string | null;
+  status: "ACTIVE" | "INACTIVE" | "HIDDEN";
+  order: number;
+  visibleToNormalUser: boolean;
+  folderCount: number;
+  createdAt: string;   // ISO
+  updatedAt: string;   // ISO
+}
+```
+
+### Server Action: `listCatalogsAction`
+
+Lista todos los catálogos (cualquier `status`), ordenados por `order`.
+
+| | |
+|---|---|
+| **Auth** | Sesión + rol `ADMIN` |
+| **Entrada** | ninguna |
+
+**Respuesta (éxito):** `{ success: true, data: CatalogListItem[] }`
+
+---
+
+### Server Action: `createCatalogAction`
+
+Crea un catálogo. Si no se indica `order`, se asigna el siguiente disponible.
+
+| | |
+|---|---|
+| **Auth** | Sesión + rol `ADMIN` |
+
+**Entrada**
+
+```ts
+{
+  name: string;                    // 1–200 caracteres
+  description?: string | null;     // máx. 2000
+  status?: "ACTIVE" | "INACTIVE" | "HIDDEN";
+  order?: number;                  // entero ≥ 0
+  visibleToNormalUser?: boolean;   // default true
+}
+```
+
+**Respuesta (éxito):** `{ success: true, data: CatalogListItem }`
+
+**Códigos de error:** `VALIDATION_ERROR`, `INVALID_STATUS`, `FORBIDDEN`
+
+---
+
+### Server Action: `updateCatalogAction`
+
+Edita nombre, descripción y/o estado.
+
+| | |
+|---|---|
+| **Auth** | Sesión + rol `ADMIN` |
+
+**Entrada**
+
+```ts
+{
+  id: string;                      // cuid del catálogo
+  name?: string;
+  description?: string | null;
+  status?: "ACTIVE" | "INACTIVE" | "HIDDEN";
+  // Al menos uno de name, description o status es obligatorio
+}
+```
+
+**Respuesta (éxito):** `{ success: true, data: CatalogListItem }`
+
+**Códigos de error:** `CATALOG_NOT_FOUND`, `VALIDATION_ERROR`, `INVALID_STATUS`, `FORBIDDEN`
+
+---
+
+### Server Action: `reorderCatalogsAction`
+
+Actualiza el orden de uno o más catálogos.
+
+| | |
+|---|---|
+| **Auth** | Sesión + rol `ADMIN` |
+
+**Entrada**
+
+```ts
+{
+  items: Array<{ id: string; order: number }>;  // mínimo 1 ítem
+}
+```
+
+**Respuesta (éxito):** `{ success: true, data: CatalogListItem[] }` (lista completa reordenada)
+
+---
+
+### Server Action: `setCatalogVisibilityAction`
+
+Oculta o muestra el catálogo para usuarios con rol `CONSULTA` (`visibleToNormalUser`). El filtrado en `GET /api/admin/directory` para `CONSULTA` se implementará en Fase 3.7.
+
+| | |
+|---|---|
+| **Auth** | Sesión + rol `ADMIN` |
+
+**Entrada**
+
+```ts
+{ catalogId: string; visible: boolean }
+```
+
+**Respuesta (éxito):** `{ success: true, data: CatalogListItem }`
+
+---
+
+### Server Action: `deleteCatalogAction`
+
+Elimina el catálogo y en cascada sus carpetas, columnas y productos. **No** elimina archivos Excel originales (modelo `UploadedFile` pendiente en Fase 4). Elimina la imagen de portada del bucket `product-images` si existe.
+
+| | |
+|---|---|
+| **Auth** | Sesión + rol `ADMIN` |
+
+**Entrada**
+
+```ts
+{ catalogId: string }
+```
+
+**Respuesta (éxito):** `{ success: true, data: undefined }`
+
+**Códigos de error:** `CATALOG_NOT_FOUND`, `FORBIDDEN`
+
+> La UI debe mostrar modal de confirmación antes de invocar esta acción (PRD §14.2).
+
+---
+
+### Server Action: `clearCatalogAction`
+
+Elimina todos los productos de las carpetas del catálogo. Conserva catálogo, carpetas, columnas y visibilidad (PRD §14.3).
+
+| | |
+|---|---|
+| **Auth** | Sesión + rol `ADMIN` |
+
+**Entrada**
+
+```ts
+{ catalogId: string }
+```
+
+**Respuesta (éxito)**
+
+```ts
+{ success: true, data: { deletedProductCount: number } }
+```
+
+> La UI debe mostrar modal de confirmación antes de invocar esta acción (PRD §14.3).
+
+---
+
+### Server Action: `setCoverImageAction`
+
+Sube imagen representativa al bucket `product-images` y actualiza `coverImagePath`. Formatos permitidos: `.jpg`, `.jpeg`, `.png`, `.webp`.
+
+| | |
+|---|---|
+| **Auth** | Sesión + rol `ADMIN` |
+
+**Entrada:** `FormData` con campos `catalogId` (string) y `file` (File).
+
+**Respuesta (éxito):** `{ success: true, data: CatalogListItem }`
+
+---
+
+### Server Action: `removeCoverImageAction`
+
+Elimina la imagen de portada del Storage y pone `coverImagePath` en `null`.
+
+| | |
+|---|---|
+| **Auth** | Sesión + rol `ADMIN` |
+
+**Entrada**
+
+```ts
+{ catalogId: string }
+```
+
+**Respuesta (éxito):** `{ success: true, data: CatalogListItem }`
+
+---
+
+### Códigos de error compartidos
+
+| Código | Significado |
+|--------|-------------|
+| `CATALOG_NOT_FOUND` | Catálogo inexistente |
+| `VALIDATION_ERROR` | Datos de entrada inválidos o archivo de imagen rechazado |
+| `INVALID_STATUS` | Estado de catálogo no permitido |
+| `FORBIDDEN` | El solicitante no es ADMIN |
+| `UNAUTHENTICATED` | Sin sesión válida |
+
+**Schemas Zod:** `src/features/catalog/schemas/catalog.schemas.ts`  
+**Tipos:** `src/features/catalog/types/catalog.types.ts`
+
+---
+
 ## Directorio de catálogos
 
 **Fase backend:** 2.5 · **PRD:** §7 (directorio automático), §13 (navegación)  
-**Uso en frontend:** API disponible; **aún no consumida** en UI. La vista de catálogos (`/admin/catalogos`) es placeholder. Integración prevista en Fase backend 3.
+**Uso en frontend:** API disponible; **aún no consumida** en UI. La vista de catálogos (`/admin/catalogos`) es placeholder. Para CRUD admin ver [Gestión de catálogos](#gestión-de-catálogos-panel-admin).
 
 Reemplaza las hojas índice manuales de Excel (ej. Catálogo Azul): el sistema genera el directorio desde catálogos activos sin mantener una carátula manual.
 
@@ -559,9 +790,9 @@ if (res.ok) {
 **Implementación:** `src/app/api/admin/directory/route.ts`  
 **Tipos:** `src/features/directory/types/directory.types.ts`
 
-> Solo se incluyen catálogos con `status = ACTIVE`, ordenados por `order` ascendente. Nuevos catálogos activos aparecen automáticamente sin cambios de código (PRD §50).
+> Solo se incluyen catálogos con `status = ACTIVE`, ordenados por `order` ascendente. Nuevos catálogos activos creados con `createCatalogAction` aparecen automáticamente sin cambios de código (PRD §50).
 
-**Evolución Fase 3:** el campo `visibleToNormalUser` ya existe en los modelos Prisma (3.1). Cuando se implemente `VisibilityService` (3.7), los usuarios `CONSULTA` solo verán catálogos marcados como visibles. `sectionCount` reflejará solo carpetas visibles para ese rol.
+**Evolución Fase 3:** el filtrado por `visibleToNormalUser` para rol `CONSULTA` se implementará en 3.7 (`VisibilityService`). `sectionCount` reflejará carpetas visibles en 3.8.
 
 ---
 
@@ -578,9 +809,10 @@ No hay endpoint REST de consulta de logs en esta fase. El backend registra opera
 | `USER_LOGIN` | Inicio de sesión exitoso |
 | `USER_LOGOUT` | Cierre de sesión |
 | `USER_CREATED` / `USER_UPDATED` / `USER_ACTIVATED` / `USER_DEACTIVATED` | Gestión de usuarios (ADMIN) |
+| `CATALOG_CREATED` / `CATALOG_UPDATED` / `CATALOG_DELETED` / `CATALOG_CLEARED` | Gestión de catálogos (ADMIN, Fase 3.2) |
 | `FILE_UPLOADED` | Subida vía `uploadFile()` cuando se pasa `auditContext: { userId }` |
 
-**Reservados (Fase 3+):** `CATALOG_*`, `FOLDER_*`, `IMPORT_PUBLISHED`, etc.
+**Reservados (Fase 3+):** `FOLDER_*`, `IMPORT_PUBLISHED`, etc.
 
 Los fallos al escribir en `AuditLog` no interrumpen la operación principal.
 
@@ -622,7 +854,7 @@ Navegación lateral definida en `src/features/admin/data/adminNav.ts`. Tras logi
 | Ruta | Acceso | Estado | Uso |
 |------|--------|--------|-----|
 | `/admin` | Protegida | Placeholder | Home del panel (`AdminPlaceholder`) |
-| `/admin/catalogos` | Protegida | Placeholder | **Catálogos** — navegación catálogo → carpeta → tabla de productos (PRD §13) |
+| `/admin/catalogos` | Protegida | Placeholder | **Catálogos** — Server Actions 3.2 listas; UI pendiente (PRD §13) |
 | `/admin/archivos` | Protegida | Placeholder | **Archivos** — Excel subidos, historial e informes (PRD §37) |
 | `/admin/users` | Protegida | Sin página | Gestión de usuarios (Server Actions existentes, UI pendiente) |
 
@@ -649,6 +881,7 @@ Resumen tras el merge del PR #3 (landing, login y shell del panel).
 | `requestPasswordResetAction` | No | Falta `/auth/forgot-password` |
 | `updatePasswordAction` | No | Falta `/auth/reset-password` |
 | Acciones de usuarios (`user.actions`) | No | Falta `/admin/users` |
+| Acciones de catálogos (`catalog.actions`) | No | Falta UI en `/admin/catalogos` |
 
 **Constantes de rutas en código**
 
@@ -668,7 +901,8 @@ Resumen tras el merge del PR #3 (landing, login y shell del panel).
 
 | Recurso previsto | Tipo | RF / PRD |
 |------------------|------|----------|
-| CRUD catálogos (crear, editar, ordenar, ocultar, borrar, **vaciar**) | Server Actions | RF-006, §14 |
+| ~~CRUD catálogos (crear, editar, ordenar, ocultar, borrar, **vaciar**)~~ | ~~Server Actions~~ | ✅ Fase 3.2 — ver [Gestión de catálogos](#gestión-de-catálogos-panel-admin) |
+| Asociación Excel ↔ catálogo (`UploadedFile`) | Server Actions | Fase 4/8 — pendiente modelo `UploadedFile` |
 | CRUD carpetas (crear, renombrar, ordenar, ocultar, borrar, **vaciar**) | Server Actions | RF-007, §14 |
 | Configuración de columnas por carpeta | Server Actions | RF-042, §36 |
 | Visibilidad catálogo / carpeta / columna | Server Actions + filtros en GET | RF-010–RF-012, §9 |
@@ -736,6 +970,9 @@ Resumen tras el merge del PR #3 (landing, login y shell del panel).
 - Plan backend: [`docs/BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md)
 - Schemas de validación auth: [`src/features/auth/schemas/auth.schemas.ts`](../src/features/auth/schemas/auth.schemas.ts)
 - Schemas de validación usuarios: [`src/features/users/schemas/user.schemas.ts`](../src/features/users/schemas/user.schemas.ts)
+- Schemas de validación catálogos: [`src/features/catalog/schemas/catalog.schemas.ts`](../src/features/catalog/schemas/catalog.schemas.ts)
+- Server Actions de catálogos: [`src/features/catalog/actions/catalog.actions.ts`](../src/features/catalog/actions/catalog.actions.ts)
+- Tipos de catálogos: [`src/features/catalog/types/catalog.types.ts`](../src/features/catalog/types/catalog.types.ts)
 - Tipos del directorio: [`src/features/directory/types/directory.types.ts`](../src/features/directory/types/directory.types.ts)
 - Navegación del panel: [`src/features/admin/data/adminNav.ts`](../src/features/admin/data/adminNav.ts)
 - Login (formulario): [`src/features/auth/actions/login-form.action.ts`](../src/features/auth/actions/login-form.action.ts)

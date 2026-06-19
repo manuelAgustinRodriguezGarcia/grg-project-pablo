@@ -47,7 +47,7 @@
 | Variables de entorno | ✅ | `DATABASE_URL`, `DIRECT_URL`, credenciales Supabase en `.env`; opcional `NEXT_PUBLIC_APP_URL` |
 | Base de datos | ✅ | Migraciones `20260617182823_init_user_catalog_audit_log`, `20260619214310_add_catalog_folder_product_models` |
 | Autenticación | ✅ | Módulo `src/server/auth/`, middleware, guards, Server Actions (§11.3) |
-| Servicios / repositorios | ✅ | `UserRepository`, `UserService`, `CatalogRepository`, `DirectoryService`, `AuditRepository`, `AuditService` |
+| Servicios / repositorios | ✅ | `UserRepository`, `UserService`, `CatalogRepository` (CRUD), `CatalogService`, `DirectoryService`, `AuditRepository`, `AuditService` |
 | UI de aplicación | ⏳ | Página inicial por defecto de Next.js |
 
 ### 1.3 Archivos backend existentes
@@ -65,12 +65,15 @@ src/server/database/prisma.ts → singleton PrismaClient con PrismaPg adapter
 src/server/storage/             → cliente admin, validación MIME/tamaño, URLs firmadas
 src/server/auth/                → sesión SSR, AuthService, guards, middleware helpers
 src/server/repositories/user.repository.ts → perfil local sincronizado con Supabase Auth
-src/server/repositories/catalog.repository.ts → consultas de catálogos activos
+src/server/repositories/catalog.repository.ts → CRUD catálogos, vaciado, reorden
 src/server/repositories/audit.repository.ts → persistencia de AuditLog
 src/server/services/user.service.ts   → CRUD de usuarios (solo ADMIN)
+src/server/services/catalog.service.ts → CRUD catálogos, vaciado, visibilidad, portada (solo ADMIN)
+src/server/services/catalog.errors.ts  → errores de dominio de catálogos
 src/server/services/directory.service.ts → directorio automático de catálogos
 src/server/services/audit.service.ts → registro de operaciones importantes
 src/features/users/                   → schemas Zod, tipos y Server Actions de usuarios
+src/features/catalog/                 → schemas Zod, tipos y Server Actions de catálogos
 src/features/directory/types/         → tipos del directorio de catálogos
 src/app/api/admin/directory/route.ts  → GET directorio privado
 src/middleware.ts               → protección /admin y /api/admin, refresh de sesión
@@ -86,7 +89,7 @@ El PRD ordena el roadmap por experiencia de usuario (§48). El backend sigue un 
 | Fase PRD (§48) | Fase backend | Estado | Notas |
 |----------------|--------------|--------|-------|
 | 1 — Base visual y acceso | 2 — Base del sistema | ✅ | Auth, roles, directorio, storage |
-| 2 — Modelo Catálogo-Carpeta-Producto | 3 — Catálogos y carpetas | 🔄 | 3.1 completada: modelos Prisma + visibilidad; servicios/API pendientes (3.2+) |
+| 2 — Modelo Catálogo-Carpeta-Producto | 3 — Catálogos y carpetas | 🔄 | 3.1–3.2 completadas: modelos Prisma + `CatalogService`; carpetas y lectura pendientes (3.3+) |
 | 3 — Administración manual | 6 — Administración manual | ⏳ | Tras modelo e imágenes |
 | 4 — Filtros y búsqueda | 7 — Búsqueda y filtros | ⏳ | Requiere productos y columnas |
 | 5 — Importador | 4 — Importador | ⏳ | Asistente guiado, publicación segura |
@@ -526,7 +529,7 @@ Servicios del PRD §46, más servicios de infraestructura ya implementados.
 
 | Servicio | Responsabilidades |
 |----------|-------------------|
-| **CatalogService** | CRUD catálogos, vaciar, visibilidad, orden |
+| **CatalogService** | CRUD catálogos, vaciar, visibilidad, orden ✅ (3.2) |
 | **FolderService** | CRUD carpetas, vaciar, visibilidad, configuración de columnas/búsqueda/filtros |
 | **ProductService** | CRUD productos, datos dinámicos, duplicar, equivalencias |
 | **CatalogImportService** | Asistente de importación, análisis, vista previa, combinar/reemplazar/aplicar lista, publicación segura |
@@ -825,7 +828,7 @@ Reservadas Fase 3+: `CATALOG_*`, `FOLDER_*`, `IMPORT_PUBLISHED`.
 
 ### Fase 3 — Catálogos y carpetas
 
-**Estado:** 🔄 En progreso (3.1 completada) · **Equivale a PRD fase 2 (modelo Catálogo-Carpeta-Producto)**
+**Estado:** 🔄 En progreso (3.1–3.2 completadas) · **Equivale a PRD fase 2 (modelo Catálogo-Carpeta-Producto)**
 
 **Depende de:** Fase 2
 
@@ -852,11 +855,24 @@ CRUD de catálogos y carpetas, configuración de columnas, visibilidad por rol, 
 
 **Verificación:** `pnpm exec prisma validate`, `pnpm db:generate`, `pnpm db:verify`.
 
-#### 3.2 Gestión de catálogos (PRD §14.1, RF-005, RF-006, RF-010)
+#### 3.2 Gestión de catálogos (PRD §14.1, RF-006, RF-010) ✅
 
-- [ ] `CatalogService` — crear, editar, ordenar, ocultar/mostrar, borrar, **vaciar**, asociar archivos
-- [ ] Borrar no elimina Excel original (PRD §14.2)
-- [ ] Vaciar conserva carpetas y configuración (PRD §14.3)
+- [x] `CatalogService` — crear, editar, ordenar, ocultar/mostrar, borrar, **vaciar**, imagen representativa
+- [x] Borrar no elimina Excel original (PRD §14.2) — sin modelo `UploadedFile` aún; solo tablas Prisma + portada opcional en Storage
+- [x] Vaciar conserva carpetas y configuración (PRD §14.3)
+
+**Archivos:** `src/server/services/catalog.service.ts`, `src/server/repositories/catalog.repository.ts`, `src/features/catalog/`.
+
+**Server Actions:** `listCatalogsAction`, `createCatalogAction`, `updateCatalogAction`, `reorderCatalogsAction`, `setCatalogVisibilityAction`, `deleteCatalogAction`, `clearCatalogAction`, `setCoverImageAction`, `removeCoverImageAction`.
+
+**Decisiones de alcance 3.2:**
+
+- Asociación Excel ↔ catálogo (`UploadedFile`) diferida a Fase 4/8; la imagen representativa se gestiona vía `coverImagePath` + bucket `product-images`.
+- Ocultar/mostrar para usuarios normales usa `visibleToNormalUser`; el filtrado en lecturas GET para rol `CONSULTA` queda en 3.7 (`VisibilityService`).
+- Modales de confirmación al borrar/vaciar son responsabilidad de la UI (RF-025).
+- Auditoría: `CATALOG_CREATED`, `CATALOG_UPDATED`, `CATALOG_DELETED`, `CATALOG_CLEARED`.
+
+**Verificación:** `pnpm exec prisma validate`, `pnpm db:generate`, `pnpm lint`, `pnpm db:verify`.
 
 #### 3.3 Gestión de carpetas (PRD §14.4, RF-007, RF-011)
 
@@ -1196,11 +1212,11 @@ Mapeo completo de PRD §40 (47 RF).
 | RF-003 | Landing pública | 2 | ✅ | Rutas públicas sin API de catálogos |
 | RF-004 | Dominio | 2/10 | ⏳ | `NEXT_PUBLIC_APP_URL`, despliegue producción |
 | RF-005 | Estructura Catálogo-Carpeta-Producto | 3 | ⏳ | `CatalogFolder`, `Product`, JSONB |
-| RF-006 | Gestión de catálogos | 3 | ⏳ | `CatalogService` (incl. vaciar) |
+| RF-006 | Gestión de catálogos | 3 | ✅ | `CatalogService`, Server Actions (3.2) |
 | RF-007 | Gestión de carpetas | 3 | ⏳ | `FolderService` (incl. vaciar) |
 | RF-008 | Gestión de productos | 3/6 | ⏳ | `ProductService` |
 | RF-009 | Edición de columnas | 6 | ⏳ | `ProductService`, `ColumnConfigService` |
-| RF-010 | Visibilidad de catálogos | 3 | ⏳ | `VisibilityService`, `Catalog` |
+| RF-010 | Visibilidad de catálogos | 3 | 🔄 | `setCatalogVisibilityAction` (3.2); filtrado lectura en `VisibilityService` (3.7) |
 | RF-011 | Visibilidad de carpetas | 3 | ⏳ | `VisibilityService`, `CatalogFolder` |
 | RF-012 | Visibilidad de columnas | 3 | ⏳ | `VisibilityService`, `FolderColumn` |
 | RF-013 | Subida de Excel | 4 | ⏳ | Route Handler upload |
