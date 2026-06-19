@@ -42,10 +42,10 @@
 |------|--------|---------|
 | Proyecto Next.js | ✅ | Next.js 16.2.9, React 19, TypeScript |
 | Estructura de carpetas | ✅ | `src/app`, `src/features`, `src/server`, `src/shared`, `src/ui` con placeholders |
-| Prisma | ✅ | Modelos Fase 2 (`User`, `Catalog`, `AuditLog`), migración inicial aplicada |
+| Prisma | ✅ | Fase 2: `User`, `Catalog`, `AuditLog`. Fase 3.1: `CatalogFolder`, `FolderColumn`, `Product` + visibilidad |
 | Supabase | ✅ | Auth (§11.3), Storage privado (§5.1), `@supabase/ssr` + `@supabase/supabase-js` |
 | Variables de entorno | ✅ | `DATABASE_URL`, `DIRECT_URL`, credenciales Supabase en `.env`; opcional `NEXT_PUBLIC_APP_URL` |
-| Base de datos | ✅ | Migración `20260617182823_init_user_catalog_audit_log` en Supabase |
+| Base de datos | ✅ | Migraciones `20260617182823_init_user_catalog_audit_log`, `20260619214310_add_catalog_folder_product_models` |
 | Autenticación | ✅ | Módulo `src/server/auth/`, middleware, guards, Server Actions (§11.3) |
 | Servicios / repositorios | ✅ | `UserRepository`, `UserService`, `CatalogRepository`, `DirectoryService`, `AuditRepository`, `AuditService` |
 | UI de aplicación | ⏳ | Página inicial por defecto de Next.js |
@@ -53,8 +53,9 @@
 ### 1.3 Archivos backend existentes
 
 ```text
-prisma/schema.prisma          → User, Catalog, AuditLog + enums
+prisma/schema.prisma          → User, Catalog, CatalogFolder, FolderColumn, Product, AuditLog + enums
 prisma/migrations/            → 20260617182823_init_user_catalog_audit_log
+                              → 20260619214310_add_catalog_folder_product_models
 prisma.config.ts              → configuración Prisma 7 con DIRECT_URL
 scripts/verify-db-connections.ts → verificación pooled/directa + cliente Supabase
 scripts/setup-storage-buckets.ts → creación de buckets privados
@@ -85,7 +86,7 @@ El PRD ordena el roadmap por experiencia de usuario (§48). El backend sigue un 
 | Fase PRD (§48) | Fase backend | Estado | Notas |
 |----------------|--------------|--------|-------|
 | 1 — Base visual y acceso | 2 — Base del sistema | ✅ | Auth, roles, directorio, storage |
-| 2 — Modelo Catálogo-Carpeta-Producto | 3 — Catálogos y carpetas | ⏳ | Modelos Prisma + visibilidad |
+| 2 — Modelo Catálogo-Carpeta-Producto | 3 — Catálogos y carpetas | 🔄 | 3.1 completada: modelos Prisma + visibilidad; servicios/API pendientes (3.2+) |
 | 3 — Administración manual | 6 — Administración manual | ⏳ | Tras modelo e imágenes |
 | 4 — Filtros y búsqueda | 7 — Búsqueda y filtros | ⏳ | Requiere productos y columnas |
 | 5 — Importador | 4 — Importador | ⏳ | Asistente guiado, publicación segura |
@@ -824,7 +825,7 @@ Reservadas Fase 3+: `CATALOG_*`, `FOLDER_*`, `IMPORT_PUBLISHED`.
 
 ### Fase 3 — Catálogos y carpetas
 
-**Estado:** ⏳ Pendiente · **Equivale a PRD fase 2 (modelo Catálogo-Carpeta-Producto)**
+**Estado:** 🔄 En progreso (3.1 completada) · **Equivale a PRD fase 2 (modelo Catálogo-Carpeta-Producto)**
 
 **Depende de:** Fase 2
 
@@ -832,11 +833,24 @@ Reservadas Fase 3+: `CATALOG_*`, `FOLDER_*`, `IMPORT_PUBLISHED`.
 
 CRUD de catálogos y carpetas, configuración de columnas, visibilidad por rol, lectura paginada de productos.
 
-#### 3.1 Modelos Prisma
+#### 3.1 Modelos Prisma ✅
 
-- [ ] `CatalogFolder`, `FolderColumn`, `Product` (estructura base + JSONB)
-- [ ] Campos de visibilidad en catálogo, carpeta y columna
-- [ ] Relaciones, índices
+- [x] `CatalogFolder`, `FolderColumn`, `Product` (estructura base + JSONB)
+- [x] Campos de visibilidad en catálogo, carpeta y columna
+- [x] Relaciones, índices
+
+**Migración:** `20260619214310_add_catalog_folder_product_models`
+
+**Enums añadidos:** `FolderStatus` (`ACTIVE`, `INACTIVE`), `ColumnDataType` (`TEXT`, `NUMBER`, `BOOLEAN`, `DATE`, `DATETIME`, `IMAGE`, `FORMULA`, `UNKNOWN`).
+
+**Decisiones de alcance 3.1:**
+
+- `Catalog.visibleToNormalUser` añadido al modelo existente (default `true`).
+- `Product.dynamicData` como JSONB con índice GIN para búsquedas futuras.
+- `FolderColumn.globalFieldKey` como placeholder; `GlobalFieldMapping` se implementará en 3.5.
+- `EquivalentCode`, `ProductImage` e importación quedan para fases posteriores (4–6).
+
+**Verificación:** `pnpm exec prisma validate`, `pnpm db:generate`, `pnpm db:verify`.
 
 #### 3.2 Gestión de catálogos (PRD §14.1, RF-005, RF-006, RF-010)
 
