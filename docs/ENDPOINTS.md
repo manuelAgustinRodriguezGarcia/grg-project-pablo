@@ -1,6 +1,6 @@
 # ENDPOINTS — Referencia para frontend
 
-> Documento derivado de las tareas **completadas** en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) (Fase 2: base del sistema), alineado con la integración frontend del PR #3.  
+> Documento derivado de las tareas **completadas** en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) (Fase 2: base del sistema), alineado con [`PRD.md`](./PRD.md) y la integración frontend del PR #3.  
 > Última actualización: 2026-06-19.
 
 ---
@@ -8,6 +8,7 @@
 ## Tabla de contenidos
 
 - [Convenciones generales](#convenciones-generales)
+- [Alineación con el PRD](#alineación-con-el-prd)
 - [Autenticación y sesión](#autenticación-y-sesión)
 - [Gestión de usuarios (panel admin)](#gestión-de-usuarios-panel-admin)
 - [Directorio de catálogos](#directorio-de-catálogos)
@@ -38,6 +39,7 @@
 - Usuario ya autenticado que visita `/auth/login` → redirección a `redirectTo` (query) o `/admin` por defecto.
 - El layout de admin (`src/app/admin/layout.tsx`) además valida sesión con `requireAuthOrRedirect("/admin")` en el servidor.
 - Roles: `ADMIN` | `CONSULTA`. Las acciones de usuarios exigen rol `ADMIN`.
+- **Usuario normal (PRD §8.3):** corresponde al rol `CONSULTA`. Solo lectura de catálogos, carpetas y productos **visibles**; sin controles de edición.
 
 ### Formato de respuesta (Server Actions)
 
@@ -57,14 +59,52 @@ Todas las Server Actions devuelven un resultado discriminado:
 
 | Campo | Valores |
 |-------|---------|
-| `role` | `ADMIN` \| `CONSULTA` |
+| `role` | `ADMIN` \| `CONSULTA` (PRD: `ADMIN` \| `USER`) |
 | `status` | `ACTIVE` \| `INACTIVE` |
+
+### Dominio de producción (RF-004, PRD §1)
+
+```text
+www.rothamelrepuestos.com.ar
+```
+
+Variable relevante: `NEXT_PUBLIC_APP_URL` (enlaces de recuperación de contraseña y callbacks).
+
+---
+
+## Alineación con el PRD
+
+### Glosario producto ↔ API
+
+| PRD (UI / producto) | Backend / respuestas JSON | Notas |
+|---------------------|---------------------------|-------|
+| Carpeta | `CatalogFolder` (futuro) | Subdivisión de un catálogo; generalmente una hoja Excel |
+| Producto | `Product` (futuro) | Fila de datos dentro de una carpeta |
+| Usuario normal | Rol `CONSULTA` | El PRD usa `USER`; el enum en código es `CONSULTA` |
+| Sección (doc. anterior) | **Carpeta** | Nomenclatura deprecada en documentación |
+
+### Modelo de tres niveles (PRD §7)
+
+```text
+Catálogo → Carpeta → Producto
+```
+
+El panel privado (PRD §12) navega con sidebar:
+
+```text
+Catálogos   → consulta y gestión de catálogos, carpetas y productos
+Archivos    → archivos Excel subidos, historial e informes de importación
+```
+
+### Visibilidad por rol (PRD §9) — impacto en APIs futuras
+
+Cuando existan catálogos, carpetas y columnas (Fase 3+), las respuestas para rol `CONSULTA` **excluirán** entidades y columnas marcadas como no visibles. El rol `ADMIN` siempre recibe todo. Esto aplica a directorio, listados, búsqueda y sync offline.
 
 ---
 
 ## Autenticación y sesión
 
-**Fase:** 2.3 Autenticación (RF-001)  
+**Fase backend:** 2.3 · **RF:** RF-001 (PRD §11)  
 **Uso en frontend:** pantallas de login, recuperación de contraseña, layout del panel, verificación de sesión al cargar la app.
 
 ### `GET /api/admin/session`
@@ -221,7 +261,7 @@ Cierra la sesión actual.
 }
 ```
 
-> El frontend debe escuchar `signal === "grg:offline:clear"` para limpiar IndexedDB cuando exista el modo offline (Fase 9). Con `logoutFormAction` la respuesta no llega al cliente porque hay redirección inmediata.
+> El frontend debe escuchar `signal === "grg:offline:clear"` para limpiar IndexedDB cuando exista el modo offline (PRD §38, Fase backend 9). Con `logoutFormAction` la respuesta no llega al cliente porque hay redirección inmediata.
 
 ---
 
@@ -322,7 +362,7 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sessi
 
 ## Gestión de usuarios (panel admin)
 
-**Fase:** 2.4 Usuarios (RF-002)  
+**Fase backend:** 2.4 · **RF:** RF-002 (PRD §8)  
 **Uso en frontend:** pantalla de administración de usuarios (`/admin/users`). Solo rol `ADMIN`. **UI pendiente** — las Server Actions están listas para integrar.
 
 Todas las acciones importan desde `@/features/users/actions/user.actions`.
@@ -456,8 +496,10 @@ Desactiva un usuario y cierra todas sus sesiones activas en Supabase.
 
 ## Directorio de catálogos
 
-**Fase:** 2.5 Directorio (RF-004)  
-**Uso en frontend:** API disponible; **aún no consumida** en UI. La vista de catálogos (`/admin/catalogos`) es placeholder. Integración prevista en Fase 3.
+**Fase backend:** 2.5 · **PRD:** §7 (directorio automático), §13 (navegación)  
+**Uso en frontend:** API disponible; **aún no consumida** en UI. La vista de catálogos (`/admin/catalogos`) es placeholder. Integración prevista en Fase backend 3.
+
+Reemplaza las hojas índice manuales de Excel (ej. Catálogo Azul): el sistema genera el directorio desde catálogos activos sin mantener una carátula manual.
 
 ### `GET /api/admin/directory`
 
@@ -493,8 +535,8 @@ Lista automáticamente los catálogos activos del directorio privado con metadat
 | Campo | Descripción |
 |-------|-------------|
 | `coverImageUrl` | URL firmada temporal si el catálogo tiene `coverImagePath` en bucket `product-images`; `null` si no hay imagen o falla la firma |
-| `sectionCount` | Cantidad de secciones; `0` hasta Fase 3 (`CatalogSection`) |
-| `offlineSync.status` | Placeholder `"unavailable"` hasta Fase 9 (modo offline) |
+| `sectionCount` | **Nombre legacy en API.** Cantidad de **carpetas** del catálogo; `0` hasta Fase 3 (`CatalogFolder`). En UI mostrar como carpetas, no como “secciones” |
+| `offlineSync.status` | Placeholder `"unavailable"` hasta Fase backend 9 (PRD §38) |
 | `generatedAt` | Momento en que se generó el directorio en el servidor |
 
 **Respuesta 401**
@@ -515,13 +557,15 @@ if (res.ok) {
 **Implementación:** `src/app/api/admin/directory/route.ts`  
 **Tipos:** `src/features/directory/types/directory.types.ts`
 
-> Solo se incluyen catálogos con `status = ACTIVE`, ordenados por `order` ascendente. Nuevos catálogos activos aparecen automáticamente sin cambios de código.
+> Solo se incluyen catálogos con `status = ACTIVE`, ordenados por `order` ascendente. Nuevos catálogos activos aparecen automáticamente sin cambios de código (PRD §50).
+
+**Evolución Fase 3:** cuando exista visibilidad por rol (PRD §9), los usuarios `CONSULTA` solo verán catálogos marcados como visibles. `sectionCount` reflejará solo carpetas visibles para ese rol.
 
 ---
 
 ## Auditoría (backend interno)
 
-**Fase:** 2.6 Auditoría (RNF §38.2)
+**Fase backend:** 2.6 · **RNF:** PRD §41.2 (seguridad)
 
 No hay endpoint REST de consulta de logs en esta fase. El backend registra operaciones importantes en la tabla `AuditLog` de forma interna.
 
@@ -534,6 +578,8 @@ No hay endpoint REST de consulta de logs en esta fase. El backend registra opera
 | `USER_CREATED` / `USER_UPDATED` / `USER_ACTIVATED` / `USER_DEACTIVATED` | Gestión de usuarios (ADMIN) |
 | `FILE_UPLOADED` | Subida vía `uploadFile()` cuando se pasa `auditContext: { userId }` |
 
+**Reservados (Fase 3+):** `CATALOG_*`, `FOLDER_*`, `IMPORT_PUBLISHED`, etc.
+
 Los fallos al escribir en `AuditLog` no interrumpen la operación principal.
 
 ---
@@ -542,14 +588,16 @@ Los fallos al escribir en `AuditLog` no interrumpen la operación principal.
 
 Rutas relevantes para el frontend; no exponen JSON pero definen la navegación.
 
-### Sitio público
+### Sitio público (PRD §10, RF-003)
 
 | Ruta | Acceso | Estado | Uso |
 |------|--------|--------|-----|
-| `/` | Pública | Implementada | Landing de Rothamel Repuestos (hero, marcas, contacto, mapa) |
+| `/` | Pública | Implementada | Landing de Rothamel Repuestos (hero, marcas, contacto, mapa). Sin información de catálogos privados |
 | `/login` | Pública | Implementada | Alias: redirección server-side a `/auth/login` |
 
-### Autenticación
+Dominio de producción: `www.rothamelrepuestos.com.ar` (RF-004).
+
+### Autenticación (PRD §11)
 
 | Ruta | Acceso | Estado | Uso |
 |------|--------|--------|-----|
@@ -565,15 +613,15 @@ Rutas relevantes para el frontend; no exponen JSON pero definen la navegación.
 | `redirectTo` | Ruta interna tras login exitoso (default `/admin`). El middleware la añade al redirigir desde rutas protegidas |
 | `error` | Opcional; `logout_failed` si falla `logoutFormAction`; `auth_callback_failed` si falla el callback |
 
-### Panel admin (protegido)
+### Panel admin (protegido — PRD §12)
 
 Navegación lateral definida en `src/features/admin/data/adminNav.ts`. Tras login, destino por defecto: `/admin`.
 
 | Ruta | Acceso | Estado | Uso |
 |------|--------|--------|-----|
 | `/admin` | Protegida | Placeholder | Home del panel (`AdminPlaceholder`) |
-| `/admin/catalogos` | Protegida | Placeholder | Sección "Catálogos" (nav) — futura integración con directorio / Fase 3 |
-| `/admin/archivos` | Protegida | Placeholder | Sección "Archivos" (nav) — futura Fase 8 |
+| `/admin/catalogos` | Protegida | Placeholder | **Catálogos** — navegación catálogo → carpeta → tabla de productos (PRD §13) |
+| `/admin/archivos` | Protegida | Placeholder | **Archivos** — Excel subidos, historial e informes (PRD §37) |
 | `/admin/users` | Protegida | Sin página | Gestión de usuarios (Server Actions existentes, UI pendiente) |
 
 ### APIs REST
@@ -612,24 +660,77 @@ Resumen tras el merge del PR #3 (landing, login y shell del panel).
 
 ## Pendiente de implementación
 
-Las siguientes áreas están documentadas en el plan backend pero **aún no tienen endpoints** disponibles para el frontend:
+Áreas documentadas en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) y [`PRD.md`](./PRD.md) **sin endpoints aún**. Cuando se implementen, ampliar este documento.
 
-| Área | Fase | Referencia |
-|------|------|------------|
-| Catálogos y secciones | 3 | CRUD, columnas dinámicas, registros paginados |
-| Importador Excel | 4 | Upload multipart, análisis, publicación |
-| Imágenes de producto | 5 | Extracción, asociación, URLs firmadas |
-| Administración manual | 6 | CRUD de registros y equivalencias |
-| Búsqueda y filtros | 7 | Búsqueda por sección, catálogo y global |
-| Archivos subidos | 8 | Historial, descarga, reimportación |
-| Sincronización offline | 9 | Manifiestos, deltas, versionado |
+### Fase backend 3 — Catálogos y carpetas (PRD fase 2)
 
-Cuando se implementen nuevas fases, este documento debe ampliarse con las secciones correspondientes.
+| Recurso previsto | Tipo | RF / PRD |
+|------------------|------|----------|
+| CRUD catálogos (crear, editar, ordenar, ocultar, borrar, **vaciar**) | Server Actions | RF-006, §14 |
+| CRUD carpetas (crear, renombrar, ordenar, ocultar, borrar, **vaciar**) | Server Actions | RF-007, §14 |
+| Configuración de columnas por carpeta | Server Actions | RF-042, §36 |
+| Visibilidad catálogo / carpeta / columna | Server Actions + filtros en GET | RF-010–RF-012, §9 |
+| Listado paginado de productos por carpeta | Route Handler | RF-005, §13 |
+| Metadatos de catálogo con carpetas | Route Handler | §13 |
+| Renombrar `sectionCount` → `folderCount` (opcional) | Breaking change API | Alineación terminología |
+
+### Fase backend 4 — Importador (PRD fase 5, §17–§18)
+
+| Recurso previsto | Tipo | RF / PRD |
+|------------------|------|----------|
+| Upload Excel (+ ZIP / imágenes) | Route Handler multipart | RF-013, RF-014 |
+| Asistente 6 pasos: destino, vista previa, combinar/reemplazar/aplicar | Server Actions | RF-015–RF-025 |
+| Estados de importación y publicación segura | Interno + consulta estado | RF-044, §21 |
+| Informe de importación | Route Handler | §22 |
+
+### Fase backend 5 — Imágenes (PRD fase 6, §23–§28)
+
+| Recurso previsto | Tipo | RF / PRD |
+|------------------|------|----------|
+| URLs firmadas miniatura / vista ampliada | Route Handler | RF-032 |
+| Revisión de imágenes pendientes / ambiguas | Server Actions + GET | RF-031, §27 |
+| Asociación manual imagen ↔ producto | Server Actions | §27 |
+
+### Fase backend 6 — Administración manual (PRD fase 3, §15)
+
+| Recurso previsto | Tipo | RF / PRD |
+|------------------|------|----------|
+| CRUD productos (crear, editar, eliminar, duplicar) | Server Actions | RF-008, RF-009 |
+| Gestión de equivalencias | Server Actions | RF-033, §29 |
+| Imágenes manuales en producto | Server Actions | §23.3 |
+
+### Fase backend 7 — Búsqueda y filtros (PRD fase 4, §29–§36)
+
+| Recurso previsto | Tipo | RF / PRD |
+|------------------|------|----------|
+| Búsqueda por carpeta | Route Handler | RF-035, §31 |
+| Búsqueda por catálogo | Route Handler | RF-036, §32 |
+| Búsqueda global | Route Handler | RF-037, RF-038, §33 |
+| Filtros acumulables por columna + pills | Route Handler / query params | RF-039–RF-041, §34 |
+| Filtros globales (campos mapeados) | Route Handler | §35 |
+
+### Fase backend 8 — Archivos subidos (PRD fase 7, §37)
+
+| Recurso previsto | Tipo | RF / PRD |
+|------------------|------|----------|
+| Listado de archivos con metadatos | Route Handler | RF-043 |
+| Descarga de original (URL firmada) | Route Handler | RF-043 |
+| Reprocesar / combinar / reemplazar desde archivo | Server Actions | §37 |
+
+### Fase backend 9 — Offline (PRD fase 8, §38–§39)
+
+| Recurso previsto | Tipo | RF / PRD |
+|------------------|------|----------|
+| Verificar actualizaciones desde última sync | Route Handler | RF-047 |
+| Descargar snapshot / delta sincronizable | Route Handler | RF-045, RF-047 |
+| Bloqueo de mutaciones offline | Guards server-side | RF-046 |
+| Estado de sync en directorio (`offlineSync`) | Extensión `GET /api/admin/directory` | §38.3 |
 
 ---
 
 ## Referencias
 
+- Producto: [`docs/PRD.md`](./PRD.md)
 - Plan backend: [`docs/BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md)
 - Schemas de validación auth: [`src/features/auth/schemas/auth.schemas.ts`](../src/features/auth/schemas/auth.schemas.ts)
 - Schemas de validación usuarios: [`src/features/users/schemas/user.schemas.ts`](../src/features/users/schemas/user.schemas.ts)
