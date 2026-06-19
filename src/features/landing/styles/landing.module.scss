@@ -1,0 +1,49 @@
+@use "./variables" as *;
+@use "./animations" as *;
+
+.animateFadeIn {
+  animation: fadeIn 0.7s ease-out both;
+}
+
+.animateSlideUp {
+  animation: slideUpFade 0.8s ease-out both;
+}
+
+.animateDelay1 {
+  animation-delay: 0.15s;
+}
+
+.animateDelay2 {
+  animation-delay: 0.3s;
+}
+
+.animateDelay3 {
+  animation-delay: 0.45s;
+}
+
+.section {
+  padding: $section-padding-y $section-padding-x;
+}
+
+.container {
+  width: 100%;
+  max-width: $container-max;
+  margin: 0 auto;
+}
+
+.sectionTitle {
+  font-family: $font-sans;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 700;
+  color: $navy;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.sectionSubtitle {
+  margin-top: 0.75rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: $text-muted;
+  max-width: 36rem;
+}

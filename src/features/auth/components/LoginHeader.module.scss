@@ -1,0 +1,22 @@
+@use "../styles/variables" as *;
+
+.header {
+  flex-shrink: 0;
+  background: $white;
+  border-bottom: 1px solid $border-soft;
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  min-height: $header-height;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (max-width: 900px) {
+  .inner {
+    padding-left: $section-padding-x;
+    padding-right: $section-padding-x;
+  }
+}

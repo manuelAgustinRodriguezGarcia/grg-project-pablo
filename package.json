@@ -15,6 +15,7 @@
     "storage:setup": "pnpm dlx tsx scripts/setup-storage-buckets.ts",
     "storage:verify": "pnpm dlx tsx scripts/verify-storage.ts",
     "auth:verify": "pnpm dlx tsx scripts/verify-auth.ts",
+    "seed:admin": "pnpm dlx tsx scripts/seed-admin-user.ts",
     "postinstall": "prisma generate"
   },
   "pnpm": {
@@ -31,6 +32,8 @@
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tanstack/react-table": "^8.21.3",
+    "bootstrap-icons": "^1.13.1",
+    "lucide-react": "^1.21.0",
     "next": "16.2.9",
     "pg": "^8.21.0",
     "react": "19.2.4",

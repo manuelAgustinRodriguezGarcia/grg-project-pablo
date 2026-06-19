@@ -1,0 +1,81 @@
+@use "../styles/variables" as *;
+
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 100;
+  background: $white;
+  border-bottom: 1px solid $border-soft;
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4.5rem;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (max-width: 900px) {
+  .inner {
+    padding-left: $section-padding-x;
+    padding-right: $section-padding-x;
+  }
+}
+
+.logoLink {
+  display: inline-flex;
+  border-radius: $radius-sm;
+  transition: opacity 0.2s ease;
+
+  &:focus-visible {
+    outline: 2px solid $green;
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+}
+
+.loginButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 999px;
+  background: $navy;
+  color: $white;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+
+  &:focus-visible {
+    outline: 2px solid $green;
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: $navy-dark;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .loginButton {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+}

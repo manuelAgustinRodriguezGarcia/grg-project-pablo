@@ -38,7 +38,61 @@ function mapSignInError(message: string): AuthError {
     );
   }
 
-  return new AuthError(message, "AUTH_PROVIDER_ERROR");
+  if (normalized.includes("invalid api key")) {
+    return new AuthError(
+      "No se pudo conectar con el servicio de autenticación. Contacta al administrador.",
+      "AUTH_PROVIDER_ERROR",
+    );
+  }
+
+  if (normalized.includes("email not confirmed")) {
+    return new AuthError(
+      "Debes confirmar tu correo antes de ingresar.",
+      "AUTH_PROVIDER_ERROR",
+    );
+  }
+
+  if (
+    normalized.includes("too many requests") ||
+    normalized.includes("rate limit")
+  ) {
+    return new AuthError(
+      "Demasiados intentos. Espera un momento e inténtalo de nuevo.",
+      "AUTH_PROVIDER_ERROR",
+    );
+  }
+
+  if (
+    normalized.includes("network") ||
+    normalized.includes("fetch failed") ||
+    normalized.includes("failed to fetch")
+  ) {
+    return new AuthError(
+      "No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
+      "AUTH_PROVIDER_ERROR",
+    );
+  }
+
+  return new AuthError(
+    "No se pudo iniciar sesión. Inténtalo de nuevo más tarde.",
+    "AUTH_PROVIDER_ERROR",
+  );
+}
+
+function mapAuthProviderError(message: string): AuthError {
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("invalid api key")) {
+    return new AuthError(
+      "No se pudo conectar con el servicio de autenticación. Contacta al administrador.",
+      "AUTH_PROVIDER_ERROR",
+    );
+  }
+
+  return new AuthError(
+    "Ocurrió un error con el servicio de autenticación. Inténtalo de nuevo.",
+    "AUTH_PROVIDER_ERROR",
+  );
 }
 
 function resolveDisplayName(
@@ -124,7 +178,7 @@ export class AuthService {
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      throw new AuthError(error.message, "AUTH_PROVIDER_ERROR");
+      throw mapAuthProviderError(error.message);
     }
 
     if (user) {
@@ -152,7 +206,7 @@ export class AuthService {
     });
 
     if (error) {
-      throw new AuthError(error.message, "AUTH_PROVIDER_ERROR");
+      throw mapAuthProviderError(error.message);
     }
   }
 
@@ -163,7 +217,7 @@ export class AuthService {
     });
 
     if (error) {
-      throw new AuthError(error.message, "AUTH_PROVIDER_ERROR");
+      throw mapAuthProviderError(error.message);
     }
   }
 }

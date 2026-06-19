@@ -15,10 +15,6 @@ function toActionError(error: unknown): AuthActionResult<never> {
     return { success: false, error: error.message, code: error.code };
   }
 
-  if (error instanceof Error) {
-    return { success: false, error: error.message };
-  }
-
   return { success: false, error: "Ocurrió un error inesperado." };
 }
 
@@ -37,10 +33,11 @@ export async function signInAction(
 
   try {
     await authService.signInWithPassword(parsed.data);
-    redirect(redirectTo);
   } catch (error) {
     return toActionError(error);
   }
+
+  redirect(redirectTo);
 }
 
 export async function signOutAction(): Promise<AuthActionResult<SignOutResult>> {

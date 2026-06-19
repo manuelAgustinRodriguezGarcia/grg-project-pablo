@@ -1,0 +1,218 @@
+@use "../styles/variables" as *;
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 26rem;
+}
+
+.card {
+  width: 100%;
+  padding: clamp(1.75rem, 3vw, 2.25rem);
+  border-radius: $radius-xl;
+  border: 1px solid $border-soft;
+  background: $white;
+  box-shadow: $shadow-card;
+  text-align: left;
+}
+
+.cardHeader {
+  margin-bottom: 1.5rem;
+}
+
+.errorAlert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: $radius-md;
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.errorIcon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: #dc2626;
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #b91c1c;
+  text-align: left;
+}
+
+.title {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: $navy;
+  text-align: left;
+}
+
+.intro {
+  margin: 0.75rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: $text-muted;
+  text-align: left;
+}
+
+.field + .field {
+  margin-top: 1.25rem;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $navy;
+  text-align: left;
+}
+
+.inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 0.9rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: $text-muted;
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  padding: 0.8rem 2.75rem 0.8rem 2.65rem;
+  border: 1px solid $border-soft;
+  border-radius: $radius-md;
+  background: $bg-page;
+  color: $text-body;
+  font-family: $font-sans;
+  font-size: 0.95rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &::placeholder {
+    color: rgba($text-muted, 0.75);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $blue-main;
+    box-shadow: 0 0 0 3px rgba($blue-main, 0.15);
+  }
+}
+
+.eyeButton {
+  position: absolute;
+  right: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  color: $text-muted;
+  cursor: pointer;
+}
+
+.eyeIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+
+  &:focus-visible {
+    outline: 2px solid $navy;
+    outline-offset: 3px;
+  }
+}
+
+.primaryButton {
+  margin-top: 1.5rem;
+  border: 2px solid transparent;
+  background: $blue-main;
+  color: $white;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.secondaryButton {
+  border: 2px solid $border-soft;
+  background: $white;
+  color: $navy;
+  text-decoration: none;
+  cursor: pointer;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgba($blue-main, 0.1);
+      border-color: rgba($blue-main, 0.1);
+    }
+  }
+}
+
+.buttonIcon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background: $border-soft;
+}
+
+.dividerText {
+  font-size: 0.85rem;
+  color: $text-muted;
+  text-transform: lowercase;
+}
+
+@media (max-width: 480px) {
+  .wrapper {
+    max-width: none;
+  }
+}

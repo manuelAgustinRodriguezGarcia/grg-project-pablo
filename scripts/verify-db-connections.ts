@@ -25,6 +25,25 @@ async function verifyConnection(
   }
 }
 
+async function verifySupabaseAnonKeyForAuth(
+  url: string,
+  apiKey: string,
+): Promise<void> {
+  const client = createClient(url, apiKey);
+  const { error } = await client.auth.signInWithPassword({
+    email: "verify-key@example.com",
+    password: "invalid-password-for-key-check",
+  });
+
+  if (error?.message.toLowerCase().includes("invalid api key")) {
+    throw new Error(
+      "La clave anon/publishable no es válida para autenticación. En Supabase → Settings → API Keys, copia la clave publishable o anon y actualiza NEXT_PUBLIC_SUPABASE_ANON_KEY en .env.",
+    );
+  }
+
+  console.log("✓ Supabase (anon key): válida para autenticación");
+}
+
 async function verifySupabaseClient(
   label: string,
   url: string | undefined,
@@ -58,6 +77,10 @@ async function main(): Promise<void> {
     "Supabase (anon key)",
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+  await verifySupabaseAnonKeyForAuth(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
   await verifySupabaseClient(
     "Supabase (service role key)",

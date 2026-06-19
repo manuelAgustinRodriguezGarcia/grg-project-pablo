@@ -1,0 +1,434 @@
+@use "../styles/variables" as *;
+
+$contact-bg: #f6f8fb;
+$blue-soft: rgba(0, 102, 217, 0.1);
+$blue-main: #0066d9;
+
+.contactSection {
+  width: 100%;
+  padding: $section-padding-y $section-padding-x;
+  background: $contact-bg;
+}
+
+.container {
+  width: 100%;
+  max-width: $container-max;
+  margin: 0 auto;
+}
+
+.sectionHeader {
+  margin-bottom: clamp(2rem, 4vw, 2.75rem);
+}
+
+.eyebrow {
+  font-family: $font-sans;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: $green;
+  text-transform: uppercase;
+}
+
+.heading {
+  margin-top: 0.65rem;
+  font-family: $font-sans;
+  font-size: clamp(1.85rem, 3.5vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: $navy;
+}
+
+.supporting {
+  margin-top: 0.85rem;
+  font-size: clamp(1rem, 1.5vw, 1.1rem);
+  line-height: 1.7;
+  color: $text-muted;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .supporting {
+    white-space: normal;
+  }
+}
+
+.contactGrid {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.25rem, 2.5vw, 1.5rem);
+}
+
+.topRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(1.25rem, 2.5vw, 1.5rem);
+  align-items: stretch;
+}
+
+.contactCard {
+  display: flex;
+  height: 100%;
+  padding: 1.5rem;
+  border-radius: $radius-lg;
+  border: 1px solid $border-soft;
+  background: $white;
+  box-shadow: $shadow-card;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: $shadow-soft;
+    }
+  }
+}
+
+.whatsappCard {
+  position: relative;
+  border-color: rgba($green, 0.18);
+  box-shadow: $shadow-soft;
+
+  .cardContent {
+    align-items: center;
+  }
+}
+
+.whatsappCardLink {
+  display: none;
+}
+
+.hoursCard {
+  .cardIconWrap {
+    align-self: center;
+  }
+}
+
+.cardContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  width: 100%;
+  min-height: 100%;
+}
+
+.cardText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.whatsappCardText {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.whatsappInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.cardIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: $radius-md;
+  background: $blue-soft;
+  color: $blue-main;
+}
+
+.whatsappIconWrap {
+  background: rgba($green, 0.12);
+  color: $green;
+}
+
+.cardIcon {
+  width: 1.65rem;
+  height: 1.65rem;
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: $navy;
+}
+
+.whatsappPhone {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: $navy;
+}
+
+.whatsappButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: fit-content;
+  flex-shrink: 0;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  background: $green;
+  color: $white;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.25s ease;
+
+  &:focus-visible {
+    outline: 2px solid $navy;
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: $green-hover;
+    }
+  }
+}
+
+.whatsappButtonIcon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
+.infoBody {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: $text-body;
+
+  p + p {
+    margin-top: 0.75rem;
+  }
+
+  strong {
+    color: $navy;
+    font-weight: 600;
+  }
+}
+
+.hoursBody {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.25rem 2rem;
+
+  p + p {
+    margin-top: 0;
+  }
+}
+
+.hoursBlock {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.hoursDay {
+  margin: 0;
+  font-weight: 600;
+  color: $navy;
+}
+
+.hoursTime {
+  margin: 0;
+}
+
+.mapCard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-radius: $radius-xl;
+  border: 1px solid $border-soft;
+  background: $white;
+  box-shadow: $shadow-soft;
+  overflow: hidden;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 36px rgba(6, 43, 95, 0.1);
+    }
+  }
+}
+
+.mapHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1.25rem;
+  border-bottom: 1px solid $border-soft;
+}
+
+.mapHeaderIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: $radius-md;
+  background: $blue-soft;
+  color: $blue-main;
+}
+
+.mapHeaderIcon {
+  width: 1.65rem;
+  height: 1.65rem;
+}
+
+.mapHeaderText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.mapTitle {
+  font-family: $font-sans;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: $navy;
+}
+
+.mapBusinessName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: $text-body;
+}
+
+.mapAddress {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: $text-muted;
+}
+
+.mapAddressIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: $blue-main;
+}
+
+.directionsLink {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: $blue-main;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s ease;
+
+  &:focus-visible {
+    outline: 2px solid $green;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      color: $navy;
+    }
+  }
+}
+
+.mapEmbed {
+  flex: 1;
+  min-height: clamp(14rem, 28vw, 20rem);
+  background: #e8f0f8;
+}
+
+.mapIframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: clamp(14rem, 28vw, 20rem);
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .topRow {
+    grid-template-columns: 1fr;
+  }
+
+  .hoursBody {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .whatsappCardLink {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+
+    &:focus-visible {
+      outline: 2px solid $navy;
+      outline-offset: 3px;
+    }
+  }
+
+  .whatsappCardText {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .whatsappButton {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .whatsappCardText {
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contactCard,
+  .mapCard {
+    transition: none;
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        transform: none;
+      }
+    }
+  }
+
+  .whatsappButton {
+    transition: none;
+  }
+}
