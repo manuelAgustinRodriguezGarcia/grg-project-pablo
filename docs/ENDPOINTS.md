@@ -1,7 +1,7 @@
 # ENDPOINTS — Referencia para frontend
 
-> Documento derivado de las tareas **completadas** en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) (Fase 2: base del sistema).  
-> Última actualización: 2026-06-18.
+> Documento derivado de las tareas **completadas** en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) (Fase 2: base del sistema), alineado con la integración frontend del PR #3.  
+> Última actualización: 2026-06-19.
 
 ---
 
@@ -13,6 +13,7 @@
 - [Directorio de catálogos](#directorio-de-catálogos)
 - [Auditoría (backend interno)](#auditoría-backend-interno)
 - [Rutas de la aplicación (no API)](#rutas-de-la-aplicación-no-api)
+- [Estado de integración frontend](#estado-de-integración-frontend)
 - [Pendiente de implementación](#pendiente-de-implementación)
 
 ---
@@ -25,14 +26,17 @@
 |------|---------------|---------------------|
 | **Route Handler (REST)** | Consultas desde cliente con `fetch`, hooks de datos, verificación de sesión | `src/app/api/**/route.ts` |
 | **Server Action** | Formularios y mutaciones desde componentes React del panel admin | `src/features/**/actions/*.ts` |
+| **Server Action (formulario)** | Login y logout con `<form action={...}>` y `useActionState` | `login-form.action.ts`, `logout-form.action.ts` |
 | **Callback de auth** | Flujo OAuth / enlace de recuperación de contraseña (redirección) | `src/app/auth/callback/route.ts` |
 
 ### Autenticación
 
 - La sesión se gestiona con **cookies de Supabase** (`@supabase/ssr`). No hace falta enviar tokens manualmente en las peticiones del mismo origen.
 - Rutas bajo `/admin` y `/api/admin` están **protegidas por middleware**. Sin sesión válida:
-  - Páginas → redirección a `/auth/login?redirectTo=...`
+  - Páginas → redirección a `/auth/login?redirectTo=<ruta-original>`
   - APIs → `401 { "error": "No autenticado" }`
+- Usuario ya autenticado que visita `/auth/login` → redirección a `redirectTo` (query) o `/admin` por defecto.
+- El layout de admin (`src/app/admin/layout.tsx`) además valida sesión con `requireAuthOrRedirect("/admin")` en el servidor.
 - Roles: `ADMIN` | `CONSULTA`. Las acciones de usuarios exigen rol `ADMIN`.
 
 ### Formato de respuesta (Server Actions)
@@ -132,7 +136,7 @@ Inicio de sesión con correo y contraseña.
 |---|---|
 | **Import** | `@/features/auth/actions/auth.actions` |
 | **Auth** | Pública |
-| **Uso típico** | Formulario en `/auth/login` |
+| **Uso típico** | Invocación directa; en UI se usa `loginFormAction` (ver abajo) |
 
 **Entrada**
 
@@ -164,6 +168,35 @@ Inicio de sesión con correo y contraseña.
 
 ---
 
+### Server Action: `loginFormAction`
+
+Wrapper de `signInAction` para formularios con `useActionState` y campos `FormData`.
+
+| | |
+|---|---|
+| **Import** | `@/features/auth/actions/login-form.action` |
+| **Auth** | Pública |
+| **Uso en frontend** | `LoginFormCard` en `/auth/login` |
+
+**Campos del formulario (`FormData`)**
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `email` | string | Correo del usuario |
+| `password` | string | Contraseña |
+| `redirectTo` | string (opcional) | Ruta interna tras login; default `/admin`. Solo rutas que empiezan con `/` y no con `//` |
+
+**Respuesta**
+
+| Caso | Resultado |
+|------|-----------|
+| Éxito | Redirección server-side (igual que `signInAction`); el cliente no recibe `{ success: true }` |
+| Error | `{ success: false, error: string, code?: string }` — mostrado en `LoginFormCard` |
+
+**Implementación:** `src/features/auth/components/LoginFormCard.tsx`
+
+---
+
 ### Server Action: `signOutAction`
 
 Cierra la sesión actual.
@@ -172,11 +205,11 @@ Cierra la sesión actual.
 |---|---|
 | **Import** | `@/features/auth/actions/auth.actions` |
 | **Auth** | Sesión válida |
-| **Uso típico** | Botón "Cerrar sesión" en el panel |
+| **Uso típico** | Lógica de cierre de sesión; en UI se usa `logoutFormAction` (ver abajo) |
 
 **Entrada:** ninguna
 
-**Respuesta 200 (éxito)**
+**Respuesta (éxito)**
 
 ```ts
 {
@@ -188,7 +221,30 @@ Cierra la sesión actual.
 }
 ```
 
-> El frontend debe escuchar `signal === "grg:offline:clear"` para limpiar IndexedDB cuando exista el modo offline (Fase 9).
+> El frontend debe escuchar `signal === "grg:offline:clear"` para limpiar IndexedDB cuando exista el modo offline (Fase 9). Con `logoutFormAction` la respuesta no llega al cliente porque hay redirección inmediata.
+
+---
+
+### Server Action: `logoutFormAction`
+
+Cierra sesión y redirige al login. Usado desde `<form action={logoutFormAction}>`.
+
+| | |
+|---|---|
+| **Import** | `@/features/auth/actions/logout-form.action` |
+| **Auth** | Sesión válida |
+| **Uso en frontend** | `AdminSignOutButton` en el sidebar del panel |
+
+**Entrada:** ninguna (acción de formulario sin campos)
+
+**Comportamiento**
+
+| Caso | Resultado |
+|------|-----------|
+| Éxito | Redirección a `/auth/login` |
+| Error al cerrar sesión | Redirección a `/auth/login?error=logout_failed` |
+
+**Implementación:** `src/features/auth/components/AdminSignOutButton.tsx`
 
 ---
 
@@ -267,7 +323,7 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sessi
 ## Gestión de usuarios (panel admin)
 
 **Fase:** 2.4 Usuarios (RF-002)  
-**Uso en frontend:** pantalla de administración de usuarios (`/admin/users` o equivalente). Solo rol `ADMIN`.
+**Uso en frontend:** pantalla de administración de usuarios (`/admin/users`). Solo rol `ADMIN`. **UI pendiente** — las Server Actions están listas para integrar.
 
 Todas las acciones importan desde `@/features/users/actions/user.actions`.
 
@@ -401,7 +457,7 @@ Desactiva un usuario y cierra todas sus sesiones activas en Supabase.
 ## Directorio de catálogos
 
 **Fase:** 2.5 Directorio (RF-004)  
-**Uso en frontend:** pantalla principal post-login (`/admin`) con tarjetas de catálogos activos.
+**Uso en frontend:** API disponible; **aún no consumida** en UI. La vista de catálogos (`/admin/catalogos`) es placeholder. Integración prevista en Fase 3.
 
 ### `GET /api/admin/directory`
 
@@ -486,14 +542,71 @@ Los fallos al escribir en `AuditLog` no interrumpen la operación principal.
 
 Rutas relevantes para el frontend; no exponen JSON pero definen la navegación.
 
-| Ruta | Acceso | Uso |
-|------|--------|-----|
-| `/auth/login` | Pública | Inicio de sesión |
-| `/auth/forgot-password` | Pública | Solicitar recuperación |
-| `/auth/reset-password` | Pública (tras callback) | Nueva contraseña |
-| `/auth/callback` | Pública | Callback Supabase |
-| `/admin/*` | Protegida | Panel privado |
-| `/api/admin/*` | Protegida | APIs REST del panel |
+### Sitio público
+
+| Ruta | Acceso | Estado | Uso |
+|------|--------|--------|-----|
+| `/` | Pública | Implementada | Landing de Rothamel Repuestos (hero, marcas, contacto, mapa) |
+| `/login` | Pública | Implementada | Alias: redirección server-side a `/auth/login` |
+
+### Autenticación
+
+| Ruta | Acceso | Estado | Uso |
+|------|--------|--------|-----|
+| `/auth/login` | Pública | Implementada | Login (`LoginFormCard` + `loginFormAction`). Query: `redirectTo` |
+| `/auth/forgot-password` | Pública | Sin página | Definida en middleware; formulario pendiente |
+| `/auth/reset-password` | Pública (tras callback) | Sin página | Definida en middleware; formulario pendiente |
+| `/auth/callback` | Pública | Implementada | Callback Supabase (enlace de correo) |
+
+**Query params en `/auth/login`**
+
+| Param | Descripción |
+|-------|-------------|
+| `redirectTo` | Ruta interna tras login exitoso (default `/admin`). El middleware la añade al redirigir desde rutas protegidas |
+| `error` | Opcional; `logout_failed` si falla `logoutFormAction`; `auth_callback_failed` si falla el callback |
+
+### Panel admin (protegido)
+
+Navegación lateral definida en `src/features/admin/data/adminNav.ts`. Tras login, destino por defecto: `/admin`.
+
+| Ruta | Acceso | Estado | Uso |
+|------|--------|--------|-----|
+| `/admin` | Protegida | Placeholder | Home del panel (`AdminPlaceholder`) |
+| `/admin/catalogos` | Protegida | Placeholder | Sección "Catálogos" (nav) — futura integración con directorio / Fase 3 |
+| `/admin/archivos` | Protegida | Placeholder | Sección "Archivos" (nav) — futura Fase 8 |
+| `/admin/users` | Protegida | Sin página | Gestión de usuarios (Server Actions existentes, UI pendiente) |
+
+### APIs REST
+
+| Prefijo | Acceso |
+|---------|--------|
+| `/api/admin/*` | Protegida (cookie de sesión) |
+
+---
+
+## Estado de integración frontend
+
+Resumen tras el merge del PR #3 (landing, login y shell del panel).
+
+| Recurso backend | Integrado en UI | Componente / ruta |
+|-----------------|-----------------|-------------------|
+| `loginFormAction` | Sí | `LoginFormCard` → `/auth/login` |
+| `logoutFormAction` | Sí | `AdminSignOutButton` → sidebar admin |
+| `requireAuthOrRedirect` | Sí | `src/app/admin/layout.tsx` |
+| `GET /api/admin/session` | No | — |
+| `GET /api/admin/directory` | No | — |
+| `signInAction` / `signOutAction` directos | No | Usados vía wrappers de formulario |
+| `requestPasswordResetAction` | No | Falta `/auth/forgot-password` |
+| `updatePasswordAction` | No | Falta `/auth/reset-password` |
+| Acciones de usuarios (`user.actions`) | No | Falta `/admin/users` |
+
+**Constantes de rutas en código**
+
+| Constante | Valor | Archivo |
+|-----------|-------|---------|
+| `LOGIN_PATH` (landing) | `/auth/login` | `src/features/landing/data/landingData.ts` |
+| `AUTH_LOGIN_PATH` | `/auth/login` | `src/server/auth/config.ts` |
+| `ADMIN_USER_EMAIL_FALLBACK` | `admin@rothamelrepuestos.com.ar` | `src/features/admin/data/adminNav.ts` |
 
 ---
 
@@ -521,4 +634,7 @@ Cuando se implementen nuevas fases, este documento debe ampliarse con las seccio
 - Schemas de validación auth: [`src/features/auth/schemas/auth.schemas.ts`](../src/features/auth/schemas/auth.schemas.ts)
 - Schemas de validación usuarios: [`src/features/users/schemas/user.schemas.ts`](../src/features/users/schemas/user.schemas.ts)
 - Tipos del directorio: [`src/features/directory/types/directory.types.ts`](../src/features/directory/types/directory.types.ts)
+- Navegación del panel: [`src/features/admin/data/adminNav.ts`](../src/features/admin/data/adminNav.ts)
+- Login (formulario): [`src/features/auth/actions/login-form.action.ts`](../src/features/auth/actions/login-form.action.ts)
+- Logout (formulario): [`src/features/auth/actions/logout-form.action.ts`](../src/features/auth/actions/logout-form.action.ts)
 - Configuración de rutas protegidas: [`src/server/auth/config.ts`](../src/server/auth/config.ts)
