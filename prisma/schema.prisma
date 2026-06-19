@@ -26,6 +26,22 @@ enum CatalogStatus {
   HIDDEN
 }
 
+enum FolderStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ColumnDataType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  DATE
+  DATETIME
+  IMAGE
+  FORMULA
+  UNKNOWN
+}
+
 /// Perfil local sincronizado con Supabase Auth (`auth.users.id` → `User.id`).
 model User {
   id           String     @id @db.Uuid
@@ -42,19 +58,104 @@ model User {
   @@index([status])
 }
 
-/// Catálogo visible en el directorio privado (estructura mínima Fase 2).
+/// Catálogo visible en el directorio privado.
 model Catalog {
-  id             String        @id @default(cuid())
-  name           String
-  description    String?
-  coverImagePath String?
-  status         CatalogStatus @default(ACTIVE)
-  order          Int           @default(0)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id                  String        @id @default(cuid())
+  name                String
+  description         String?
+  coverImagePath      String?
+  status              CatalogStatus @default(ACTIVE)
+  order               Int           @default(0)
+  visibleToNormalUser Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  folders CatalogFolder[]
 
   @@index([status])
   @@index([order])
+  @@index([status, visibleToNormalUser])
+}
+
+/// Carpeta dentro de un catálogo (generalmente una hoja Excel).
+model CatalogFolder {
+  id                  String       @id @default(cuid())
+  catalogId           String
+  name                String
+  description         String?
+  status              FolderStatus @default(ACTIVE)
+  order               Int          @default(0)
+  visibleToNormalUser Boolean      @default(true)
+  searchConfig        Json?
+  filterConfig        Json?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  catalog  Catalog        @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  columns  FolderColumn[]
+  products Product[]
+
+  @@unique([catalogId, name])
+  @@index([catalogId])
+  @@index([catalogId, order])
+  @@index([status])
+  @@index([visibleToNormalUser])
+}
+
+/// Columna configurada dentro de una carpeta.
+model FolderColumn {
+  id                    String         @id @default(cuid())
+  folderId              String
+  originalName          String
+  displayName           String
+  internalKey           String
+  dataType              ColumnDataType @default(UNKNOWN)
+  order                 Int            @default(0)
+  visibleToNormalUser   Boolean        @default(true)
+  isSearchable          Boolean        @default(false)
+  isGloballySearchable  Boolean        @default(false)
+  isFilterable          Boolean        @default(false)
+  isGloballyFilterable  Boolean        @default(false)
+  isAdminEditable       Boolean        @default(true)
+  isPrimaryCode         Boolean        @default(false)
+  isEquivalence         Boolean        @default(false)
+  isDescription         Boolean        @default(false)
+  isImageCode           Boolean        @default(false)
+  isRequired            Boolean        @default(false)
+  isReadOnly            Boolean        @default(false)
+  width                 Int?
+  format                String?
+  unit                  String?
+  label                 String?
+  globalFieldKey        String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  folder CatalogFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, internalKey])
+  @@index([folderId])
+  @@index([folderId, order])
+}
+
+/// Producto (fila de datos) dentro de una carpeta.
+model Product {
+  id               String   @id @default(cuid())
+  folderId         String
+  primaryCode      String?
+  normalizedCode   String?
+  description      String?
+  dynamicData      Json     @default("{}")
+  originalText     String?  @db.Text
+  indexedText      String?  @db.Text
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  folder CatalogFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+  @@index([normalizedCode])
+  @@index([dynamicData], type: Gin)
 }
 
 /// Registro de operaciones importantes (login, CRUD, importaciones, etc.).
