@@ -2,65 +2,78 @@
 
 ## Tabla de contenidos
 
-- [Parte I — Contexto y visión](#parte-i--contexto-y-visión)
-  - [1. Información general](#1-información-general)
-  - [2. Contexto actual](#2-contexto-actual)
-  - [3. Archivos de muestra analizados](#3-archivos-de-muestra-analizados)
-  - [4. Objetivos](#4-objetivos)
-  - [5. Principios del producto](#5-principios-del-producto)
-- [Parte II — Modelo de dominio y usuarios](#parte-ii--modelo-de-dominio-y-usuarios)
-  - [6. Estructura conceptual del contenido](#6-estructura-conceptual-del-contenido)
-  - [7. Usuarios y permisos](#7-usuarios-y-permisos)
-- [Parte III — Experiencia de usuario](#parte-iii--experiencia-de-usuario)
-  - [8. Landing pública](#8-landing-pública)
-  - [9. Autenticación](#9-autenticación)
-  - [10. Directorio general](#10-directorio-general)
-  - [11. Navegación de catálogos](#11-navegación-de-catálogos)
-  - [12. Gestión de catálogos y secciones](#12-gestión-de-catálogos-y-secciones)
-  - [13. Gestión manual de registros](#13-gestión-manual-de-registros)
-- [Parte IV — Importación de datos](#parte-iv--importación-de-datos)
-  - [14. Importación de archivos Excel](#14-importación-de-archivos-excel)
-  - [15. Fórmulas de Excel](#15-fórmulas-de-excel)
-  - [16. Macros de Visual Basic](#16-macros-de-visual-basic)
-  - [17. Actualización y reimportación](#17-actualización-y-reimportación)
-  - [18. Publicación segura de importaciones](#18-publicación-segura-de-importaciones)
-  - [19. Informe de importación](#19-informe-de-importación)
-- [Parte V — Imágenes](#parte-v--imágenes)
-  - [20. Gestión de imágenes](#20-gestión-de-imágenes)
-  - [21. Imágenes embebidas](#21-imágenes-embebidas)
-  - [22. Imágenes externas](#22-imágenes-externas)
-  - [23. Formatos de imagen](#23-formatos-de-imagen)
-  - [24. Asociación y revisión de imágenes](#24-asociación-y-revisión-de-imágenes)
-  - [25. Visualización de imágenes](#25-visualización-de-imágenes)
-- [Parte VI — Búsqueda, códigos y filtros](#parte-vi--búsqueda-códigos-y-filtros)
-  - [26. Códigos y equivalencias](#26-códigos-y-equivalencias)
-  - [27. Normalización de búsqueda](#27-normalización-de-búsqueda)
-  - [28. Búsqueda por sección](#28-búsqueda-por-sección)
-  - [29. Búsqueda por catálogo](#29-búsqueda-por-catálogo)
-  - [30. Búsqueda global](#30-búsqueda-global)
-  - [31. Filtros por sección](#31-filtros-por-sección)
-  - [32. Filtros globales](#32-filtros-globales)
-  - [33. Configuración de columnas](#33-configuración-de-columnas)
-- [Parte VII — Archivos y modo offline](#parte-vii--archivos-y-modo-offline)
-  - [34. Archivos subidos](#34-archivos-subidos)
-  - [35. Modo offline](#35-modo-offline)
-  - [36. Imágenes offline](#36-imágenes-offline)
-- [Parte VIII — Requerimientos](#parte-viii--requerimientos)
-  - [37. Requerimientos funcionales](#37-requerimientos-funcionales)
-  - [38. Requerimientos no funcionales](#38-requerimientos-no-funcionales)
-- [Parte IX — Arquitectura técnica](#parte-ix--arquitectura-técnica)
-  - [39. Modelo conceptual de datos](#39-modelo-conceptual-de-datos)
-  - [40. Estrategia de almacenamiento](#40-estrategia-de-almacenamiento)
-  - [41. Stack tecnológico propuesto](#41-stack-tecnológico-propuesto)
-  - [42. Arquitectura propuesta](#42-arquitectura-propuesta)
-  - [43. Servicios principales](#43-servicios-principales)
-  - [44. Flujo resumido de importación](#44-flujo-resumido-de-importación)
-- [Parte X — Planificación y cierre](#parte-x--planificación-y-cierre)
-  - [45. Roadmap funcional](#45-roadmap-funcional)
-  - [46. Funciones fuera del alcance](#46-funciones-fuera-del-alcance)
-  - [47. Criterios de aceptación](#47-criterios-de-aceptación)
-  - [48. Criterios de éxito](#48-criterios-de-éxito)
-  - [49. Condiciones y supuestos](#49-condiciones-y-supuestos)
+* [Parte I — Contexto y visión](#parte-i--contexto-y-visión)
+
+  * [1. Información general](#1-información-general)
+  * [2. Contexto actual](#2-contexto-actual)
+  * [3. Estado actual del desarrollo](#3-estado-actual-del-desarrollo)
+  * [4. Archivos de muestra analizados](#4-archivos-de-muestra-analizados)
+  * [5. Objetivos](#5-objetivos)
+  * [6. Principios del producto](#6-principios-del-producto)
+* [Parte II — Modelo de dominio y usuarios](#parte-ii--modelo-de-dominio-y-usuarios)
+
+  * [7. Estructura conceptual del contenido](#7-estructura-conceptual-del-contenido)
+  * [8. Usuarios y permisos](#8-usuarios-y-permisos)
+  * [9. Visibilidad por rol](#9-visibilidad-por-rol)
+* [Parte III — Experiencia de usuario](#parte-iii--experiencia-de-usuario)
+
+  * [10. Landing pública](#10-landing-pública)
+  * [11. Autenticación](#11-autenticación)
+  * [12. Panel privado](#12-panel-privado)
+  * [13. Navegación de catálogos y carpetas](#13-navegación-de-catálogos-y-carpetas)
+  * [14. Gestión de catálogos y carpetas](#14-gestión-de-catálogos-y-carpetas)
+  * [15. Gestión manual de productos](#15-gestión-manual-de-productos)
+* [Parte IV — Importación de datos](#parte-iv--importación-de-datos)
+
+  * [16. Importación de archivos Excel](#16-importación-de-archivos-excel)
+  * [17. Asistente de importación](#17-asistente-de-importación)
+  * [18. Combinar, reemplazar e importar listas](#18-combinar-reemplazar-e-importar-listas)
+  * [19. Fórmulas de Excel](#19-fórmulas-de-excel)
+  * [20. Macros de Visual Basic](#20-macros-de-visual-basic)
+  * [21. Publicación segura de importaciones](#21-publicación-segura-de-importaciones)
+  * [22. Informe de importación](#22-informe-de-importación)
+* [Parte V — Imágenes](#parte-v--imágenes)
+
+  * [23. Gestión de imágenes](#23-gestión-de-imágenes)
+  * [24. Imágenes embebidas](#24-imágenes-embebidas)
+  * [25. Imágenes externas](#25-imágenes-externas)
+  * [26. Formatos de imagen](#26-formatos-de-imagen)
+  * [27. Asociación y revisión de imágenes](#27-asociación-y-revisión-de-imágenes)
+  * [28. Visualización ampliada de imágenes](#28-visualización-ampliada-de-imágenes)
+* [Parte VI — Búsqueda, códigos y filtros](#parte-vi--búsqueda-códigos-y-filtros)
+
+  * [29. Códigos y equivalencias](#29-códigos-y-equivalencias)
+  * [30. Normalización de búsqueda](#30-normalización-de-búsqueda)
+  * [31. Búsqueda por carpeta](#31-búsqueda-por-carpeta)
+  * [32. Búsqueda por catálogo](#32-búsqueda-por-catálogo)
+  * [33. Búsqueda global](#33-búsqueda-global)
+  * [34. Filtros acumulables por columna](#34-filtros-acumulables-por-columna)
+  * [35. Filtros globales](#35-filtros-globales)
+  * [36. Configuración de columnas](#36-configuración-de-columnas)
+* [Parte VII — Archivos y modo offline](#parte-vii--archivos-y-modo-offline)
+
+  * [37. Archivos subidos](#37-archivos-subidos)
+  * [38. Modo offline](#38-modo-offline)
+  * [39. Imágenes offline](#39-imágenes-offline)
+* [Parte VIII — Requerimientos](#parte-viii--requerimientos)
+
+  * [40. Requerimientos funcionales](#40-requerimientos-funcionales)
+  * [41. Requerimientos no funcionales](#41-requerimientos-no-funcionales)
+* [Parte IX — Arquitectura técnica](#parte-ix--arquitectura-técnica)
+
+  * [42. Modelo conceptual de datos](#42-modelo-conceptual-de-datos)
+  * [43. Estrategia de almacenamiento](#43-estrategia-de-almacenamiento)
+  * [44. Stack tecnológico propuesto](#44-stack-tecnológico-propuesto)
+  * [45. Arquitectura propuesta](#45-arquitectura-propuesta)
+  * [46. Servicios principales](#46-servicios-principales)
+  * [47. Flujo resumido de importación](#47-flujo-resumido-de-importación)
+* [Parte X — Planificación y cierre](#parte-x--planificación-y-cierre)
+
+  * [48. Roadmap funcional](#48-roadmap-funcional)
+  * [49. Funciones fuera del alcance](#49-funciones-fuera-del-alcance)
+  * [50. Criterios de aceptación](#50-criterios-de-aceptación)
+  * [51. Criterios de éxito](#51-criterios-de-éxito)
+  * [52. Condiciones y supuestos](#52-condiciones-y-supuestos)
 
 ---
 
@@ -78,6 +91,16 @@ Pablo R.
 Casa de repuestos para camiones y vehículos pesados.
 Chaco, Argentina.
 
+#### Dominio
+
+El dominio definido para el proyecto será:
+
+```text
+www.rothamelrepuestos.com.ar
+```
+
+El dominio se encuentra disponible en NIC Argentina al momento de la planificación inicial.
+
 #### Tipo de producto
 
 Aplicación web privada para la administración y consulta de catálogos técnicos, acompañada por una landing institucional pública.
@@ -86,7 +109,7 @@ Aplicación web privada para la administración y consulta de catálogos técnic
 
 Reemplazar el sistema actual de archivos Excel transportados físicamente mediante pendrive por una plataforma web centralizada, segura y accesible desde diferentes ubicaciones.
 
-La plataforma deberá permitir que Pablo, su hermano y otros usuarios autorizados consulten la misma información actualizada sin depender de copias locales ni traslados físicos.
+La plataforma deberá permitir que Pablo, su hermano y otros usuarios autorizados consulten la misma información actualizada sin depender de copias locales, pendrives ni traslados físicos.
 
 ---
 
@@ -96,78 +119,107 @@ Pablo administra múltiples catálogos técnicos mediante archivos Excel.
 
 Cada archivo representa un rubro distinto y puede contener:
 
-- Varias hojas.
-- Diferentes cantidades de columnas.
-- Criterios de búsqueda particulares.
-- Códigos principales.
-- Códigos equivalentes.
-- Fórmulas.
-- Imágenes embebidas.
-- Imágenes externas vinculadas mediante rutas locales.
-- Macros de Visual Basic utilizadas para mostrar imágenes.
+* Varias hojas.
+* Diferentes cantidades de columnas.
+* Criterios de búsqueda particulares.
+* Códigos principales.
+* Códigos equivalentes.
+* Fórmulas.
+* Imágenes embebidas.
+* Imágenes externas vinculadas mediante rutas locales.
+* Macros de Visual Basic utilizadas para mostrar imágenes.
 
 Actualmente Pablo actualiza los archivos, los copia en un pendrive y recorre aproximadamente 60 kilómetros para llevar la versión actualizada a la casa de repuestos de su hermano.
 
 Este procedimiento provoca:
 
-- Dependencia de dispositivos físicos.
-- Duplicación de archivos.
-- Riesgo de utilizar versiones desactualizadas.
-- Posibilidad de pérdida o corrupción del pendrive.
-- Dificultad para mantener ambos locales sincronizados.
-- Pérdida de tiempo en traslados.
-- Búsquedas fragmentadas entre múltiples archivos.
-- Dependencia de Excel y de rutas locales específicas.
-- Dificultad para incorporar nuevos catálogos de manera ordenada.
+* Dependencia de dispositivos físicos.
+* Duplicación de archivos.
+* Riesgo de utilizar versiones desactualizadas.
+* Posibilidad de pérdida o corrupción del pendrive.
+* Dificultad para mantener ambos locales sincronizados.
+* Pérdida de tiempo en traslados.
+* Búsquedas fragmentadas entre múltiples archivos.
+* Dependencia de Excel y de rutas locales específicas.
+* Dificultad para incorporar nuevos catálogos de manera ordenada.
 
 ---
 
-### 3. Archivos de muestra analizados
+### 3. Estado actual del desarrollo
 
-#### 3.1 Rulemanes
+Al momento de esta actualización del PRD:
+
+* La landing pública ya se encuentra diseñada e implementada en su primera versión.
+* La página de login ya se encuentra diseñada y funcionando.
+* El panel administrativo ya cuenta con una estructura visual inicial.
+* La sección `/admin` ya está planteada con navegación lateral.
+* El sistema aún debe desarrollar el modelo real de catálogos, carpetas, productos, permisos, importación, filtros e imágenes.
+
+Este PRD reemplaza la versión anterior y establece el nuevo criterio funcional acordado con Pablo.
+
+---
+
+### 4. Archivos de muestra analizados
+
+#### 4.1 Rulemanes
 
 Características identificadas:
 
-- Archivo `.xlsx`.
-- Tres hojas.
-- Algunas hojas contienen imágenes pegadas directamente en las filas.
-- No depende de una carpeta externa de imágenes.
-- Las hojas poseen estructuras y columnas propias.
+* Archivo `.xlsx`.
+* Tres hojas.
+* Algunas hojas contienen imágenes pegadas directamente en las filas.
+* No depende de una carpeta externa de imágenes.
+* Las hojas poseen estructuras y columnas propias.
 
-Ejemplo de estructura:
+Estructura esperada dentro del sistema:
 
 ```text
-Rulemanes
-├── Rodamientos
-├── Tensores pesados
-└── Tensores livianos
+Catálogo: Rulemanes
+├── Carpeta: Rodamientos
+├── Carpeta: Tensores pesados
+└── Carpeta: Tensores livianos
 ```
 
-#### 3.2 Catálogo Azul
+Cada carpeta contendrá su propia lista de productos.
+
+---
+
+#### 4.2 Catálogo Azul
 
 Características identificadas:
 
-- Archivo `.xlsx`.
-- Gran cantidad de hojas.
-- La muestra recibida posee múltiples rubros y una hoja de índice.
-- Pablo indicó que el catálogo completo puede contener aproximadamente 35 pestañas.
-- Las imágenes están pegadas directamente en las hojas.
-- Algunas filas pueden tener varias imágenes relacionadas.
-- La hoja de índice funciona actualmente como carátula o directorio manual.
+* Archivo `.xlsx`.
+* Gran cantidad de hojas.
+* La muestra recibida posee múltiples rubros y una hoja de índice.
+* Pablo indicó que el catálogo completo puede contener aproximadamente 35 pestañas.
+* Las imágenes están pegadas directamente en las hojas.
+* Algunas filas pueden tener varias imágenes relacionadas.
+* La hoja de índice funciona actualmente como carátula o directorio manual.
 
-En la aplicación web, esa carátula no deberá mantenerse manualmente. El sistema deberá generar el directorio automáticamente según los catálogos y secciones disponibles.
+En la aplicación web, esa carátula no deberá mantenerse manualmente. El sistema deberá generar el directorio automáticamente según los catálogos y carpetas disponibles.
 
-#### 3.3 Embragues
+---
+
+#### 4.3 Embragues
 
 Características identificadas:
 
-- Archivo `.xlsm`.
-- Tres hojas principales.
-- Dos hojas utilizan imágenes almacenadas en una carpeta externa.
-- Las imágenes se relacionan mediante códigos o nombres de archivo.
-- El archivo contiene macros de Visual Basic.
-- Las macros muestran una imagen al desplazarse por determinadas filas.
-- Las rutas dependen actualmente de una carpeta local de Windows.
+* Archivo `.xlsm`.
+* Tres hojas principales.
+* Dos hojas utilizan imágenes almacenadas en una carpeta externa.
+* Las imágenes se relacionan mediante códigos o nombres de archivo.
+* El archivo contiene macros de Visual Basic.
+* Las macros muestran una imagen al desplazarse por determinadas filas.
+* Las rutas dependen actualmente de una carpeta local de Windows.
+
+Estructura esperada dentro del sistema:
+
+```text
+Catálogo: Embragues
+├── Carpeta: Placas
+├── Carpeta: Discos
+└── Carpeta: Crapodinas
+```
 
 Ejemplo de ruta utilizada por el sistema actual:
 
@@ -179,86 +231,106 @@ La plataforma web no deberá ejecutar estas macros ni depender de rutas locales.
 
 El comportamiento deberá reemplazarse por:
 
-- Asociación de imágenes mediante código.
-- Miniatura en la tabla o detalle.
-- Apertura ampliada de la imagen.
-- Almacenamiento centralizado.
+* Asociación de imágenes mediante código.
+* Miniatura en la tabla o detalle.
+* Apertura ampliada de la imagen.
+* Almacenamiento centralizado.
 
 ---
 
-### 4. Objetivos
+### 5. Objetivos
 
-#### 4.1 Objetivo general
+#### 5.1 Objetivo general
 
 Crear una plataforma web que permita:
 
-- Centralizar catálogos de diferentes estructuras.
-- Consultar la información desde ambos locales.
-- Incorporar nuevos archivos sin modificar el código.
-- Administrar productos manualmente.
-- Buscar dentro de cada sección.
-- Buscar simultáneamente en todos los catálogos.
-- Gestionar códigos equivalentes.
-- Procesar imágenes embebidas y externas.
-- Mantener los archivos originales respaldados.
-- Consultar información sin conexión en modo lectura.
-
-#### 4.2 Objetivos específicos
-
-- Eliminar el traslado de archivos mediante pendrive.
-- Mantener una única versión central de los catálogos.
-- Permitir que cada archivo conserve su estructura particular.
-- Representar cada hoja como una sección configurable.
-- Generar automáticamente el directorio general.
-- Permitir agregar nuevos catálogos desde el panel.
-- Permitir reemplazar versiones anteriores de un catálogo.
-- Procesar archivos Excel con estructuras variables.
-- Conservar columnas que no estén estandarizadas.
-- Extraer imágenes pegadas dentro de Excel.
-- Asociar imágenes externas mediante códigos o nombres.
-- Permitir correcciones manuales de asociaciones.
-- Normalizar códigos para mejorar las búsquedas.
-- Permitir filtros diferentes en cada sección.
-- Permitir filtros globales entre catálogos.
-- Mantener una interfaz simple para usuarios no técnicos.
+* Centralizar catálogos de diferentes estructuras.
+* Dividir cada catálogo en carpetas internas.
+* Consultar la información desde ambos locales.
+* Incorporar nuevos archivos sin modificar el código.
+* Administrar productos manualmente.
+* Buscar dentro de cada carpeta.
+* Buscar dentro de cada catálogo.
+* Buscar simultáneamente en todos los catálogos.
+* Gestionar códigos equivalentes.
+* Procesar imágenes embebidas y externas.
+* Mantener los archivos originales respaldados.
+* Consultar información sin conexión en modo lectura.
 
 ---
 
-### 5. Principios del producto
+#### 5.2 Objetivos específicos
 
-#### 5.1 Flexibilidad
+* Eliminar el traslado de archivos mediante pendrive.
+* Mantener una única versión central de los catálogos.
+* Permitir que cada archivo conserve su estructura particular.
+* Representar cada hoja relevante como una carpeta configurable.
+* Permitir editar nombres de catálogos y carpetas.
+* Generar automáticamente el directorio general.
+* Permitir agregar nuevos catálogos desde el panel.
+* Permitir agregar nuevas carpetas dentro de cada catálogo.
+* Permitir reemplazar o combinar listas de productos.
+* Procesar archivos Excel con estructuras variables.
+* Conservar columnas que no estén estandarizadas.
+* Extraer imágenes pegadas dentro de Excel.
+* Asociar imágenes externas mediante códigos o nombres.
+* Permitir correcciones manuales de asociaciones.
+* Normalizar códigos para mejorar las búsquedas.
+* Permitir filtros acumulables por columna.
+* Permitir que el usuario encuentre un producto en menos de 5 minutos mediante búsqueda y filtros.
+* Permitir controlar la visibilidad de catálogos, carpetas y columnas para usuarios normales.
+* Mantener una interfaz simple para usuarios no técnicos.
+
+---
+
+### 6. Principios del producto
+
+#### 6.1 Flexibilidad
 
 La plataforma no deberá depender de una estructura fija de Excel.
 
-Cada catálogo y cada sección podrán tener:
+Cada catálogo y cada carpeta podrán tener:
 
-- Columnas diferentes.
-- Filtros diferentes.
-- Campos buscables diferentes.
-- Distintas formas de asociar imágenes.
-- Reglas particulares de visualización.
+* Columnas diferentes.
+* Filtros diferentes.
+* Campos buscables diferentes.
+* Distintas formas de asociar imágenes.
+* Reglas particulares de visualización.
 
-#### 5.2 Preservación de la información
+---
+
+#### 6.2 Preservación de la información
 
 El sistema deberá conservar:
 
-- Archivo original.
-- Nombre original de columnas.
-- Contenido original de las celdas.
-- Saltos de línea relevantes.
-- Códigos escritos por Pablo.
-- Fórmulas originales cuando sea necesario.
-- Valor calculado de las fórmulas.
-- Imágenes.
-- Relación de cada imagen con su fila y columna de origen.
+* Archivo original.
+* Nombre original de columnas.
+* Contenido original de las celdas.
+* Saltos de línea relevantes.
+* Códigos escritos por Pablo.
+* Fórmulas originales cuando sea necesario.
+* Valor calculado de las fórmulas.
+* Imágenes.
+* Relación de cada imagen con su fila y columna de origen.
 
-#### 5.3 Simplicidad de uso
+---
+
+#### 6.3 Simplicidad de uso
 
 La plataforma deberá evitar que Pablo necesite conocimientos de bases de datos o programación.
 
-Las operaciones complejas deberán presentarse mediante asistentes guiados.
+Las operaciones complejas deberán presentarse mediante asistentes guiados, especialmente:
 
-#### 5.4 Seguridad
+* Importación de Excel.
+* Selección de catálogo y carpeta destino.
+* Creación de nuevas carpetas.
+* Reemplazo o combinación de listas.
+* Configuración de visibilidad.
+* Revisión de imágenes.
+
+---
+
+#### 6.4 Seguridad
 
 Los catálogos no serán públicos.
 
@@ -266,33 +338,54 @@ Solo podrán acceder usuarios autenticados y autorizados.
 
 ---
 
+#### 6.5 Rapidez operativa
+
+El sistema deberá estar diseñado para que un usuario pueda filtrar una lista amplia de productos y encontrar opciones relevantes en menos de 5 minutos, incluso cuando el cliente no conozca el código exacto del repuesto.
+
+---
+
 ## Parte II — Modelo de dominio y usuarios
 
-### 6. Estructura conceptual del contenido
+### 7. Estructura conceptual del contenido
 
-El sistema utilizará tres niveles principales:
+El sistema utilizará tres niveles principales visibles para el usuario:
 
 ```text
 Catálogo
-└── Sección
-    └── Registro
+└── Carpeta
+    └── Producto
 ```
 
-#### 6.1 Catálogo
+#### 7.1 Catálogo
 
-Representa un archivo o rubro principal.
+Representa un rubro principal o agrupación general.
+
+Ejemplos:
+
+* Rulemanes.
+* Embragues.
+* Frenos.
+* Encendido.
+* Catálogo Azul.
+
+Un catálogo puede contener una o varias carpetas.
+
+---
+
+#### 7.2 Carpeta
+
+Representa una subdivisión interna de un catálogo.
+
+Generalmente una carpeta corresponde a una hoja del Excel, aunque también podrá crearse manualmente desde el panel.
 
 Ejemplos:
 
-- Rulemanes.
-- Catálogo Azul.
-- Embragues.
-
-#### 6.2 Sección
-
-Representa generalmente una hoja del Excel.
-
-Ejemplos:
+```text
+Rulemanes
+├── Rodamientos
+├── Tensores pesados
+└── Tensores livianos
+```
 
 ```text
 Embragues
@@ -301,360 +394,719 @@ Embragues
 └── Crapodinas
 ```
 
-Cada sección podrá tener sus propias:
+Cada carpeta podrá tener sus propias:
 
-- Columnas.
-- Reglas de búsqueda.
-- Imágenes.
-- Filtros.
-- Configuraciones de visualización.
+* Columnas.
+* Productos.
+* Reglas de búsqueda.
+* Imágenes.
+* Filtros.
+* Configuración de visibilidad.
+* Configuraciones de visualización.
 
-#### 6.3 Registro
+Los nombres de las carpetas deberán ser editables únicamente por el administrador.
 
-Representa una fila de datos dentro de una sección.
+Ejemplo:
 
-Según el catálogo, un registro puede representar:
-
-- Un producto.
-- Un repuesto.
-- Una aplicación.
-- Una equivalencia.
-- Un conjunto técnico.
-- Una combinación de códigos.
-
-El sistema utilizará internamente el término `registro` para no asumir que todas las filas representan exactamente el mismo tipo de entidad.
+```text
+Tensores livianos → Tens. livianos
+```
 
 ---
 
-### 7. Usuarios y permisos
+#### 7.3 Producto
 
-#### 7.1 Visitante público
+Representa una fila de datos dentro de una carpeta.
+
+Según el catálogo, un producto puede representar:
+
+* Un repuesto.
+* Una aplicación.
+* Una equivalencia.
+* Un conjunto técnico.
+* Una combinación de códigos.
+* Una pieza con imágenes asociadas.
+
+Todos los productos deberán poder conservar columnas dinámicas provenientes de Excel.
+
+---
+
+#### 7.4 Relación conceptual
+
+```text
+Catálogo: Rulemanes
+├── Carpeta: Rodamientos
+│   ├── Producto 1
+│   ├── Producto 2
+│   └── Producto 3
+│
+├── Carpeta: Tensores pesados
+│   ├── Producto 1
+│   └── Producto 2
+│
+└── Carpeta: Tensores livianos
+    ├── Producto 1
+    └── Producto 2
+```
+
+---
+
+### 8. Usuarios y permisos
+
+El sistema tendrá dos tipos principales de usuarios:
+
+1. Administrador.
+2. Usuario normal.
+
+Ambos accederán mediante correo electrónico y contraseña.
+
+---
+
+#### 8.1 Visitante público
 
 Podrá acceder únicamente a la landing institucional.
 
-No podrá consultar catálogos ni productos.
+No podrá:
 
-#### 7.2 Administrador
+* Consultar catálogos.
+* Consultar carpetas.
+* Consultar productos.
+* Ver información técnica privada.
+* Descargar archivos.
+* Acceder al panel privado.
 
-Podrá:
+---
 
-- Iniciar sesión.
-- Consultar todos los catálogos.
-- Crear catálogos.
-- Editar catálogos.
-- Activar o desactivar catálogos.
-- Subir archivos.
-- Importar hojas.
-- Reemplazar catálogos o secciones.
-- Crear registros manualmente.
-- Editar registros.
-- Eliminar registros.
-- Administrar imágenes.
-- Configurar columnas.
-- Configurar filtros.
-- Configurar campos buscables.
-- Descargar archivos originales.
-- Gestionar usuarios.
-- Consultar errores de importación.
+#### 8.2 Administrador
 
-#### 7.3 Usuario de consulta
+El administrador podrá:
 
-Podrá:
+* Iniciar sesión.
+* Cerrar sesión.
+* Consultar todos los catálogos.
+* Ver catálogos ocultos para usuarios normales.
+* Crear catálogos.
+* Editar nombres de catálogos.
+* Borrar catálogos.
+* Vaciar catálogos.
+* Activar o desactivar visibilidad de catálogos para usuarios normales.
+* Crear carpetas dentro de catálogos.
+* Editar nombres de carpetas.
+* Borrar carpetas.
+* Vaciar carpetas.
+* Activar o desactivar visibilidad de carpetas para usuarios normales.
+* Subir archivos Excel.
+* Importar productos a una carpeta.
+* Combinar listas de productos.
+* Reemplazar listas de productos.
+* Crear productos manualmente.
+* Editar productos.
+* Eliminar productos.
+* Editar todas las columnas de un producto.
+* Reemplazar imágenes.
+* Eliminar imágenes.
+* Agregar imágenes.
+* Configurar columnas visibles para usuarios normales.
+* Configurar columnas buscables.
+* Configurar columnas filtrables.
+* Descargar archivos originales.
+* Consultar errores de importación.
+* Gestionar usuarios, si se habilita esta función en el panel.
 
-- Iniciar sesión.
-- Consultar el directorio.
-- Abrir catálogos y secciones.
-- Utilizar búsquedas.
-- Aplicar filtros.
-- Consultar imágenes.
-- Utilizar el modo offline previamente sincronizado.
+---
 
-No podrá realizar modificaciones.
+#### 8.3 Usuario normal
+
+El usuario normal podrá:
+
+* Iniciar sesión.
+* Cerrar sesión.
+* Consultar catálogos visibles.
+* Consultar carpetas visibles.
+* Consultar productos visibles.
+* Buscar productos.
+* Filtrar productos por columnas visibles y filtrables.
+* Abrir imágenes ampliadas.
+* Consultar información offline previamente sincronizada.
+
+El usuario normal no podrá:
+
+* Crear catálogos.
+* Editar catálogos.
+* Borrar catálogos.
+* Vaciar catálogos.
+* Crear carpetas.
+* Editar carpetas.
+* Borrar carpetas.
+* Vaciar carpetas.
+* Crear productos.
+* Editar productos.
+* Eliminar productos.
+* Subir Excel.
+* Importar listas.
+* Reemplazar listas.
+* Combinar listas.
+* Reemplazar imágenes.
+* Configurar columnas.
+* Modificar visibilidad.
+* Descargar archivos originales, salvo que el administrador lo habilite explícitamente.
+
+Los controles de edición no deberán mostrarse para usuarios normales.
+
+---
+
+### 9. Visibilidad por rol
+
+El sistema deberá permitir controlar qué información ve el usuario normal.
+
+El administrador siempre verá todo.
+
+La visibilidad deberá configurarse en tres niveles:
+
+```text
+Catálogo
+Carpeta
+Columna
+```
+
+---
+
+#### 9.1 Visibilidad de catálogos
+
+Cada catálogo tendrá un control:
+
+```text
+Visible para usuarios normales: Sí / No
+```
+
+Si un catálogo está oculto, el usuario normal no podrá verlo ni acceder a sus carpetas o productos.
+
+---
+
+#### 9.2 Visibilidad de carpetas
+
+Cada carpeta tendrá un control:
+
+```text
+Visible para usuarios normales: Sí / No
+```
+
+Si una carpeta está oculta, el usuario normal no podrá verla dentro del catálogo, aunque el catálogo esté visible.
+
+---
+
+#### 9.3 Visibilidad de columnas
+
+Cada columna tendrá un control:
+
+```text
+Visible para usuarios normales: Sí / No
+```
+
+Esto permitirá ocultar información interna como:
+
+* Costos.
+* Proveedor.
+* Observaciones internas.
+* Notas privadas.
+* Códigos internos.
+* Columnas administrativas.
+* Información que Pablo no quiera mostrar al usuario normal.
+
+---
+
+#### 9.4 Buscable y filtrable
+
+La visibilidad de una columna no será lo mismo que su capacidad de búsqueda o filtrado.
+
+Cada columna podrá configurarse como:
+
+* Visible para usuario normal.
+* Buscable.
+* Filtrable.
+* Buscable globalmente.
+* Filtrable globalmente.
+* Editable por administrador.
+
+Ejemplo:
+
+```text
+Montadora → visible, buscable, filtrable.
+Cantidad de estrías → visible, buscable, filtrable.
+Imagen → visible, no filtrable.
+Última actualización → visible para admin, no visible para user.
+Observaciones internas → visible para admin, no visible para user.
+```
 
 ---
 
 ## Parte III — Experiencia de usuario
 
-### 8. Landing pública
+### 10. Landing pública
 
-La aplicación contará con una landing institucional básica.
+La aplicación contará con una landing institucional básica ya desarrollada en su primera versión.
 
 Deberá incluir:
 
-- Logo.
-- Nombre del negocio.
-- Título principal.
-- Descripción.
-- Datos de contacto.
-- Horarios.
-- Dirección.
-- Ubicación.
-- Marcas comercializadas.
-- Botón de contacto.
-- Acceso al sistema.
+* Logo o marca temporal.
+* Nombre del negocio.
+* Título principal.
+* Descripción.
+* Datos de contacto.
+* Horarios.
+* Dirección.
+* Ubicación.
+* Marcas comercializadas.
+* Botón de contacto por WhatsApp.
+* Acceso al sistema mediante botón “Iniciar Sesión”.
 
 La landing no mostrará información privada de los catálogos.
 
-Los textos dirigidos al cliente deberán utilizar un tono formal y tratarlo de "Usted".
+Los textos dirigidos al cliente deberán utilizar un tono formal y tratarlo de “Usted”.
+
+El dominio público será:
+
+```text
+www.rothamelrepuestos.com.ar
+```
 
 ---
 
-### 9. Autenticación
+### 11. Autenticación
 
 El sistema deberá permitir:
 
-- Inicio de sesión con correo y contraseña.
-- Cierre de sesión.
-- Recuperación de contraseña.
-- Protección de rutas privadas.
-- Persistencia segura de la sesión.
-- Control de permisos.
-- Desactivación de usuarios.
-- Cierre de sesión en el dispositivo.
-- Eliminación de datos offline al cerrar sesión, cuando corresponda.
+* Inicio de sesión con correo electrónico y contraseña.
+* Cierre de sesión.
+* Recuperación de contraseña.
+* Protección de rutas privadas.
+* Persistencia segura de la sesión.
+* Control de permisos según rol.
+* Desactivación de usuarios.
+* Cierre de sesión en el dispositivo.
+* Eliminación de datos offline al cerrar sesión, cuando corresponda.
+
+La página de login ya se encuentra implementada en su primera versión.
 
 ---
 
-### 10. Directorio general
+### 12. Panel privado
 
-Después de iniciar sesión, el usuario accederá a un directorio general.
+Después de iniciar sesión, el usuario accederá al panel privado.
 
-Este directorio deberá mostrar automáticamente los catálogos activos.
+El panel tendrá una navegación lateral con acceso a:
 
-Cada catálogo podrá mostrarse mediante una tarjeta con:
+```text
+Catálogos
+Archivos
+```
 
-- Nombre.
-- Descripción.
-- Imagen o icono opcional.
-- Cantidad de secciones.
-- Fecha de última actualización.
-- Botón para abrir.
-- Estado de sincronización offline.
+La sección Catálogos concentrará la consulta y gestión de catálogos, carpetas y productos.
 
-Cuando el administrador agregue un nuevo catálogo, este deberá incorporarse automáticamente al directorio.
-
-No será necesario editar manualmente una hoja índice ni modificar el código de la aplicación.
-
-El administrador podrá configurar:
-
-- Orden de los catálogos.
-- Estado visible u oculto.
-- Título.
-- Descripción.
-- Imagen representativa.
-- Color o identificador visual opcional.
+La sección Archivos concentrará la administración de archivos Excel subidos, historial e informes de importación.
 
 ---
 
-### 11. Navegación de catálogos
+### 13. Navegación de catálogos y carpetas
 
-Al abrir un catálogo, el usuario podrá ver:
+El usuario podrá navegar mediante:
 
-- Nombre.
-- Descripción.
-- Fecha de actualización.
-- Lista de secciones.
-- Buscador del catálogo.
-- Acceso a filtros.
-- Estado de conexión.
+* Selector de catálogo.
+* Selector de carpeta.
+* Tabla de productos.
+* Buscador global.
+* Buscador dentro del catálogo o carpeta.
+* Filtros acumulables por columna.
+* Pills de filtros activos.
 
-Cada sección podrá abrirse como una tabla independiente.
+Ejemplo:
 
-En catálogos con muchas secciones se podrá utilizar:
+```text
+Catálogo: Embragues
+Carpeta: Discos
+Tabla: Productos de Discos
+```
 
-- Menú lateral.
-- Selector desplegable.
-- Pestañas.
-- Buscador de secciones.
+Cada carpeta podrá abrirse como una tabla independiente.
 
-La solución visual definitiva se definirá durante el diseño de interfaz.
+En catálogos con muchas carpetas se podrá utilizar:
+
+* Selector desplegable.
+* Menú lateral interno.
+* Buscador de carpetas.
+* Pestañas, si el diseño lo requiere.
 
 ---
 
-### 12. Gestión de catálogos y secciones
+### 14. Gestión de catálogos y carpetas
 
-#### 12.1 Gestión de catálogos
+#### 14.1 Gestión de catálogos
 
 El administrador podrá:
 
-- Crear un catálogo.
-- Editar su información.
-- Activarlo.
-- Desactivarlo.
-- Cambiar su orden.
-- Reemplazar su archivo.
-- Eliminarlo.
-- Asociarlo con archivos subidos.
+* Crear un catálogo.
+* Editar su nombre.
+* Editar su descripción.
+* Cambiar su orden.
+* Ocultarlo para usuarios normales.
+* Mostrarlo para usuarios normales.
+* Borrarlo.
+* Vaciarlo.
+* Asociarlo con archivos subidos.
 
-#### 12.2 Gestión de secciones
+---
+
+#### 14.2 Borrar catálogo
+
+Borrar un catálogo eliminará:
+
+* El catálogo.
+* Sus carpetas.
+* Sus productos.
+* Sus relaciones internas.
+
+Esta acción deberá mostrar un modal de confirmación.
+
+El archivo Excel original no deberá eliminarse automáticamente.
+
+---
+
+#### 14.3 Vaciar catálogo
+
+Vaciar un catálogo eliminará los productos contenidos en sus carpetas, pero conservará:
+
+* El catálogo.
+* Sus carpetas.
+* La configuración de columnas, cuando corresponda.
+* La configuración de visibilidad, cuando corresponda.
+
+Esta acción deberá mostrar un modal de confirmación.
+
+---
+
+#### 14.4 Gestión de carpetas
 
 El administrador podrá:
 
-- Crear secciones manualmente.
-- Crear secciones desde hojas de Excel.
-- Renombrar una sección.
-- Cambiar su orden.
-- Activarla o desactivarla.
-- Configurar sus columnas.
-- Configurar su buscador.
-- Configurar sus filtros.
-- Eliminarla.
+* Crear carpetas manualmente.
+* Crear carpetas desde hojas de Excel.
+* Renombrar una carpeta.
+* Cambiar su orden.
+* Ocultarla para usuarios normales.
+* Mostrarla para usuarios normales.
+* Configurar sus columnas.
+* Configurar su buscador.
+* Configurar sus filtros.
+* Borrarla.
+* Vaciarla.
 
-#### 12.3 Hojas auxiliares
+---
+
+#### 14.5 Borrar carpeta
+
+Borrar una carpeta eliminará:
+
+* La carpeta.
+* Sus productos.
+* Sus imágenes asociadas, según estrategia de almacenamiento.
+* Sus configuraciones propias.
+
+Esta acción deberá mostrar un modal de confirmación.
+
+---
+
+#### 14.6 Vaciar carpeta
+
+Vaciar una carpeta eliminará todos sus productos, pero conservará:
+
+* El nombre de la carpeta.
+* Su pertenencia al catálogo.
+* Su configuración.
+* Su visibilidad.
+
+Esta acción deberá mostrar un modal de confirmación.
+
+---
+
+#### 14.7 Hojas auxiliares
 
 Durante una importación, una hoja podrá marcarse como:
 
-- Sección importable.
-- Hoja índice.
-- Hoja auxiliar.
-- Hoja ignorada.
+* Carpeta importable.
+* Hoja índice.
+* Hoja auxiliar.
+* Hoja ignorada.
 
-Las hojas índice de Excel no tendrán que convertirse obligatoriamente en tablas dentro del sistema.
+Las hojas índice de Excel no tendrán que convertirse obligatoriamente en carpetas dentro del sistema.
 
 ---
 
-### 13. Gestión manual de registros
+### 15. Gestión manual de productos
 
 El administrador podrá:
 
-- Crear un registro.
-- Editar un registro.
-- Eliminar un registro.
-- Duplicar un registro.
-- Editar campos dinámicos.
-- Agregar equivalencias.
-- Eliminar equivalencias.
-- Agregar imágenes.
-- Reemplazar imágenes.
-- Consultar fecha de creación.
-- Consultar fecha de modificación.
+* Crear un producto.
+* Editar un producto.
+* Eliminar un producto.
+* Duplicar un producto.
+* Editar campos dinámicos.
+* Editar cualquier columna importada.
+* Agregar equivalencias.
+* Eliminar equivalencias.
+* Agregar imágenes.
+* Reemplazar imágenes.
+* Eliminar imágenes.
+* Consultar fecha de creación.
+* Consultar fecha de modificación.
 
-Los formularios deberán generarse según la configuración de columnas de cada sección.
+Los formularios deberán generarse según la configuración de columnas de cada carpeta.
+
+El usuario normal solo podrá visualizar los productos. No tendrá acceso a controles de edición.
 
 ---
 
 ## Parte IV — Importación de datos
 
-### 14. Importación de archivos Excel
+### 16. Importación de archivos Excel
 
-#### 14.1 Formatos iniciales
+#### 16.1 Formatos iniciales
 
 El MVP deberá admitir:
 
-- `.xlsx`
-- `.xlsm`
+* `.xlsx`
+* `.xlsm`
 
 Los archivos `.xlsm` serán procesados únicamente como fuentes de datos.
 
 El sistema:
 
-- No ejecutará macros.
-- No ejecutará código Visual Basic.
-- No dependerá de rutas locales.
-- No replicará internamente la lógica VBA.
+* No ejecutará macros.
+* No ejecutará código Visual Basic.
+* No dependerá de rutas locales.
+* No replicará internamente la lógica VBA.
 
 El soporte para `.xls` antiguo quedará sujeto a validación técnica.
 
-#### 14.2 Flujo general de importación
+---
 
-1. El administrador selecciona un archivo.
-2. El sistema valida su formato y tamaño.
-3. El archivo original se almacena como respaldo.
-4. Se analizan sus hojas.
-5. Se detectan columnas, filas, fórmulas e imágenes.
-6. Se muestra una vista previa.
-7. El administrador selecciona las hojas que desea importar.
-8. Cada hoja seleccionada se relaciona con una sección.
-9. Se configuran las columnas especiales.
-10. Se configuran las imágenes.
-11. Se valida la importación.
-12. El sistema procesa los datos en estado preliminar.
-13. Se muestra un resumen.
-14. El administrador confirma la publicación.
-15. Los datos pasan a estar disponibles para los usuarios.
+#### 16.2 Principio de importación
 
-#### 14.3 Selección de hojas
-
-El sistema deberá permitir seleccionar:
-
-- Una hoja.
-- Varias hojas.
-- Todas las hojas válidas.
-
-Cada hoja podrá:
-
-- Crear una sección nueva.
-- Reemplazar una sección existente.
-- Ser ignorada.
-- Marcarse como índice o auxiliar.
-
-#### 14.4 Detección de encabezados
-
-El sistema deberá intentar detectar:
-
-- Fila de encabezados.
-- Columnas vacías.
-- Encabezados duplicados.
-- Celdas combinadas.
-- Filas decorativas.
-- Títulos previos a la tabla.
-- Columnas sin nombre.
-
-Cuando la detección no sea segura, el administrador podrá seleccionar manualmente la fila de encabezados.
-
-#### 14.5 Mapeo de columnas
-
-El administrador podrá indicar qué columna corresponde a:
-
-- Código principal.
-- Código alternativo.
-- Equivalencias.
-- Descripción.
-- Marca.
-- Categoría.
-- Modelo.
-- Aplicación.
-- Fabricante.
-- Código de imagen.
-- Observaciones.
-- Otro campo global.
-
-Las columnas no mapeadas deberán poder conservarse como campos dinámicos.
-
-#### 14.6 Contenido dinámico
-
-El sistema no deberá exigir que todos los catálogos utilicen las mismas columnas.
-
-Los valores particulares se almacenarán de forma flexible.
-
-Ejemplo:
+Cada archivo Excel deberá importarse hacia un destino exacto:
 
 ```text
-Sección A:
-Código | Descripción | Marca | Aplicación
-
-Sección B:
-Número | Diámetro | Medida | Modelo | Imagen
-
-Sección C:
-Referencia | Equivalencias | Fabricante
+Catálogo elegido
+└── Carpeta elegida
 ```
 
-Las tres estructuras deberán coexistir sin generar nuevas tablas físicas en la base de datos.
+El sistema no deberá decidir automáticamente el destino final sin confirmación del administrador.
 
 ---
 
-### 15. Fórmulas de Excel
+### 17. Asistente de importación
+
+La importación se realizará mediante un asistente guiado por pasos.
+
+No se implementará como un único modal sobrecargado.
+
+---
+
+#### 17.1 Paso 1 — Subir archivo
+
+El administrador selecciona:
+
+* Archivo Excel.
+* ZIP de imágenes, cuando corresponda.
+* Imágenes sueltas, cuando corresponda.
+
+El sistema valida:
+
+* Formato.
+* Tamaño.
+* Extensión.
+* Tipo MIME.
+* Integridad básica.
+
+El archivo original se almacena como respaldo antes de procesarse.
+
+---
+
+#### 17.2 Paso 2 — Seleccionar destino
+
+Antes de aplicar los productos, el sistema deberá solicitar:
+
+```text
+Catálogo: [dropdown] [+]
+Carpeta: [dropdown dependiente] [+]
+```
+
+El dropdown de carpeta dependerá del catálogo seleccionado.
+
+El botón `+` junto al catálogo permitirá crear un catálogo nuevo.
+
+El botón `+` junto a la carpeta permitirá crear una carpeta nueva dentro del catálogo seleccionado.
+
+---
+
+#### 17.3 Paso 3 — Reconocer estructura
+
+El sistema deberá analizar el archivo y reconocer:
+
+* Hojas disponibles.
+* Columnas.
+* Filas.
+* Campos detectados.
+* Campo de referencia principal.
+* Posibles códigos únicos.
+* Fórmulas.
+* Imágenes embebidas.
+* Referencias a imágenes externas.
+* Filas vacías.
+* Encabezados duplicados.
+* Celdas combinadas.
+
+El sistema deberá mostrar una vista previa.
+
+---
+
+#### 17.4 Paso 4 — Mostrar productos reconocidos
+
+Una vez seleccionado el destino, el sistema mostrará una lista preliminar de productos reconocidos.
+
+La vista previa deberá incluir:
+
+* Columnas detectadas.
+* Productos reconocidos.
+* Código o campo de referencia.
+* Imágenes asociadas, si existen.
+* Productos con errores.
+* Productos posiblemente coincidentes con productos existentes.
+* Cantidad total de productos.
+* Cantidad de imágenes detectadas.
+* Cantidad de advertencias.
+
+---
+
+#### 17.5 Paso 5 — Resolver destino existente
+
+Si la carpeta seleccionada está vacía, el sistema deberá permitir aplicar la lista directamente después de la vista previa.
+
+Si la carpeta seleccionada ya contiene productos, el sistema deberá ofrecer:
+
+```text
+Combinar lista
+Reemplazar lista
+```
+
+Los productos coincidentes deberán resaltarse con color amarillo o una señal visual clara, indicando que ya existen dentro de la carpeta.
+
+---
+
+#### 17.6 Paso 6 — Confirmar operación
+
+Las operaciones que puedan modificar datos existentes deberán abrir un modal de confirmación.
+
+Deberán requerir confirmación:
+
+* Combinar lista cuando existan coincidencias.
+* Reemplazar lista.
+* Borrar catálogo.
+* Vaciar catálogo.
+* Borrar carpeta.
+* Vaciar carpeta.
+* Eliminar producto.
+* Eliminar imagen.
+
+---
+
+### 18. Combinar, reemplazar e importar listas
+
+#### 18.1 Carpeta vacía
+
+Si la carpeta destino está vacía, el sistema deberá mostrar:
+
+```text
+Cancelar
+Aplicar lista
+```
+
+`Cancelar` detendrá el proceso y no agregará productos.
+
+`Aplicar lista` cerrará el asistente y agregará los productos reconocidos a la carpeta seleccionada.
+
+No será necesario un modal de confirmación adicional en este caso, porque no existen productos previos que puedan perderse.
+
+---
+
+#### 18.2 Carpeta con productos existentes
+
+Si la carpeta destino ya contiene productos, el sistema deberá mostrar:
+
+```text
+Combinar lista
+Reemplazar lista
+```
+
+---
+
+#### 18.3 Combinar lista
+
+La acción `Combinar lista` agregará productos nuevos a la carpeta existente.
+
+Para el MVP, la estrategia recomendada será:
+
+```text
+Agregar productos nuevos y omitir productos coincidentes.
+```
+
+Los productos coincidentes deberán aparecer resaltados en amarillo en la previsualización.
+
+El sistema deberá mostrar un modal de confirmación antes de aplicar la combinación.
+
+---
+
+#### 18.4 Reemplazar lista
+
+La acción `Reemplazar lista` sustituirá la lista actual de productos por la lista reconocida desde el Excel.
+
+Antes de aplicar esta acción, el sistema deberá mostrar un modal de confirmación.
+
+El modal deberá indicar claramente:
+
+* Que se eliminarán o reemplazarán los productos actuales de esa carpeta.
+* Qué carpeta será afectada.
+* Cuántos productos actuales existen.
+* Cuántos productos nuevos serán cargados.
+* Que el archivo original quedará respaldado.
+
+La importación fallida no deberá borrar la lista vigente.
+
+---
+
+#### 18.5 Productos coincidentes
+
+El sistema deberá detectar posibles coincidencias mediante:
+
+* Código principal.
+* Código normalizado.
+* Código de imagen, si aplica.
+* Campo de referencia elegido.
+* Equivalencias.
+
+Cuando existan coincidencias, deberán destacarse visualmente.
+
+---
+
+### 19. Fórmulas de Excel
 
 Algunos archivos contienen fórmulas.
 
 El importador deberá:
 
-- Leer el valor calculado disponible.
-- Conservar opcionalmente la fórmula original.
-- No ejecutar fórmulas arbitrarias en el servidor.
-- Advertir cuando una fórmula no tenga un valor calculado guardado.
-- Permitir corregir manualmente el valor después de la importación.
+* Leer el valor calculado disponible.
+* Conservar opcionalmente la fórmula original.
+* No ejecutar fórmulas arbitrarias en el servidor.
+* Advertir cuando una fórmula no tenga un valor calculado guardado.
+* Permitir corregir manualmente el valor después de la importación.
 
 Ejemplo:
 
@@ -667,7 +1119,7 @@ El valor mostrado en la aplicación será el resultado calculado.
 
 ---
 
-### 16. Macros de Visual Basic
+### 20. Macros de Visual Basic
 
 El sistema no ejecutará ni trasladará macros de Visual Basic.
 
@@ -680,85 +1132,57 @@ Comportamiento actual:
 Moverse por una fila → la macro busca una imagen local → muestra una miniatura.
 
 Comportamiento web:
-Abrir o seleccionar el registro → el sistema consulta la imagen asociada → muestra una miniatura o galería.
+Abrir o seleccionar el producto → el sistema consulta la imagen asociada → muestra una miniatura o galería.
 ```
 
 Las macros podrán analizarse para comprender la relación entre datos e imágenes, pero no formarán parte de la aplicación final.
 
 ---
 
-### 17. Actualización y reimportación
-
-El administrador podrá utilizar un archivo para:
-
-- Crear un catálogo nuevo.
-- Crear nuevas secciones.
-- Reemplazar una sección.
-- Reemplazar un catálogo completo.
-
-Durante el MVP, las estrategias seguras serán:
-
-#### 17.1 Crear nuevo
-
-Genera un catálogo independiente.
-
-#### 17.2 Reemplazar sección
-
-Sustituye todos los registros de una sección seleccionada.
-
-#### 17.3 Reemplazar catálogo
-
-Sustituye todas las secciones seleccionadas del catálogo.
-
-Antes de reemplazar datos se deberá:
-
-- Mostrar una vista previa.
-- Informar qué se reemplazará.
-- Solicitar confirmación.
-- Conservar el archivo anterior.
-- Evitar que una importación fallida elimine la versión vigente.
-
-La actualización individual por coincidencia de códigos podrá evaluarse posteriormente debido a la variedad de estructuras y códigos.
-
----
-
-### 18. Publicación segura de importaciones
+### 21. Publicación segura de importaciones
 
 Las importaciones deberán procesarse primero en estado preliminar.
 
 Estados posibles:
 
-- Archivo almacenado.
-- Analizando.
-- Pendiente de configuración.
-- Procesando.
-- Pendiente de revisión.
-- Listo para publicar.
-- Publicado.
-- Fallido.
-- Cancelado.
+* Archivo almacenado.
+* Analizando.
+* Pendiente de destino.
+* Pendiente de configuración.
+* Procesando.
+* Pendiente de revisión.
+* Listo para aplicar.
+* Aplicado.
+* Publicado.
+* Fallido.
+* Cancelado.
 
-Los registros nuevos no deberán reemplazar la versión activa hasta que la importación se complete correctamente y sea confirmada.
+Los productos nuevos no deberán reemplazar la versión activa hasta que la importación se complete correctamente y sea confirmada.
 
 ---
 
-### 19. Informe de importación
+### 22. Informe de importación
 
 Al finalizar, el sistema deberá informar:
 
-- Hojas detectadas.
-- Hojas importadas.
-- Registros procesados.
-- Registros creados.
-- Registros omitidos.
-- Fórmulas detectadas.
-- Imágenes detectadas.
-- Imágenes asociadas.
-- Imágenes pendientes.
-- Imágenes rechazadas.
-- Columnas detectadas.
-- Errores.
-- Advertencias.
+* Archivo procesado.
+* Catálogo destino.
+* Carpeta destino.
+* Hojas detectadas.
+* Hojas importadas.
+* Productos procesados.
+* Productos creados.
+* Productos omitidos.
+* Productos coincidentes.
+* Fórmulas detectadas.
+* Imágenes detectadas.
+* Imágenes asociadas.
+* Imágenes pendientes.
+* Imágenes rechazadas.
+* Columnas detectadas.
+* Errores.
+* Advertencias.
+* Acción aplicada: importar, combinar o reemplazar.
 
 Los errores deberán presentarse con lenguaje comprensible.
 
@@ -766,9 +1190,9 @@ Los errores deberán presentarse con lenguaje comprensible.
 
 ## Parte V — Imágenes
 
-### 20. Gestión de imágenes
+### 23. Gestión de imágenes
 
-#### 20.1 Tipos de imágenes soportadas
+#### 23.1 Tipos de imágenes soportadas
 
 El sistema deberá manejar:
 
@@ -778,63 +1202,73 @@ El sistema deberá manejar:
 4. Imágenes cargadas manualmente.
 5. Varias imágenes dentro de una misma fila.
 
-#### 20.2 Imágenes opcionales
+---
 
-Un registro podrá tener:
+#### 23.2 Imágenes opcionales
 
-- Ninguna imagen.
-- Una imagen.
-- Varias imágenes.
+Un producto podrá tener:
+
+* Ninguna imagen.
+* Una imagen.
+* Varias imágenes.
 
 La ausencia de una imagen no deberá impedir la importación.
 
 ---
 
-### 21. Imágenes embebidas
+#### 23.3 Permisos sobre imágenes
+
+El administrador podrá:
+
+* Agregar imágenes.
+* Reemplazar imágenes.
+* Eliminar imágenes.
+* Marcar una imagen como principal.
+* Corregir asociaciones.
+* Ver imágenes ampliadas.
+
+El usuario normal solo podrá:
+
+* Ver miniaturas.
+* Abrir imágenes ampliadas.
+
+---
+
+### 24. Imágenes embebidas
 
 Las imágenes pegadas dentro de las hojas deberán extraerse durante la importación.
 
 El sistema deberá considerar:
 
-- Hoja de origen.
-- Fila de anclaje.
-- Columna de anclaje.
-- Posición de la imagen.
-- Encabezado de la columna.
-- Registro relacionado.
+* Hoja de origen.
+* Fila de anclaje.
+* Columna de anclaje.
+* Posición de la imagen.
+* Encabezado de la columna.
+* Producto relacionado.
 
 La columna de origen podrá utilizarse para identificar la función de la imagen.
-
-Ejemplo:
-
-```text
-Registro
-├── Imagen principal
-├── Imagen de componentes
-├── Imagen de reparación
-└── Imagen de aplicación
-```
 
 Cuando la asociación no sea segura, la imagen deberá quedar pendiente de revisión.
 
 ---
 
-### 22. Imágenes externas
+### 25. Imágenes externas
 
 Para archivos como Embragues, el administrador deberá poder subir:
 
-- El archivo Excel.
-- Un archivo ZIP con las imágenes.
-- Varias imágenes seleccionadas manualmente.
+* El archivo Excel.
+* Un archivo ZIP con las imágenes.
+* Varias imágenes seleccionadas manualmente.
 
 El sistema deberá intentar asociarlas mediante:
 
-- Código de imagen.
-- Código del producto.
-- Nombre del archivo.
-- Nombre sin extensión.
-- Columna configurada.
-- Regla de asociación definida en la importación.
+* Código de imagen.
+* Código del producto.
+* Nombre del archivo.
+* Nombre sin extensión.
+* Columna configurada.
+* Regla de asociación definida en la importación.
 
 Ejemplo:
 
@@ -852,101 +1286,113 @@ Las rutas locales originales de Windows no deberán almacenarse como dependencia
 
 ---
 
-### 23. Formatos de imagen
+### 26. Formatos de imagen
 
 El sistema admitirá inicialmente:
 
-- `.jpg`
-- `.jpeg`
-- `.png`
-- `.webp`
+* `.jpg`
+* `.jpeg`
+* `.png`
+* `.webp`
 
 Deberá validar:
 
-- Extensión.
-- Tipo MIME.
-- Tamaño.
-- Integridad.
-- Nombre de archivo.
-- Posibles duplicados.
+* Extensión.
+* Tipo MIME.
+* Tamaño.
+* Integridad.
+* Nombre de archivo.
+* Posibles duplicados.
 
 Una imagen dañada no deberá cancelar toda la importación.
 
 ---
 
-### 24. Asociación y revisión de imágenes
+### 27. Asociación y revisión de imágenes
 
 Cada imagen podrá tener uno de estos estados:
 
-- Asociada automáticamente.
-- Asociada manualmente.
-- Pendiente de revisión.
-- Archivo no encontrado.
-- Asociación ambigua.
-- Nombre duplicado.
-- Formato rechazado.
-- Eliminada.
+* Asociada automáticamente.
+* Asociada manualmente.
+* Pendiente de revisión.
+* Archivo no encontrado.
+* Asociación ambigua.
+* Nombre duplicado.
+* Formato rechazado.
+* Eliminada.
 
 El panel deberá incluir una sección de revisión de imágenes.
 
 El administrador podrá:
 
-- Ver imágenes no asociadas.
-- Buscar un registro.
-- Asociar la imagen manualmente.
-- Reemplazar una asociación.
-- Eliminar la imagen.
-- Marcar una imagen como principal.
-- Cambiar el orden.
-- Cambiar su etiqueta o función.
+* Ver imágenes no asociadas.
+* Buscar un producto.
+* Asociar la imagen manualmente.
+* Reemplazar una asociación.
+* Eliminar la imagen.
+* Marcar una imagen como principal.
+* Cambiar el orden.
+* Cambiar su etiqueta o función.
 
 ---
 
-### 25. Visualización de imágenes
+### 28. Visualización ampliada de imágenes
 
 Las tablas podrán mostrar miniaturas optimizadas.
 
-El detalle de un registro podrá mostrar:
+Cuando un producto tenga imagen, el usuario podrá hacer click sobre la miniatura para abrir un modal de vista ampliada.
 
-- Imagen principal.
-- Galería.
-- Vista ampliada.
-- Etiqueta de cada imagen.
-- Imagen de reemplazo cuando no exista una fotografía.
+El modal deberá:
 
-Las imágenes no deberán cargarse todas en tamaño completo dentro de una tabla.
+* Mostrar la imagen en mayor tamaño.
+* Tener una cruz de cierre arriba a la derecha.
+* Permitir cerrar con `Escape`.
+* Permitir cerrar haciendo click fuera del contenido.
+* No abrirse si el producto no tiene imagen.
+* No abrirse vacío.
+* Mantener buena visualización en desktop, tablet y mobile.
 
-Se utilizarán miniaturas para mantener el rendimiento.
+Si el producto tiene varias imágenes, el sistema podrá:
+
+* Mostrar la imagen seleccionada.
+* Permitir navegación entre imágenes, si se implementa galería.
+* Mostrar una galería en el detalle del producto.
+
+Para el MVP, la prioridad será abrir la imagen seleccionada en tamaño ampliado.
 
 ---
 
 ## Parte VI — Búsqueda, códigos y filtros
 
-### 26. Códigos y equivalencias
+### 29. Códigos y equivalencias
 
-#### 26.1 Código principal
+#### 29.1 Código principal
 
-Cada registro podrá tener un código principal opcional.
+Cada producto podrá tener un código principal opcional.
 
-#### 26.2 Equivalencias
+---
 
-Un registro podrá contener:
+#### 29.2 Equivalencias
 
-- Ninguna equivalencia.
-- Una equivalencia.
-- Múltiples equivalencias.
+Un producto podrá contener:
 
-#### 26.3 Celdas con múltiples códigos
+* Ninguna equivalencia.
+* Una equivalencia.
+* Múltiples equivalencias.
+
+---
+
+#### 29.3 Celdas con múltiples códigos
 
 Algunas celdas pueden contener varios códigos separados mediante:
 
-- Saltos de línea.
-- Signos igual.
-- Guiones.
-- Barras.
-- Espacios.
-- Paréntesis.
-- Texto descriptivo.
+* Saltos de línea.
+* Signos igual.
+* Guiones.
+* Barras.
+* Espacios.
+* Paréntesis.
+* Texto descriptivo.
 
 El sistema deberá conservar el contenido original y generar, en paralelo, valores normalizados para búsqueda.
 
@@ -967,19 +1413,19 @@ La separación automática deberá poder revisarse cuando el formato sea ambiguo
 
 ---
 
-### 27. Normalización de búsqueda
+### 30. Normalización de búsqueda
 
 La búsqueda deberá ignorar diferencias de formato que no alteren el código.
 
 Como mínimo:
 
-- Mayúsculas y minúsculas.
-- Espacios.
-- Guiones.
-- Guiones bajos.
-- Puntos.
-- Barras.
-- Separadores configurados.
+* Mayúsculas y minúsculas.
+* Espacios.
+* Guiones.
+* Guiones bajos.
+* Puntos.
+* Barras.
+* Separadores configurados.
 
 Ejemplo:
 
@@ -998,28 +1444,36 @@ Todos los términos se compararán mediante una versión normalizada.
 
 ---
 
-### 28. Búsqueda por sección
+### 31. Búsqueda por carpeta
 
-Cada sección tendrá su propio buscador.
+Cada carpeta tendrá su propio buscador.
 
 Podrá buscar sobre:
 
-- Código principal.
-- Equivalencias.
-- Descripción.
-- Marca.
-- Categoría.
-- Modelo.
-- Aplicación.
-- Columnas configuradas como buscables.
+* Código principal.
+* Equivalencias.
+* Descripción.
+* Marca.
+* Categoría.
+* Modelo.
+* Aplicación.
+* Columnas configuradas como buscables.
 
-Cada sección podrá definir qué columnas participan en la búsqueda.
+Cada carpeta podrá definir qué columnas participan en la búsqueda.
+
+Ejemplo:
+
+```text
+Catálogo: Embragues
+Carpeta: Discos
+Buscador: Buscar en Discos
+```
 
 ---
 
-### 29. Búsqueda por catálogo
+### 32. Búsqueda por catálogo
 
-Dentro de un catálogo se podrá realizar una búsqueda que recorra todas sus secciones.
+Dentro de un catálogo se podrá realizar una búsqueda que recorra todas sus carpetas visibles para el usuario.
 
 Ejemplo:
 
@@ -1032,75 +1486,161 @@ La búsqueda recorre:
 - Crapodinas
 ```
 
-Cada resultado deberá indicar la sección de origen.
+Cada resultado deberá indicar la carpeta de origen.
 
 ---
 
-### 30. Búsqueda global
+### 33. Búsqueda global
 
 La búsqueda global será una función principal del sistema.
 
 Permitirá buscar simultáneamente en:
 
-- Todos los catálogos activos.
-- Todas las secciones activas.
-- Códigos principales.
-- Equivalencias.
-- Descripciones.
-- Campos configurados como globalmente buscables.
+* Todos los catálogos activos.
+* Todas las carpetas activas.
+* Códigos principales.
+* Equivalencias.
+* Descripciones.
+* Campos configurados como globalmente buscables.
 
 Cada resultado deberá mostrar:
 
-- Catálogo.
-- Sección.
-- Código principal.
-- Descripción.
-- Coincidencia encontrada.
-- Imagen principal, cuando exista.
-- Acción para abrir el registro.
+* Catálogo.
+* Carpeta.
+* Código principal.
+* Descripción.
+* Coincidencia encontrada.
+* Imagen principal, cuando exista.
+* Acción para abrir el producto.
 
-El usuario no deberá conocer previamente en qué archivo o sección se encuentra el repuesto.
-
----
-
-### 31. Filtros por sección
-
-Cada sección podrá tener filtros diferentes.
-
-Ejemplos:
-
-- Marca.
-- Medida.
-- Modelo.
-- Fabricante.
-- Aplicación.
-- Tipo.
-- Diámetro.
-- Vehículo.
-- Categoría.
-
-El administrador podrá indicar qué columnas son filtrables.
-
-Los filtros concretos se definirán con Pablo para cada rubro.
+El usuario no deberá conocer previamente en qué archivo, catálogo o carpeta se encuentra el repuesto.
 
 ---
 
-### 32. Filtros globales
+### 34. Filtros acumulables por columna
 
-El buscador global contará con filtros comunes entre catálogos.
+Esta será una funcionalidad central del sistema.
+
+El objetivo es permitir que el usuario reduzca rápidamente una lista amplia de productos hasta encontrar opciones relevantes, incluso cuando el cliente no conoce el código exacto.
+
+Ejemplo:
+
+```text
+Catálogo: Embragues
+Carpeta: Discos
+
+Filtro 1:
+Montadora contiene "John D"
+
+Filtro 2:
+Cant. de estrías = 19
+
+Resultado:
+La lista se reduce de 100 productos a pocos resultados relevantes.
+```
+
+---
+
+#### 34.1 Funcionamiento visual
+
+Cada columna filtrable deberá mostrar un botón o ícono de filtro.
+
+El ícono podrá aparecer:
+
+* Al hacer hover sobre el nombre de la columna.
+* Siempre visible si la columna tiene un filtro activo.
+
+Al hacer click en el ícono, se abrirá un input flotante debajo del nombre de la columna.
+
+El usuario podrá escribir el valor a filtrar.
+
+El sistema aplicará el filtro de forma automática con un pequeño debounce de 250 a 300 ms.
+
+---
+
+#### 34.2 Estado activo del filtro
+
+Cuando una columna tenga un filtro activo:
+
+* El ícono deberá quedar visible.
+* La columna deberá mostrar un indicador visual.
+* El filtro deberá aparecer en la zona superior de filtros activos.
+
+Ejemplo:
+
+```text
+Filtrando por:
+[Cant. estrías: 19 ×] [Montadora: John D ×]
+```
+
+Cada pill deberá tener una cruz para eliminar ese filtro.
+
+---
+
+#### 34.3 Limpieza de filtros
+
+El usuario podrá eliminar filtros de tres maneras:
+
+* Borrando el texto dentro del input flotante.
+* Haciendo click en la cruz del pill correspondiente.
+* Usando una acción general de limpiar filtros, si se implementa.
+
+---
+
+#### 34.4 Tipos de filtro
+
+Para el MVP:
+
+* Columnas de texto: filtro por “contiene”.
+* Columnas numéricas: filtro por coincidencia exacta o contiene, según el dato importado.
+* Columnas con valores repetidos: podrán utilizar input o selector, según la implementación.
+
+El filtrado avanzado por rangos, mayor que, menor que o reglas complejas podrá evaluarse después.
+
+---
+
+#### 34.5 Filtros acumulables
+
+Los filtros deberán combinarse entre sí.
+
+Ejemplo:
+
+```text
+Montadora: John Deere
++
+Cant. estrías: 19
++
+Marca: Sachs
+```
+
+El resultado deberá cumplir todos los filtros activos.
+
+---
+
+#### 34.6 Meta de usabilidad
+
+El sistema deberá permitir encontrar un producto o reducir una búsqueda a un conjunto pequeño de opciones en menos de 5 minutos.
+
+Esto será un criterio central del éxito del sistema.
+
+---
+
+### 35. Filtros globales
+
+El buscador global podrá contar con filtros comunes entre catálogos.
 
 Los filtros definitivos se definirán posteriormente con Pablo.
 
 Ejemplos posibles:
 
-- Catálogo.
-- Sección.
-- Marca.
-- Categoría.
-- Fabricante.
-- Aplicación.
-- Con imagen.
-- Con equivalencias.
+* Catálogo.
+* Carpeta.
+* Marca.
+* Categoría.
+* Fabricante.
+* Aplicación.
+* Con imagen.
+* Con equivalencias.
 
 Como los nombres de las columnas varían, deberá existir un mapeo a campos globales.
 
@@ -1119,113 +1659,137 @@ Este mapeo no deberá realizarse automáticamente sin confirmación.
 
 ---
 
-### 33. Configuración de columnas
+### 36. Configuración de columnas
 
 Cada columna podrá configurarse como:
 
-- Visible.
-- Oculta.
-- Editable.
-- Buscable.
-- Buscable globalmente.
-- Filtrable.
-- Filtrable globalmente.
-- Código principal.
-- Equivalencia.
-- Descripción.
-- Código de imagen.
-- Obligatoria.
-- Solo lectura.
+* Visible para administrador.
+* Visible para usuario normal.
+* Editable por administrador.
+* Buscable.
+* Buscable globalmente.
+* Filtrable.
+* Filtrable globalmente.
+* Código principal.
+* Equivalencia.
+* Descripción.
+* Código de imagen.
+* Obligatoria.
+* Solo lectura.
 
 También se podrá configurar:
 
-- Nombre visible.
-- Orden.
-- Tipo de dato.
-- Ancho.
-- Formato.
-- Unidad.
-- Etiqueta.
+* Nombre original.
+* Nombre visible.
+* Orden.
+* Tipo de dato.
+* Ancho.
+* Formato.
+* Unidad.
+* Etiqueta.
+
+El administrador podrá modificar la visibilidad de columnas mediante toggles simples.
 
 ---
 
 ## Parte VII — Archivos y modo offline
 
-### 34. Archivos subidos
+### 37. Archivos subidos
 
 El sistema tendrá una sección denominada **Archivos subidos**.
 
 Por cada archivo se mostrará:
 
-- Nombre original.
-- Extensión.
-- Tamaño.
-- Fecha de carga.
-- Usuario.
-- Catálogo relacionado.
-- Cantidad de hojas.
-- Hojas importadas.
-- Estado.
-- Fecha del último procesamiento.
-- Cantidad de registros.
-- Cantidad de imágenes.
-- Errores encontrados.
+* Nombre original.
+* Extensión.
+* Tamaño.
+* Fecha de carga.
+* Usuario.
+* Catálogo relacionado.
+* Carpeta relacionada, cuando corresponda.
+* Cantidad de hojas.
+* Hojas importadas.
+* Estado.
+* Fecha del último procesamiento.
+* Cantidad de productos.
+* Cantidad de imágenes.
+* Errores encontrados.
 
 Acciones:
 
-- Descargar original.
-- Consultar detalles.
-- Reprocesar.
-- Crear un nuevo catálogo.
-- Reemplazar un catálogo.
-- Eliminar el archivo.
-- Consultar el informe de importación.
+* Descargar original.
+* Consultar detalles.
+* Reprocesar.
+* Crear un nuevo catálogo.
+* Crear una nueva carpeta.
+* Combinar lista.
+* Reemplazar lista.
+* Eliminar el archivo.
+* Consultar el informe de importación.
 
-La eliminación de un catálogo no deberá eliminar automáticamente el archivo original.
+La eliminación de un catálogo o carpeta no deberá eliminar automáticamente el archivo original.
 
 ---
 
-### 35. Modo offline
+### 38. Modo offline
 
 La aplicación deberá permitir consultar información sin conexión.
 
 El modo offline será exclusivamente de lectura.
 
-#### 35.1 Funciones disponibles offline
+---
 
-- Abrir la aplicación.
-- Consultar el directorio sincronizado.
-- Abrir catálogos.
-- Abrir secciones.
-- Consultar registros.
-- Buscar dentro de una sección.
-- Buscar dentro de un catálogo.
-- Utilizar la búsqueda global.
-- Aplicar filtros.
-- Consultar equivalencias.
-- Ver miniaturas sincronizadas.
+#### 38.1 Funciones disponibles offline
 
-#### 35.2 Funciones bloqueadas offline
+* Abrir la aplicación.
+* Consultar el panel sincronizado.
+* Abrir catálogos visibles.
+* Abrir carpetas visibles.
+* Consultar productos.
+* Buscar dentro de una carpeta.
+* Buscar dentro de un catálogo.
+* Utilizar la búsqueda global.
+* Aplicar filtros acumulables.
+* Consultar equivalencias.
+* Ver miniaturas sincronizadas.
+* Abrir imágenes sincronizadas.
 
-- Subir archivos.
-- Crear catálogos.
-- Editar registros.
-- Eliminar registros.
-- Reprocesar archivos.
-- Administrar imágenes.
-- Gestionar usuarios.
-- Cambiar configuraciones.
+---
 
-#### 35.3 Estado de conexión
+#### 38.2 Funciones bloqueadas offline
+
+* Subir archivos.
+* Crear catálogos.
+* Editar catálogos.
+* Borrar catálogos.
+* Vaciar catálogos.
+* Crear carpetas.
+* Editar carpetas.
+* Borrar carpetas.
+* Vaciar carpetas.
+* Crear productos.
+* Editar productos.
+* Eliminar productos.
+* Reprocesar archivos.
+* Administrar imágenes.
+* Gestionar usuarios.
+* Cambiar configuraciones.
+* Modificar visibilidad.
+
+---
+
+#### 38.3 Estado de conexión
 
 La interfaz deberá mostrar:
 
-- Indicador sin conexión.
-- Fecha de última sincronización.
-- Advertencia sobre posibles datos desactualizados.
-- Funciones bloqueadas.
+* Indicador sin conexión.
+* Fecha de última sincronización.
+* Advertencia sobre posibles datos desactualizados.
+* Funciones bloqueadas.
 
-#### 35.4 Sincronización
+---
+
+#### 38.4 Sincronización
 
 Cuando vuelva la conexión:
 
@@ -1238,359 +1802,511 @@ Como no habrá edición offline, no será necesario resolver conflictos de escri
 
 ---
 
-### 36. Imágenes offline
+### 39. Imágenes offline
 
 Para controlar el espacio del dispositivo:
 
-- Se sincronizarán miniaturas optimizadas.
-- Las imágenes completas podrán descargarse bajo demanda.
-- Se podrá ofrecer una opción para sincronizar imágenes completas.
-- Se mostrará un reemplazo cuando una imagen no esté disponible localmente.
-- Los archivos Excel originales no se almacenarán offline.
+* Se sincronizarán miniaturas optimizadas.
+* Las imágenes completas podrán descargarse bajo demanda.
+* Se podrá ofrecer una opción para sincronizar imágenes completas.
+* Se mostrará un reemplazo cuando una imagen no esté disponible localmente.
+* Los archivos Excel originales no se almacenarán offline.
 
 ---
 
 ## Parte VIII — Requerimientos
 
-### 37. Requerimientos funcionales
+### 40. Requerimientos funcionales
 
-| ID | Requerimiento | Descripción |
-|---|---|---|
-| RF-001 | Autenticación | El sistema deberá permitir iniciar y cerrar sesión. |
-| RF-002 | Roles | El sistema deberá diferenciar administradores y usuarios de consulta. |
-| RF-003 | Landing pública | La información institucional deberá ser pública, pero los catálogos serán privados. |
-| RF-004 | Directorio automático | El sistema deberá generar el directorio según los catálogos activos. |
-| RF-005 | Gestión de catálogos | El administrador podrá crear, editar, ordenar, activar y eliminar catálogos. |
-| RF-006 | Gestión de secciones | El administrador podrá crear, editar, ordenar y eliminar secciones. |
-| RF-007 | Subida de Excel | El administrador podrá subir archivos `.xlsx` y `.xlsm`. |
-| RF-008 | Respaldo | El archivo original deberá almacenarse antes de procesarse. |
-| RF-009 | Análisis de hojas | El sistema deberá detectar todas las hojas del archivo. |
-| RF-010 | Selección de hojas | El administrador podrá seleccionar qué hojas importar. |
-| RF-011 | Detección de columnas | El sistema deberá detectar encabezados y columnas. |
-| RF-012 | Mapeo | El administrador podrá mapear columnas a campos especiales. |
-| RF-013 | Campos dinámicos | Las columnas particulares deberán conservarse sin modificar la base de datos. |
-| RF-014 | Fórmulas | El sistema deberá importar valores calculados sin ejecutar fórmulas arbitrarias. |
-| RF-015 | Macros | El sistema no deberá ejecutar macros. |
-| RF-016 | Imágenes embebidas | El sistema deberá extraer imágenes pegadas cuando sea técnicamente posible. |
-| RF-017 | Imágenes externas | El sistema deberá asociar imágenes externas mediante códigos o nombres. |
-| RF-018 | Imágenes múltiples | Un registro podrá contener varias imágenes. |
-| RF-019 | Revisión de imágenes | Las asociaciones dudosas deberán quedar pendientes de revisión. |
-| RF-020 | Gestión manual | El administrador podrá crear, editar y eliminar registros. |
-| RF-021 | Equivalencias | Los registros podrán tener múltiples códigos equivalentes. |
-| RF-022 | Normalización | El sistema deberá normalizar códigos y consultas. |
-| RF-023 | Búsqueda por sección | Cada sección deberá tener un buscador configurable. |
-| RF-024 | Búsqueda por catálogo | El sistema deberá buscar entre todas las secciones de un catálogo. |
-| RF-025 | Búsqueda global | El sistema deberá buscar entre todos los catálogos activos. |
-| RF-026 | Origen del resultado | Cada resultado deberá indicar catálogo y sección. |
-| RF-027 | Filtros por sección | Cada sección podrá tener filtros particulares. |
-| RF-028 | Filtros globales | La búsqueda global deberá admitir filtros compartidos. |
-| RF-029 | Archivos subidos | El administrador podrá consultar y descargar los archivos originales. |
-| RF-030 | Reimportación | El administrador podrá reemplazar catálogos o secciones de forma controlada. |
-| RF-031 | Publicación segura | Una importación fallida no deberá afectar los datos vigentes. |
-| RF-032 | Consulta offline | Los catálogos sincronizados deberán estar disponibles sin conexión. |
-| RF-033 | Bloqueo offline | Las modificaciones deberán bloquearse sin conexión. |
-| RF-034 | Sincronización | La copia local deberá actualizarse al recuperar Internet. |
+| ID     | Requerimiento                        | Descripción                                                                                  |
+| ------ | ------------------------------------ | -------------------------------------------------------------------------------------------- |
+| RF-001 | Autenticación                        | El sistema deberá permitir iniciar y cerrar sesión con correo y contraseña.                  |
+| RF-002 | Roles                                | El sistema deberá diferenciar administradores y usuarios normales.                           |
+| RF-003 | Landing pública                      | La información institucional deberá ser pública, pero los catálogos serán privados.          |
+| RF-004 | Dominio                              | El sistema utilizará el dominio `www.rothamelrepuestos.com.ar`.                              |
+| RF-005 | Estructura Catálogo-Carpeta-Producto | El sistema deberá organizar la información en catálogos, carpetas y productos.               |
+| RF-006 | Gestión de catálogos                 | El administrador podrá crear, editar, ordenar, ocultar, mostrar, borrar y vaciar catálogos.  |
+| RF-007 | Gestión de carpetas                  | El administrador podrá crear, editar, ordenar, ocultar, mostrar, borrar y vaciar carpetas.   |
+| RF-008 | Gestión de productos                 | El administrador podrá crear, editar, duplicar y eliminar productos.                         |
+| RF-009 | Edición de columnas                  | El administrador podrá editar todas las columnas de un producto.                             |
+| RF-010 | Visibilidad de catálogos             | El administrador podrá definir si un catálogo es visible para usuarios normales.             |
+| RF-011 | Visibilidad de carpetas              | El administrador podrá definir si una carpeta es visible para usuarios normales.             |
+| RF-012 | Visibilidad de columnas              | El administrador podrá definir si una columna es visible para usuarios normales.             |
+| RF-013 | Subida de Excel                      | El administrador podrá subir archivos `.xlsx` y `.xlsm`.                                     |
+| RF-014 | Respaldo                             | El archivo original deberá almacenarse antes de procesarse.                                  |
+| RF-015 | Selección de destino                 | El administrador deberá seleccionar catálogo y carpeta antes de aplicar una lista importada. |
+| RF-016 | Creación rápida de destino           | El asistente de importación deberá permitir crear catálogos y carpetas desde botones `+`.    |
+| RF-017 | Análisis de hojas                    | El sistema deberá detectar hojas del archivo.                                                |
+| RF-018 | Detección de columnas                | El sistema deberá detectar encabezados y columnas.                                           |
+| RF-019 | Campos dinámicos                     | Las columnas particulares deberán conservarse sin modificar la base de datos.                |
+| RF-020 | Vista previa                         | El sistema deberá mostrar productos reconocidos antes de aplicar cambios.                    |
+| RF-021 | Coincidencias                        | El sistema deberá detectar y resaltar productos coincidentes.                                |
+| RF-022 | Combinar lista                       | El administrador podrá combinar una lista importada con una carpeta existente.               |
+| RF-023 | Reemplazar lista                     | El administrador podrá reemplazar los productos de una carpeta existente.                    |
+| RF-024 | Importar lista vacía                 | El administrador podrá aplicar una lista a una carpeta vacía.                                |
+| RF-025 | Confirmaciones                       | Las acciones destructivas deberán solicitar confirmación.                                    |
+| RF-026 | Fórmulas                             | El sistema deberá importar valores calculados sin ejecutar fórmulas arbitrarias.             |
+| RF-027 | Macros                               | El sistema no deberá ejecutar macros.                                                        |
+| RF-028 | Imágenes embebidas                   | El sistema deberá extraer imágenes pegadas cuando sea técnicamente posible.                  |
+| RF-029 | Imágenes externas                    | El sistema deberá asociar imágenes externas mediante códigos o nombres.                      |
+| RF-030 | Imágenes múltiples                   | Un producto podrá contener varias imágenes.                                                  |
+| RF-031 | Revisión de imágenes                 | Las asociaciones dudosas deberán quedar pendientes de revisión.                              |
+| RF-032 | Modal de imagen                      | Las imágenes de productos deberán poder abrirse en un modal ampliado.                        |
+| RF-033 | Equivalencias                        | Los productos podrán tener múltiples códigos equivalentes.                                   |
+| RF-034 | Normalización                        | El sistema deberá normalizar códigos y consultas.                                            |
+| RF-035 | Búsqueda por carpeta                 | Cada carpeta deberá tener un buscador configurable.                                          |
+| RF-036 | Búsqueda por catálogo                | El sistema deberá buscar entre todas las carpetas de un catálogo.                            |
+| RF-037 | Búsqueda global                      | El sistema deberá buscar entre todos los catálogos activos.                                  |
+| RF-038 | Origen del resultado                 | Cada resultado deberá indicar catálogo y carpeta.                                            |
+| RF-039 | Filtros acumulables                  | Las columnas filtrables deberán admitir filtros acumulables.                                 |
+| RF-040 | Pills de filtros activos             | El sistema deberá mostrar filtros activos encima de la tabla.                                |
+| RF-041 | Limpieza de filtros                  | Cada filtro activo deberá poder eliminarse individualmente.                                  |
+| RF-042 | Configuración de columnas            | El administrador podrá definir columnas visibles, buscables y filtrables.                    |
+| RF-043 | Archivos subidos                     | El administrador podrá consultar y descargar los archivos originales.                        |
+| RF-044 | Publicación segura                   | Una importación fallida no deberá afectar los datos vigentes.                                |
+| RF-045 | Consulta offline                     | Los catálogos sincronizados deberán estar disponibles sin conexión.                          |
+| RF-046 | Bloqueo offline                      | Las modificaciones deberán bloquearse sin conexión.                                          |
+| RF-047 | Sincronización                       | La copia local deberá actualizarse al recuperar Internet.                                    |
 
 ---
 
-### 38. Requerimientos no funcionales
+### 41. Requerimientos no funcionales
 
-#### 38.1 Rendimiento
+#### 41.1 Rendimiento
 
-- Las búsquedas habituales deberán responder rápidamente.
-- Las tablas deberán utilizar paginación o virtualización.
-- Las imágenes deberán mostrarse mediante miniaturas.
-- La búsqueda global deberá utilizar índices.
-- Las importaciones extensas deberán mostrar progreso.
-- La interfaz no deberá cargar todos los registros simultáneamente.
+* Las búsquedas habituales deberán responder rápidamente.
+* Las tablas deberán utilizar paginación o virtualización.
+* Las imágenes deberán mostrarse mediante miniaturas.
+* La búsqueda global deberá utilizar índices.
+* Las importaciones extensas deberán mostrar progreso.
+* La interfaz no deberá cargar todos los productos simultáneamente cuando el volumen sea elevado.
+* Los filtros por columna deberán responder con fluidez.
+* El filtrado deberá utilizar debounce para evitar cálculos excesivos.
+* El usuario deberá poder reducir una lista amplia a resultados relevantes en menos de 5 minutos.
 
-#### 38.2 Seguridad
+---
 
-- Rutas privadas protegidas.
-- Storage privado.
-- Validación de archivos.
-- Validación MIME.
-- Límites de tamaño.
-- Sanitización de nombres.
-- Archivos ZIP extraídos de forma segura.
-- Descargas autorizadas.
-- Confirmación antes de eliminaciones.
-- Registro de operaciones importantes.
-- Protección de datos offline.
+#### 41.2 Seguridad
 
-#### 38.3 Usabilidad
+* Rutas privadas protegidas.
+* Acceso mediante correo y contraseña.
+* Control de roles.
+* Storage privado.
+* Validación de archivos.
+* Validación MIME.
+* Límites de tamaño.
+* Sanitización de nombres.
+* Archivos ZIP extraídos de forma segura.
+* Descargas autorizadas.
+* Confirmación antes de eliminaciones.
+* Registro de operaciones importantes.
+* Protección de datos offline.
+* Ocultamiento real de datos no visibles para usuario normal.
 
-- Interfaz clara.
-- Navegación sencilla.
-- Importador guiado.
-- Mensajes comprensibles.
-- Vista previa antes de publicar.
-- Confirmación de acciones destructivas.
-- Textos formales.
-- Prioridad de uso en computadoras y notebooks.
+---
 
-#### 38.4 Compatibilidad
+#### 41.3 Usabilidad
 
-- Google Chrome.
-- Microsoft Edge.
-- Navegadores modernos.
-- Diseño adaptable.
-- Uso desde computadoras, tablets y celulares.
+* Interfaz clara.
+* Navegación sencilla.
+* Catálogos y carpetas fáciles de identificar.
+* Importador guiado por pasos.
+* Mensajes comprensibles.
+* Vista previa antes de aplicar importaciones.
+* Confirmación de acciones destructivas.
+* Textos formales.
+* Prioridad de uso en computadoras y notebooks.
+* Filtros por columna rápidos y acumulables.
+* Pills visibles para comprender qué filtros están activos.
+* Modal de imagen simple y rápido.
+
+---
+
+#### 41.4 Compatibilidad
+
+* Google Chrome.
+* Microsoft Edge.
+* Navegadores modernos.
+* Diseño adaptable.
+* Uso desde computadoras, tablets y celulares.
 
 ---
 
 ## Parte IX — Arquitectura técnica
 
-### 39. Modelo conceptual de datos
+### 42. Modelo conceptual de datos
 
 #### User
 
-- ID.
-- Nombre.
-- Correo.
-- Rol.
-- Estado.
-- Último acceso.
+Representa usuarios del sistema.
+
+Campos principales:
+
+* ID.
+* Nombre.
+* Correo.
+* Rol.
+* Estado.
+* Último acceso.
+
+Roles:
+
+```text
+ADMIN
+USER
+```
+
+---
 
 #### Catalog
 
-- ID.
-- Nombre.
-- Descripción.
-- Imagen representativa.
-- Estado.
-- Orden.
-- Fecha de actualización.
+Representa un catálogo.
 
-#### CatalogSection
+Campos principales:
 
-- ID.
-- Catálogo.
-- Nombre.
-- Descripción.
-- Estado.
-- Orden.
-- Configuración de búsqueda.
-- Configuración de filtros.
+* ID.
+* Nombre.
+* Descripción.
+* Imagen representativa.
+* Estado.
+* Orden.
+* Visible para usuario normal.
+* Fecha de creación.
+* Fecha de actualización.
 
-#### SectionColumn
+---
 
-- ID.
-- Sección.
-- Nombre original.
-- Nombre visible.
-- Clave interna.
-- Tipo.
-- Orden.
-- Visible.
-- Buscable.
-- Filtrable.
-- Campo global relacionado.
+#### CatalogFolder
 
-#### CatalogRecord
+Representa una carpeta dentro de un catálogo.
 
-- ID.
-- Sección.
-- Código principal.
-- Código normalizado.
-- Descripción.
-- Datos dinámicos.
-- Texto original.
-- Texto indexado.
-- Fecha de creación.
-- Fecha de modificación.
+Campos principales:
+
+* ID.
+* Catálogo.
+* Nombre.
+* Descripción.
+* Estado.
+* Orden.
+* Visible para usuario normal.
+* Configuración de búsqueda.
+* Configuración de filtros.
+* Fecha de creación.
+* Fecha de actualización.
+
+---
+
+#### FolderColumn
+
+Representa una columna configurada dentro de una carpeta.
+
+Campos principales:
+
+* ID.
+* Carpeta.
+* Nombre original.
+* Nombre visible.
+* Clave interna.
+* Tipo.
+* Orden.
+* Visible para usuario normal.
+* Buscable.
+* Buscable globalmente.
+* Filtrable.
+* Filtrable globalmente.
+* Editable por administrador.
+* Campo global relacionado.
+* Es código principal.
+* Es equivalencia.
+* Es descripción.
+* Es código de imagen.
+
+---
+
+#### Product
+
+Representa un producto dentro de una carpeta.
+
+Campos principales:
+
+* ID.
+* Carpeta.
+* Código principal.
+* Código normalizado.
+* Descripción.
+* Datos dinámicos en JSONB.
+* Texto original.
+* Texto indexado.
+* Fecha de creación.
+* Fecha de modificación.
+
+---
 
 #### EquivalentCode
 
-- ID.
-- Registro.
-- Código original.
-- Código normalizado.
-- Tipo opcional.
+Representa un código equivalente.
+
+Campos principales:
+
+* ID.
+* Producto.
+* Código original.
+* Código normalizado.
+* Tipo opcional.
+
+---
 
 #### ProductImage
 
-- ID.
-- Registro opcional.
-- Ruta.
-- Nombre original.
-- Tipo MIME.
-- Tamaño.
-- Orden.
-- Imagen principal.
-- Etiqueta.
-- Hoja de origen.
-- Fila de origen.
-- Columna de origen.
-- Estado de asociación.
-- Origen.
+Representa una imagen asociada a un producto.
+
+Campos principales:
+
+* ID.
+* Producto opcional.
+* Ruta.
+* Nombre original.
+* Tipo MIME.
+* Tamaño.
+* Orden.
+* Imagen principal.
+* Etiqueta.
+* Hoja de origen.
+* Fila de origen.
+* Columna de origen.
+* Estado de asociación.
+* Origen.
+
+---
 
 #### UploadedFile
 
-- ID.
-- Nombre original.
-- Ruta.
-- Tipo.
-- Tamaño.
-- Usuario.
-- Fecha.
-- Estado.
+Representa un archivo almacenado.
+
+Campos principales:
+
+* ID.
+* Nombre original.
+* Ruta.
+* Tipo.
+* Tamaño.
+* Usuario.
+* Fecha.
+* Estado.
+
+---
 
 #### ImportJob
 
-- ID.
-- Archivo.
-- Catálogo.
-- Estado.
-- Configuración.
-- Resultados.
-- Fecha de inicio.
-- Fecha de finalización.
+Representa una operación de importación.
 
-#### ImportSheet
+Campos principales:
 
-- ID.
-- Importación.
-- Nombre de hoja.
-- Sección de destino.
-- Fila de encabezado.
-- Estado.
-- Cantidad de registros.
+* ID.
+* Archivo.
+* Catálogo destino.
+* Carpeta destino.
+* Estado.
+* Tipo de acción.
+* Configuración.
+* Resultados.
+* Fecha de inicio.
+* Fecha de finalización.
+
+Tipos de acción:
+
+```text
+IMPORTAR_LISTA
+COMBINAR_LISTA
+REEMPLAZAR_LISTA
+```
+
+---
+
+#### ImportPreview
+
+Representa la vista previa de productos reconocidos antes de aplicar cambios.
+
+Campos principales:
+
+* ID.
+* Importación.
+* Productos reconocidos.
+* Productos coincidentes.
+* Errores.
+* Advertencias.
+* Estado.
+
+---
 
 #### GlobalFieldMapping
 
-- ID.
-- Columna.
-- Campo global.
-- Configuración.
+Relaciona columnas particulares con campos globales.
+
+Campos principales:
+
+* ID.
+* Columna.
+* Campo global.
+* Configuración.
+
+---
 
 #### OfflineSyncManifest
 
-- Usuario.
-- Dispositivo.
-- Catálogos sincronizados.
-- Versión.
-- Fecha de sincronización.
+Representa la sincronización offline.
+
+Campos principales:
+
+* Usuario.
+* Dispositivo.
+* Catálogos sincronizados.
+* Carpetas sincronizadas.
+* Versión.
+* Fecha de sincronización.
+
+---
 
 #### AuditLog
 
-- Usuario.
-- Acción.
-- Entidad.
-- Identificador.
-- Fecha.
+Representa operaciones importantes.
+
+Campos principales:
+
+* Usuario.
+* Acción.
+* Entidad.
+* Identificador.
+* Fecha.
 
 ---
 
-### 40. Estrategia de almacenamiento
+### 43. Estrategia de almacenamiento
 
-No se creará una tabla física en PostgreSQL por cada Excel, catálogo o sección.
+No se creará una tabla física en PostgreSQL por cada Excel, catálogo o carpeta.
 
 Se utilizará:
 
-- Estructura relacional para catálogos, secciones, usuarios, archivos e imágenes.
-- Columnas específicas para campos importantes.
-- JSONB para datos variables.
-- Índices para búsquedas.
-- Storage privado para Excel e imágenes.
+* Estructura relacional para usuarios, catálogos, carpetas, archivos, productos e imágenes.
+* Columnas específicas para campos importantes.
+* JSONB para datos variables de productos.
+* Índices para búsquedas.
+* Índices para filtros frecuentes.
+* Storage privado para Excel e imágenes.
 
 Esto permitirá:
 
-- Agregar nuevos archivos sin migraciones.
-- Conservar estructuras diferentes.
-- Mantener un buscador global.
-- Incorporar nuevos catálogos sin modificar el código.
-- Simplificar el modo offline.
+* Agregar nuevos archivos sin migraciones.
+* Conservar estructuras diferentes.
+* Mantener un buscador global.
+* Incorporar nuevos catálogos sin modificar el código.
+* Crear carpetas dinámicamente.
+* Configurar visibilidad.
+* Simplificar el modo offline.
 
 ---
 
-### 41. Stack tecnológico propuesto
+### 44. Stack tecnológico propuesto
 
 #### Frontend
 
-- Next.js.
-- React.
-- TypeScript.
-- SCSS Modules.
-- TanStack Table.
-- React Hook Form.
-- Zod.
+* Next.js.
+* React.
+* TypeScript.
+* SCSS Modules.
+* TanStack Table.
+* React Hook Form.
+* Zod.
+* Lucide React para iconos.
 
 Se utilizará una versión estable y compatible de cada tecnología al comenzar el desarrollo.
+
+---
 
 #### Backend
 
 El backend principal se desarrollará dentro del ecosistema Next.js mediante:
 
-- Route Handlers.
-- Server Actions cuando correspondan.
-- Services.
-- Repositories.
-- Validadores.
-- Procesadores de importación.
-- Procesadores de imágenes.
-- Tareas de procesamiento en segundo plano cuando sean necesarias.
+* Route Handlers.
+* Server Actions cuando correspondan.
+* Services.
+* Repositories.
+* Validadores.
+* Procesadores de importación.
+* Procesadores de imágenes.
+* Tareas de procesamiento en segundo plano cuando sean necesarias.
 
 **NestJS no se utilizará en el MVP ni en futuras fases del proyecto.**
 
+---
+
 #### Base de datos
 
-- PostgreSQL.
-- Supabase.
-- Prisma.
-- JSONB.
+* PostgreSQL.
+* Supabase.
+* Prisma.
+* JSONB.
+
+---
 
 #### Almacenamiento
 
-- Supabase Storage privado.
+* Supabase Storage privado.
 
 Se utilizará para:
 
-- Archivos Excel.
-- Imágenes.
-- Miniaturas.
-- Archivos temporales.
-- ZIP de imágenes.
+* Archivos Excel.
+* Imágenes.
+* Miniaturas.
+* Archivos temporales.
+* ZIP de imágenes.
+
+---
 
 #### Procesamiento de Excel
 
-- ExcelJS como herramienta principal.
-- Librerías adicionales únicamente cuando exista una necesidad concreta.
+* ExcelJS como herramienta principal.
+* Librerías adicionales únicamente cuando exista una necesidad concreta.
+
+---
 
 #### Procesamiento de imágenes
 
 Se deberán utilizar herramientas compatibles con Node.js para:
 
-- Extraer imágenes.
-- Validar formatos.
-- Generar miniaturas.
-- Optimizar archivos.
-- Leer metadatos.
-
-#### Modo offline
-
-- Progressive Web App.
-- Service Worker.
-- Cache Storage.
-- IndexedDB.
+* Extraer imágenes.
+* Validar formatos.
+* Generar miniaturas.
+* Optimizar archivos.
+* Leer metadatos.
 
 ---
 
-### 42. Arquitectura propuesta
+#### Modo offline
+
+* Progressive Web App.
+* Service Worker.
+* Cache Storage.
+* IndexedDB.
+
+---
+
+### 45. Arquitectura propuesta
 
 ```text
 src/
 ├── app/
 │   ├── (public)/
-│   ├── auth/
+│   ├── login/
 │   └── admin/
 │
 ├── features/
 │   ├── auth/
-│   ├── directory/
+│   ├── landing/
+│   ├── admin/
 │   ├── catalogs/
-│   ├── sections/
-│   ├── records/
+│   ├── folders/
+│   ├── products/
 │   ├── imports/
 │   ├── uploaded-files/
 │   ├── product-images/
@@ -1615,6 +2331,7 @@ src/
     ├── importers/
     ├── image-processors/
     ├── search/
+    ├── filters/
     ├── storage/
     ├── auth/
     └── database/
@@ -1622,62 +2339,114 @@ src/
 
 ---
 
-### 43. Servicios principales
+### 46. Servicios principales
 
-#### CatalogImportService
+#### CatalogService
 
-- Analiza archivos.
-- Detecta hojas.
-- Procesa filas.
-- Genera importaciones preliminares.
-- Publica resultados.
-
-#### ExcelStructureService
-
-- Detecta encabezados.
-- Detecta columnas.
-- Analiza celdas combinadas.
-- Identifica fórmulas.
-- Identifica hojas auxiliares.
-
-#### ImageExtractionService
-
-- Extrae imágenes embebidas.
-- Detecta filas y columnas de origen.
-- Genera miniaturas.
-- Registra imágenes pendientes.
-
-#### ImageMatchingService
-
-- Asocia imágenes por código.
-- Asocia imágenes por nombre.
-- Detecta duplicados.
-- Registra coincidencias ambiguas.
-
-#### SearchService
-
-- Normaliza consultas.
-- Busca por sección.
-- Busca por catálogo.
-- Ejecuta la búsqueda global.
-- Ordena resultados.
-
-#### FilterService
-
-- Aplica filtros particulares.
-- Aplica filtros globales.
-- Gestiona campos compartidos.
-
-#### OfflineSyncService
-
-- Prepara datos sincronizables.
-- Actualiza IndexedDB.
-- Gestiona versiones.
-- Sincroniza miniaturas.
+* Crea catálogos.
+* Edita catálogos.
+* Borra catálogos.
+* Vacía catálogos.
+* Gestiona visibilidad.
 
 ---
 
-### 44. Flujo resumido de importación
+#### FolderService
+
+* Crea carpetas.
+* Edita carpetas.
+* Borra carpetas.
+* Vacía carpetas.
+* Gestiona visibilidad.
+* Gestiona configuración de columnas.
+
+---
+
+#### ProductService
+
+* Crea productos.
+* Edita productos.
+* Elimina productos.
+* Gestiona datos dinámicos.
+* Gestiona equivalencias.
+
+---
+
+#### CatalogImportService
+
+* Analiza archivos.
+* Detecta hojas.
+* Procesa filas.
+* Genera importaciones preliminares.
+* Gestiona importaciones, combinaciones y reemplazos.
+
+---
+
+#### ExcelStructureService
+
+* Detecta encabezados.
+* Detecta columnas.
+* Analiza celdas combinadas.
+* Identifica fórmulas.
+* Identifica hojas auxiliares.
+
+---
+
+#### ImageExtractionService
+
+* Extrae imágenes embebidas.
+* Detecta filas y columnas de origen.
+* Genera miniaturas.
+* Registra imágenes pendientes.
+
+---
+
+#### ImageMatchingService
+
+* Asocia imágenes por código.
+* Asocia imágenes por nombre.
+* Detecta duplicados.
+* Registra coincidencias ambiguas.
+
+---
+
+#### SearchService
+
+* Normaliza consultas.
+* Busca por carpeta.
+* Busca por catálogo.
+* Ejecuta la búsqueda global.
+* Ordena resultados.
+
+---
+
+#### ColumnFilterService
+
+* Gestiona filtros por columna.
+* Aplica filtros acumulables.
+* Genera pills de filtros activos.
+* Limpia filtros.
+
+---
+
+#### VisibilityService
+
+* Determina qué catálogos ve cada rol.
+* Determina qué carpetas ve cada rol.
+* Determina qué columnas ve cada rol.
+
+---
+
+#### OfflineSyncService
+
+* Prepara datos sincronizables.
+* Actualiza IndexedDB.
+* Gestiona versiones.
+* Sincroniza miniaturas.
+
+---
+
+### 47. Flujo resumido de importación
 
 ```text
 Administrador
@@ -1689,255 +2458,349 @@ Sube Excel y, si corresponde, ZIP de imágenes
 Se almacenan los archivos originales
       │
       ▼
+Selecciona catálogo destino o crea uno nuevo
+      │
+      ▼
+Selecciona carpeta destino o crea una nueva
+      │
+      ▼
 Se detectan hojas, columnas, fórmulas e imágenes
       │
       ▼
-Se seleccionan las hojas
+Se muestra una vista previa de productos reconocidos
       │
       ▼
-Se configuran secciones y columnas
+Se detectan coincidencias con productos existentes
       │
       ▼
-Se configuran reglas de imágenes
+Si la carpeta está vacía:
+      │     ├── Cancelar
+      │     └── Aplicar lista
       │
       ▼
-Se muestra una vista previa
+Si la carpeta tiene productos:
+      │     ├── Combinar lista
+      │     └── Reemplazar lista
+      │
+      ▼
+Se confirma la acción cuando corresponde
       │
       ▼
 Se procesa una versión preliminar
       │
       ▼
-Se revisan errores y asociaciones
+Se revisan errores y asociaciones de imágenes
       │
       ▼
-El administrador confirma
+Se aplica la lista
       │
       ▼
-Se publica la nueva versión
-      │
-      ▼
-El directorio se actualiza automáticamente
+El catálogo y la carpeta quedan actualizados
 ```
 
 ---
 
 ## Parte X — Planificación y cierre
 
-### 45. Roadmap funcional
+### 48. Roadmap funcional
 
-#### Fase 1 — Análisis y definición
+#### Fase 1 — Base visual y acceso
 
-- Reunión con Pablo.
-- Revisión de cada archivo.
-- Definición de significado de columnas.
-- Definición de equivalencias.
-- Definición de filtros.
-- Validación de imágenes externas.
-- Identificación de hojas auxiliares.
+* Landing pública.
+* Login.
+* Panel admin base.
+* Sidebar admin.
+* Rutas protegidas.
+* Roles admin/user.
 
-#### Fase 2 — Base del sistema
-
-- Proyecto.
-- Base de datos.
-- Storage.
-- Autenticación.
-- Usuarios.
-- Landing.
-- Directorio privado.
-
-#### Fase 3 — Catálogos y secciones
-
-- Gestión de catálogos.
-- Gestión de secciones.
-- Tablas dinámicas.
-- Columnas configurables.
-- Detalle del registro.
-
-#### Fase 4 — Importador
-
-- Subida.
-- Respaldo.
-- Análisis de hojas.
-- Detección de encabezados.
-- Mapeo.
-- Vista previa.
-- Publicación segura.
-
-#### Fase 5 — Imágenes
-
-- Extracción de imágenes embebidas.
-- Importación mediante ZIP.
-- Asociación por código.
-- Generación de miniaturas.
-- Revisión manual.
-
-#### Fase 6 — Administración
-
-- Creación manual.
-- Edición.
-- Eliminación.
-- Equivalencias.
-- Gestión de imágenes.
-
-#### Fase 7 — Búsqueda y filtros
-
-- Búsqueda por sección.
-- Búsqueda por catálogo.
-- Búsqueda global.
-- Normalización.
-- Filtros particulares.
-- Filtros globales.
-
-#### Fase 8 — Archivos y reimportación
-
-- Historial.
-- Descarga.
-- Reemplazo de secciones.
-- Reemplazo de catálogos.
-- Informes.
-
-#### Fase 9 — Offline
-
-- PWA.
-- IndexedDB.
-- Sincronización.
-- Búsquedas offline.
-- Miniaturas offline.
-- Bloqueo de edición.
-
-#### Fase 10 — Pruebas y entrega
-
-- Pruebas con archivos reales.
-- Pruebas de imágenes.
-- Pruebas de búsqueda.
-- Pruebas de reemplazo.
-- Pruebas offline.
-- Capacitación.
-- Documentación.
-- Despliegue.
+Estado: iniciado.
 
 ---
 
-### 46. Funciones fuera del alcance
+#### Fase 2 — Modelo Catálogo-Carpeta-Producto
+
+* Crear modelo de catálogos.
+* Crear modelo de carpetas.
+* Crear modelo de productos.
+* Crear configuración de columnas.
+* Crear visibilidad por rol.
+* Crear estructura base de tablas.
+
+---
+
+#### Fase 3 — Administración manual
+
+* Crear catálogo.
+* Editar catálogo.
+* Borrar catálogo.
+* Vaciar catálogo.
+* Crear carpeta.
+* Editar carpeta.
+* Borrar carpeta.
+* Vaciar carpeta.
+* Crear producto.
+* Editar producto.
+* Eliminar producto.
+* Reemplazar imágenes.
+
+---
+
+#### Fase 4 — Filtros y búsqueda
+
+* Búsqueda por carpeta.
+* Búsqueda por catálogo.
+* Búsqueda global.
+* Normalización de códigos.
+* Filtros por columna.
+* Pills de filtros activos.
+* Limpieza de filtros.
+* Optimización de rendimiento.
+
+---
+
+#### Fase 5 — Importador
+
+* Subida de Excel.
+* Respaldo.
+* Selección de catálogo y carpeta.
+* Creación rápida mediante `+`.
+* Análisis de hojas.
+* Detección de encabezados.
+* Vista previa.
+* Detección de coincidencias.
+* Combinar lista.
+* Reemplazar lista.
+* Aplicar lista.
+* Confirmaciones.
+
+---
+
+#### Fase 6 — Imágenes
+
+* Extracción de imágenes embebidas.
+* Importación mediante ZIP.
+* Asociación por código.
+* Generación de miniaturas.
+* Modal de imagen ampliada.
+* Revisión manual.
+* Reemplazo de imágenes.
+
+---
+
+#### Fase 7 — Archivos subidos
+
+* Historial.
+* Descarga.
+* Estado de importaciones.
+* Informes.
+* Reprocesamiento.
+* Relación con catálogos y carpetas.
+
+---
+
+#### Fase 8 — Offline
+
+* PWA.
+* IndexedDB.
+* Sincronización.
+* Búsquedas offline.
+* Filtros offline.
+* Miniaturas offline.
+* Bloqueo de edición.
+
+---
+
+#### Fase 9 — Pruebas y entrega
+
+* Pruebas con archivos reales.
+* Pruebas de imágenes.
+* Pruebas de búsqueda.
+* Pruebas de filtros acumulables.
+* Pruebas de combinar/reemplazar.
+* Pruebas de visibilidad por usuario.
+* Pruebas offline.
+* Capacitación.
+* Documentación.
+* Despliegue en dominio final.
+
+---
+
+### 49. Funciones fuera del alcance
 
 No se incluyen inicialmente:
 
-- Ejecución de macros VBA.
-- Edición de archivos Excel desde la web.
-- Edición offline.
-- Sincronización de modificaciones offline.
-- OCR.
-- Inteligencia artificial.
-- Búsqueda semántica.
-- Aplicación móvil nativa.
-- Multiempresa.
-- Facturación.
-- Control de stock.
-- Ventas.
-- Carrito de compras.
-- Pagos.
-- Integración contable.
-- Integración automática con proveedores.
-- Conversión automática de cualquier estructura sin configuración.
-- Reconocimiento visual del contenido de las imágenes.
-- Edición avanzada de fotografías.
-- NestJS.
+* Ejecución de macros VBA.
+* Edición de archivos Excel desde la web.
+* Edición offline.
+* Sincronización de modificaciones offline.
+* OCR.
+* Inteligencia artificial.
+* Búsqueda semántica.
+* Aplicación móvil nativa.
+* Multiempresa.
+* Facturación.
+* Control de stock.
+* Ventas.
+* Carrito de compras.
+* Pagos.
+* Integración contable.
+* Integración automática con proveedores.
+* Conversión automática de cualquier estructura sin configuración.
+* Reconocimiento visual del contenido de las imágenes.
+* Edición avanzada de fotografías.
+* NestJS.
 
 ---
 
-### 47. Criterios de aceptación
+### 50. Criterios de aceptación
 
-#### Catálogos
+#### Catálogos y carpetas
 
-- Los catálogos aparecen automáticamente en el directorio.
-- Cada archivo puede generar varias secciones.
-- Las secciones pueden tener columnas diferentes.
-- Se pueden agregar nuevos catálogos sin modificar el código.
+* Los catálogos aparecen automáticamente en el panel.
+* Cada catálogo puede contener carpetas.
+* Las carpetas pueden tener columnas diferentes.
+* Se pueden agregar nuevos catálogos sin modificar el código.
+* Se pueden crear carpetas desde el panel.
+* Se pueden editar nombres de catálogos y carpetas.
+* Se pueden borrar y vaciar catálogos con confirmación.
+* Se pueden borrar y vaciar carpetas con confirmación.
+
+---
+
+#### Usuarios y permisos
+
+* El admin puede editar.
+* El user normal solo puede ver.
+* Los controles de edición no aparecen para el user normal.
+* El admin puede ocultar catálogos para users normales.
+* El admin puede ocultar carpetas para users normales.
+* El admin puede ocultar columnas para users normales.
+
+---
 
 #### Importación
 
-- El archivo original queda respaldado.
-- El sistema detecta hojas y columnas.
-- El administrador selecciona las hojas.
-- Se muestra una vista previa.
-- Los campos dinámicos se conservan.
-- Las fórmulas se importan mediante su valor calculado.
-- Las macros no se ejecutan.
-- Una importación fallida no reemplaza los datos activos.
+* El archivo original queda respaldado.
+* El sistema detecta hojas y columnas.
+* El administrador selecciona catálogo y carpeta destino.
+* El administrador puede crear catálogo desde el asistente.
+* El administrador puede crear carpeta desde el asistente.
+* Se muestra una vista previa de productos reconocidos.
+* Los productos coincidentes se resaltan.
+* Si la carpeta está vacía, se puede aplicar la lista.
+* Si la carpeta tiene productos, se puede combinar o reemplazar.
+* Las acciones de combinar y reemplazar muestran confirmación cuando corresponde.
+* Los campos dinámicos se conservan.
+* Las fórmulas se importan mediante su valor calculado.
+* Las macros no se ejecutan.
+* Una importación fallida no reemplaza datos activos.
+
+---
+
+#### Productos
+
+* El administrador puede crear productos.
+* El administrador puede editar productos.
+* El administrador puede eliminar productos.
+* Todas las columnas pueden editarse por admin.
+* Las imágenes pueden reemplazarse por admin.
+* El user normal solo puede visualizar productos.
+
+---
 
 #### Imágenes
 
-- Se extraen imágenes embebidas compatibles.
-- Se importan imágenes externas.
-- Las asociaciones por código funcionan.
-- Las imágenes ambiguas quedan pendientes.
-- Un registro admite múltiples imágenes.
-- Una imagen dañada no cancela la importación completa.
-- Se muestran miniaturas y vistas ampliadas.
+* Se extraen imágenes embebidas compatibles.
+* Se importan imágenes externas.
+* Las asociaciones por código funcionan.
+* Las imágenes ambiguas quedan pendientes.
+* Un producto admite múltiples imágenes.
+* Una imagen dañada no cancela la importación completa.
+* Se muestran miniaturas.
+* Al hacer click en una imagen existente, se abre un modal ampliado.
+* No se abre modal si el producto no tiene imagen.
+* El modal tiene cruz de cierre.
 
-#### Búsqueda
+---
 
-- Cada sección tiene un buscador.
-- Cada catálogo puede buscar entre sus secciones.
-- El buscador global recorre todos los catálogos.
-- Los resultados indican catálogo y sección.
-- Las equivalencias participan en la búsqueda.
-- Los separadores de códigos no impiden encontrar resultados.
+#### Búsqueda y filtros
 
-#### Filtros
+* Cada carpeta tiene un buscador.
+* Cada catálogo puede buscar entre sus carpetas.
+* El buscador global recorre todos los catálogos visibles.
+* Los resultados indican catálogo y carpeta.
+* Las equivalencias participan en la búsqueda.
+* Los separadores de códigos no impiden encontrar resultados.
+* Cada columna filtrable permite aplicar un filtro.
+* Los filtros son acumulables.
+* Los filtros activos se muestran como pills.
+* Cada pill puede eliminarse individualmente.
+* El usuario puede reducir una lista amplia a resultados relevantes en menos de 5 minutos.
 
-- Cada sección puede tener filtros propios.
-- Los filtros globales funcionan mediante campos mapeados.
-- El administrador puede configurar columnas filtrables.
+---
 
 #### Archivos
 
-- Existe una sección de archivos subidos.
-- Los archivos originales pueden descargarse.
-- Se pueden reemplazar secciones o catálogos.
-- Los archivos anteriores permanecen respaldados.
+* Existe una sección de archivos subidos.
+* Los archivos originales pueden descargarse.
+* Se pueden relacionar archivos con catálogos y carpetas.
+* Se pueden consultar informes de importación.
+* Los archivos anteriores permanecen respaldados.
+
+---
 
 #### Offline
 
-- Los catálogos sincronizados pueden consultarse.
-- Las búsquedas funcionan offline.
-- Las miniaturas sincronizadas se muestran.
-- Las modificaciones quedan bloqueadas.
-- La fecha de sincronización es visible.
+* Los catálogos sincronizados pueden consultarse.
+* Las carpetas sincronizadas pueden consultarse.
+* Las búsquedas funcionan offline.
+* Los filtros funcionan offline.
+* Las miniaturas sincronizadas se muestran.
+* Las modificaciones quedan bloqueadas.
+* La fecha de sincronización es visible.
 
 ---
 
-### 48. Criterios de éxito
+### 51. Criterios de éxito
 
 El proyecto será considerado exitoso cuando:
 
-- Pablo deje de utilizar el pendrive como medio de actualización.
-- Ambos locales consulten la misma versión.
-- Los archivos nuevos puedan incorporarse desde el panel.
-- El directorio se actualice automáticamente.
-- Las hojas se conviertan en secciones utilizables.
-- Los productos puedan buscarse sin conocer el archivo de origen.
-- Los códigos equivalentes puedan encontrarse.
-- Las imágenes de Rulemanes y Catálogo Azul se visualicen correctamente.
-- Las imágenes externas de Embragues se relacionen sin depender de rutas locales.
-- El administrador pueda corregir datos e imágenes.
-- Los archivos originales permanezcan respaldados.
-- La información pueda consultarse sin conexión.
-- El sistema sea comprensible para Pablo y su hermano.
+* Pablo deje de utilizar el pendrive como medio de actualización.
+* Ambos locales consulten la misma versión.
+* Los archivos nuevos puedan incorporarse desde el panel.
+* Los productos puedan organizarse por catálogo y carpeta.
+* Los nombres de catálogos y carpetas puedan editarse.
+* Las hojas de Excel puedan transformarse en carpetas utilizables.
+* Los productos puedan buscarse sin conocer el archivo de origen.
+* Los códigos equivalentes puedan encontrarse.
+* Los filtros acumulables permitan reducir rápidamente una búsqueda.
+* El usuario pueda encontrar opciones relevantes en menos de 5 minutos.
+* Las imágenes de Rulemanes y Catálogo Azul se visualicen correctamente.
+* Las imágenes externas de Embragues se relacionen sin depender de rutas locales.
+* El administrador pueda corregir datos e imágenes.
+* El administrador pueda ocultar catálogos, carpetas o columnas para usuarios normales.
+* El usuario normal pueda ver, buscar y filtrar sin editar.
+* Los archivos originales permanezcan respaldados.
+* La información pueda consultarse sin conexión.
+* El sistema sea comprensible para Pablo y su hermano.
 
 ---
 
-### 49. Condiciones y supuestos
+### 52. Condiciones y supuestos
 
-- Pablo deberá explicar el significado de las columnas particulares.
-- Deberá proporcionar las imágenes externas con sus nombres originales.
-- Deberá conservarse la estructura de carpetas de muestra durante el análisis.
-- Algunas asociaciones de imágenes podrán requerir revisión manual.
-- No se garantiza que todas las fórmulas tengan valores calculados almacenados.
-- No se ejecutarán macros.
-- Los filtros definitivos se acordarán por sección.
-- Los filtros globales se definirán después de mapear los campos comunes.
-- El modo offline requerirá una sincronización previa.
-- La primera importación podrá requerir configuración y asistencia de GRG.
-- Los nuevos catálogos podrán reutilizar configuraciones anteriores cuando posean estructuras similares.
-- NestJS queda excluido de toda la arquitectura presente y futura del proyecto.
+* Pablo deberá explicar el significado de las columnas particulares.
+* Pablo deberá confirmar qué columnas deben ser visibles para usuarios normales.
+* Pablo deberá confirmar qué columnas deben ser filtrables.
+* Pablo deberá confirmar qué columnas deben ser buscables.
+* Pablo deberá proporcionar las imágenes externas con sus nombres originales.
+* Deberá conservarse la estructura de carpetas de muestra durante el análisis.
+* Algunas asociaciones de imágenes podrán requerir revisión manual.
+* No se garantiza que todas las fórmulas tengan valores calculados almacenados.
+* No se ejecutarán macros.
+* Los filtros definitivos se acordarán por carpeta.
+* Los filtros globales se definirán después de mapear los campos comunes.
+* El modo offline requerirá una sincronización previa.
+* La primera importación podrá requerir configuración y asistencia de GRG.
+* Los nuevos catálogos podrán reutilizar configuraciones anteriores cuando posean estructuras similares.
+* Los Excel con estructuras muy diferentes podrán requerir configuración adicional.
+* NestJS queda excluido de toda la arquitectura presente y futura del proyecto.
