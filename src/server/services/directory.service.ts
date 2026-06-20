@@ -5,8 +5,10 @@ import type {
 } from "@/features/directory/types/directory.types";
 import { requireAuth } from "@/server/auth";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
+import { folderRepository } from "@/server/repositories/folder.repository";
 import { createSignedDownloadUrl } from "@/server/storage";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
+import { visibilityService } from "./visibility.service";
 
 async function resolveCoverImageUrl(
   coverImagePath: string | null,
@@ -29,13 +31,14 @@ async function resolveCoverImageUrl(
 function toDirectoryCatalogItem(
   catalog: Catalog,
   coverImageUrl: string | null,
+  sectionCount: number,
 ): DirectoryCatalogItem {
   return {
     id: catalog.id,
     name: catalog.name,
     description: catalog.description,
     coverImageUrl,
-    sectionCount: 0,
+    sectionCount,
     updatedAt: catalog.updatedAt.toISOString(),
     order: catalog.order,
     offlineSync: {
@@ -46,14 +49,21 @@ function toDirectoryCatalogItem(
 
 export class DirectoryService {
   async getDirectory(): Promise<DirectoryResponse> {
-    await requireAuth();
+    const { profile } = await requireAuth();
+    const role = profile.role;
 
     const catalogs = await catalogRepository.findActiveOrdered();
+    const visibleCatalogs = visibilityService.filterCatalogs(catalogs, role);
 
     const items = await Promise.all(
-      catalogs.map(async (catalog) => {
+      visibleCatalogs.map(async (catalog) => {
         const coverImageUrl = await resolveCoverImageUrl(catalog.coverImagePath);
-        return toDirectoryCatalogItem(catalog, coverImageUrl);
+        const sectionCount = await folderRepository.countByCatalogId(
+          catalog.id,
+          visibilityService.folderWhereForRole(role),
+        );
+
+        return toDirectoryCatalogItem(catalog, coverImageUrl, sectionCount);
       }),
     );
 

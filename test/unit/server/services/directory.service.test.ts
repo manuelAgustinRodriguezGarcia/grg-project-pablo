@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "@/server/auth/errors";
 import { requireAuth } from "@/server/auth";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
+import { folderRepository } from "@/server/repositories/folder.repository";
 import { createSignedDownloadUrl } from "@/server/storage";
 import { directoryService } from "@/server/services/directory.service";
 import {
+  adminUserFixture,
   consultaUserFixture,
   mockRequireAuth,
   mockRequireAuthUnauthenticated,
@@ -18,6 +20,11 @@ vi.mock("@/server/auth", () => ({
 vi.mock("@/server/repositories/catalog.repository", () => ({
   catalogRepository: {
     findActiveOrdered: vi.fn(),
+  },
+}));
+vi.mock("@/server/repositories/folder.repository", () => ({
+  folderRepository: {
+    countByCatalogId: vi.fn(),
   },
 }));
 vi.mock("@/server/storage", () => ({
@@ -35,6 +42,7 @@ describe("DirectoryService", () => {
       expiresInSeconds: 3600,
     });
     vi.mocked(catalogRepository.findActiveOrdered).mockResolvedValue([]);
+    vi.mocked(folderRepository.countByCatalogId).mockResolvedValue(0);
   });
 
   it("exige autenticación", async () => {
@@ -50,6 +58,7 @@ describe("DirectoryService", () => {
       coverImagePath: "catalogs/embragues/cover.jpg",
     });
     vi.mocked(catalogRepository.findActiveOrdered).mockResolvedValue([catalog]);
+    vi.mocked(folderRepository.countByCatalogId).mockResolvedValue(3);
 
     const result = await directoryService.getDirectory();
 
@@ -57,11 +66,42 @@ describe("DirectoryService", () => {
     expect(result.catalogs[0]).toMatchObject({
       id: catalog.id,
       name: "Embragues",
-      sectionCount: 0,
+      sectionCount: 3,
       coverImageUrl: "https://example.com/signed-url",
       offlineSync: { status: "unavailable" },
     });
+    expect(folderRepository.countByCatalogId).toHaveBeenCalledWith(catalog.id, {
+      visibleToNormalUser: true,
+      status: "ACTIVE",
+    });
     expect(result.generatedAt).toEqual(expect.any(String));
+  });
+
+  it("CONSULTA excluye catálogos ocultos", async () => {
+    const visibleCatalog = createCatalogFixture({ visibleToNormalUser: true });
+    const hiddenCatalog = createCatalogFixture({
+      id: "hidden-catalog",
+      visibleToNormalUser: false,
+    });
+    vi.mocked(catalogRepository.findActiveOrdered).mockResolvedValue([
+      visibleCatalog,
+      hiddenCatalog,
+    ]);
+
+    const result = await directoryService.getDirectory();
+
+    expect(result.catalogs).toHaveLength(1);
+    expect(result.catalogs[0]?.id).toBe(visibleCatalog.id);
+  });
+
+  it("ADMIN cuenta todas las carpetas del catálogo", async () => {
+    mockRequireAuth(adminUserFixture);
+    const catalog = createCatalogFixture();
+    vi.mocked(catalogRepository.findActiveOrdered).mockResolvedValue([catalog]);
+
+    await directoryService.getDirectory();
+
+    expect(folderRepository.countByCatalogId).toHaveBeenCalledWith(catalog.id, {});
   });
 
   it("usa coverImageUrl null si falla la URL firmada", async () => {
