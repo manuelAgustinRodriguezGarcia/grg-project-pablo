@@ -1,4 +1,5 @@
 import type { Product } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
 
 export type ProductPaginationOptions = {
@@ -12,6 +13,16 @@ export type PaginatedProducts = {
   page: number;
   pageSize: number;
   totalPages: number;
+};
+
+export type CreateProductData = {
+  folderId: string;
+  primaryCode?: string | null;
+  normalizedCode?: string | null;
+  description?: string | null;
+  dynamicData?: Record<string, unknown>;
+  originalText?: string | null;
+  indexedText?: string | null;
 };
 
 export class ProductRepository {
@@ -50,6 +61,40 @@ export class ProductRepository {
 
   async countByFolder(folderId: string): Promise<number> {
     return prisma.product.count({ where: { folderId } });
+  }
+
+  async findPrimaryCodesByFolder(folderId: string): Promise<
+    Array<{ id: string; primaryCode: string | null; normalizedCode: string | null }>
+  > {
+    return prisma.product.findMany({
+      where: { folderId },
+      select: { id: true, primaryCode: true, normalizedCode: true },
+    });
+  }
+
+  async createMany(data: CreateProductData[]): Promise<number> {
+    if (data.length === 0) {
+      return 0;
+    }
+
+    const result = await prisma.product.createMany({
+      data: data.map((item) => ({
+        folderId: item.folderId,
+        primaryCode: item.primaryCode ?? null,
+        normalizedCode: item.normalizedCode ?? null,
+        description: item.description ?? null,
+        dynamicData: (item.dynamicData ?? {}) as Prisma.InputJsonValue,
+        originalText: item.originalText ?? null,
+        indexedText: item.indexedText ?? null,
+      })),
+    });
+
+    return result.count;
+  }
+
+  async deleteByFolder(folderId: string): Promise<number> {
+    const result = await prisma.product.deleteMany({ where: { folderId } });
+    return result.count;
   }
 }
 

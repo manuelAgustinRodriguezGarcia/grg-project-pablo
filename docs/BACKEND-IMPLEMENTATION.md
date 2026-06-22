@@ -20,7 +20,7 @@
 
 ## 1. Estado actual
 
-**Rama:** `backend` · **Fases completadas:** 1, 2, 3 (3.1–3.8)
+**Rama:** `backend` · **Fases completadas:** 1, 2, 3 (3.1–3.8), 4
 
 ### 1.1 Roadmap PRD ↔ backend
 
@@ -30,7 +30,7 @@
 | 2 — Modelo Catálogo-Carpeta-Producto | 3 — Catálogos y carpetas | ✅ |
 | 3 — Administración manual | 6 | ⏳ |
 | 4 — Filtros y búsqueda | 7 | ⏳ |
-| 5 — Importador | 4 | ⏳ |
+| 5 — Importador | 4 | ✅ |
 | 6 — Imágenes | 5 | ⏳ |
 | 7 — Archivos subidos | 8 | ⏳ |
 | 8 — Offline | 9 | ⏳ |
@@ -42,13 +42,14 @@
 | Área | Detalle |
 |------|---------|
 | **Stack** | Next.js 16, React 19, TypeScript, Prisma 7, Supabase Auth + Storage |
-| **Modelos Prisma** | `User`, `Catalog`, `CatalogFolder`, `FolderColumn`, `Product`, `AuditLog` |
-| **Migraciones** | `20260617182823_init_user_catalog_audit_log`, `20260619214310_add_catalog_folder_product_models` |
+| **Modelos Prisma** | `User`, `Catalog`, `CatalogFolder`, `FolderColumn`, `Product`, `UploadedFile`, `ImportJob`, `ImportSheet`, `ImportPreview`, `AuditLog` |
+| **Migraciones** | `20260617182823_*`, `20260619214310_*`, `20260622225542_import_migration_backend` |
 | **Auth** | `src/server/auth/`, middleware `/admin` + `/api/admin`, guards, Server Actions |
 | **Storage** | Buckets privados `excel-originals`, `product-images`, `temp-imports` |
-| **Servicios** | Auth, User, Catalog, Folder, ColumnConfig, Product (lectura), Visibility, Navigation, Directory, Audit, ExcelStructure (clasificación) |
-| **APIs** | `GET /api/admin/directory`, `GET /api/admin/catalogs/{id}/navigation`, `GET /api/admin/folders/{id}/products` |
-| **Pendiente** | Importador, imágenes, CRUD manual productos, búsqueda/filtros, archivos, offline |
+| **Servicios** | Auth, User, Catalog, Folder, ColumnConfig, Product (lectura + bulk import), Visibility, Navigation, Directory, Audit, ExcelStructure, **CatalogImportService** |
+| **Importers** | `src/server/importers/` — ExcelJS parseo, fórmulas, detección imágenes (conteo) |
+| **APIs** | Directorio, navegación, productos + **import upload/job/sheets/preview/report** |
+| **Pendiente** | UI asistente import, imágenes (Fase 5), CRUD manual productos, búsqueda/filtros, listado archivos (Fase 8), offline |
 
 ### 1.3 Glosario PRD ↔ código
 
@@ -95,7 +96,8 @@ src/
     ├── services/  → lógica de negocio
     ├── repositories/ → Prisma
     ├── auth/, storage/, database/
-    └── (futuro) importers/, search/, filters/
+    ├── importers/   → parseo ExcelJS
+    └── (futuro) search/, filters/
 ```
 
 | Capa | Uso |
@@ -130,20 +132,24 @@ src/
 | `CatalogFolder` | catálogo, orden, `searchConfig`/`filterConfig` JSON, visibilidad | 3 |
 | `FolderColumn` | tipos semánticos, buscable/filtrable/global, `globalFieldKey` placeholder | 3 |
 | `Product` | `dynamicData` JSONB, código/descripción, texto indexado | 3 |
+| `UploadedFile` | respaldo Excel en Storage, estado, usuario | 4 |
+| `ImportJob` | asistente, destino, estados, config/resultados JSON | 4 |
+| `ImportSheet` | hojas detectadas y clasificadas | 4 |
+| `ImportPreview` | productos reconocidos, coincidencias, advertencias | 4 |
 | `AuditLog` | acción, entidad, userId opcional | 2 |
 
-**Enums:** `UserRole`, `UserStatus`, `CatalogStatus`, `FolderStatus`, `ColumnDataType`.
+**Enums:** `UserRole`, `UserStatus`, `CatalogStatus`, `FolderStatus`, `ColumnDataType`, `UploadedFileStatus`, `ImportJobStatus`, `ImportActionType`, `ImportSheetClassification`.
 
 ### 4.2 Pendiente ⏳
 
 | Entidad | Fase | Propósito |
 |---------|------|-----------|
 | `EquivalentCode` | 6–7 | Equivalencias normalizadas |
-| `ProductImage` | 5 | Embebidas/externas/manuales; estados §6.2 |
-| `UploadedFile` | 4/8 | Historial y respaldo de originales |
-| `ImportJob`, `ImportPreview`, `ImportSheet` | 4 | Asistente y publicación segura |
+| `ProductImage` | 5 | Embebidas/externas/manuales; estados §4.3 |
 | `GlobalFieldMapping` | 7 | Filtros globales |
 | `OfflineSyncManifest` | 9 | Sincronización offline |
+
+> `UploadedFile` listado/reprocesar UI → Fase 8 (`UploadedFileService`).
 
 ### 4.3 Estados de imagen (PRD §27) — Fase 5
 
@@ -169,12 +175,12 @@ Asociada (auto/manual), pendiente revisión, no encontrada, ambigua, duplicada, 
 | ProductService | ✅ lectura / ⏳ CRUD | Paginación + JSONB filtrado |
 | VisibilityService | ✅ | Filtrado real para rol `CONSULTA` |
 | NavigationService, DirectoryService | ✅ | Directorio y navegación por catálogo |
-| ExcelStructureService | 🔄 | Clasificación hojas ✅; parseo ⏳ Fase 4 |
-| AuditService | ✅ | Operaciones críticas |
-| CatalogImportService | ⏳ | Asistente 6 pasos, publicación segura |
-| ImageExtraction/MatchingService | ⏳ | Imágenes embebidas/externas |
+| ExcelStructureService | ✅ | Clasificación hojas + delegación parseo ExcelJS |
+| AuditService | ✅ | Operaciones críticas; `IMPORT_PUBLISHED` |
+| CatalogImportService | ✅ | Asistente 6 pasos, publicación segura, combinar/reemplazar |
+| ImageExtraction/MatchingService | ⏳ | Imágenes embebidas/externas (Fase 5) |
 | SearchService, ColumnFilterService | ⏳ | Búsqueda normalizada, filtros acumulables |
-| UploadedFileService, OfflineSyncService | ⏳ | Archivos, sync |
+| UploadedFileService, OfflineSyncService | ⏳ | Listado archivos (Fase 8), sync |
 
 ### 5.2 Visibilidad (PRD §9) ✅
 
@@ -274,21 +280,31 @@ CRUD catálogos/carpetas/columnas, lectura paginada de productos, visibilidad po
 
 ---
 
-### Fase 4 — Importador ⏳
+### Fase 4 — Importador ✅ (2026-06-22)
 
 **PRD fase 5** · Depende de Fase 3
 
-Asistente guiado 6 pasos, publicación segura, combinar/reemplazar/aplicar lista.
+Asistente guiado 6 pasos, publicación segura, combinar/reemplazar/aplicar lista. **Un job = una hoja → una carpeta.** Imágenes: solo detección/conteo (extracción en Fase 5).
 
-- [ ] Modelos: `UploadedFile`, `ImportJob`, `ImportPreview`, `ImportSheet`
-- [ ] Upload multipart `.xlsx`/`.xlsm`; respaldo **antes** de procesar
-- [ ] Pasos §6: subir → destino `[+]` → detectar estructura → vista previa → estrategia lista → confirmación
-- [ ] `ExcelStructureService` + `CatalogImportService`: mapeo semántico; no mapeados → JSONB
-- [ ] Fórmulas (valor calculado); sin macros
-- [ ] Máquina de estados §6.1; transacción atómica al publicar
-- [ ] Progreso e informe §6.3
+| # | Entregable | Componentes |
+|---|------------|-------------|
+| 4.1 | Modelos Prisma | `UploadedFile`, `ImportJob`, `ImportSheet`, `ImportPreview` · migración `20260622225542_*` |
+| 4.2 | ExcelJS | `src/server/importers/` — workbook/sheet/cell parser, image detector, column/product mappers |
+| 4.3 | Repositories | `uploaded-file`, `import-job`; `product.repository` bulk (`createMany`, `deleteByFolder`) |
+| 4.4 | CatalogImportService | Máquina de estados, preview, coincidencias, publicación atómica |
+| 4.5 | REST | `POST .../imports/upload`, `GET .../imports/{id}`, `/sheets`, `/preview`, `/report` |
+| 4.6 | Server Actions | `analyzeImportAction`, `setImportDestinationAction`, `setImportConfigAction`, `applyImportAction`, `cancelImportAction` |
+| 4.7 | Tests | `test/unit/server/importers/*`, `catalog-import.service.test.ts` |
+| 4.8 | Documentación | [`ENDPOINTS.md`](./ENDPOINTS.md) contratos importador |
 
-**Completitud:** importar Rulemanes o Catálogo Azul; combinar/reemplazar con confirmación; original respaldado.
+**Estados `ImportJob`:** `STORED` → `ANALYZING` → `PENDING_DESTINATION` → `PENDING_CONFIG` → `PROCESSING` → `READY_TO_APPLY` → `PUBLISHED` | `FAILED` | `CANCELLED`  
+(`PENDING_REVIEW` reservado para revisión de imágenes — Fase 5)
+
+**Estrategias:** `IMPORTAR_LISTA` (carpeta vacía), `COMBINAR_LISTA` (omitir coincidentes), `REEMPLAZAR_LISTA` (confirmación obligatoria).
+
+**Verificación:** `pnpm lint` · `pnpm test:run` (137 tests) · `pnpm db:verify` ✅
+
+**Pendiente UI:** cablear asistente en `/admin/archivos` contra APIs documentadas.
 
 ---
 
@@ -376,15 +392,15 @@ Asistente guiado 6 pasos, publicación segura, combinar/reemplazar/aplicar lista
 | RF-008 | Gestión productos | 6 | ⏳ |
 | RF-009 | Edición columnas | 3/6 | 🔄 config ✅ / valores ⏳ |
 | RF-010–012 | Visibilidad catálogo/carpeta/columna | 3 | ✅ |
-| RF-013–016 | Subida y destino importación | 4 | ⏳ |
-| RF-017 | Análisis hojas | 4 | 🔄 clasificación ✅ |
-| RF-018–027 | Detección, vista previa, listas, fórmulas | 4 | ⏳ |
+| RF-013–016 | Subida y destino importación | 4 | ✅ |
+| RF-017 | Análisis hojas | 4 | ✅ |
+| RF-018–027 | Detección, vista previa, listas, fórmulas | 4 | ✅ |
 | RF-028–032 | Imágenes | 5 | ⏳ |
 | RF-033 | Equivalencias | 6–7 | ⏳ |
 | RF-034–041 | Búsqueda y filtros | 7 | ⏳ |
 | RF-042 | Configuración columnas | 3 | ✅ |
 | RF-043 | Archivos subidos | 8 | ⏳ |
-| RF-044 | Publicación segura | 4 | ⏳ |
+| RF-044 | Publicación segura | 4 | ✅ |
 | RF-045–047 | Offline | 9 | ⏳ |
 
 ### 8.2 Requerimientos no funcionales (PRD §41)
@@ -401,7 +417,7 @@ Asistente guiado 6 pasos, publicación segura, combinar/reemplazar/aplicar lista
 | **Base (Fase 2)** | ✅ Auth, roles, directorio, auditoría — ver [`ENDPOINTS.md`](./ENDPOINTS.md) |
 | **Catálogos y carpetas** | ✅ Directorio automático, CRUD, columnas por carpeta, visibilidad, vaciado/borrar |
 | **Usuarios** | ✅ Admin edita; CONSULTA solo ve. Controles UI ocultos → frontend |
-| **Importación** | ⏳ |
+| **Importación** | ✅ Backend (sin UI asistente ni imágenes) — ver [`ENDPOINTS.md`](./ENDPOINTS.md) |
 | **Productos manuales** | ⏳ |
 | **Imágenes** | ⏳ |
 | **Búsqueda y filtros** | ⏳ |

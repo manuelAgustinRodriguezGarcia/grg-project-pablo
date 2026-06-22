@@ -142,6 +142,40 @@ export class ColumnRepository {
     return (result._max.order ?? -1) + 1;
   }
 
+  async createMany(data: CreateColumnData[]): Promise<number> {
+    if (data.length === 0) {
+      return 0;
+    }
+
+    const result = await prisma.folderColumn.createMany({ data: data.map((item) => ({
+      folderId: item.folderId,
+      originalName: item.originalName,
+      displayName: item.displayName,
+      internalKey: item.internalKey,
+      dataType: item.dataType ?? "UNKNOWN",
+      order: item.order ?? 0,
+      visibleToNormalUser: item.visibleToNormalUser ?? true,
+      isSearchable: item.isSearchable ?? false,
+      isGloballySearchable: item.isGloballySearchable ?? false,
+      isFilterable: item.isFilterable ?? false,
+      isGloballyFilterable: item.isGloballyFilterable ?? false,
+      isAdminEditable: item.isAdminEditable ?? true,
+      isPrimaryCode: item.isPrimaryCode ?? false,
+      isEquivalence: item.isEquivalence ?? false,
+      isDescription: item.isDescription ?? false,
+      isImageCode: item.isImageCode ?? false,
+      isRequired: item.isRequired ?? false,
+      isReadOnly: item.isReadOnly ?? false,
+      width: item.width ?? null,
+      format: item.format ?? null,
+      unit: item.unit ?? null,
+      label: item.label ?? null,
+      globalFieldKey: item.globalFieldKey ?? null,
+    })) });
+
+    return result.count;
+  }
+
   isUniqueConstraintError(error: unknown): boolean {
     return (
       error instanceof Prisma.PrismaClientKnownRequestError &&
