@@ -1,7 +1,7 @@
 # ENDPOINTS — Referencia para frontend
 
-> Contratos de API y Server Actions **implementados** (Fases 2–3.8). Plan futuro: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md). Producto: [`PRD.md`](./PRD.md).  
-> Última actualización: 2026-06-20.
+> Contratos de API y Server Actions **implementados** (Fases 2–4). Plan futuro: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md). Producto: [`PRD.md`](./PRD.md).  
+> Última actualización: 2026-06-22.
 
 ---
 
@@ -19,6 +19,7 @@
 | `GET /api/admin/folders/{id}/products` | ❌ | Tabla de productos paginada |
 | Acciones de usuarios | ❌ | Falta `/admin/users` |
 | Acciones de catálogos / carpetas / columnas | ❌ | CRUD admin sin UI |
+| Importador Excel (REST + actions) | ❌ | APIs listas; UI `/admin/archivos` pendiente |
 | `requestPasswordResetAction` / `updatePasswordAction` | ❌ | Faltan `/auth/forgot-password` y `/auth/reset-password` |
 
 **Flujo sugerido para reemplazar mocks en `/admin/catalogos`:**
@@ -64,6 +65,9 @@ Excepciones: `signInAction` / `loginFormAction` redirigen en éxito (`redirect()
 | `catalog.status` | `ACTIVE` \| `INACTIVE` \| `HIDDEN` |
 | `folder.status` | `ACTIVE` \| `INACTIVE` |
 | `column.dataType` | `TEXT` \| `NUMBER` \| `BOOLEAN` \| `DATE` \| `DATETIME` \| `IMAGE` \| `FORMULA` \| `UNKNOWN` |
+| `importJob.status` | `STORED` \| `ANALYZING` \| `PENDING_DESTINATION` \| `PENDING_CONFIG` \| `PROCESSING` \| `READY_TO_APPLY` \| `PUBLISHED` \| `FAILED` \| `CANCELLED` |
+| `importActionType` | `IMPORTAR_LISTA` \| `COMBINAR_LISTA` \| `REEMPLAZAR_LISTA` |
+| `importSheet.classification` | `IMPORTABLE` \| `INDEX` \| `AUXILIARY` \| `IGNORED` |
 
 ### Modelo de dominio
 
@@ -204,6 +208,44 @@ Columnas visibles + productos paginados.
 
 ---
 
+### `POST /api/admin/imports/upload`
+
+Sube Excel (`.xlsx`/`.xlsm`), respalda en bucket `excel-originals` **antes** de analizar. Solo `ADMIN`.
+
+**Body:** `multipart/form-data` con campo `file`.
+
+**201:** `{ "jobId": "clx...", "uploadedFileId": "clx..." }`
+
+**400:** `{ "error": "...", "code": "INVALID_FILE" | "VALIDATION_ERROR" }`
+
+→ `src/app/api/admin/imports/upload/route.ts`
+
+---
+
+### `GET /api/admin/imports/{jobId}`
+
+Estado del job de importación. **200:** `ImportJobDetail` (`src/features/imports/types/import-job.types.ts`).
+
+---
+
+### `GET /api/admin/imports/{jobId}/sheets`
+
+Hojas detectadas tras `analyzeImportAction`. **200:** `{ jobId, sheets: ImportSheetItem[] }`.
+
+---
+
+### `GET /api/admin/imports/{jobId}/preview`
+
+Vista previa paginada. **Query:** `page`, `pageSize`. Productos con `isMatch: true` = coincidencia.
+
+---
+
+### `GET /api/admin/imports/{jobId}/report`
+
+Informe final. Solo jobs `PUBLISHED` o `FAILED`. **200:** `{ jobId, status, report, errorMessage, finishedAt }`.
+
+---
+
 ### `GET /auth/callback`
 
 Intercambia `code` de Supabase por sesión. URL del correo, no `fetch`.
@@ -324,6 +366,28 @@ Campos opcionales de create/update: ver `src/features/catalog/schemas/column.sch
 
 ---
 
+## Server Actions — Importación (solo `ADMIN`)
+
+Import: `@/features/imports/actions/import.actions`
+
+**Flujo asistente:** upload → `analyzeImportAction` → `setImportDestinationAction` → `setImportConfigAction` → preview GET → `applyImportAction`.
+
+| Acción | Entrada | Respuesta `data` | Notas |
+|--------|---------|------------------|-------|
+| `analyzeImportAction` | `{ jobId }` | `ImportJobDetail` | → `PENDING_DESTINATION` |
+| `setImportDestinationAction` | `{ jobId, catalogId, folderId, sheetName }` | `ImportJobDetail` | Hoja `IMPORTABLE` |
+| `setImportConfigAction` | `{ jobId, columnMapping?, primaryCodeColumnKey?, descriptionColumnKey? }` | `ImportJobDetail` | → `READY_TO_APPLY` |
+| `applyImportAction` | `{ jobId, actionType, confirmed }` | `ImportJobDetail` | Ver confirmaciones |
+| `cancelImportAction` | `{ jobId }` | `ImportJobDetail` | → `CANCELLED` |
+
+**Confirmaciones:** `COMBINAR_LISTA` / `REEMPLAZAR_LISTA` requieren `confirmed: true`. `IMPORTAR_LISTA` solo si carpeta vacía.
+
+**Códigos error:** `IMPORT_NOT_FOUND`, `INVALID_STATE`, `INVALID_FILE`, `FOLDER_NOT_EMPTY`, `CONFIRMATION_REQUIRED`, `ANALYSIS_FAILED`, `PUBLISH_FAILED`, `SHEET_NOT_IMPORTABLE`, `VALIDATION_ERROR`.
+
+Schemas: `src/features/imports/schemas/import.schemas.ts`
+
+---
+
 ## Rutas de la aplicación
 
 ### Público
@@ -346,20 +410,20 @@ Navegación: `src/features/admin/data/adminNav.ts`. Destino post-login: `/admin`
 |------|--------|-----|
 | `/admin` | Placeholder | Home panel |
 | `/admin/catalogos` | UI mock | `CatalogNavigator` — cablear REST arriba |
-| `/admin/archivos` | Placeholder | Excel e importaciones (Fase 4+) |
+| `/admin/archivos` | Placeholder | Importador — **APIs listas**, UI pendiente |
 | `/admin/users` | ❌ | Gestión usuarios |
 
 ---
 
 ## Auditoría (interno)
 
-Sin endpoint de consulta. Eventos en `AuditLog`: login/logout, CRUD usuarios, CRUD/vaciado catálogos, `FILE_UPLOADED` (con `auditContext`). Fallos de auditoría no interrumpen la operación.
+Sin endpoint de consulta. Eventos en `AuditLog`: login/logout, CRUD usuarios, CRUD/vaciado catálogos, `FILE_UPLOADED`, `IMPORT_PUBLISHED`. Fallos de auditoría no interrumpen la operación.
 
 ---
 
 ## Pendiente (sin contrato aún)
 
-Importador Excel, CRUD manual de productos, búsqueda/filtros, archivos subidos, offline/sync. Detalle por fase: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md).
+CRUD manual de productos, búsqueda/filtros, listado archivos subidos (Fase 8), imágenes (Fase 5), offline/sync. Detalle por fase: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md).
 
 ---
 
@@ -373,5 +437,6 @@ Importador Excel, CRUD manual de productos, búsqueda/filtros, archivos subidos,
 | Carpetas | `folder.actions.ts`, `schemas/folder.schemas.ts`, `types/folder.types.ts` |
 | Columnas | `column.actions.ts`, `schemas/column.schemas.ts`, `types/column.types.ts` |
 | REST productos / navegación | `src/app/api/admin/folders/[folderId]/products/route.ts`, `.../catalogs/[catalogId]/navigation/route.ts` |
+| Importador | `src/app/api/admin/imports/`, `src/features/imports/actions/import.actions.ts`, `src/server/services/catalog-import.service.ts`, `src/server/importers/` |
 | Directorio | `src/app/api/admin/directory/route.ts`, `src/features/directory/types/directory.types.ts` |
 | UI catálogos (mock) | `src/features/catalog/components/CatalogNavigator.tsx`, `data/mockCatalogNavigator.data.ts` |

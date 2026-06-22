@@ -42,6 +42,38 @@ enum ColumnDataType {
   UNKNOWN
 }
 
+enum UploadedFileStatus {
+  STORED
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum ImportJobStatus {
+  STORED
+  ANALYZING
+  PENDING_DESTINATION
+  PENDING_CONFIG
+  PROCESSING
+  READY_TO_APPLY
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+enum ImportActionType {
+  IMPORTAR_LISTA
+  COMBINAR_LISTA
+  REEMPLAZAR_LISTA
+}
+
+enum ImportSheetClassification {
+  IMPORTABLE
+  INDEX
+  AUXILIARY
+  IGNORED
+}
+
 /// Perfil local sincronizado con Supabase Auth (`auth.users.id` → `User.id`).
 model User {
   id           String     @id @db.Uuid
@@ -53,7 +85,8 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  auditLogs AuditLog[]
+  auditLogs    AuditLog[]
+  uploadedFiles UploadedFile[]
 
   @@index([status])
 }
@@ -70,7 +103,8 @@ model Catalog {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
-  folders CatalogFolder[]
+  folders     CatalogFolder[]
+  importJobs  ImportJob[]
 
   @@index([status])
   @@index([order])
@@ -91,9 +125,10 @@ model CatalogFolder {
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
-  catalog  Catalog        @relation(fields: [catalogId], references: [id], onDelete: Cascade)
-  columns  FolderColumn[]
-  products Product[]
+  catalog    Catalog        @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  columns    FolderColumn[]
+  products   Product[]
+  importJobs ImportJob[]
 
   @@unique([catalogId, name])
   @@index([catalogId])
@@ -156,6 +191,90 @@ model Product {
   @@index([folderId])
   @@index([normalizedCode])
   @@index([dynamicData], type: Gin)
+}
+
+/// Archivo Excel respaldado en Storage.
+model UploadedFile {
+  id           String             @id @default(cuid())
+  originalName String
+  storagePath  String
+  mimeType     String
+  sizeBytes    Int
+  status       UploadedFileStatus @default(STORED)
+  uploadedById String             @db.Uuid
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  uploadedBy User        @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  importJobs ImportJob[]
+
+  @@index([uploadedById])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Operación de importación Excel hacia una carpeta.
+model ImportJob {
+  id              String           @id @default(cuid())
+  uploadedFileId  String
+  catalogId       String?
+  folderId        String?
+  targetSheetName String?
+  status          ImportJobStatus  @default(STORED)
+  actionType      ImportActionType?
+  config          Json?
+  resultados      Json?
+  progress        Json?
+  errorMessage    String?
+  startedAt       DateTime         @default(now())
+  finishedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  uploadedFile UploadedFile   @relation(fields: [uploadedFileId], references: [id], onDelete: Cascade)
+  catalog      Catalog?       @relation(fields: [catalogId], references: [id], onDelete: SetNull)
+  folder       CatalogFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  sheets       ImportSheet[]
+  preview      ImportPreview?
+
+  @@index([uploadedFileId])
+  @@index([status])
+  @@index([folderId])
+  @@index([catalogId])
+}
+
+/// Hoja detectada durante el análisis de un archivo Excel.
+model ImportSheet {
+  id             String                    @id @default(cuid())
+  importJobId    String
+  sheetName      String
+  classification ImportSheetClassification
+  rowCount       Int                       @default(0)
+  columnCount    Int                       @default(0)
+  detectedHeaders Json?
+  metadata       Json?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  importJob ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+
+  @@unique([importJobId, sheetName])
+  @@index([importJobId])
+}
+
+/// Vista previa de productos reconocidos antes de publicar.
+model ImportPreview {
+  id                 String   @id @default(cuid())
+  importJobId        String   @unique
+  recognizedProducts Json
+  matchedProducts    Json     @default("[]")
+  errors             Json     @default("[]")
+  warnings           Json     @default("[]")
+  summary            Json
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  importJob ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
 }
 
 /// Registro de operaciones importantes (login, CRUD, importaciones, etc.).

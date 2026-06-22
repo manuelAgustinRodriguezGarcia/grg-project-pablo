@@ -12,6 +12,7 @@ export {
   buildStoragePath,
   createSignedDownloadUrl,
   deleteFile,
+  downloadFile,
   ensureStorageBuckets,
   listStorageBuckets,
   uploadFile,

@@ -89,6 +89,27 @@ export async function createSignedDownloadUrl(
   };
 }
 
+export async function downloadFile(
+  bucket: StorageBucketName,
+  path: string,
+): Promise<Buffer> {
+  const normalizedPath = normalizeStoragePath(path);
+  const client = getSupabaseAdminClient();
+
+  const { data, error } = await client.storage
+    .from(bucket)
+    .download(normalizedPath);
+
+  if (error || !data) {
+    throw new StorageError(
+      `Error al descargar archivo: ${error?.message ?? "respuesta vacía"}`,
+    );
+  }
+
+  const arrayBuffer = await data.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
 export async function deleteFile(
   bucket: StorageBucketName,
   path: string,
