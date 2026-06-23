@@ -1,4 +1,3 @@
-import type { UserRole } from "@/generated/prisma/client";
 import { userRepository } from "@/server/repositories/user.repository";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/server/services/audit.constants";
 import { auditService } from "@/server/services/audit.service";
@@ -107,15 +106,6 @@ function resolveDisplayName(
   return email.split("@")[0] ?? email;
 }
 
-function resolveRole(metadata: Record<string, unknown> | undefined): UserRole {
-  const role = metadata?.role;
-  if (role === "ADMIN" || role === "CONSULTA") {
-    return role;
-  }
-
-  return "CONSULTA";
-}
-
 export class AuthService {
   async signInWithPassword(input: SignInInput) {
     const supabase = await createSupabaseServerClient();
@@ -153,7 +143,7 @@ export class AuthService {
         authUser.user_metadata,
         authUser.email ?? input.email,
       ),
-      role: existing?.role ?? resolveRole(authUser.user_metadata),
+      role: existing?.role ?? "CONSULTA",
       status: existing?.status ?? "ACTIVE",
     });
 

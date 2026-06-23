@@ -3,9 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
-const SEED_EMAIL = "agencygrg@gmail.com";
-const SEED_PASSWORD = "grgsolutions";
-const SEED_NAME = "adminGRG";
+const SEED_EMAIL = process.env.SEED_ADMIN_EMAIL ?? "agencygrg@gmail.com";
+const SEED_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "grgsolutions";
+const SEED_NAME = process.env.SEED_ADMIN_NAME ?? "adminGRG";
 const SEED_ROLE = "ADMIN" as const;
 
 function getSupabaseAdmin() {

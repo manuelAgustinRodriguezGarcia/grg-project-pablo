@@ -8,6 +8,7 @@ import {
   type PaginatedProducts,
 } from "@/server/repositories/product.repository";
 import { ProductError } from "./product.errors";
+import { productImageService } from "./product-image.service";
 import { VisibilityError } from "./visibility.errors";
 import { visibilityService } from "./visibility.service";
 
@@ -22,6 +23,11 @@ export type ProductTableItem = {
   primaryCode: string | null;
   description: string | null;
   dynamicData: Record<string, unknown>;
+  primaryImage: {
+    id: string;
+    thumbnailUrl: string | null;
+    fullUrl: string | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -58,6 +64,7 @@ function toProductTableItem(
   product: PaginatedProducts["items"][number],
   visibleColumnKeys: Iterable<string>,
   role: "ADMIN" | "CONSULTA",
+  primaryImage: ProductTableItem["primaryImage"],
 ): ProductTableItem {
   const dynamicData = visibilityService.stripHiddenDynamicData(
     parseDynamicData(product.dynamicData),
@@ -70,6 +77,7 @@ function toProductTableItem(
     primaryCode: product.primaryCode,
     description: product.description,
     dynamicData,
+    primaryImage,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   };
@@ -118,6 +126,9 @@ export class ProductService {
     });
 
     const visibleColumnKeys = columns.map((column) => column.internalKey);
+    const productIds = paginated.items.map((product) => product.id);
+    const primaryImages =
+      await productImageService.resolvePrimaryImagesForProducts(productIds);
 
     return {
       folder: {
@@ -127,7 +138,12 @@ export class ProductService {
       },
       columns,
       products: paginated.items.map((product) =>
-        toProductTableItem(product, visibleColumnKeys, role),
+        toProductTableItem(
+          product,
+          visibleColumnKeys,
+          role,
+          primaryImages.get(product.id) ?? null,
+        ),
       ),
       pagination: {
         page: paginated.page,

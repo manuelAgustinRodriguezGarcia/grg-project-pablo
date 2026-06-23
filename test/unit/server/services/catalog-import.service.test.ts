@@ -73,6 +73,55 @@ vi.mock("@/server/services/audit.service", () => ({
   },
 }));
 
+vi.mock("@/server/services/image-extraction.service", () => ({
+  imageExtractionService: {
+    processEmbeddedImages: vi.fn(async () => ({
+      records: [],
+      warnings: [],
+      stats: {
+        extracted: 0,
+        associated: 0,
+        pendingReview: 0,
+        rejected: 0,
+        ambiguous: 0,
+      },
+    })),
+  },
+}));
+
+vi.mock("@/server/services/product-image.service", () => ({
+  productImageService: {
+    processExternalImages: vi.fn(async () => ({
+      warnings: [],
+      stats: {
+        processed: 0,
+        associated: 0,
+        pendingReview: 0,
+        rejected: 0,
+        ambiguous: 0,
+        duplicateName: 0,
+      },
+    })),
+    uploadExternalToStaging: vi.fn(),
+  },
+}));
+
+vi.mock("@/server/repositories/product-image.repository", () => ({
+  productImageRepository: {
+    countByImportJobAndStatuses: vi.fn(async () => 0),
+  },
+}));
+
+vi.mock("exceljs", () => ({
+  default: {
+    Workbook: vi.fn().mockImplementation(() => ({
+      xlsx: {
+        load: vi.fn(),
+      },
+    })),
+  },
+}));
+
 import { catalogImportService } from "@/server/services/catalog-import.service";
 import { importJobRepository } from "@/server/repositories/import-job.repository";
 import { folderRepository } from "@/server/repositories/folder.repository";
@@ -137,5 +186,24 @@ describe("CatalogImportService", () => {
     ).rejects.toMatchObject({
       code: "CONFIRMATION_REQUIRED",
     } satisfies Partial<ImportError>);
+  });
+
+  it("completeImageReview pasa de PENDING_REVIEW a PUBLISHED", async () => {
+    vi.mocked(importJobRepository.findByIdWithRelations).mockResolvedValue({
+      id: "job-review",
+      status: "PENDING_REVIEW",
+    } as never);
+
+    vi.mocked(importJobRepository.update).mockResolvedValue({
+      id: "job-review",
+      status: "PUBLISHED",
+    } as never);
+
+    const result = await catalogImportService.completeImageReview("job-review");
+    expect(result.status).toBe("PUBLISHED");
+    expect(importJobRepository.update).toHaveBeenCalledWith(
+      "job-review",
+      expect.objectContaining({ status: "PUBLISHED" }),
+    );
   });
 });

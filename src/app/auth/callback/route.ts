@@ -3,6 +3,7 @@ import {
   ADMIN_HOME_PATH,
   AUTH_RESET_PASSWORD_PATH,
   createSupabaseServerClient,
+  resolveSafeRedirectPath,
 } from "@/server/auth";
 
 export async function GET(request: Request) {
@@ -26,9 +27,7 @@ export async function GET(request: Request) {
   const destination =
     next === AUTH_RESET_PASSWORD_PATH
       ? AUTH_RESET_PASSWORD_PATH
-      : next.startsWith("/")
-        ? next
-        : ADMIN_HOME_PATH;
+      : resolveSafeRedirectPath(next);
 
   return NextResponse.redirect(new URL(destination, requestUrl.origin));
 }

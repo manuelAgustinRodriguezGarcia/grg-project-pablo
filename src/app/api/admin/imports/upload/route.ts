@@ -1,30 +1,13 @@
 import { NextResponse } from "next/server";
-import { AuthError } from "@/server/auth";
+import { handleAdminApiError } from "@/server/api/admin-api-error";
 import { catalogImportService } from "@/server/services/catalog-import.service";
 import { ImportError } from "@/server/services/import.errors";
 import { BUCKET_CONFIGS } from "@/server/storage/config";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
+import { getFileExtension } from "@/server/storage/sanitize-filename";
 
 const EXCEL_CONFIG = BUCKET_CONFIGS[STORAGE_BUCKETS.EXCEL_ORIGINALS];
-
-function mapImportError(error: ImportError): NextResponse {
-  const statusByCode: Record<string, number> = {
-    IMPORT_NOT_FOUND: 404,
-    INVALID_STATE: 409,
-    INVALID_FILE: 400,
-    FOLDER_NOT_EMPTY: 409,
-    CONFIRMATION_REQUIRED: 400,
-    ANALYSIS_FAILED: 422,
-    PUBLISH_FAILED: 500,
-    SHEET_NOT_IMPORTABLE: 400,
-    VALIDATION_ERROR: 400,
-  };
-
-  return NextResponse.json(
-    { error: error.message, code: error.code },
-    { status: statusByCode[error.code] ?? 400 },
-  );
-}
+const TEMP_CONFIG = BUCKET_CONFIGS[STORAGE_BUCKETS.TEMP_IMPORTS];
 
 function validateExcelUpload(file: File): string | null {
   const lowerName = file.name.toLowerCase();
@@ -41,6 +24,69 @@ function validateExcelUpload(file: File): string | null {
   }
 
   return null;
+}
+
+function validateOptionalImageFile(file: File): string | null {
+  const extension = getFileExtension(file.name);
+  const isZip = extension === ".zip";
+  const isImage = [".jpg", ".jpeg", ".png", ".webp"].includes(extension);
+
+  if (!isZip && !isImage) {
+    return `Formato no permitido: ${file.name}`;
+  }
+
+  if (file.size > TEMP_CONFIG.maxSizeBytes) {
+    return `El archivo ${file.name} supera el tamaño máximo permitido.`;
+  }
+
+  return null;
+}
+
+async function collectOptionalImages(
+  formData: FormData,
+): Promise<Array<{ buffer: Buffer; originalFilename: string; contentType: string; isZip: boolean }>> {
+  const files: Array<{
+    buffer: Buffer;
+    originalFilename: string;
+    contentType: string;
+    isZip: boolean;
+  }> = [];
+
+  const zip = formData.get("imagesZip");
+  if (zip instanceof File) {
+    const validationError = validateOptionalImageFile(zip);
+    if (validationError) {
+      throw new ImportError(validationError, "INVALID_FILE");
+    }
+
+    files.push({
+      buffer: Buffer.from(await zip.arrayBuffer()),
+      originalFilename: zip.name,
+      contentType: zip.type || "application/zip",
+      isZip: true,
+    });
+  }
+
+  const looseImages = formData.getAll("images");
+  for (const entry of looseImages) {
+    if (!(entry instanceof File)) {
+      continue;
+    }
+
+    const validationError = validateOptionalImageFile(entry);
+    if (validationError) {
+      throw new ImportError(validationError, "INVALID_FILE");
+    }
+
+    files.push({
+      buffer: Buffer.from(await entry.arrayBuffer()),
+      originalFilename: entry.name,
+      contentType: entry.type || "image/jpeg",
+      isZip: false,
+    });
+  }
+
+  return files;
 }
 
 export async function POST(request: Request) {
@@ -70,20 +116,13 @@ export async function POST(request: Request) {
       contentType: file.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
+    const optionalImages = await collectOptionalImages(formData);
+    if (optionalImages.length > 0) {
+      await catalogImportService.uploadImportImages(result.jobId, optionalImages);
+    }
+
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError && error.code === "UNAUTHENTICATED") {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-    }
-
-    if (error instanceof AuthError && error.code === "FORBIDDEN") {
-      return NextResponse.json({ error: error.message, code: error.code }, { status: 403 });
-    }
-
-    if (error instanceof ImportError) {
-      return mapImportError(error);
-    }
-
-    throw error;
+    return handleAdminApiError(error);
   }
 }

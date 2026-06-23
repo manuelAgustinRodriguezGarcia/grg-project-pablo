@@ -47,6 +47,11 @@ vi.mock("@/server/repositories/product.repository", () => ({
     countByFolder: vi.fn(),
   },
 }));
+vi.mock("@/server/services/product-image.service", () => ({
+  productImageService: {
+    resolvePrimaryImagesForProducts: vi.fn(async () => new Map()),
+  },
+}));
 
 describe("ProductService", () => {
   beforeEach(() => {
@@ -76,6 +81,7 @@ describe("ProductService", () => {
     expect(result.folder.id).toBe(FOLDER_ID);
     expect(result.columns).toHaveLength(2);
     expect(result.products).toHaveLength(1);
+    expect(result.products[0]?.primaryImage).toBeNull();
     expect(result.pagination.total).toBe(1);
   });
 

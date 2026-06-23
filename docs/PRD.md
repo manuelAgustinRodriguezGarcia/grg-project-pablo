@@ -147,15 +147,34 @@ Este procedimiento provoca:
 
 ### 3. Estado actual del desarrollo
 
-Al momento de esta actualización del PRD:
+Al **23/06/2026** (rama `backend`). Detalle técnico y contratos en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) y [`ENDPOINTS.md`](./ENDPOINTS.md).
 
-* La landing pública ya se encuentra diseñada e implementada en su primera versión.
-* La página de login ya se encuentra diseñada y funcionando.
-* El panel administrativo ya cuenta con una estructura visual inicial.
-* La sección `/admin` ya está planteada con navegación lateral.
-* El sistema aún debe desarrollar el modelo real de catálogos, carpetas, productos, permisos, importación, filtros e imágenes.
+#### UI
 
-Este PRD reemplaza la versión anterior y establece el nuevo criterio funcional acordado con Pablo.
+| Área | Estado |
+|------|--------|
+| Landing pública (`/`) | ✅ Primera versión |
+| Login (`/auth/login`) | ✅ Funcional |
+| Panel admin (sidebar, layout) | ✅ Estructura base |
+| `/admin/catalogos` | ⚠️ `CatalogNavigator` con **datos mock** — APIs REST listas |
+| `/admin/archivos` (importador) | ⏳ Placeholder — backend listo |
+| `/admin/users`, recuperación contraseña | ⏳ Sin página |
+
+#### Backend (fases técnicas 1–5 ✅)
+
+| Capacidad | Estado |
+|-----------|--------|
+| Auth, usuarios, directorio, auditoría | ✅ |
+| Catálogos, carpetas, columnas, visibilidad | ✅ |
+| Productos (lectura paginada + miniatura) | ✅ |
+| Importador Excel (asistente 6 pasos, publicación segura) | ✅ |
+| Imágenes (extracción, matching, revisión, galería) | ✅ |
+| CRUD manual de productos | ⏳ |
+| Búsqueda, filtros, archivos subidos, offline | ⏳ |
+
+> Las **fases del roadmap PRD (§48)** no coinciden 1:1 con las fases backend. Ver tabla de mapeo en [`BACKEND-IMPLEMENTATION.md` §1.1](./BACKEND-IMPLEMENTATION.md#11-roadmap-prd--backend).
+
+Este PRD define el criterio funcional acordado con Pablo; el estado de implementación se mantiene sincronizado en los documentos técnicos citados.
 
 ---
 
@@ -2504,6 +2523,8 @@ El catálogo y la carpeta quedan actualizados
 
 ### 48. Roadmap funcional
 
+> **Estado de implementación técnica:** [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) · **Contratos API:** [`ENDPOINTS.md`](./ENDPOINTS.md)
+
 #### Fase 1 — Base visual y acceso
 
 * Landing pública.
@@ -2513,7 +2534,7 @@ El catálogo y la carpeta quedan actualizados
 * Rutas protegidas.
 * Roles admin/user.
 
-Estado: iniciado.
+**Estado:** ✅ UI base y auth operativos (backend Fase 2).
 
 ---
 
@@ -2525,6 +2546,8 @@ Estado: iniciado.
 * Crear configuración de columnas.
 * Crear visibilidad por rol.
 * Crear estructura base de tablas.
+
+**Estado:** ✅ Backend completo (backend Fase 3). UI catálogos aún con mock.
 
 ---
 
@@ -2543,6 +2566,8 @@ Estado: iniciado.
 * Eliminar producto.
 * Reemplazar imágenes.
 
+**Estado:** 🔄 Catálogos/carpetas/columnas ✅ backend · productos e imágenes manuales ⏳ (backend Fase 6).
+
 ---
 
 #### Fase 4 — Filtros y búsqueda
@@ -2555,6 +2580,8 @@ Estado: iniciado.
 * Pills de filtros activos.
 * Limpieza de filtros.
 * Optimización de rendimiento.
+
+**Estado:** ⏳ (backend Fase 7).
 
 ---
 
@@ -2573,6 +2600,8 @@ Estado: iniciado.
 * Aplicar lista.
 * Confirmaciones.
 
+**Estado:** ✅ Backend completo (backend Fase 4). UI asistente en `/admin/archivos` ⏳.
+
 ---
 
 #### Fase 6 — Imágenes
@@ -2585,6 +2614,8 @@ Estado: iniciado.
 * Revisión manual.
 * Reemplazo de imágenes.
 
+**Estado:** ✅ Backend completo (backend Fase 5). UI miniaturas en tabla, panel revisión y modal ampliado ⏳.
+
 ---
 
 #### Fase 7 — Archivos subidos
@@ -2595,6 +2626,8 @@ Estado: iniciado.
 * Informes.
 * Reprocesamiento.
 * Relación con catálogos y carpetas.
+
+**Estado:** ⏳ (backend Fase 8).
 
 ---
 
@@ -2607,6 +2640,8 @@ Estado: iniciado.
 * Filtros offline.
 * Miniaturas offline.
 * Bloqueo de edición.
+
+**Estado:** ⏳ (backend Fase 9). Señal `grg:offline:clear` preparada en logout.
 
 ---
 
@@ -2622,6 +2657,8 @@ Estado: iniciado.
 * Capacitación.
 * Documentación.
 * Despliegue en dominio final.
+
+**Estado:** ⏳ (backend Fase 10).
 
 ---
 

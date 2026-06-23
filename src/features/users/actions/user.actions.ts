@@ -10,6 +10,7 @@ import {
 } from "@/features/users/schemas/user.schemas";
 import type { UserActionResult, UserListItem } from "@/features/users/types/user.types";
 import { toUserListItem } from "@/features/users/types/user.types";
+import { getSafeClientMessage } from "@/server/errors/sanitize-error";
 
 function toActionError(error: unknown): UserActionResult<never> {
   if (error instanceof UserError) {
@@ -21,7 +22,7 @@ function toActionError(error: unknown): UserActionResult<never> {
   }
 
   if (error instanceof Error) {
-    return { success: false, error: error.message };
+    return { success: false, error: getSafeClientMessage(error) };
   }
 
   return { success: false, error: "Ocurrió un error inesperado." };

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AuthError } from "@/server/auth";
+import { handleAdminApiError } from "@/server/api/admin-api-error";
 import { ProductError } from "@/server/services/product.errors";
 import { productService } from "@/server/services/product.service";
 import { productPaginationQuerySchema } from "@/features/catalog/schemas/product.schemas";
@@ -36,15 +36,16 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(table);
   } catch (error) {
-    if (error instanceof AuthError && error.code === "UNAUTHENTICATED") {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-    }
+    return handleAdminApiError(error, (domainError) => {
+      if (domainError instanceof ProductError) {
+        const status = domainError.code === "VALIDATION_ERROR" ? 400 : 404;
+        return NextResponse.json(
+          { error: domainError.message, code: domainError.code },
+          { status },
+        );
+      }
 
-    if (error instanceof ProductError) {
-      const status = error.code === "VALIDATION_ERROR" ? 400 : 404;
-      return NextResponse.json({ error: error.message, code: error.code }, { status });
-    }
-
-    throw error;
+      return null;
+    });
   }
 }

@@ -18,6 +18,9 @@ export const AUDIT_ACTIONS = {
   COLUMN_UPDATED: "COLUMN_UPDATED",
   COLUMN_DELETED: "COLUMN_DELETED",
   IMPORT_PUBLISHED: "IMPORT_PUBLISHED",
+  PRODUCT_IMAGE_ASSOCIATED: "PRODUCT_IMAGE_ASSOCIATED",
+  PRODUCT_IMAGE_UPDATED: "PRODUCT_IMAGE_UPDATED",
+  PRODUCT_IMAGE_DELETED: "PRODUCT_IMAGE_DELETED",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -29,6 +32,7 @@ export const AUDIT_ENTITY_TYPES = {
   FOLDER: "CatalogFolder",
   COLUMN: "FolderColumn",
   IMPORT: "Import",
+  PRODUCT_IMAGE: "ProductImage",
 } as const;
 
 export type AuditEntityType =

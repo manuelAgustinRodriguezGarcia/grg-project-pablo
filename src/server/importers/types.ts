@@ -63,4 +63,13 @@ export type ImportJobConfig = {
   columnMapping?: ColumnMappingEntry[];
   primaryCodeColumnKey?: string;
   descriptionColumnKey?: string;
+  externalImages?: ExternalImageRef[];
+};
+
+export type ExternalImageRef = {
+  storagePath: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  source: "EXTERNAL_ZIP" | "EXTERNAL_UPLOAD";
 };

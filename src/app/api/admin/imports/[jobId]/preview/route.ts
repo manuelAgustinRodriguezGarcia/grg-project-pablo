@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { AuthError } from "@/server/auth";
+import { handleAdminApiError } from "@/server/api/admin-api-error";
 import { catalogImportService } from "@/server/services/catalog-import.service";
-import { ImportError } from "@/server/services/import.errors";
 import type { MappedProductRow } from "@/server/importers";
 import type { ImportPreviewSummary } from "@/features/imports/types/import-job.types";
 import { importPreviewQuerySchema } from "@/features/imports/schemas/import.schemas";
@@ -57,15 +56,6 @@ export async function GET(request: Request, context: RouteContext) {
       pagination: { page, pageSize, total, totalPages },
     });
   } catch (error) {
-    if (error instanceof AuthError && error.code === "UNAUTHENTICATED") {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-    }
-
-    if (error instanceof ImportError) {
-      const status = error.code === "IMPORT_NOT_FOUND" ? 404 : 400;
-      return NextResponse.json({ error: error.message, code: error.code }, { status });
-    }
-
-    throw error;
+    return handleAdminApiError(error);
   }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/server/auth";
+import { AuthError, requireAuth } from "@/server/auth";
 
 export async function GET() {
   try {
@@ -11,7 +11,14 @@ export async function GET() {
       role: profile.role,
       status: profile.status,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError && error.code === "FORBIDDEN") {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: 403 },
+      );
+    }
+
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 }

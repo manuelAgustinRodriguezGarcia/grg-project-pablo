@@ -20,7 +20,7 @@
 
 ## 1. Estado actual
 
-**Rama:** `backend` · **Fases completadas:** 1, 2, 3 (3.1–3.8), 4
+**Rama:** `backend` · **Fases completadas:** 1, 2, 3 (3.1–3.8), 4, 5
 
 ### 1.1 Roadmap PRD ↔ backend
 
@@ -31,7 +31,7 @@
 | 3 — Administración manual | 6 | ⏳ |
 | 4 — Filtros y búsqueda | 7 | ⏳ |
 | 5 — Importador | 4 | ✅ |
-| 6 — Imágenes | 5 | ⏳ |
+| 6 — Imágenes | 5 | ✅ |
 | 7 — Archivos subidos | 8 | ⏳ |
 | 8 — Offline | 9 | ⏳ |
 | 9 — Pruebas y entrega | 10 | ⏳ |
@@ -42,14 +42,14 @@
 | Área | Detalle |
 |------|---------|
 | **Stack** | Next.js 16, React 19, TypeScript, Prisma 7, Supabase Auth + Storage |
-| **Modelos Prisma** | `User`, `Catalog`, `CatalogFolder`, `FolderColumn`, `Product`, `UploadedFile`, `ImportJob`, `ImportSheet`, `ImportPreview`, `AuditLog` |
-| **Migraciones** | `20260617182823_*`, `20260619214310_*`, `20260622225542_import_migration_backend` |
-| **Auth** | `src/server/auth/`, middleware `/admin` + `/api/admin`, guards, Server Actions |
+| **Modelos Prisma** | `User`, `Catalog`, `CatalogFolder`, `FolderColumn`, `Product`, `ProductImage`, `UploadedFile`, `ImportJob`, `ImportSheet`, `ImportPreview`, `AuditLog` |
+| **Migraciones** | `20260617182823_*`, `20260619214310_*`, `20260622225542_import_migration_backend`, `20260623134707_product_images_phase5` |
+| **Auth** | `src/server/auth/`, middleware `/admin` + `/api/admin`, guards, rate limit login/upload, safe redirect, Server Actions |
 | **Storage** | Buckets privados `excel-originals`, `product-images`, `temp-imports` |
-| **Servicios** | Auth, User, Catalog, Folder, ColumnConfig, Product (lectura + bulk import), Visibility, Navigation, Directory, Audit, ExcelStructure, **CatalogImportService** |
-| **Importers** | `src/server/importers/` — ExcelJS parseo, fórmulas, detección imágenes (conteo) |
-| **APIs** | Directorio, navegación, productos + **import upload/job/sheets/preview/report** |
-| **Pendiente** | UI asistente import, imágenes (Fase 5), CRUD manual productos, búsqueda/filtros, listado archivos (Fase 8), offline |
+| **Servicios** | Auth, User, Catalog, Folder, ColumnConfig, Product (lectura + bulk import + `primaryImage`), Visibility, Navigation, Directory, Audit, ExcelStructure, CatalogImportService, **ImageExtraction/MatchingService**, **ProductImageService** |
+| **Importers / processors** | `src/server/importers/` — ExcelJS; `src/server/image-processors/` — sharp, ZIP seguro |
+| **APIs** | Directorio, navegación, productos (con miniatura), import upload/job/sheets/preview/report/**images/review**, galería por producto |
+| **Pendiente** | UI asistente import + revisión imágenes + modal ampliado, CRUD manual productos, búsqueda/filtros, listado archivos (Fase 8), offline |
 
 ### 1.3 Glosario PRD ↔ código
 
@@ -97,6 +97,7 @@ src/
     ├── repositories/ → Prisma
     ├── auth/, storage/, database/
     ├── importers/   → parseo ExcelJS
+    ├── image-processors/ → sharp, ZIP seguro, integridad
     └── (futuro) search/, filters/
 ```
 
@@ -113,6 +114,7 @@ src/
 | ORM | Prisma 7 + `@prisma/adapter-pg` |
 | Auth / Storage | Supabase |
 | Excel | ExcelJS |
+| Imágenes | sharp, unzipper |
 | Validación | Zod |
 
 **Almacenamiento (§43):** relacional para entidades; JSONB en `Product.dynamicData`; índices GIN y normalizados para búsqueda futura.
@@ -131,29 +133,29 @@ src/
 | `Catalog` | nombre, orden, status, `visibleToNormalUser`, `coverImagePath` | 2–3 |
 | `CatalogFolder` | catálogo, orden, `searchConfig`/`filterConfig` JSON, visibilidad | 3 |
 | `FolderColumn` | tipos semánticos, buscable/filtrable/global, `globalFieldKey` placeholder | 3 |
-| `Product` | `dynamicData` JSONB, código/descripción, texto indexado | 3 |
+| `Product` | `dynamicData` JSONB, código/descripción, texto indexado, imágenes | 3, 5 |
+| `ProductImage` | embebidas/externas; estados §4.3; miniatura + original en Storage | 5 |
 | `UploadedFile` | respaldo Excel en Storage, estado, usuario | 4 |
 | `ImportJob` | asistente, destino, estados, config/resultados JSON | 4 |
 | `ImportSheet` | hojas detectadas y clasificadas | 4 |
 | `ImportPreview` | productos reconocidos, coincidencias, advertencias | 4 |
 | `AuditLog` | acción, entidad, userId opcional | 2 |
 
-**Enums:** `UserRole`, `UserStatus`, `CatalogStatus`, `FolderStatus`, `ColumnDataType`, `UploadedFileStatus`, `ImportJobStatus`, `ImportActionType`, `ImportSheetClassification`.
+**Enums:** `UserRole`, `UserStatus`, `CatalogStatus`, `FolderStatus`, `ColumnDataType`, `UploadedFileStatus`, `ImportJobStatus`, `ImportActionType`, `ImportSheetClassification`, `ProductImageStatus`, `ProductImageSource`.
 
 ### 4.2 Pendiente ⏳
 
 | Entidad | Fase | Propósito |
 |---------|------|-----------|
 | `EquivalentCode` | 6–7 | Equivalencias normalizadas |
-| `ProductImage` | 5 | Embebidas/externas/manuales; estados §4.3 |
 | `GlobalFieldMapping` | 7 | Filtros globales |
 | `OfflineSyncManifest` | 9 | Sincronización offline |
 
 > `UploadedFile` listado/reprocesar UI → Fase 8 (`UploadedFileService`).
 
-### 4.3 Estados de imagen (PRD §27) — Fase 5
+### 4.3 Estados de imagen (PRD §27) — Fase 5 ✅
 
-Asociada (auto/manual), pendiente revisión, no encontrada, ambigua, duplicada, rechazada, eliminada.
+`ASSOCIATED_AUTO`, `ASSOCIATED_MANUAL`, `PENDING_REVIEW`, `FILE_NOT_FOUND`, `AMBIGUOUS`, `DUPLICATE_NAME`, `FORMAT_REJECTED`, `DELETED`.
 
 ### 4.4 Operaciones admin clave (PRD §14)
 
@@ -178,7 +180,7 @@ Asociada (auto/manual), pendiente revisión, no encontrada, ambigua, duplicada, 
 | ExcelStructureService | ✅ | Clasificación hojas + delegación parseo ExcelJS |
 | AuditService | ✅ | Operaciones críticas; `IMPORT_PUBLISHED` |
 | CatalogImportService | ✅ | Asistente 6 pasos, publicación segura, combinar/reemplazar |
-| ImageExtraction/MatchingService | ⏳ | Imágenes embebidas/externas (Fase 5) |
+| ImageExtractionService, ImageMatchingService, ProductImageService | ✅ | Extracción embebida, matching externo, revisión, URLs firmadas (Fase 5) |
 | SearchService, ColumnFilterService | ⏳ | Búsqueda normalizada, filtros acumulables |
 | UploadedFileService, OfflineSyncService | ⏳ | Listado archivos (Fase 8), sync |
 
@@ -205,7 +207,7 @@ Subir Excel (+ ZIP/imágenes) → respaldo Storage → elegir catálogo/carpeta 
 
 ### 6.1 Estados ImportJob (publicación segura — PRD §21)
 
-`STORED` → `ANALYZING` → `PENDING_DESTINATION` → `PENDING_CONFIG` → `PROCESSING` → `PENDING_REVIEW` → `READY_TO_APPLY` → `PUBLISHED` | `FAILED` | `CANCELLED`
+`STORED` → `ANALYZING` → `PENDING_DESTINATION` → `PENDING_CONFIG` → `READY_TO_APPLY` → (`apply`) → `PROCESSING` → `PENDING_REVIEW` | `PUBLISHED` → (revisión) → `PUBLISHED` | `FAILED` | `CANCELLED`
 
 > Datos activos no se reemplazan hasta confirmación exitosa (RF-044).
 
@@ -297,28 +299,43 @@ Asistente guiado 6 pasos, publicación segura, combinar/reemplazar/aplicar lista
 | 4.7 | Tests | `test/unit/server/importers/*`, `catalog-import.service.test.ts` |
 | 4.8 | Documentación | [`ENDPOINTS.md`](./ENDPOINTS.md) contratos importador |
 
-**Estados `ImportJob`:** `STORED` → `ANALYZING` → `PENDING_DESTINATION` → `PENDING_CONFIG` → `PROCESSING` → `READY_TO_APPLY` → `PUBLISHED` | `FAILED` | `CANCELLED`  
-(`PENDING_REVIEW` reservado para revisión de imágenes — Fase 5)
+**Estados `ImportJob`:** `STORED` → `ANALYZING` → `PENDING_DESTINATION` → `PENDING_CONFIG` → `READY_TO_APPLY` → (`apply`) → `PROCESSING` → `PUBLISHED` | `PENDING_REVIEW` | `FAILED` | `CANCELLED`  
+(`PENDING_REVIEW` tras `apply` si quedan imágenes por revisar — Fase 5)
 
 **Estrategias:** `IMPORTAR_LISTA` (carpeta vacía), `COMBINAR_LISTA` (omitir coincidentes), `REEMPLAZAR_LISTA` (confirmación obligatoria).
 
-**Verificación:** `pnpm lint` · `pnpm test:run` (137 tests) · `pnpm db:verify` ✅
+**Verificación:** `pnpm lint` · `pnpm test:run` · `pnpm db:verify` ✅
 
 **Pendiente UI:** cablear asistente en `/admin/archivos` contra APIs documentadas.
 
 ---
 
-### Fase 5 — Imágenes ⏳
+### Fase 5 — Imágenes ✅ (2026-06-23)
 
 **PRD fase 6** · Depende de Fase 4
 
-- [ ] `ProductImage` con estados §4.3
-- [ ] Embebidas: `ImageExtractionService` (hoja/fila/columna)
-- [ ] Externas: ZIP/sueltas; `ImageMatchingService` por código/nombre (sin rutas Windows)
-- [ ] Formatos `.jpg`/`.jpeg`/`.png`/`.webp`; error parcial si imagen dañada
-- [ ] Miniaturas + URLs firmadas; API revisión (ambiguas, asociar, principal, orden)
+Extracción embebida, importación externa (ZIP/sueltas), matching por código/nombre, miniaturas, revisión manual y URLs firmadas. **Backend listo; UI pendiente** (miniaturas en tabla, panel revisión, modal RF-032).
 
-**Completitud:** Rulemanes/Catálogo Azul embebidas; Embragues externas por código.
+| # | Entregable | Componentes |
+|---|------------|-------------|
+| 5.1 | Modelos Prisma | `ProductImage`, enums `ProductImageStatus`/`ProductImageSource`, `PENDING_REVIEW` en `ImportJob` · migración `20260623134707_*` |
+| 5.2 | Processors | `src/server/image-processors/` — `sharp` miniaturas, integridad, ZIP seguro (`unzipper`) |
+| 5.3 | Servicios | `ImageExtractionService`, `ImageMatchingService`, `ProductImageService` |
+| 5.4 | Repository | `product-image.repository` |
+| 5.5 | Integración import | `CatalogImportService.apply` → `PROCESSING` → imágenes → `PENDING_REVIEW` \| `PUBLISHED`; `uploadImportImages`, `completeImageReview` |
+| 5.6 | REST | `POST .../upload` (+ ZIP/`images[]`), `POST .../images`, `GET .../images/review`, `PATCH/DELETE .../images/{id}`, `GET .../products/{id}/images` |
+| 5.7 | Server Actions | `listImportImageReviewAction`, `associateImportImageAction`, `updateImportImageAction`, `deleteImportImageAction`, `completeImageReviewAction` |
+| 5.8 | Productos | `ProductTableItem.primaryImage` con URLs firmadas |
+| 5.9 | Tests | `image-matching`, `image-processors`, `catalog-import` (review), `product.service` |
+| 5.10 | Documentación | [`ENDPOINTS.md`](./ENDPOINTS.md) contratos imágenes |
+
+**Flujo:** apply → procesar embebidas + externas → si hay `PENDING_REVIEW`/`AMBIGUOUS` → revisión admin → `completeImageReview` → `PUBLISHED`.
+
+**Completitud:** Rulemanes/Catálogo Azul embebidas; Embragues externas por código (sin rutas Windows).
+
+**Verificación:** `pnpm lint` · `pnpm test:run` (168 tests) · `pnpm db:verify` · `pnpm storage:verify` ✅
+
+**Pendiente UI:** miniaturas en tabla, panel revisión import, modal ampliado.
 
 ---
 
@@ -395,7 +412,7 @@ Asistente guiado 6 pasos, publicación segura, combinar/reemplazar/aplicar lista
 | RF-013–016 | Subida y destino importación | 4 | ✅ |
 | RF-017 | Análisis hojas | 4 | ✅ |
 | RF-018–027 | Detección, vista previa, listas, fórmulas | 4 | ✅ |
-| RF-028–032 | Imágenes | 5 | ⏳ |
+| RF-028–032 | Imágenes | 5 | ✅ backend / ⏳ UI modal (RF-032) |
 | RF-033 | Equivalencias | 6–7 | ⏳ |
 | RF-034–041 | Búsqueda y filtros | 7 | ⏳ |
 | RF-042 | Configuración columnas | 3 | ✅ |
@@ -406,7 +423,7 @@ Asistente guiado 6 pasos, publicación segura, combinar/reemplazar/aplicar lista
 ### 8.2 Requerimientos no funcionales (PRD §41)
 
 - **Rendimiento:** paginación obligatoria; miniaturas en listados; índices búsqueda; progreso en importaciones; meta < 5 min a resultados relevantes.
-- **Seguridad:** middleware, roles, Storage privado, MIME/ZIP seguro, URLs firmadas, `AuditLog`, ocultamiento real por rol.
+- **Seguridad:** middleware, roles, rate limit (login/import), redirect seguro, Storage privado, MIME/ZIP seguro, URLs firmadas, `AuditLog`, ocultamiento real por rol, `handleAdminApiError`.
 - **Usabilidad API:** JSON claro, vista previa importación, informes comprensibles.
 - **Compatibilidad:** Chrome/Edge/navegadores modernos; JSON para PWA.
 
@@ -417,9 +434,9 @@ Asistente guiado 6 pasos, publicación segura, combinar/reemplazar/aplicar lista
 | **Base (Fase 2)** | ✅ Auth, roles, directorio, auditoría — ver [`ENDPOINTS.md`](./ENDPOINTS.md) |
 | **Catálogos y carpetas** | ✅ Directorio automático, CRUD, columnas por carpeta, visibilidad, vaciado/borrar |
 | **Usuarios** | ✅ Admin edita; CONSULTA solo ve. Controles UI ocultos → frontend |
-| **Importación** | ✅ Backend (sin UI asistente ni imágenes) — ver [`ENDPOINTS.md`](./ENDPOINTS.md) |
+| **Importación** | ✅ Backend (sin UI asistente) — ver [`ENDPOINTS.md`](./ENDPOINTS.md) |
+| **Imágenes** | ✅ Backend (extracción, matching, revisión, miniaturas API) — ⏳ UI modal/panel |
 | **Productos manuales** | ⏳ |
-| **Imágenes** | ⏳ |
 | **Búsqueda y filtros** | ⏳ |
 | **Archivos / Offline** | ⏳ |
 
