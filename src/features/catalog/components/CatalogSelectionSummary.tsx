@@ -4,7 +4,7 @@ import { Info, ICON_STROKE } from "@/shared/icons";
 import type {
   MockCatalog,
   MockFolder,
-} from "@/features/catalog/types/catalog-navigator.types";
+} from "@/features/catalog/types/mock-catalog.types";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 type CatalogSelectionSummaryProps = {
