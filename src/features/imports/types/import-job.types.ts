@@ -82,6 +82,39 @@ export type ImportPreviewResponse = {
 
 export type ImportReport = Record<string, unknown>;
 
+export type ImportImageReviewItem = {
+  id: string;
+  productId: string | null;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  sortOrder: number;
+  isPrimary: boolean;
+  label: string | null;
+  sourceSheet: string | null;
+  sourceRow: number | null;
+  sourceColumn: string | null;
+  status: string;
+  source: string;
+  matchCandidates: unknown;
+  errorMessage: string | null;
+  thumbnailUrl: string | null;
+  fullUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ImportImageReviewResponse = {
+  jobId: string;
+  items: ImportImageReviewItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 export function toImportJobDetail(job: ImportJobWithRelations): ImportJobDetail {
   const summary = job.preview?.summary as ImportPreviewSummary | undefined;
 

@@ -4,7 +4,7 @@ export type { ExtractedCellValue } from "./excel-cell.extractor";
 export { detectSheetImages } from "./excel-image.detector";
 export type { SheetImageStats } from "./excel-image.detector";
 export { parseWorksheet } from "./excel-sheet.parser";
-export { parseSheetFromBuffer, parseWorkbookFromBuffer } from "./excel-workbook.parser";
+export { parseSheetFromBuffer, parseWorkbookFromBuffer, toExcelJsBuffer } from "./excel-workbook.parser";
 export { buildExistingCodeIndex, findMatchingProductId, normalizeCodeForMatch } from "./match-detector";
 export { mapSheetToProducts } from "./product-row.mapper";
 export type {

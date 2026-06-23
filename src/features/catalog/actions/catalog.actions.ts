@@ -17,6 +17,7 @@ import type {
   ClearCatalogResult,
 } from "@/features/catalog/types/catalog.types";
 import { toCatalogListItem } from "@/features/catalog/types/catalog.types";
+import { getSafeClientMessage } from "@/server/errors/sanitize-error";
 
 function toActionError(error: unknown): CatalogActionResult<never> {
   if (error instanceof CatalogError) {
@@ -32,7 +33,7 @@ function toActionError(error: unknown): CatalogActionResult<never> {
   }
 
   if (error instanceof Error) {
-    return { success: false, error: error.message };
+    return { success: false, error: getSafeClientMessage(error) };
   }
 
   return { success: false, error: "Ocurrió un error inesperado." };

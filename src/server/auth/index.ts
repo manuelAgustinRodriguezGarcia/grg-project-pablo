@@ -7,6 +7,7 @@ export {
   OFFLINE_DATA_CLEAR_SIGNAL,
   PROTECTED_PATH_PREFIXES,
 } from "./config";
+export { isSafeRedirectPath, resolveSafeRedirectPath } from "./safe-redirect";
 export { getAppOrigin, getSupabasePublicEnv } from "./env";
 export { AuthError, AuthForbiddenError } from "./errors";
 export type { AuthErrorCode } from "./errors";

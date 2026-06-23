@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  ADMIN_HOME_PATH,
+} from "@/server/auth/config";
 import { updateSession } from "@/server/auth/supabase-middleware";
 import { middleware } from "@/middleware";
 
@@ -35,7 +38,7 @@ describe("middleware", () => {
     await expect(response.json()).resolves.toEqual({ error: "No autenticado" });
   });
 
-  it("redirige /auth/login a /admin si ya hay sesión", async () => {
+  it("redirige /auth/login al home admin si ya hay sesión", async () => {
     vi.mocked(updateSession).mockResolvedValue({
       response: NextResponse.next(),
       user: { id: "user-id" } as never,
@@ -44,7 +47,25 @@ describe("middleware", () => {
     const response = await middleware(createRequest("/auth/login"));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("http://localhost:3000/admin");
+    expect(response.headers.get("location")).toBe(
+      `http://localhost:3000${ADMIN_HOME_PATH}`,
+    );
+  });
+
+  it("bloquea open redirect en redirectTo al estar autenticado", async () => {
+    vi.mocked(updateSession).mockResolvedValue({
+      response: NextResponse.next(),
+      user: { id: "user-id" } as never,
+    });
+
+    const response = await middleware(
+      createRequest("/auth/login", "?redirectTo=//evil.com"),
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      `http://localhost:3000${ADMIN_HOME_PATH}`,
+    );
   });
 
   it("permite /auth/login sin sesión", async () => {

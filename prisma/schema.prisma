@@ -56,9 +56,28 @@ enum ImportJobStatus {
   PENDING_CONFIG
   PROCESSING
   READY_TO_APPLY
+  PENDING_REVIEW
   PUBLISHED
   FAILED
   CANCELLED
+}
+
+enum ProductImageStatus {
+  ASSOCIATED_AUTO
+  ASSOCIATED_MANUAL
+  PENDING_REVIEW
+  FILE_NOT_FOUND
+  AMBIGUOUS
+  DUPLICATE_NAME
+  FORMAT_REJECTED
+  DELETED
+}
+
+enum ProductImageSource {
+  EMBEDDED
+  EXTERNAL_ZIP
+  EXTERNAL_UPLOAD
+  MANUAL
 }
 
 enum ImportActionType {
@@ -187,10 +206,42 @@ model Product {
   updatedAt        DateTime @updatedAt
 
   folder CatalogFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  images ProductImage[]
 
   @@index([folderId])
   @@index([normalizedCode])
   @@index([dynamicData], type: Gin)
+}
+
+/// Imagen asociada a un producto (embebida, externa o manual).
+model ProductImage {
+  id              String             @id @default(cuid())
+  productId       String?
+  importJobId     String?
+  storagePath     String?
+  thumbnailPath   String?
+  originalName    String
+  mimeType        String
+  sizeBytes       Int                @default(0)
+  sortOrder       Int                @default(0)
+  isPrimary       Boolean            @default(false)
+  label           String?
+  sourceSheet     String?
+  sourceRow       Int?
+  sourceColumn    String?
+  status          ProductImageStatus
+  source          ProductImageSource
+  matchCandidates Json?
+  errorMessage    String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  product   Product?   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  importJob ImportJob? @relation(fields: [importJobId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([importJobId, status])
+  @@index([status])
 }
 
 /// Archivo Excel respaldado en Storage.
@@ -234,8 +285,9 @@ model ImportJob {
   uploadedFile UploadedFile   @relation(fields: [uploadedFileId], references: [id], onDelete: Cascade)
   catalog      Catalog?       @relation(fields: [catalogId], references: [id], onDelete: SetNull)
   folder       CatalogFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  sheets       ImportSheet[]
-  preview      ImportPreview?
+  sheets        ImportSheet[]
+  preview       ImportPreview?
+  productImages ProductImage[]
 
   @@index([uploadedFileId])
   @@index([status])

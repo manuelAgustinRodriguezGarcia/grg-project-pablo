@@ -17,18 +17,15 @@ export type CreateFolderData = {
   filterConfig?: FolderColumnKeysConfig | null;
 };
 
-export type UpdateFolderData = Partial<
-  Pick<
-    CatalogFolder,
-    | "name"
-    | "description"
-    | "status"
-    | "order"
-    | "visibleToNormalUser"
-    | "searchConfig"
-    | "filterConfig"
-  >
->;
+export type UpdateFolderData = Partial<{
+  name: string;
+  description: string | null;
+  status: FolderStatus;
+  order: number;
+  visibleToNormalUser: boolean;
+  searchConfig: FolderColumnKeysConfig | null;
+  filterConfig: FolderColumnKeysConfig | null;
+}>;
 
 export type FolderWithProductCount = CatalogFolder & { productCount: number };
 
@@ -103,9 +100,25 @@ export class FolderRepository {
   }
 
   async update(id: string, data: UpdateFolderData): Promise<CatalogFolder> {
+    const { searchConfig, filterConfig, ...rest } = data;
+
     return prisma.catalogFolder.update({
       where: { id },
-      data,
+      data: {
+        ...rest,
+        ...(searchConfig !== undefined
+          ? {
+              searchConfig:
+                searchConfig === null ? Prisma.JsonNull : searchConfig,
+            }
+          : {}),
+        ...(filterConfig !== undefined
+          ? {
+              filterConfig:
+                filterConfig === null ? Prisma.JsonNull : filterConfig,
+            }
+          : {}),
+      },
     });
   }
 

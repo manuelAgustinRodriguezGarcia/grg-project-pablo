@@ -34,6 +34,43 @@ export const importPreviewQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 
+export const importImageReviewQuerySchema = z.object({
+  jobId: z.string().min(1),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(50),
+  status: z
+    .enum([
+      "ASSOCIATED_AUTO",
+      "ASSOCIATED_MANUAL",
+      "PENDING_REVIEW",
+      "FILE_NOT_FOUND",
+      "AMBIGUOUS",
+      "DUPLICATE_NAME",
+      "FORMAT_REJECTED",
+      "DELETED",
+    ])
+    .optional(),
+});
+
+export const associateImportImageSchema = z.object({
+  jobId: z.string().min(1),
+  imageId: z.string().min(1),
+  productId: z.string().min(1),
+});
+
+export const updateImportImageSchema = z.object({
+  jobId: z.string().min(1),
+  imageId: z.string().min(1),
+  isPrimary: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+  label: z.string().nullable().optional(),
+});
+
+export const deleteImportImageSchema = z.object({
+  jobId: z.string().min(1),
+  imageId: z.string().min(1),
+});
+
 export type ImportDestinationInput = z.infer<typeof importDestinationSchema>;
 export type ImportConfigInput = z.infer<typeof importConfigSchema>;
 export type ImportApplyInput = z.infer<typeof importApplySchema>;

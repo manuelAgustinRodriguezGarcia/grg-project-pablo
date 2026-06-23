@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { AuthError } from "@/server/auth";
+import { handleAdminApiError } from "@/server/api/admin-api-error";
 import { catalogImportService } from "@/server/services/catalog-import.service";
-import { ImportError } from "@/server/services/import.errors";
 
 type RouteContext = {
   params: Promise<{ jobId: string }>;
@@ -12,7 +11,11 @@ export async function GET(_request: Request, context: RouteContext) {
     const { jobId } = await context.params;
     const job = await catalogImportService.getJob(jobId);
 
-    if (job.status !== "PUBLISHED" && job.status !== "FAILED") {
+    if (
+      job.status !== "PUBLISHED" &&
+      job.status !== "FAILED" &&
+      job.status !== "PENDING_REVIEW"
+    ) {
       return NextResponse.json(
         {
           error: "El informe solo está disponible para importaciones finalizadas.",
@@ -30,15 +33,6 @@ export async function GET(_request: Request, context: RouteContext) {
       finishedAt: job.finishedAt?.toISOString() ?? null,
     });
   } catch (error) {
-    if (error instanceof AuthError && error.code === "UNAUTHENTICATED") {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-    }
-
-    if (error instanceof ImportError) {
-      const status = error.code === "IMPORT_NOT_FOUND" ? 404 : 400;
-      return NextResponse.json({ error: error.message, code: error.code }, { status });
-    }
-
-    throw error;
+    return handleAdminApiError(error);
   }
 }

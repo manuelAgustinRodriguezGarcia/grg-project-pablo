@@ -18,15 +18,6 @@ function resolveDisplayName(
   return email.split("@")[0] ?? email;
 }
 
-function resolveRole(metadata: Record<string, unknown> | undefined): UserRole {
-  const role = metadata?.role;
-  if (role === "ADMIN" || role === "CONSULTA") {
-    return role;
-  }
-
-  return "CONSULTA";
-}
-
 async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
   const supabase = await createSupabaseServerClient();
   const {
@@ -45,7 +36,7 @@ async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
       id: user.id,
       email: user.email ?? "",
       name: resolveDisplayName(user.user_metadata, user.email ?? "Usuario"),
-      role: resolveRole(user.user_metadata),
+      role: "CONSULTA",
     });
   }
 

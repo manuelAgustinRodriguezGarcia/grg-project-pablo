@@ -4,6 +4,7 @@ import type {
   ImportSheetClassification,
   Prisma,
 } from "@/generated/prisma/client";
+import ExcelJS from "exceljs";
 import { requireRole } from "@/server/auth";
 import {
   buildExistingCodeIndex,
@@ -11,12 +12,15 @@ import {
   findMatchingProductId,
   mapSheetToProducts,
   parseWorkbookFromBuffer,
+  toExcelJsBuffer,
   type ImportJobConfig,
   type MappedProductRow,
   type ParsedSheet,
 } from "@/server/importers";
+import { extractImagesFromZip, ZipExtractionError } from "@/server/image-processors";
 import { columnRepository } from "@/server/repositories/column.repository";
 import { importJobRepository } from "@/server/repositories/import-job.repository";
+import { productImageRepository } from "@/server/repositories/product-image.repository";
 import { productRepository } from "@/server/repositories/product.repository";
 import { uploadedFileRepository } from "@/server/repositories/uploaded-file.repository";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
@@ -29,6 +33,8 @@ import {
 } from "@/server/storage";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
 import { StorageError } from "@/server/storage/errors";
+import { imageExtractionService } from "./image-extraction.service";
+import { productImageService } from "./product-image.service";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { ImportError } from "./import.errors";
@@ -49,6 +55,13 @@ export type UploadImportFileInput = {
   buffer: Buffer;
   originalFilename: string;
   contentType: string;
+};
+
+export type UploadImportImageInput = {
+  buffer: Buffer;
+  originalFilename: string;
+  contentType: string;
+  isZip: boolean;
 };
 
 export type SetImportDestinationInput = {
@@ -83,6 +96,11 @@ export type ImportReport = {
   formulasDetected: number;
   formulasWithoutCachedValue: number;
   imagesDetected: number;
+  imagesExtracted: number;
+  imagesAssociated: number;
+  imagesPendingReview: number;
+  imagesRejected: number;
+  imagesAmbiguous: number;
   columnsDetected: number;
   columnsCreated: number;
   errors: string[];
@@ -223,18 +241,18 @@ export class CatalogImportService {
         },
       });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Error al analizar el archivo.";
+      console.error("[catalogImportService.analyzeJob]", error);
+      const clientMessage = "Error al analizar el archivo.";
 
       await importJobRepository.update(jobId, {
         status: "FAILED",
-        errorMessage: message,
+        errorMessage: clientMessage,
         finishedAt: new Date(),
-        progress: { phase: "failed", percent: 100, message },
+        progress: { phase: "failed", percent: 100, message: clientMessage },
       });
 
       await uploadedFileRepository.updateStatus(job.uploadedFileId, "FAILED");
-      throw new ImportError(message, "ANALYSIS_FAILED");
+      throw new ImportError(clientMessage, "ANALYSIS_FAILED");
     }
   }
 
@@ -295,7 +313,9 @@ export class CatalogImportService {
 
     assertStatus(job.status, ["PENDING_CONFIG", "READY_TO_APPLY"]);
 
+    const existingConfig = (job.config as ImportJobConfig | null) ?? {};
     const config: ImportJobConfig = {
+      ...existingConfig,
       columnMapping: input.columnMapping,
       primaryCodeColumnKey: input.primaryCodeColumnKey,
       descriptionColumnKey: input.descriptionColumnKey,
@@ -312,6 +332,209 @@ export class CatalogImportService {
     });
 
     return this.buildPreview(jobId, config);
+  }
+
+  private async loadWorkbookFromJob(
+    job: NonNullable<Awaited<ReturnType<typeof importJobRepository.findByIdWithRelations>>>,
+  ): Promise<ExcelJS.Workbook> {
+    const buffer = await downloadFile(
+      STORAGE_BUCKETS.EXCEL_ORIGINALS,
+      job.uploadedFile.storagePath,
+    );
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(toExcelJsBuffer(buffer));
+    return workbook;
+  }
+
+  private async buildRowToProductMap(
+    folderId: string,
+    mappedProducts: MappedProductRow[],
+  ): Promise<Map<number, string>> {
+    const products = await productRepository.findPrimaryCodesByFolder(folderId);
+    const index = buildExistingCodeIndex(products);
+    const map = new Map<number, string>();
+
+    for (const row of mappedProducts) {
+      const productId = findMatchingProductId(row.primaryCode, index);
+      if (productId) {
+        map.set(row.rowNumber, productId);
+      }
+    }
+
+    return map;
+  }
+
+  private async processImportImages(input: {
+    jobId: string;
+    folderId: string;
+    sheet: ParsedSheet;
+    mappedProducts: MappedProductRow[];
+    config: ImportJobConfig;
+    columns: Awaited<ReturnType<typeof columnRepository.findByFolderIdOrdered>>;
+    workbook: ExcelJS.Workbook;
+  }): Promise<{
+    warnings: string[];
+    stats: {
+      extracted: number;
+      associated: number;
+      pendingReview: number;
+      rejected: number;
+      ambiguous: number;
+    };
+  }> {
+    const warnings: string[] = [];
+    const stats = {
+      extracted: 0,
+      associated: 0,
+      pendingReview: 0,
+      rejected: 0,
+      ambiguous: 0,
+    };
+
+    const rowToProductId = await this.buildRowToProductMap(
+      input.folderId,
+      input.mappedProducts,
+    );
+
+    if (input.sheet.imageCount > 0) {
+      const embedded = await imageExtractionService.processEmbeddedImages({
+        workbook: input.workbook,
+        sheet: input.sheet,
+        folderId: input.folderId,
+        importJobId: input.jobId,
+        rowToProductId,
+      });
+
+      warnings.push(...embedded.warnings);
+      stats.extracted += embedded.stats.extracted;
+      stats.associated += embedded.stats.associated;
+      stats.pendingReview += embedded.stats.pendingReview;
+      stats.rejected += embedded.stats.rejected;
+      stats.ambiguous += embedded.stats.ambiguous;
+    }
+
+    const externalImages = input.config.externalImages ?? [];
+    if (externalImages.length > 0) {
+      const imageInputs = await Promise.all(
+        externalImages.map(async (ref) => ({
+          buffer: await downloadFile(STORAGE_BUCKETS.TEMP_IMPORTS, ref.storagePath),
+          originalName: ref.originalName,
+          mimeType: ref.mimeType,
+          source: ref.source,
+        })),
+      );
+
+      const imageCodeColumnKeys = input.columns
+        .filter((column) => column.isImageCode)
+        .map((column) => column.internalKey);
+
+      const external = await productImageService.processExternalImages({
+        importJobId: input.jobId,
+        folderId: input.folderId,
+        images: imageInputs,
+        imageCodeColumnKeys,
+      });
+
+      warnings.push(...external.warnings);
+      stats.extracted += external.stats.processed;
+      stats.associated += external.stats.associated;
+      stats.pendingReview += external.stats.pendingReview;
+      stats.rejected += external.stats.rejected;
+      stats.ambiguous += external.stats.ambiguous;
+    }
+
+    return { warnings, stats };
+  }
+
+  async uploadImportImages(jobId: string, files: UploadImportImageInput[]) {
+    await requireRole("ADMIN");
+    const job = await importJobRepository.findByIdWithRelations(jobId);
+
+    if (!job) {
+      throw new ImportError("Importación no encontrada.", "IMPORT_NOT_FOUND");
+    }
+
+    assertStatus(job.status, [
+      "STORED",
+      "PENDING_DESTINATION",
+      "PENDING_CONFIG",
+      "READY_TO_APPLY",
+    ]);
+
+    const config = (job.config as ImportJobConfig | null) ?? {};
+    const externalImages = [...(config.externalImages ?? [])];
+
+    for (const file of files) {
+      if (file.isZip) {
+        let extracted;
+        try {
+          extracted = await extractImagesFromZip(file.buffer);
+        } catch (error) {
+          if (error instanceof ZipExtractionError) {
+            throw new ImportError(error.message, "INVALID_FILE");
+          }
+          throw error;
+        }
+
+        for (const entry of extracted) {
+          const staged = await productImageService.uploadExternalToStaging({
+            jobId,
+            buffer: entry.buffer,
+            originalFilename: entry.originalName,
+            contentType: "application/octet-stream",
+            source: "EXTERNAL_ZIP",
+          });
+          externalImages.push(staged);
+        }
+        continue;
+      }
+
+      const staged = await productImageService.uploadExternalToStaging({
+        jobId,
+        buffer: file.buffer,
+        originalFilename: file.originalFilename,
+        contentType: file.contentType,
+        source: "EXTERNAL_UPLOAD",
+      });
+      externalImages.push(staged);
+    }
+
+    return importJobRepository.update(jobId, {
+      config: {
+        ...config,
+        externalImages,
+      } as unknown as Prisma.InputJsonValue,
+    });
+  }
+
+  async completeImageReview(jobId: string) {
+    const { profile: admin } = await requireRole("ADMIN");
+    const job = await importJobRepository.findByIdWithRelations(jobId);
+
+    if (!job) {
+      throw new ImportError("Importación no encontrada.", "IMPORT_NOT_FOUND");
+    }
+
+    assertStatus(job.status, ["PENDING_REVIEW"]);
+
+    const updated = await importJobRepository.update(jobId, {
+      status: "PUBLISHED",
+      finishedAt: new Date(),
+      progress: {
+        phase: "published",
+        percent: 100,
+        message: "Revisión de imágenes completada. Importación publicada.",
+      },
+    });
+
+    auditService.logOperationSafe({
+      userId: admin.id,
+      action: AUDIT_ACTIONS.IMPORT_PUBLISHED,
+      entityType: AUDIT_ENTITY_TYPES.IMPORT,
+      entityId: jobId,
+    });
+
+    return updated;
   }
 
   private async loadTargetSheet(job: NonNullable<Awaited<ReturnType<typeof importJobRepository.findByIdWithRelations>>>) {
@@ -555,6 +778,34 @@ export class CatalogImportService {
         }
       });
 
+      await importJobRepository.update(jobId, {
+        status: "PROCESSING",
+        progress: {
+          phase: "images",
+          percent: 85,
+          message: "Procesando imágenes...",
+        },
+      });
+
+      const workbook = await this.loadWorkbookFromJob(job);
+      const imageProcessing = await this.processImportImages({
+        jobId,
+        folderId: job.folderId!,
+        sheet,
+        mappedProducts,
+        config,
+        columns,
+        workbook,
+      });
+
+      const pendingCount = await productImageRepository.countByImportJobAndStatuses(
+        jobId,
+        ["PENDING_REVIEW", "AMBIGUOUS"],
+      );
+
+      const finalStatus: ImportJobStatus =
+        pendingCount > 0 ? "PENDING_REVIEW" : "PUBLISHED";
+
       const formulaStats = countFormulas(mappedProducts);
       const report: ImportReport = {
         fileName: job.uploadedFile.originalName,
@@ -569,45 +820,58 @@ export class CatalogImportService {
         formulasDetected: formulaStats.formulasDetected,
         formulasWithoutCachedValue: formulaStats.formulasWithoutCachedValue,
         imagesDetected: sheet.imageCount,
+        imagesExtracted: imageProcessing.stats.extracted,
+        imagesAssociated: imageProcessing.stats.associated,
+        imagesPendingReview: pendingCount,
+        imagesRejected: imageProcessing.stats.rejected,
+        imagesAmbiguous: imageProcessing.stats.ambiguous,
         columnsDetected: sheet.columnCount,
         columnsCreated: columns.length,
         errors: [],
-        warnings: recognizedProducts.flatMap((product) => product.warnings),
+        warnings: [
+          ...recognizedProducts.flatMap((product) => product.warnings),
+          ...imageProcessing.warnings,
+        ],
         actionApplied: input.actionType,
       };
 
       const updated = await importJobRepository.update(jobId, {
-        status: "PUBLISHED",
+        status: finalStatus,
         actionType: input.actionType,
         resultados: report as unknown as Prisma.InputJsonValue,
-        finishedAt: new Date(),
+        finishedAt: finalStatus === "PUBLISHED" ? new Date() : null,
         progress: {
-          phase: "published",
-          percent: 100,
-          message: "Importación publicada correctamente.",
+          phase: finalStatus === "PENDING_REVIEW" ? "image_review" : "published",
+          percent: finalStatus === "PENDING_REVIEW" ? 95 : 100,
+          message:
+            finalStatus === "PENDING_REVIEW"
+              ? "Importación aplicada. Revise las asociaciones de imágenes pendientes."
+              : "Importación publicada correctamente.",
         },
       });
 
-      auditService.logOperationSafe({
-        userId: admin.id,
-        action: AUDIT_ACTIONS.IMPORT_PUBLISHED,
-        entityType: AUDIT_ENTITY_TYPES.IMPORT,
-        entityId: jobId,
-      });
+      if (finalStatus === "PUBLISHED") {
+        auditService.logOperationSafe({
+          userId: admin.id,
+          action: AUDIT_ACTIONS.IMPORT_PUBLISHED,
+          entityType: AUDIT_ENTITY_TYPES.IMPORT,
+          entityId: jobId,
+        });
+      }
 
       return updated;
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Error al publicar la importación.";
+      console.error("[catalogImportService.publish]", error);
+      const clientMessage = "Error al publicar la importación.";
 
       await importJobRepository.update(jobId, {
         status: "FAILED",
-        errorMessage: message,
+        errorMessage: clientMessage,
         finishedAt: new Date(),
-        progress: { phase: "failed", percent: 100, message },
+        progress: { phase: "failed", percent: 100, message: clientMessage },
       });
 
-      throw new ImportError(message, "PUBLISH_FAILED");
+      throw new ImportError(clientMessage, "PUBLISH_FAILED");
     }
   }
 

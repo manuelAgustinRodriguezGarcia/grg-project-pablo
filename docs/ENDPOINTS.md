@@ -1,7 +1,7 @@
 # ENDPOINTS — Referencia para frontend
 
-> Contratos de API y Server Actions **implementados** (Fases 2–4). Plan futuro: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md). Producto: [`PRD.md`](./PRD.md).  
-> Última actualización: 2026-06-22.
+> Contratos de API y Server Actions **implementados** (Fases 2–5 backend). Plan futuro: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md). Producto: [`PRD.md`](./PRD.md).  
+> Última actualización: 2026-06-23.
 
 ---
 
@@ -20,6 +20,7 @@
 | Acciones de usuarios | ❌ | Falta `/admin/users` |
 | Acciones de catálogos / carpetas / columnas | ❌ | CRUD admin sin UI |
 | Importador Excel (REST + actions) | ❌ | APIs listas; UI `/admin/archivos` pendiente |
+| Imágenes import / galería producto (REST + actions) | ❌ | APIs Fase 5 listas; UI revisión/modal pendiente |
 | `requestPasswordResetAction` / `updatePasswordAction` | ❌ | Faltan `/auth/forgot-password` y `/auth/reset-password` |
 
 **Flujo sugerido para reemplazar mocks en `/admin/catalogos`:**
@@ -44,7 +45,9 @@
 
 - Sesión vía **cookies Supabase** (`@supabase/ssr`). Mismo origen: no enviar tokens manualmente.
 - `/admin` y `/api/admin/*` protegidos por middleware. Sin sesión: páginas → `/auth/login?redirectTo=…`; APIs → `401 { "error": "No autenticado" }`.
-- Roles: `ADMIN` | `CONSULTA` (usuario normal del PRD). Mutaciones de usuarios/catálogos/carpetas/columnas: solo `ADMIN`.
+- **`redirectTo`** validado con `resolveSafeRedirectPath` (solo rutas internas; evita open redirect).
+- **Rate limit (middleware):** `POST /auth/login` → 10 req/min por IP; `POST /api/admin/imports/*` → 20 req/min. Respuesta `429` con header `Retry-After`.
+- Roles: `ADMIN` | `CONSULTA` (usuario normal del PRD). Mutaciones de usuarios/catálogos/carpetas/columnas/importación/imágenes: solo `ADMIN`.
 - **`VisibilityService`:** rol `CONSULTA` no ve catálogos/carpetas/columnas con `visibleToNormalUser = false`; recibe `404` en GET si el padre está oculto.
 
 ### Formato Server Actions
@@ -65,9 +68,11 @@ Excepciones: `signInAction` / `loginFormAction` redirigen en éxito (`redirect()
 | `catalog.status` | `ACTIVE` \| `INACTIVE` \| `HIDDEN` |
 | `folder.status` | `ACTIVE` \| `INACTIVE` |
 | `column.dataType` | `TEXT` \| `NUMBER` \| `BOOLEAN` \| `DATE` \| `DATETIME` \| `IMAGE` \| `FORMULA` \| `UNKNOWN` |
-| `importJob.status` | `STORED` \| `ANALYZING` \| `PENDING_DESTINATION` \| `PENDING_CONFIG` \| `PROCESSING` \| `READY_TO_APPLY` \| `PUBLISHED` \| `FAILED` \| `CANCELLED` |
+| `importJob.status` | `STORED` \| `ANALYZING` \| `PENDING_DESTINATION` \| `PENDING_CONFIG` \| `PROCESSING` \| `READY_TO_APPLY` \| `PENDING_REVIEW` \| `PUBLISHED` \| `FAILED` \| `CANCELLED` |
 | `importActionType` | `IMPORTAR_LISTA` \| `COMBINAR_LISTA` \| `REEMPLAZAR_LISTA` |
 | `importSheet.classification` | `IMPORTABLE` \| `INDEX` \| `AUXILIARY` \| `IGNORED` |
+| `productImage.status` | `ASSOCIATED_AUTO` \| `ASSOCIATED_MANUAL` \| `PENDING_REVIEW` \| `FILE_NOT_FOUND` \| `AMBIGUOUS` \| `DUPLICATE_NAME` \| `FORMAT_REJECTED` \| `DELETED` |
+| `productImage.source` | `EMBEDDED` \| `EXTERNAL_ZIP` \| `EXTERNAL_UPLOAD` \| `MANUAL` |
 
 ### Modelo de dominio
 
@@ -89,7 +94,7 @@ Validación detallada: schemas Zod en `src/features/**/schemas/*.ts`. Tipos: `sr
 
 ## REST — Route Handlers
 
-Todas requieren cookie de sesión. Errores habituales: `401` no autenticado; `404` recurso inexistente u oculto para `CONSULTA`; `400` validación (`VALIDATION_ERROR`).
+Todas requieren cookie de sesión. Errores habituales: `401` no autenticado; `403` sin permiso (`FORBIDDEN`); `404` recurso inexistente u oculto para `CONSULTA`; `400` validación (`VALIDATION_ERROR`); `409` estado inválido (`INVALID_STATE`); `429` rate limit. Mapeo centralizado en `src/server/api/admin-api-error.ts`.
 
 ### `GET /api/admin/session`
 
@@ -194,6 +199,11 @@ Columnas visibles + productos paginados.
       "primaryCode": "6205",
       "description": "Ruleman 6205",
       "dynamicData": { "marca": "SKF" },
+      "primaryImage": {
+        "id": "clx...",
+        "thumbnailUrl": "https://...signed...",
+        "fullUrl": "https://...signed..."
+      },
       "createdAt": "2026-06-19T12:00:00.000Z",
       "updatedAt": "2026-06-19T12:00:00.000Z"
     }
@@ -212,7 +222,13 @@ Columnas visibles + productos paginados.
 
 Sube Excel (`.xlsx`/`.xlsm`), respalda en bucket `excel-originals` **antes** de analizar. Solo `ADMIN`.
 
-**Body:** `multipart/form-data` con campo `file`.
+**Body:** `multipart/form-data`:
+
+| Campo | Obligatorio | Descripción |
+|-------|-------------|-------------|
+| `file` | Sí | Archivo Excel |
+| `imagesZip` | No | ZIP con imágenes externas (Embragues, etc.) |
+| `images` | No | Una o más imágenes sueltas (repetir campo) |
 
 **201:** `{ "jobId": "clx...", "uploadedFileId": "clx..." }`
 
@@ -242,7 +258,80 @@ Vista previa paginada. **Query:** `page`, `pageSize`. Productos con `isMatch: tr
 
 ### `GET /api/admin/imports/{jobId}/report`
 
-Informe final. Solo jobs `PUBLISHED` o `FAILED`. **200:** `{ jobId, status, report, errorMessage, finishedAt }`.
+Informe final. Jobs `PUBLISHED`, `PENDING_REVIEW` o `FAILED`. **200:** `{ jobId, status, report, errorMessage, finishedAt }`.
+
+El `report` incluye métricas de imágenes: `imagesDetected`, `imagesExtracted`, `imagesAssociated`, `imagesPendingReview`, `imagesRejected`, `imagesAmbiguous`.
+
+---
+
+### `POST /api/admin/imports/{jobId}/images`
+
+Sube imágenes externas a un job existente (estados `STORED`–`READY_TO_APPLY`). Solo `ADMIN`.
+
+**Body:** `multipart/form-data` — `imagesZip` (File) y/o `images` (File[], `.jpg/.jpeg/.png/.webp`).
+
+**200:** `{ "jobId": "clx...", "status": "READY_TO_APPLY" }`
+
+→ `src/app/api/admin/imports/[jobId]/images/route.ts`
+
+---
+
+### `GET /api/admin/imports/{jobId}/images/review`
+
+Listado paginado de imágenes del job para revisión. Solo `ADMIN`.
+
+**Query:** `page`, `pageSize`, `status?` (`PENDING_REVIEW`, `AMBIGUOUS`, `ASSOCIATED_AUTO`, …)
+
+**200:**
+
+```json
+{
+  "jobId": "clx...",
+  "items": [
+    {
+      "id": "clx...",
+      "productId": null,
+      "originalName": "PLACA-55120IAR.jpg",
+      "status": "PENDING_REVIEW",
+      "source": "EXTERNAL_ZIP",
+      "thumbnailUrl": "https://...signed...",
+      "fullUrl": "https://...signed...",
+      "matchCandidates": null,
+      "sourceRow": null,
+      "sourceColumn": null
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 50, "total": 3, "totalPages": 1 }
+}
+```
+
+→ `src/app/api/admin/imports/[jobId]/images/review/route.ts`
+
+---
+
+### `PATCH /api/admin/imports/{jobId}/images/{imageId}`
+
+Asociar imagen a producto o actualizar metadatos. Solo `ADMIN`.
+
+**Body JSON:** `{ "productId"?: string, "isPrimary"?: boolean, "sortOrder"?: number, "label"?: string | null }` (≥1 campo).
+
+**200:** `ImportImageReviewItem` (mismo shape que ítem de review).
+
+---
+
+### `DELETE /api/admin/imports/{jobId}/images/{imageId}`
+
+Soft-delete (`status: DELETED`). **200:** `{ "success": true }`
+
+---
+
+### `GET /api/admin/products/{productId}/images`
+
+Galería del producto con URLs firmadas. `ADMIN` y `CONSULTA` (respeta visibilidad carpeta/catálogo).
+
+**200:** `{ "productId": "clx...", "images": ImportImageReviewItem[] }`
+
+→ `src/app/api/admin/products/[productId]/images/route.ts`
 
 ---
 
@@ -370,19 +459,26 @@ Campos opcionales de create/update: ver `src/features/catalog/schemas/column.sch
 
 Import: `@/features/imports/actions/import.actions`
 
-**Flujo asistente:** upload → `analyzeImportAction` → `setImportDestinationAction` → `setImportConfigAction` → preview GET → `applyImportAction`.
+**Flujo asistente:** upload [+ imágenes opc.] → `analyzeImportAction` → `setImportDestinationAction` → `setImportConfigAction` → preview GET → [`POST .../images` opc.] → `applyImportAction` → [`image review` si `PENDING_REVIEW`] → `completeImageReviewAction`.
 
 | Acción | Entrada | Respuesta `data` | Notas |
 |--------|---------|------------------|-------|
 | `analyzeImportAction` | `{ jobId }` | `ImportJobDetail` | → `PENDING_DESTINATION` |
 | `setImportDestinationAction` | `{ jobId, catalogId, folderId, sheetName }` | `ImportJobDetail` | Hoja `IMPORTABLE` |
 | `setImportConfigAction` | `{ jobId, columnMapping?, primaryCodeColumnKey?, descriptionColumnKey? }` | `ImportJobDetail` | → `READY_TO_APPLY` |
-| `applyImportAction` | `{ jobId, actionType, confirmed }` | `ImportJobDetail` | Ver confirmaciones |
+| `applyImportAction` | `{ jobId, actionType, confirmed }` | `ImportJobDetail` | → `PUBLISHED` o `PENDING_REVIEW` |
+| `listImportImageReviewAction` | `{ jobId, page?, pageSize?, status? }` | `ImportImageReviewResponse` | Panel revisión |
+| `associateImportImageAction` | `{ jobId, imageId, productId }` | `ImportImageReviewItem` | Asociación manual |
+| `updateImportImageAction` | `{ jobId, imageId, isPrimary?, sortOrder?, label? }` | `ImportImageReviewItem` | Principal / orden / etiqueta |
+| `deleteImportImageAction` | `{ jobId, imageId }` | `{ success: true }` | Soft-delete |
+| `completeImageReviewAction` | `{ jobId }` | `ImportJobDetail` | `PENDING_REVIEW` → `PUBLISHED` |
 | `cancelImportAction` | `{ jobId }` | `ImportJobDetail` | → `CANCELLED` |
 
 **Confirmaciones:** `COMBINAR_LISTA` / `REEMPLAZAR_LISTA` requieren `confirmed: true`. `IMPORTAR_LISTA` solo si carpeta vacía.
 
-**Códigos error:** `IMPORT_NOT_FOUND`, `INVALID_STATE`, `INVALID_FILE`, `FOLDER_NOT_EMPTY`, `CONFIRMATION_REQUIRED`, `ANALYSIS_FAILED`, `PUBLISH_FAILED`, `SHEET_NOT_IMPORTABLE`, `VALIDATION_ERROR`.
+**Códigos error import:** `IMPORT_NOT_FOUND`, `INVALID_STATE`, `INVALID_FILE`, `FOLDER_NOT_EMPTY`, `CONFIRMATION_REQUIRED`, `ANALYSIS_FAILED`, `PUBLISH_FAILED`, `SHEET_NOT_IMPORTABLE`, `VALIDATION_ERROR`.
+
+**Códigos error imágenes:** `IMAGE_NOT_FOUND`, `PRODUCT_NOT_FOUND`, `IMPORT_NOT_FOUND`, `INVALID_STATE`, `VALIDATION_ERROR`, `FORBIDDEN`.
 
 Schemas: `src/features/imports/schemas/import.schemas.ts`
 
@@ -417,13 +513,13 @@ Navegación: `src/features/admin/data/adminNav.ts`. Destino post-login: `/admin`
 
 ## Auditoría (interno)
 
-Sin endpoint de consulta. Eventos en `AuditLog`: login/logout, CRUD usuarios, CRUD/vaciado catálogos, `FILE_UPLOADED`, `IMPORT_PUBLISHED`. Fallos de auditoría no interrumpen la operación.
+Sin endpoint de consulta. Eventos en `AuditLog`: login/logout, CRUD usuarios, CRUD/vaciado catálogos, `FILE_UPLOADED`, `IMPORT_PUBLISHED`, `PRODUCT_IMAGE_ASSOCIATED`, `PRODUCT_IMAGE_UPDATED`, `PRODUCT_IMAGE_DELETED`. Fallos de auditoría no interrumpen la operación.
 
 ---
 
 ## Pendiente (sin contrato aún)
 
-CRUD manual de productos, búsqueda/filtros, listado archivos subidos (Fase 8), imágenes (Fase 5), offline/sync. Detalle por fase: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md).
+CRUD manual de productos, búsqueda/filtros, listado archivos subidos (Fase 8), offline/sync, **UI** imágenes (miniaturas tabla, panel revisión, modal ampliado RF-032). Detalle por fase: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md).
 
 ---
 
@@ -431,12 +527,14 @@ CRUD manual de productos, búsqueda/filtros, listado archivos subidos (Fase 8), 
 
 | Área | Archivos |
 |------|----------|
-| Auth | `src/features/auth/actions/`, `src/features/auth/schemas/auth.schemas.ts`, `src/server/auth/config.ts` |
+| Auth | `src/features/auth/actions/`, `src/features/auth/schemas/auth.schemas.ts`, `src/server/auth/config.ts`, `rate-limit.ts`, `safe-redirect.ts` |
+| Errores API admin | `src/server/api/admin-api-error.ts` |
 | Usuarios | `src/features/users/actions/user.actions.ts`, `schemas/user.schemas.ts` |
 | Catálogos | `src/features/catalog/actions/catalog.actions.ts`, `schemas/catalog.schemas.ts`, `types/catalog.types.ts` |
 | Carpetas | `folder.actions.ts`, `schemas/folder.schemas.ts`, `types/folder.types.ts` |
 | Columnas | `column.actions.ts`, `schemas/column.schemas.ts`, `types/column.types.ts` |
 | REST productos / navegación | `src/app/api/admin/folders/[folderId]/products/route.ts`, `.../catalogs/[catalogId]/navigation/route.ts` |
 | Importador | `src/app/api/admin/imports/`, `src/features/imports/actions/import.actions.ts`, `src/server/services/catalog-import.service.ts`, `src/server/importers/` |
+| Imágenes | `src/server/image-processors/`, `src/server/services/image-*.service.ts`, `src/server/services/product-image.service.ts`, `src/server/repositories/product-image.repository.ts` |
 | Directorio | `src/app/api/admin/directory/route.ts`, `src/features/directory/types/directory.types.ts` |
 | UI catálogos (mock) | `src/features/catalog/components/CatalogNavigator.tsx`, `data/mockCatalogNavigator.data.ts` |

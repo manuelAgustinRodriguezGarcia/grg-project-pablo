@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import {
-  ADMIN_HOME_PATH,
   AUTH_LOGIN_PATH,
   AUTH_PUBLIC_PATHS,
   PROTECTED_PATH_PREFIXES,
 } from "@/server/auth/config";
+import { checkRateLimit, getRateLimitKey } from "@/server/auth/rate-limit";
+import { resolveSafeRedirectPath } from "@/server/auth/safe-redirect";
 import { updateSession } from "@/server/auth/supabase-middleware";
 
 function isPublicAuthPath(pathname: string): boolean {
@@ -36,12 +37,56 @@ export async function middleware(request: NextRequest) {
 
   if (isPublicAuthPath(pathname)) {
     if (user && pathname === AUTH_LOGIN_PATH) {
-      const redirectTo =
-        request.nextUrl.searchParams.get("redirectTo") ?? ADMIN_HOME_PATH;
+      const redirectTo = resolveSafeRedirectPath(
+        request.nextUrl.searchParams.get("redirectTo"),
+      );
       return NextResponse.redirect(new URL(redirectTo, request.url));
     }
 
     return response;
+  }
+
+  if (
+    pathname.startsWith("/api/admin/imports") &&
+    request.method === "POST"
+  ) {
+    const rateLimit = checkRateLimit(
+      getRateLimitKey(request, "upload"),
+      20,
+      60_000,
+    );
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Demasiadas solicitudes. Inténtalo más tarde." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+          },
+        },
+      );
+    }
+  }
+
+  if (pathname === AUTH_LOGIN_PATH && request.method === "POST") {
+    const rateLimit = checkRateLimit(
+      getRateLimitKey(request, "login"),
+      10,
+      60_000,
+    );
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Demasiados intentos de inicio de sesión." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+          },
+        },
+      );
+    }
   }
 
   if (isProtectedPath(pathname) && !user) {

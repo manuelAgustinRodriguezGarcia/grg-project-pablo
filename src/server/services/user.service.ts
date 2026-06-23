@@ -33,7 +33,10 @@ function mapAuthProviderError(message: string): UserError {
     );
   }
 
-  return new UserError(message, "AUTH_PROVIDER_ERROR");
+  return new UserError(
+    "Ocurrió un error con el servicio de autenticación. Inténtalo de nuevo.",
+    "AUTH_PROVIDER_ERROR",
+  );
 }
 
 export class UserService {
