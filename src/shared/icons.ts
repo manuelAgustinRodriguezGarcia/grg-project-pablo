@@ -1,12 +1,14 @@
 export {
+  Archive,
   ArrowLeft,
-  BookOpen,
   Camera,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Cog,
   Eye,
   EyeOff,
-  FileText,
+  FileSpreadsheet,
   Home,
   Info,
   Lock,
@@ -16,8 +18,11 @@ export {
   MapPin,
   MessageCircle,
   Phone,
+  Plus,
   Route,
+  Search,
   Share2,
+  TableProperties,
   User,
 } from "lucide-react";
 

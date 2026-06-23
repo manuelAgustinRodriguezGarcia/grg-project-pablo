@@ -4,7 +4,7 @@ import type {
   MockFolder,
   MockProduct,
   MockProductValue,
-} from "@/features/catalog/types/catalog-navigator.types";
+} from "@/features/catalog/types/mock-catalog.types";
 
 type ColumnDefinition = {
   internalKey: string;

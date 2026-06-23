@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BookOpen, FileText } from "@/shared/icons";
+import { Archive, TableProperties } from "@/shared/icons";
 
 export type AdminNavItemConfig = {
   href: string;
@@ -11,12 +11,12 @@ export const ADMIN_NAV_ITEMS: AdminNavItemConfig[] = [
   {
     href: "/admin/catalogos",
     label: "Catálogos",
-    icon: BookOpen,
+    icon: TableProperties,
   },
   {
     href: "/admin/archivos",
     label: "Archivos",
-    icon: FileText,
+    icon: Archive,
   },
 ];
 

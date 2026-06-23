@@ -3,59 +3,57 @@
 import { useMemo } from "react";
 import { CustomDropdown } from "@/features/catalog/components/CustomDropdown";
 import type {
-  MockCatalog,
-  MockFolder,
+  CatalogNavigationFolderItem,
+  DirectoryCatalogItem,
 } from "@/features/catalog/types/catalog-navigator.types";
 import { sortByName } from "@/features/catalog/utils/sortByName";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 type CatalogFolderSelectorsProps = {
-  catalogs: MockCatalog[];
+  catalogs: DirectoryCatalogItem[];
+  folders: CatalogNavigationFolderItem[];
   selectedCatalogId: string;
   selectedFolderId: string;
+  isLoadingFolders: boolean;
   onSelectCatalog: (catalogId: string) => void;
   onSelectFolder: (folderId: string) => void;
 };
 
 export function CatalogFolderSelectors({
   catalogs,
+  folders,
   selectedCatalogId,
   selectedFolderId,
+  isLoadingFolders,
   onSelectCatalog,
   onSelectFolder,
 }: CatalogFolderSelectorsProps) {
   const sortedCatalogs = useMemo(() => sortByName(catalogs), [catalogs]);
-
-  const selectedCatalog = useMemo(
-    () => sortedCatalogs.find((catalog) => catalog.id === selectedCatalogId) ?? null,
-    [sortedCatalogs, selectedCatalogId],
-  );
-
-  const sortedFolders = useMemo(
-    () => sortByName(selectedCatalog?.folders ?? []),
-    [selectedCatalog],
-  );
+  const sortedFolders = useMemo(() => sortByName(folders), [folders]);
 
   const catalogOptions = useMemo(
     () =>
       sortedCatalogs.map((catalog) => ({
         id: catalog.id,
         label: catalog.name,
-        description: catalog.description,
+        description: catalog.description ?? undefined,
         meta:
-          catalog.folders.length === 1
+          catalog.sectionCount === 1
             ? "1 carpeta"
-            : `${catalog.folders.length} carpetas`,
+            : `${catalog.sectionCount} carpetas`,
       })),
     [sortedCatalogs],
   );
 
   const folderOptions = useMemo(
     () =>
-      sortedFolders.map((folder: MockFolder) => ({
+      sortedFolders.map((folder) => ({
         id: folder.id,
         label: folder.name,
-        meta: `${folder.products.length} productos · ${folder.columns.length} columnas`,
+        meta:
+          folder.productCount === 1
+            ? "1 producto"
+            : `${folder.productCount} productos`,
       })),
     [sortedFolders],
   );
@@ -68,6 +66,8 @@ export function CatalogFolderSelectors({
           options={catalogOptions}
           selectedId={selectedCatalogId}
           onSelect={onSelectCatalog}
+          disabled={sortedCatalogs.length === 0}
+          emptyMessage="Sin catálogos disponibles"
         />
 
         <CustomDropdown
@@ -75,8 +75,14 @@ export function CatalogFolderSelectors({
           options={folderOptions}
           selectedId={selectedFolderId}
           onSelect={onSelectFolder}
-          disabled={!selectedCatalog || sortedFolders.length === 0}
-          emptyMessage="Sin carpetas disponibles"
+          disabled={
+            !selectedCatalogId ||
+            isLoadingFolders ||
+            sortedFolders.length === 0
+          }
+          emptyMessage={
+            isLoadingFolders ? "Cargando carpetas…" : "Sin carpetas disponibles"
+          }
         />
       </div>
     </section>
