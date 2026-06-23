@@ -16,8 +16,9 @@ import {
   type ImportJobConfig,
   type MappedProductRow,
   type ParsedSheet,
+  type DetectedHeader,
 } from "@/server/importers";
-import { extractImagesFromZip, ZipExtractionError } from "@/server/image-processors";
+import { extractImagesFromZip, ZipExtractionError } from "@/server/image-processors/zip-extractor";
 import { columnRepository } from "@/server/repositories/column.repository";
 import { importJobRepository } from "@/server/repositories/import-job.repository";
 import { productImageRepository } from "@/server/repositories/product-image.repository";
@@ -596,6 +597,158 @@ export class CatalogImportService {
     }
   }
 
+  private resolveMappedFolderColumnKey(
+    header: DetectedHeader,
+    columns: Awaited<ReturnType<typeof columnRepository.findByFolderIdOrdered>>,
+    config: ImportJobConfig,
+  ): string | null {
+    const mapping = new Map(
+      (config.columnMapping ?? []).map((entry) => [
+        entry.headerInternalKey,
+        entry.folderColumnInternalKey,
+      ]),
+    );
+
+    const mapped = mapping.get(header.internalKey);
+    if (mapped === "__ignore__") {
+      return null;
+    }
+
+    if (mapped) {
+      return mapped;
+    }
+
+    const byName = columns.find(
+      (column) =>
+        column.originalName.trim().toLowerCase() ===
+        header.originalName.trim().toLowerCase(),
+    );
+
+    return byName?.internalKey ?? header.internalKey;
+  }
+
+  private async syncColumnsFromSheet(
+    folderId: string,
+    sheet: ParsedSheet,
+    config: ImportJobConfig,
+  ) {
+    let columns = await columnRepository.findByFolderIdOrdered(folderId);
+    const activeHeaders = sheet.headers.filter((header) => {
+      return this.resolveMappedFolderColumnKey(header, columns, config) !== null;
+    });
+
+    if (columns.length === 0) {
+      const semanticUsed = { primary: false, description: false };
+      const columnsToCreate = [];
+
+      for (let index = 0; index < activeHeaders.length; index += 1) {
+        const header = activeHeaders[index];
+        const targetKey = this.resolveMappedFolderColumnKey(header, columns, config);
+        if (!targetKey) {
+          continue;
+        }
+
+        const flags = detectSemanticFlags(header.originalName);
+        const isPrimaryCode = config.primaryCodeColumnKey
+          ? config.primaryCodeColumnKey === targetKey
+          : !semanticUsed.primary && flags.isPrimaryCode;
+        const isDescription = config.descriptionColumnKey
+          ? config.descriptionColumnKey === targetKey
+          : !semanticUsed.description && flags.isDescription;
+
+        if (isPrimaryCode) semanticUsed.primary = true;
+        if (isDescription) semanticUsed.description = true;
+
+        columnsToCreate.push({
+          folderId,
+          originalName: header.originalName,
+          displayName: header.originalName,
+          internalKey: targetKey,
+          dataType: header.inferredDataType,
+          order: index,
+          isPrimaryCode,
+          isDescription,
+          isImageCode: flags.isImageCode,
+          isSearchable: isPrimaryCode || isDescription,
+          isFilterable: false,
+        });
+      }
+
+      if (columnsToCreate.length > 0) {
+        await columnRepository.createMany(columnsToCreate);
+        columns = await columnRepository.findByFolderIdOrdered(folderId);
+      }
+
+      return columns;
+    }
+
+    const existingKeys = new Set(columns.map((column) => column.internalKey));
+    const existingNames = new Set(
+      columns.map((column) => column.originalName.trim().toLowerCase()),
+    );
+    const columnsToCreate = [];
+
+    for (let index = 0; index < activeHeaders.length; index += 1) {
+      const header = activeHeaders[index];
+      const targetKey = this.resolveMappedFolderColumnKey(header, columns, config);
+      if (!targetKey) {
+        continue;
+      }
+
+      if (existingKeys.has(targetKey)) {
+        continue;
+      }
+
+      if (existingNames.has(header.originalName.trim().toLowerCase())) {
+        continue;
+      }
+
+      const flags = detectSemanticFlags(header.originalName);
+      columnsToCreate.push({
+        folderId,
+        originalName: header.originalName,
+        displayName: header.originalName,
+        internalKey: targetKey,
+        dataType: header.inferredDataType,
+        order: columns.length + index,
+        isPrimaryCode: config.primaryCodeColumnKey === targetKey,
+        isDescription: config.descriptionColumnKey === targetKey,
+        isImageCode: flags.isImageCode,
+        isSearchable:
+          config.primaryCodeColumnKey === targetKey ||
+          config.descriptionColumnKey === targetKey,
+        isFilterable: false,
+      });
+    }
+
+    if (columnsToCreate.length > 0) {
+      await columnRepository.createMany(columnsToCreate);
+      columns = await columnRepository.findByFolderIdOrdered(folderId);
+    }
+
+    if (config.primaryCodeColumnKey || config.descriptionColumnKey) {
+      for (const column of columns) {
+        const nextPrimary = column.internalKey === config.primaryCodeColumnKey;
+        const nextDescription = column.internalKey === config.descriptionColumnKey;
+
+        if (
+          column.isPrimaryCode !== nextPrimary ||
+          column.isDescription !== nextDescription
+        ) {
+          await columnRepository.update(column.id, {
+            isPrimaryCode: nextPrimary,
+            isDescription: nextDescription,
+            isSearchable: nextPrimary || nextDescription || column.isSearchable,
+          });
+        }
+      }
+
+      columns = await columnRepository.findByFolderIdOrdered(folderId);
+    }
+
+    return columns;
+  }
+
   async buildPreview(jobId: string, configOverride?: ImportJobConfig) {
     await requireRole("ADMIN");
     const job = await importJobRepository.findByIdWithRelations(jobId);
@@ -611,41 +764,7 @@ export class CatalogImportService {
     const config = configOverride ?? ((job.config as ImportJobConfig | null) ?? {});
     const sheet = await this.loadTargetSheet(job);
     await this.pruneOrphanAutoGeneratedColumns(job.folderId, sheet);
-    let columns = await columnRepository.findByFolderIdOrdered(job.folderId);
-
-    if (columns.length === 0) {
-      const semanticUsed = { primary: false, description: false };
-      const columnsToCreate = [];
-
-      for (let index = 0; index < sheet.headers.length; index += 1) {
-        const header = sheet.headers[index];
-        const flags = detectSemanticFlags(header.originalName);
-        const isPrimaryCode = !semanticUsed.primary && flags.isPrimaryCode;
-        const isDescription = !semanticUsed.description && flags.isDescription;
-
-        if (isPrimaryCode) semanticUsed.primary = true;
-        if (isDescription) semanticUsed.description = true;
-
-        columnsToCreate.push({
-          folderId: job.folderId,
-          originalName: header.originalName,
-          displayName: header.originalName,
-          internalKey: header.internalKey,
-          dataType: header.inferredDataType,
-          order: index,
-          isPrimaryCode,
-          isDescription,
-          isImageCode: flags.isImageCode,
-          isSearchable: isPrimaryCode || isDescription,
-          isFilterable: false,
-        });
-      }
-
-      if (columnsToCreate.length > 0) {
-        await columnRepository.createMany(columnsToCreate);
-        columns = await columnRepository.findByFolderIdOrdered(job.folderId);
-      }
-    }
+    const columns = await this.syncColumnsFromSheet(job.folderId, sheet, config);
 
     const mappedProducts = mapSheetToProducts(sheet, columns, config);
     const existingProducts = await productRepository.findPrimaryCodesByFolder(job.folderId);

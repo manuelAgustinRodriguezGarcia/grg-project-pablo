@@ -5,11 +5,15 @@ import { CustomDropdown } from "@/features/catalog/components/CustomDropdown";
 import type { DirectoryCatalogItem } from "@/features/directory/types/directory.types";
 import type { CatalogNavigationFolderItem } from "@/features/catalog/types/navigation.types";
 import type { ImportSheetItem } from "@/features/imports/types/import-job.types";
+import type { StagedExternalImagesSummary } from "@/features/imports/utils/external-images";
+import { hasStagedExternalImagesSummary } from "@/features/imports/utils/external-images";
+import { ImportStagedExternalImagesField } from "./ImportStagedExternalImagesField";
 import { Plus, FileSpreadsheet, TableProperties, ICON_STROKE } from "@/shared/icons";
 import styles from "./ImportWizard.module.scss";
 
 type ImportStepDestinationProps = {
   fileName: string;
+  stagedExternalImages?: StagedExternalImagesSummary | null;
   catalogs: DirectoryCatalogItem[];
   folders: CatalogNavigationFolderItem[];
   importableSheets: ImportSheetItem[];
@@ -30,6 +34,7 @@ type ImportStepDestinationProps = {
 
 export function ImportStepDestination({
   fileName,
+  stagedExternalImages = null,
   catalogs,
   folders,
   importableSheets,
@@ -124,6 +129,10 @@ export function ImportStepDestination({
           <span className={styles.importSourceFileName}>{fileName}</span>
         </div>
       </div>
+
+      {hasStagedExternalImagesSummary(stagedExternalImages) ? (
+        <ImportStagedExternalImagesField summary={stagedExternalImages} />
+      ) : null}
 
       <div className={styles.destinationHint}>
         <span className={styles.destinationHintIcon} aria-hidden>

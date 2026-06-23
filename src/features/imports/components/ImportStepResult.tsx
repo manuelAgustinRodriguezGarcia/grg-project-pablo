@@ -52,6 +52,20 @@ export function ImportStepResult({ report, errorMessage }: ImportStepResultProps
           <div className={styles.summaryValue}>{report.columnsDetected}</div>
           <div className={styles.summaryLabel}>Columnas</div>
         </div>
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryValue}>{report.imagesDetected}</div>
+          <div className={styles.summaryLabel}>Imágenes detectadas</div>
+        </div>
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryValue}>{report.imagesAssociated ?? 0}</div>
+          <div className={styles.summaryLabel}>Imágenes asociadas</div>
+        </div>
+        <div className={styles.summaryCard}>
+          <div className={`${styles.summaryValue} ${report.imagesPendingReview > 0 ? styles.summaryValueMatch : ""}`}>
+            {report.imagesPendingReview ?? 0}
+          </div>
+          <div className={styles.summaryLabel}>Pendientes de revisión</div>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,13 @@
 import type { ImportActionType, ImportJobStatus } from "@/generated/prisma/client";
 import type { ImportSheetItem } from "@/features/imports/types/import-job.types";
 
-export type ImportWizardStep = "upload" | "destination" | "preview" | "result";
+export type ImportWizardStep =
+  | "upload"
+  | "destination"
+  | "columns"
+  | "preview"
+  | "imageReview"
+  | "result";
 
 export type ImportSheetsResponse = {
   jobId: string;
@@ -22,6 +28,8 @@ export type ImportReportData = {
   formulasDetected: number;
   formulasWithoutCachedValue: number;
   imagesDetected: number;
+  imagesAssociated: number;
+  imagesPendingReview: number;
   columnsDetected: number;
   columnsCreated: number;
   errors: string[];

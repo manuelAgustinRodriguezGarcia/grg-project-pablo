@@ -39,7 +39,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["unzipper"],
+  serverExternalPackages: ["sharp", "unzipper"],
   async headers() {
     return [
       {

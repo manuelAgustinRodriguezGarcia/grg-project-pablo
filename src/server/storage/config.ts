@@ -12,7 +12,7 @@ export const BUCKET_CONFIGS: Record<StorageBucketName, BucketConfig> = {
     maxSizeBytes: 50 * MB,
     allowedMimeTypes: [
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel.sheet.macroEnabled.12",
+      "application/vnd.ms-excel.sheet.macroenabled.12",
     ],
     allowedExtensions: [".xlsx", ".xlsm"],
   },
@@ -29,7 +29,7 @@ export const BUCKET_CONFIGS: Record<StorageBucketName, BucketConfig> = {
     maxSizeBytes: 50 * MB,
     allowedMimeTypes: [
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel.sheet.macroEnabled.12",
+      "application/vnd.ms-excel.sheet.macroenabled.12",
       "application/zip",
       "application/x-zip-compressed",
       "image/jpeg",

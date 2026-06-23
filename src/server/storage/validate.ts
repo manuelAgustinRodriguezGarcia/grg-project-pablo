@@ -40,7 +40,9 @@ export function validateUpload(
     );
   }
 
-  if (!config.allowedMimeTypes.includes(normalizedMime)) {
+  const allowedMimeTypes = config.allowedMimeTypes.map(normalizeContentType);
+
+  if (!allowedMimeTypes.includes(normalizedMime)) {
     throw new StorageValidationError(
       `Tipo MIME no permitido (${normalizedMime}) en el bucket "${bucket}".`,
     );

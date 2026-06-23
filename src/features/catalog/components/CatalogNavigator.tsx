@@ -10,10 +10,7 @@ import {
 import { createFolderAction, deleteFolderAction, updateFolderAction } from "@/features/catalog/actions/folder.actions";
 import { CatalogFolderSelectors } from "@/features/catalog/components/CatalogFolderSelectors";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
-import {
-  CatalogPageIntro,
-  CatalogPageTopBar,
-} from "@/features/catalog/components/CatalogPageChrome";
+import { CatalogPageIntro } from "@/features/catalog/components/CatalogPageChrome";
 import { ProductTable } from "@/features/catalog/components/ProductTable";
 import { ImportWizard } from "@/features/imports/components/ImportWizard";
 import type {
@@ -607,8 +604,6 @@ export function CatalogNavigator({ catalogs }: CatalogNavigatorProps) {
   return (
     <>
       <div className={styles.page}>
-        <CatalogPageTopBar />
-
         <div className={styles.body}>
           <CatalogPageIntro onImportExcelClick={handleImportExcelClick}>
             <CatalogFolderSelectors
