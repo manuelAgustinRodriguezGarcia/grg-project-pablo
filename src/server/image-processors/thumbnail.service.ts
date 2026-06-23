@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import { loadSharp } from "./load-sharp";
 
 const THUMB_MAX_WIDTH = 256;
 
@@ -8,6 +8,7 @@ export type ThumbnailResult = {
 };
 
 export async function generateThumbnail(buffer: Buffer): Promise<ThumbnailResult> {
+  const sharp = await loadSharp();
   const thumbnailBuffer = await sharp(buffer)
     .rotate()
     .resize({ width: THUMB_MAX_WIDTH, withoutEnlargement: true })

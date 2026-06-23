@@ -1,7 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { ChevronLeft, ChevronRight, ICON_STROKE } from "@/shared/icons";
-import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
+import type {
+  ProductTablePrimaryImage,
+  ProductTableResponse,
+} from "@/features/catalog/types/product-table.types";
+import { ProductImagePreviewModal } from "./ProductImagePreviewModal";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 type ProductTableProps = {
@@ -10,6 +15,42 @@ type ProductTableProps = {
   error: string | null;
   onPageChange: (page: number) => void;
 };
+
+function formatTableHeaderLines(displayName: string): string[] {
+  const normalized = displayName.replace(/\r\n/g, "\n").trim();
+  const bracketMatch = normalized.match(/^(.+?)\s*(?:\n\s*)?\[\s*([^\]]+?)\s*\]\s*$/s);
+
+  if (bracketMatch) {
+    return [
+      bracketMatch[1].replace(/\n/g, " ").trim(),
+      bracketMatch[2].trim(),
+    ];
+  }
+
+  if (normalized.includes("\n")) {
+    const parts = normalized
+      .split("\n")
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (parts.length >= 2) {
+      return [parts[0], parts.slice(1).join(" ")];
+    }
+  }
+
+  const words = normalized.split(/\s+/).filter(Boolean);
+
+  if (words.length <= 1) {
+    return [words[0] ?? normalized];
+  }
+
+  if (words.length === 2) {
+    return [words[0], words[1]];
+  }
+
+  const splitAt = Math.ceil(words.length / 2);
+  return [words.slice(0, splitAt).join(" "), words.slice(splitAt).join(" ")];
+}
 
 function formatCellValue(value: unknown): string {
   if (value === null || value === undefined || value === "") {
@@ -37,12 +78,38 @@ function getPaginationRange(pagination: ProductTableResponse["pagination"]): {
   return { from, to };
 }
 
+function getProductImagePreviewUrl(
+  image: ProductTablePrimaryImage | null | undefined,
+): string | null {
+  if (!image) {
+    return null;
+  }
+
+  return image.fullUrl ?? image.thumbnailUrl;
+}
+
+function buildProductImageAlt(
+  primaryCode: string | null,
+  description: string | null,
+): string {
+  if (primaryCode && description) {
+    return `${primaryCode} — ${description}`;
+  }
+
+  return primaryCode ?? description ?? "Imagen del producto";
+}
+
 export function ProductTable({
   data,
   isLoading,
   error,
   onPageChange,
 }: ProductTableProps) {
+  const [previewImage, setPreviewImage] = useState<{
+    url: string;
+    alt: string;
+  } | null>(null);
+
   if (isLoading) {
     return (
       <section className={styles.tablePanel} aria-label="Tabla de productos">
@@ -68,6 +135,8 @@ export function ProductTable({
   }
 
   const sortedColumns = [...data.columns].sort((left, right) => left.order - right.order);
+  const showImageColumn = data.products.some((product) => product.primaryImage !== null);
+  const totalColumnCount = sortedColumns.length + (showImageColumn ? 1 : 0);
   const { from, to } = getPaginationRange(data.pagination);
   const { pagination } = data;
 
@@ -77,23 +146,76 @@ export function ProductTable({
         <table className={styles.productTable}>
           <thead>
             <tr>
-              {sortedColumns.map((column) => (
-                <th key={column.id} scope="col">
-                  {column.displayName}
+              {showImageColumn ? (
+                <th scope="col" className={styles.tableThumbHeader}>
+                  <span className={styles.tableHeaderLabel}>
+                    <span className={styles.tableHeaderLine}>Imagen</span>
+                  </span>
                 </th>
-              ))}
+              ) : null}
+              {sortedColumns.map((column) => {
+                const headerLines = formatTableHeaderLines(column.displayName);
+
+                return (
+                  <th key={column.id} scope="col">
+                    <span className={styles.tableHeaderLabel}>
+                      {headerLines.map((line, lineIndex) => (
+                        <span key={`${column.id}-${lineIndex}`} className={styles.tableHeaderLine}>
+                          {line}
+                        </span>
+                      ))}
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
             {data.products.length === 0 ? (
               <tr>
-                <td colSpan={Math.max(sortedColumns.length, 1)} className={styles.tableEmptyCell}>
+                <td colSpan={Math.max(totalColumnCount, 1)} className={styles.tableEmptyCell}>
                   No hay productos en esta carpeta.
                 </td>
               </tr>
             ) : (
-              data.products.map((product) => (
+              data.products.map((product) => {
+                const previewUrl = getProductImagePreviewUrl(product.primaryImage);
+
+                return (
                 <tr key={product.id}>
+                  {showImageColumn ? (
+                    <td className={styles.tableThumbCell}>
+                      {previewUrl ? (
+                        <button
+                          type="button"
+                          className={styles.tableThumbButton}
+                          onClick={() =>
+                            setPreviewImage({
+                              url: previewUrl,
+                              alt: buildProductImageAlt(
+                                product.primaryCode,
+                                product.description,
+                              ),
+                            })
+                          }
+                          aria-label={`Ver imagen de ${buildProductImageAlt(
+                            product.primaryCode,
+                            product.description,
+                          )}`}
+                        >
+                          <img
+                            src={product.primaryImage?.thumbnailUrl ?? previewUrl}
+                            alt=""
+                            className={styles.tableThumb}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </button>
+                      ) : (
+                        <span className={styles.tableThumbEmpty}>—</span>
+                      )}
+                    </td>
+                  ) : null}
                   {sortedColumns.map((column) => {
                     let value: unknown;
 
@@ -110,7 +232,8 @@ export function ProductTable({
                     );
                   })}
                 </tr>
-              ))
+              );
+              })
             )}
           </tbody>
         </table>
@@ -147,6 +270,14 @@ export function ProductTable({
           </button>
         </div>
       </footer>
+
+      {previewImage ? (
+        <ProductImagePreviewModal
+          imageUrl={previewImage.url}
+          imageAlt={previewImage.alt}
+          onClose={() => setPreviewImage(null)}
+        />
+      ) : null}
     </section>
   );
 }

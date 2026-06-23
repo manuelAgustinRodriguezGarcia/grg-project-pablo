@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { FileSpreadsheet, Upload, ICON_STROKE } from "@/shared/icons";
+import { ImportExternalImagesPanel } from "./ImportExternalImagesPanel";
+import type { ExternalImageSelection } from "@/features/imports/utils/external-images";
 import styles from "./ImportWizard.module.scss";
 
 const ACCEPTED_EXTENSIONS = [".xlsx", ".xlsm"];
@@ -9,8 +11,10 @@ const ACCEPT_ATTR = ".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.s
 
 type ImportStepUploadProps = {
   file: File | null;
+  externalImages: ExternalImageSelection;
   disabled: boolean;
   onFileSelected: (file: File | null) => void;
+  onExternalImagesChange: (selection: ExternalImageSelection) => void;
 };
 
 function formatSize(bytes: number): string {
@@ -31,8 +35,10 @@ function hasValidExtension(name: string): boolean {
 
 export function ImportStepUpload({
   file,
+  externalImages,
   disabled,
   onFileSelected,
+  onExternalImagesChange,
 }: ImportStepUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -93,13 +99,14 @@ export function ImportStepUpload({
       />
 
       {file ? (
-        <div className={styles.fileCard}>
+        <div className={`${styles.fileCard} ${styles.fileCardReady}`}>
           <span className={styles.fileIcon}>
             <FileSpreadsheet strokeWidth={ICON_STROKE} aria-hidden />
           </span>
           <span className={styles.fileMeta}>
             <span className={styles.fileName}>{file.name}</span>
             <span className={styles.fileSize}>{formatSize(file.size)}</span>
+            <span className={styles.fileReadyNote}>Se importará al continuar</span>
           </span>
           <button
             type="button"
@@ -111,6 +118,12 @@ export function ImportStepUpload({
           </button>
         </div>
       ) : null}
+
+      <ImportExternalImagesPanel
+        selection={externalImages}
+        disabled={disabled}
+        onChange={onExternalImagesChange}
+      />
     </div>
   );
 }

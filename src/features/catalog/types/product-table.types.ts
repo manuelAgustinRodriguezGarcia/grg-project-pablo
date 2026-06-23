@@ -6,11 +6,18 @@ export type ProductTableFolder = {
   catalogId: string;
 };
 
+export type ProductTablePrimaryImage = {
+  id: string;
+  thumbnailUrl: string | null;
+  fullUrl: string | null;
+};
+
 export type ProductTableItem = {
   id: string;
   primaryCode: string | null;
   description: string | null;
   dynamicData: Record<string, unknown>;
+  primaryImage: ProductTablePrimaryImage | null;
   createdAt: string;
   updatedAt: string;
 };

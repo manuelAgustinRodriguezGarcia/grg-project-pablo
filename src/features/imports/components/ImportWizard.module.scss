@@ -170,6 +170,7 @@
 .primaryButton,
 .secondaryButton,
 .dangerButton,
+.successButton,
 .ghostButton {
   display: inline-flex;
   align-items: center;
@@ -227,6 +228,16 @@
 
   &:hover:not(:disabled) {
     background: #a93226;
+  }
+}
+
+.successButton {
+  border: 1px solid transparent;
+  background: $green;
+  color: $white;
+
+  &:hover:not(:disabled) {
+    background: #188f4c;
   }
 }
 
@@ -450,6 +461,18 @@
   background: $white;
 }
 
+.fileCardReady {
+  border-color: rgba($green, 0.28);
+  background: rgba($green, 0.04);
+}
+
+.fileReadyNote {
+  font-family: $font-sans;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: $green;
+}
+
 .fileIcon {
   display: inline-flex;
   align-items: center;
@@ -465,6 +488,11 @@
     width: 1.3rem;
     height: 1.3rem;
   }
+}
+
+.fileIconImages {
+  background: rgba($blue, 0.12);
+  color: $blue;
 }
 
 .fileMeta {
@@ -552,6 +580,43 @@
   color: $navy;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.importSourceMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.importSourceFileSize {
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: rgba($navy, 0.6);
+}
+
+.importSourceIconImages {
+  background: rgba($blue, 0.12);
+  color: $blue;
+}
+
+.importSourceSuccess {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: $green;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
 }
 
 .destinationHint {
@@ -981,6 +1046,401 @@
   }
 }
 
+.externalImagesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba($navy, 0.08);
+}
+
+.externalImagesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.externalImagesTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: $navy;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    color: $blue;
+  }
+}
+
+.externalImagesBadge {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba($blue, 0.1);
+  color: $blue;
+  font-family: $font-sans;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.externalImagesReadyBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba($green, 0.12);
+  color: $green;
+  font-family: $font-sans;
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  svg {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+}
+
+.externalImagesError {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #c0392b;
+}
+
+.externalImagesAddMore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: fit-content;
+  min-height: 2.1rem;
+  padding: 0.35rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: $blue;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.externalImagesHint {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgba($navy, 0.62);
+}
+
+.externalImagesDropZone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: fit-content;
+  min-height: 2.35rem;
+  padding: 0.5rem 0.95rem;
+  border: 1px dashed rgba($blue, 0.35);
+  border-radius: $radius-md;
+  background: rgba($blue, 0.04);
+  color: $blue;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba($blue, 0.08);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.columnMappingTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+
+  th,
+  td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid rgba($navy, 0.08);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: rgba($navy, 0.62);
+    background: rgba($blue, 0.03);
+  }
+}
+
+.semanticBadge {
+  display: inline-flex;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba($blue, 0.1);
+  color: $blue;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mappingSelect {
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgba($navy, 0.14);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  color: $navy;
+}
+
+.imageReviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.imageReviewToolbar {
+  display: flex;
+  width: 100%;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+
+  > button {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.imageReviewItem {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr) minmax(12rem, 14rem);
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.85rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+}
+
+.imageReviewThumb {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 8px;
+  border: 1px solid rgba($navy, 0.1);
+  object-fit: cover;
+  background: rgba($navy, 0.04);
+  flex-shrink: 0;
+}
+
+.imageReviewMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.imageReviewName {
+  font-weight: 600;
+  color: $navy;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.imageReviewDetail {
+  font-size: 0.8rem;
+  color: rgba($navy, 0.58);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.imageReviewActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 12rem;
+}
+
+.imageReviewFinishButton {
+  display: block;
+  margin-top: 1.25rem;
+  margin-inline: auto;
+}
+
+.productCombobox {
+  position: relative;
+  width: 100%;
+}
+
+.productComboboxControl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.45rem;
+  padding: 0 0.75rem;
+  border: 1px solid rgba($navy, 0.14);
+  border-radius: $radius-md;
+  background: $white;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus-within {
+    border-color: rgba($blue, 0.45);
+    box-shadow: 0 0 0 2px rgba($blue, 0.12);
+  }
+}
+
+.productComboboxControlOpen {
+  border-color: rgba($blue, 0.45);
+  box-shadow: 0 0 0 2px rgba($blue, 0.12);
+}
+
+.productComboboxIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: rgba($navy, 0.45);
+}
+
+.productComboboxInput {
+  width: 100%;
+  min-width: 0;
+  padding: 0.55rem 0;
+  border: 0;
+  background: transparent;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  color: $navy;
+
+  &::placeholder {
+    color: rgba($navy, 0.45);
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+}
+
+.productComboboxMenu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  left: 0;
+  z-index: 20;
+  max-height: 12rem;
+  margin: 0;
+  padding: 0.35rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  background: $white;
+  box-shadow: 0 12px 28px rgba($navy, 0.14);
+  list-style: none;
+  overflow: auto;
+}
+
+.productComboboxOption {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  color: $navy;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    background: rgba($blue, 0.08);
+  }
+}
+
+.productComboboxOptionSelected {
+  background: rgba($blue, 0.1);
+  font-weight: 600;
+}
+
+.productComboboxEmpty {
+  padding: 0.65rem;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  color: rgba($navy, 0.55);
+  list-style: none;
+}
+
+@media (max-width: 720px) {
+  .imageReviewItem {
+    grid-template-columns: 4rem minmax(0, 1fr);
+    grid-template-areas:
+      "thumb meta"
+      "actions actions";
+  }
+
+  .imageReviewThumb {
+    grid-area: thumb;
+  }
+
+  .imageReviewMeta {
+    grid-area: meta;
+  }
+
+  .imageReviewActions {
+    grid-area: actions;
+    min-width: 0;
+    width: 100%;
+  }
+}
+
 @media (max-width: 600px) {
   .stepLabel {
     display: none;
@@ -1006,6 +1466,7 @@
   .primaryButton,
   .secondaryButton,
   .dangerButton,
+  .successButton,
   .ghostButton,
   .dropZone,
   .actionChoice,

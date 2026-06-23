@@ -63,6 +63,17 @@ describe("validateUpload", () => {
     ).not.toThrow();
   });
 
+  it("acepta .xlsm con MIME en minúsculas (navegador)", () => {
+    expect(() =>
+      validateUpload(
+        STORAGE_BUCKETS.EXCEL_ORIGINALS,
+        Buffer.from("xlsm-data"),
+        "application/vnd.ms-excel.sheet.macroenabled.12",
+        "catalogo.xlsm",
+      ),
+    ).not.toThrow();
+  });
+
   it("acepta Uint8Array y ArrayBuffer", () => {
     expect(() =>
       validateUpload(

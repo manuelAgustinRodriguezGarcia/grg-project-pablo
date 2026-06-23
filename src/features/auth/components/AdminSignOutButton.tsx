@@ -1,8 +1,9 @@
 "use client";
 
-import { logoutFormAction } from "@/features/auth/actions/logout-form.action";
 import { LogOut, ICON_STROKE } from "@/shared/icons";
 import styles from "./AdminSignOutButton.module.scss";
+
+const LOGOUT_PATH = "/api/auth/logout";
 
 type AdminSignOutButtonProps = {
   variant?: "default" | "sidebar";
@@ -17,7 +18,8 @@ export function AdminSignOutButton({
 
   return (
     <form
-      action={logoutFormAction}
+      action={LOGOUT_PATH}
+      method="POST"
       className={isSidebar ? styles.formSidebar : styles.form}
     >
       <button

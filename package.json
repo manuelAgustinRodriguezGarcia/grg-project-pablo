@@ -22,9 +22,11 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@img/sharp-win32-x64",
       "@parcel/watcher",
       "@prisma/engines",
-      "prisma"
+      "prisma",
+      "sharp"
     ]
   },
   "dependencies": {

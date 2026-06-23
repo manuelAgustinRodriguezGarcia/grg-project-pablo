@@ -17,6 +17,7 @@ import type {
   CatalogNavigationFolderItem,
   CatalogNavigationResponse,
 } from "@/features/catalog/types/navigation.types";
+import type { FolderColumn } from "@/generated/prisma/client";
 import {
   analyzeImportAction,
   applyImportAction,
@@ -34,8 +35,33 @@ import type {
   ImportSheetsResponse,
   ImportWizardStep,
 } from "@/features/imports/types/import-wizard.types";
+import {
+  buildImportColumnMapping,
+  parseDetectedHeaders,
+  resolveFolderColumnKey,
+  type ColumnMappingRow,
+} from "@/features/imports/utils/column-mapping";
+import {
+  appendExternalImagesToFormData,
+  hasExternalImages,
+  hasStagedExternalImagesSummary,
+  snapshotExternalImageSources,
+  type ExternalImageSelection,
+  type StagedExternalImagesSummary,
+} from "@/features/imports/utils/external-images";
+import {
+  fetchStagedImageCount,
+  uploadExternalImagesToJob,
+} from "@/features/imports/utils/upload-external-images";
 import { AlertTriangle, ArrowLeft, ArrowRight, FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
+import { ImportExternalImagesPanel } from "./ImportExternalImagesPanel";
+import { ImportStagedExternalImagesField } from "./ImportStagedExternalImagesField";
+import {
+  ImportStepColumns,
+  createInitialColumnMappingState,
+} from "./ImportStepColumns";
 import { ImportStepDestination } from "./ImportStepDestination";
+import { ImportStepImageReview } from "./ImportStepImageReview";
 import { ImportStepPreview } from "./ImportStepPreview";
 import { ImportStepResult } from "./ImportStepResult";
 import { ImportStepUpload } from "./ImportStepUpload";
@@ -48,19 +74,29 @@ type ImportWizardProps = {
   onPublished: () => void;
 };
 
-const STEP_ORDER: ImportWizardStep[] = [
+const STEP_ORDER = [
   "upload",
   "destination",
+  "columns",
   "preview",
   "result",
-];
+] as const satisfies readonly Exclude<ImportWizardStep, "imageReview">[];
 
-const STEP_LABELS: Record<ImportWizardStep, string> = {
+const STEP_LABELS: Record<Exclude<ImportWizardStep, "imageReview">, string> = {
   upload: "Archivo",
   destination: "Destino",
+  columns: "Columnas",
   preview: "Vista previa",
   result: "Resultado",
 };
+
+function getStepIndicatorIndex(step: ImportWizardStep): number {
+  if (step === "imageReview") {
+    return STEP_ORDER.indexOf("preview");
+  }
+
+  return STEP_ORDER.indexOf(step);
+}
 
 function readErrorMessage(payload: unknown, fallback: string): string {
   if (
@@ -110,10 +146,22 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
   const loadingExitResolver = useRef<(() => void) | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isBusy = loadingOverlay !== null || inlineBusy || isCatalogActionBusy;
-
-  const [file, setFile] = useState<File | null>(null);
+  const [stagedImageCount, setStagedImageCount] = useState(0);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [externalImages, setExternalImages] = useState<ExternalImageSelection>({
+    zipFile: null,
+    imageFiles: [],
+  });
+  const [stagedExternalImagesSummary, setStagedExternalImagesSummary] =
+    useState<StagedExternalImagesSummary | null>(null);
+
+  const isBusy =
+    loadingOverlay !== null ||
+    inlineBusy ||
+    isCatalogActionBusy ||
+    isUploadingImages;
 
   const [catalogList, setCatalogList] = useState<DirectoryCatalogItem[]>(catalogs);
   const [folders, setFolders] = useState<CatalogNavigationFolderItem[]>([]);
@@ -123,6 +171,11 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
   const [selectedCatalogId, setSelectedCatalogId] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [selectedSheetName, setSelectedSheetName] = useState("");
+
+  const [folderColumns, setFolderColumns] = useState<FolderColumn[]>([]);
+  const [mappingRows, setMappingRows] = useState<ColumnMappingRow[]>([]);
+  const [primaryCodeHeaderKey, setPrimaryCodeHeaderKey] = useState("");
+  const [descriptionHeaderKey, setDescriptionHeaderKey] = useState("");
 
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
   const [selectedAction, setSelectedAction] = useState<ImportActionType | null>(null);
@@ -136,8 +189,65 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
   );
   const excludedSheetCount = sheets.length - importableSheets.length;
 
+  const selectedSheet = sheets.find((sheet) => sheet.sheetName === selectedSheetName);
+  const detectedHeaders = parseDetectedHeaders(selectedSheet);
+
+  const uploadPendingExternalImages = useCallback(
+    async (options?: { clearAfter?: boolean }) => {
+      if (!jobId || !hasExternalImages(externalImages)) {
+        return;
+      }
+
+      setIsUploadingImages(true);
+      try {
+        await uploadExternalImagesToJob(jobId, externalImages);
+        if (options?.clearAfter) {
+          setExternalImages({ zipFile: null, imageFiles: [] });
+        }
+        setStagedImageCount(await fetchStagedImageCount(jobId));
+      } finally {
+        setIsUploadingImages(false);
+      }
+    },
+    [externalImages, jobId],
+  );
+
+  const loadFolderColumns = useCallback(async (folderId: string) => {
+    const response = await fetch(
+      `/api/admin/folders/${folderId}/products?page=1&pageSize=1`,
+    );
+    if (!response.ok) {
+      throw new Error("No se pudieron cargar las columnas de la carpeta.");
+    }
+
+    const data = (await response.json()) as { columns: FolderColumn[] };
+    setFolderColumns(data.columns);
+    return data.columns;
+  }, []);
+
+  const loadImportReport = useCallback(async (activeJobId: string) => {
+    const reportResponse = await fetch(`/api/admin/imports/${activeJobId}/report`);
+    if (reportResponse.ok) {
+      const reportData = (await reportResponse.json()) as ImportReportResponse;
+      setReport(reportData.report);
+      setReportError(reportData.errorMessage);
+      return;
+    }
+
+    setReport(null);
+    setReportError(null);
+  }, []);
+
   const selectedCatalog = catalogList.find((item) => item.id === selectedCatalogId);
   const selectedFolder = folders.find((item) => item.id === selectedFolderId);
+
+  useEffect(() => {
+    if (!jobId || step === "upload") {
+      return;
+    }
+
+    void fetchStagedImageCount(jobId).then(setStagedImageCount);
+  }, [jobId, step]);
 
   const waitForLoadingExit = useCallback(() => {
     return new Promise<void>((resolve) => {
@@ -229,6 +339,7 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
     try {
       const formData = new FormData();
       formData.append("file", file);
+      appendExternalImagesToFormData(formData, externalImages);
 
       updateLoadingOverlay("Subiendo archivo…", 28);
 
@@ -269,6 +380,20 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
       const sheetsData = (await sheetsResponse.json()) as ImportSheetsResponse;
       setSheets(sheetsData.sheets);
       setSelectedSheetName("");
+
+      const uploadedSources = snapshotExternalImageSources(externalImages);
+      const imageCount = await fetchStagedImageCount(newJobId);
+      if (uploadedSources.length > 0 || imageCount > 0) {
+        setStagedExternalImagesSummary({
+          sources: uploadedSources,
+          imageCount,
+        });
+      } else {
+        setStagedExternalImagesSummary(null);
+      }
+
+      setExternalImages({ zipFile: null, imageFiles: [] });
+      setStagedImageCount(imageCount);
 
       updateLoadingOverlay("Finalizando análisis…", 92);
       await completeLoadingOverlay();
@@ -470,9 +595,59 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
         throw new Error(destinationResult.error);
       }
 
-      updateLoadingOverlay("Preparando columnas…", 55);
+      await uploadPendingExternalImages({ clearAfter: true });
 
-      const configResult = await setImportConfigAction({ jobId });
+      updateLoadingOverlay("Preparando columnas…", 68);
+
+      const columns = await loadFolderColumns(selectedFolderId);
+      const sheet = sheets.find((item) => item.sheetName === selectedSheetName);
+      const headers = parseDetectedHeaders(sheet);
+      const initialMapping = createInitialColumnMappingState(headers, columns);
+      setMappingRows(initialMapping.mappingRows);
+      setPrimaryCodeHeaderKey(initialMapping.primaryCodeHeaderKey);
+      setDescriptionHeaderKey(initialMapping.descriptionHeaderKey);
+
+      updateLoadingOverlay("Destino configurado…", 93);
+      await completeLoadingOverlay();
+      setStep("columns");
+    } catch (caught) {
+      clearLoadingImmediate();
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "No se pudo configurar el destino.",
+      );
+    }
+  }
+
+  async function handleColumnsContinue() {
+    if (!jobId) {
+      return;
+    }
+
+    setError(null);
+    startLoadingOverlay("Configurando columnas…", 15);
+
+    try {
+      await uploadPendingExternalImages({ clearAfter: true });
+
+      updateLoadingOverlay("Generando la vista previa…", 45);
+
+      const columnMapping = buildImportColumnMapping(mappingRows);
+      const primaryCodeColumnKey = resolveFolderColumnKey(
+        primaryCodeHeaderKey,
+        mappingRows,
+      );
+      const descriptionColumnKey = descriptionHeaderKey
+        ? resolveFolderColumnKey(descriptionHeaderKey, mappingRows) ?? undefined
+        : undefined;
+
+      const configResult = await setImportConfigAction({
+        jobId,
+        columnMapping,
+        primaryCodeColumnKey: primaryCodeColumnKey ?? undefined,
+        descriptionColumnKey,
+      });
       if (!configResult.success) {
         throw new Error(configResult.error);
       }
@@ -542,15 +717,14 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
 
       updateLoadingOverlay("Generando informe…", 78);
 
-      const reportResponse = await fetch(`/api/admin/imports/${jobId}/report`);
-      if (reportResponse.ok) {
-        const reportData = (await reportResponse.json()) as ImportReportResponse;
-        setReport(reportData.report);
-        setReportError(reportData.errorMessage);
-      } else {
-        setReport(null);
-        setReportError(null);
+      if (applyResult.data.status === "PENDING_REVIEW") {
+        updateLoadingOverlay("Preparando revisión de imágenes…", 94);
+        await completeLoadingOverlay();
+        setStep("imageReview");
+        return;
       }
+
+      await loadImportReport(jobId);
 
       updateLoadingOverlay("Importación completa…", 94);
       await completeLoadingOverlay();
@@ -565,12 +739,34 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
     }
   }
 
+  async function handleImageReviewCompleted() {
+    if (!jobId) {
+      return;
+    }
+
+    setError(null);
+    startLoadingOverlay("Finalizando importación…", 40);
+    try {
+      await loadImportReport(jobId);
+      updateLoadingOverlay("Importación completa…", 92);
+      await completeLoadingOverlay();
+      setStep("result");
+    } catch (caught) {
+      clearLoadingImmediate();
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "No se pudo finalizar la importación.",
+      );
+    }
+  }
+
   function handleFinish() {
     onPublished();
     onClose();
   }
 
-  const currentStepIndex = STEP_ORDER.indexOf(step);
+  const currentStepIndex = getStepIndicatorIndex(step);
   const canContinueDestination = Boolean(
     selectedCatalogId && selectedFolderId && selectedSheetName,
   );
@@ -649,9 +845,14 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
               {step === "upload" ? (
                 <ImportStepUpload
                   file={file}
+                  externalImages={externalImages}
                   disabled={isBusy}
                   onFileSelected={(next) => {
                     setFile(next);
+                    setError(null);
+                  }}
+                  onExternalImagesChange={(selection) => {
+                    setExternalImages(selection);
                     setError(null);
                   }}
                 />
@@ -660,6 +861,7 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
               {step === "destination" ? (
                 <ImportStepDestination
                   fileName={file?.name ?? ""}
+                  stagedExternalImages={stagedExternalImagesSummary}
                   catalogs={catalogList}
                   folders={folders}
                   importableSheets={importableSheets}
@@ -679,6 +881,25 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
                 />
               ) : null}
 
+              {step === "columns" ? (
+                <>
+                  {hasStagedExternalImagesSummary(stagedExternalImagesSummary) ? (
+                    <ImportStagedExternalImagesField summary={stagedExternalImagesSummary} />
+                  ) : null}
+                  <ImportStepColumns
+                    headers={detectedHeaders}
+                    folderColumns={folderColumns}
+                    mappingRows={mappingRows}
+                    primaryCodeHeaderKey={primaryCodeHeaderKey}
+                    descriptionHeaderKey={descriptionHeaderKey}
+                    disabled={isBusy}
+                    onMappingRowsChange={setMappingRows}
+                    onPrimaryCodeHeaderKeyChange={setPrimaryCodeHeaderKey}
+                    onDescriptionHeaderKeyChange={setDescriptionHeaderKey}
+                  />
+                </>
+              ) : null}
+
               {step === "preview" && preview ? (
                 <ImportStepPreview
                   preview={preview}
@@ -690,6 +911,16 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
                 />
               ) : null}
 
+              {step === "imageReview" && jobId && selectedFolderId ? (
+                <ImportStepImageReview
+                  jobId={jobId}
+                  folderId={selectedFolderId}
+                  disabled={isBusy}
+                  onCompleted={() => void handleImageReviewCompleted()}
+                  onError={setError}
+                />
+              ) : null}
+
               {step === "result" ? (
                 <ImportStepResult report={report} errorMessage={reportError} />
               ) : null}
@@ -698,13 +929,23 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
         </div>
 
         <footer className={styles.footer}>
-          {step === "destination" || step === "preview" ? (
+          {step === "destination" || step === "columns" || step === "preview" ? (
             <button
               type="button"
               className={styles.secondaryButton}
-              onClick={() =>
-                setStep(step === "preview" ? "destination" : "upload")
-              }
+              onClick={() => {
+                if (step === "preview") {
+                  setStep("columns");
+                  return;
+                }
+
+                if (step === "columns") {
+                  setStep("destination");
+                  return;
+                }
+
+                setStep("upload");
+              }}
               disabled={isBusy}
             >
               <ArrowLeft className={styles.buttonIcon} strokeWidth={ICON_STROKE} aria-hidden />
@@ -731,6 +972,18 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
                 className={styles.primaryButton}
                 onClick={() => void handleDestinationContinue()}
                 disabled={isBusy || !canContinueDestination}
+              >
+                Continuar
+                <ArrowRight className={styles.buttonIcon} strokeWidth={ICON_STROKE} aria-hidden />
+              </button>
+            ) : null}
+
+            {step === "columns" ? (
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={() => void handleColumnsContinue()}
+                disabled={isBusy || detectedHeaders.length === 0}
               >
                 Continuar
                 <ArrowRight className={styles.buttonIcon} strokeWidth={ICON_STROKE} aria-hidden />

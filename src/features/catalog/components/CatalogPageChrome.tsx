@@ -30,23 +30,6 @@ const ACTION_CARDS: ActionCardConfig[] = [
   },
 ];
 
-export function CatalogPageTopBar() {
-  return (
-    <header className={styles.topBar}>
-      <div className={styles.headerSearchWrap}>
-        <Search className={styles.headerSearchIcon} strokeWidth={ICON_STROKE} aria-hidden />
-        <input
-          type="search"
-          className={styles.headerSearch}
-          placeholder="Búsqueda global en catálogos, secciones o registros…"
-          readOnly
-          aria-label="Búsqueda global"
-        />
-      </div>
-    </header>
-  );
-}
-
 type CatalogPageIntroProps = {
   onImportExcelClick?: () => void;
   onAddProductClick?: () => void;
@@ -74,7 +57,23 @@ export function CatalogPageIntro({
 }: CatalogPageIntroProps) {
   return (
     <section className={styles.sectionIntro} aria-label="Acciones de catálogos">
-      <h1 className={styles.sectionTitle}>Catálogos</h1>
+      <div className={styles.sectionHeader}>
+        <h1 className={styles.sectionTitle}>Catálogos</h1>
+        <div className={styles.headerSearchWrap}>
+          <Search
+            className={styles.headerSearchIcon}
+            strokeWidth={ICON_STROKE}
+            aria-hidden
+          />
+          <input
+            type="search"
+            className={styles.headerSearch}
+            placeholder="Búsqueda global en catálogos, secciones o registros…"
+            readOnly
+            aria-label="Búsqueda global"
+          />
+        </div>
+      </div>
 
       <div className={styles.catalogToolbar}>
         <div className={styles.actionCards}>
