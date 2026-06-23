@@ -1,6 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { FileSpreadsheet, ICON_STROKE, Plus, Search } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
@@ -9,7 +10,7 @@ type ActionCardConfig = {
   title: string;
   subtitle: string;
   icon: LucideIcon;
-  iconVariant: "green" | "excel";
+  variant: "blue" | "green";
 };
 
 const ACTION_CARDS: ActionCardConfig[] = [
@@ -18,14 +19,14 @@ const ACTION_CARDS: ActionCardConfig[] = [
     title: "Agregar producto",
     subtitle: "Agregar producto a catálogo",
     icon: Plus,
-    iconVariant: "green",
+    variant: "blue",
   },
   {
     id: "import-excel",
     title: "Importar Excel",
-    subtitle: "Subir archivo y actualizar productos",
+    subtitle: "Subir lista de productos",
     icon: FileSpreadsheet,
-    iconVariant: "excel",
+    variant: "green",
   },
 ];
 
@@ -46,36 +47,74 @@ export function CatalogPageTopBar() {
   );
 }
 
-export function CatalogPageIntro() {
+type CatalogPageIntroProps = {
+  onImportExcelClick?: () => void;
+  onAddProductClick?: () => void;
+  children?: ReactNode;
+};
+
+function handleActionCardClick(
+  cardId: string,
+  handlers: Pick<CatalogPageIntroProps, "onImportExcelClick" | "onAddProductClick">,
+): void {
+  if (cardId === "import-excel") {
+    handlers.onImportExcelClick?.();
+    return;
+  }
+
+  if (cardId === "add-product") {
+    handlers.onAddProductClick?.();
+  }
+}
+
+export function CatalogPageIntro({
+  onImportExcelClick,
+  onAddProductClick,
+  children,
+}: CatalogPageIntroProps) {
   return (
     <section className={styles.sectionIntro} aria-label="Acciones de catálogos">
       <h1 className={styles.sectionTitle}>Catálogos</h1>
 
-      <div className={styles.actionCards}>
-        {ACTION_CARDS.map((card) => {
-          const Icon = card.icon;
-          const iconClassName =
-            card.iconVariant === "excel"
-              ? styles.actionCardIconExcel
-              : styles.actionCardIconGreen;
+      <div className={styles.catalogToolbar}>
+        <div className={styles.actionCards}>
+          {ACTION_CARDS.map((card) => {
+            const Icon = card.icon;
+            const cardClassName =
+              card.variant === "green"
+                ? styles.actionCardGreen
+                : styles.actionCardBlue;
+            const iconClassName =
+              card.variant === "green"
+                ? styles.actionCardIconGreen
+                : styles.actionCardIconBlue;
 
-          return (
-            <button
-              key={card.id}
-              type="button"
-              className={styles.actionCard}
-              aria-label={card.title}
-            >
-              <span className={`${styles.actionCardIcon} ${iconClassName}`}>
-                <Icon strokeWidth={ICON_STROKE} aria-hidden />
-              </span>
-              <span className={styles.actionCardText}>
-                <span className={styles.actionCardTitle}>{card.title}</span>
-                <span className={styles.actionCardSubtitle}>{card.subtitle}</span>
-              </span>
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={card.id}
+                type="button"
+                className={`${styles.actionCard} ${cardClassName}`}
+                aria-label={card.title}
+                data-testid={`catalog-action-${card.id}`}
+                onClick={() =>
+                  handleActionCardClick(card.id, {
+                    onImportExcelClick,
+                    onAddProductClick,
+                  })
+                }
+              >
+                <span className={`${styles.actionCardIcon} ${iconClassName}`}>
+                  <Icon strokeWidth={ICON_STROKE} aria-hidden />
+                </span>
+                <span className={styles.actionCardText}>
+                  <span className={styles.actionCardTitle}>{card.title}</span>
+                  <span className={styles.actionCardSubtitle}>{card.subtitle}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {children}
       </div>
     </section>
   );

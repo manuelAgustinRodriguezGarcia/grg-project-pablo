@@ -17,9 +17,62 @@ function getCellText(row: Row, columnIndex: number): string {
   return String(value).trim();
 }
 
-function isRowEmpty(row: Row, columnCount: number): boolean {
-  for (let i = 0; i < columnCount; i += 1) {
-    if (getCellText(row, i)) {
+function getWorksheetMaxColumn(worksheet: Worksheet, fromRow: number): number {
+  let maxColumn = 0;
+
+  for (let rowNumber = fromRow; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+    const row = worksheet.getRow(rowNumber);
+    row.eachCell({ includeEmpty: true }, (_cell, colNumber) => {
+      maxColumn = Math.max(maxColumn, colNumber);
+    });
+  }
+
+  return maxColumn;
+}
+
+function columnHasData(
+  worksheet: Worksheet,
+  headerRow: number,
+  columnIndex: number,
+): boolean {
+  for (let rowNumber = headerRow + 1; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+    if (getCellText(worksheet.getRow(rowNumber), columnIndex)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function detectImportableColumns(
+  worksheet: Worksheet,
+  headerRow: number,
+): Array<{ originalName: string; columnIndex: number }> {
+  const maxColumn = getWorksheetMaxColumn(worksheet, headerRow);
+  const headerCells = worksheet.getRow(headerRow);
+  const columns: Array<{ originalName: string; columnIndex: number }> = [];
+
+  for (let col = 1; col <= maxColumn; col += 1) {
+    const columnIndex = col - 1;
+    const headerName = getCellText(headerCells, columnIndex);
+    const hasData = columnHasData(worksheet, headerRow, columnIndex);
+
+    if (!headerName && !hasData) {
+      continue;
+    }
+
+    columns.push({
+      columnIndex,
+      originalName: headerName || `Columna ${col}`,
+    });
+  }
+
+  return columns;
+}
+
+function isRowEmptyForHeaders(row: Row, headers: ReturnType<typeof buildDetectedHeaders>): boolean {
+  for (const header of headers) {
+    if (getCellText(row, header.columnIndex)) {
       return false;
     }
   }
@@ -56,27 +109,6 @@ function detectHeaderRow(worksheet: Worksheet): number | null {
   return null;
 }
 
-function readHeaderNames(worksheet: Worksheet, headerRow: number): string[] {
-  const row = worksheet.getRow(headerRow);
-  const names: string[] = [];
-  let maxColumn = 0;
-
-  row.eachCell({ includeEmpty: true }, (_cell, colNumber) => {
-    maxColumn = Math.max(maxColumn, colNumber);
-  });
-
-  for (let col = 1; col <= maxColumn; col += 1) {
-    const text = getCellText(row, col - 1);
-    names.push(text || `Columna ${col}`);
-  }
-
-  while (names.length > 0 && !names[names.length - 1]?.trim()) {
-    names.pop();
-  }
-
-  return names;
-}
-
 function parseDataRows(
   worksheet: Worksheet,
   headerRow: number,
@@ -87,7 +119,7 @@ function parseDataRows(
   for (let rowNumber = headerRow + 1; rowNumber <= worksheet.rowCount; rowNumber += 1) {
     const row = worksheet.getRow(rowNumber);
 
-    if (isRowEmpty(row, headers.length)) {
+    if (isRowEmptyForHeaders(row, headers)) {
       continue;
     }
 
@@ -153,8 +185,8 @@ export function parseWorksheet(worksheet: Worksheet): ParsedSheet {
     };
   }
 
-  const headerNames = readHeaderNames(worksheet, headerRow);
-  const headers = buildDetectedHeaders(headerNames);
+  const importableColumns = detectImportableColumns(worksheet, headerRow);
+  const headers = buildDetectedHeaders(importableColumns);
   const rows = parseDataRows(worksheet, headerRow, headers);
 
   const classification = excelStructureService.classifySheet({

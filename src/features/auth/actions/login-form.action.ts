@@ -1,16 +1,17 @@
 "use server";
 
 import type { AuthActionResult } from "@/server/auth/types";
+import { ADMIN_HOME_PATH } from "@/server/auth/config";
 import { signInAction } from "./auth.actions";
 
 function resolveRedirectTo(value: FormDataEntryValue | null): string {
   if (typeof value !== "string") {
-    return "/admin";
+    return ADMIN_HOME_PATH;
   }
 
   const trimmed = value.trim();
   if (!trimmed.startsWith("/") || trimmed.startsWith("//")) {
-    return "/admin";
+    return ADMIN_HOME_PATH;
   }
 
   return trimmed;

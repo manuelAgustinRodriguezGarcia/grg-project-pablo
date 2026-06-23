@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
+import { ADMIN_HOME_PATH } from "@/server/auth/config";
 import { loginFormAction } from "@/features/auth/actions/login-form.action";
 import type { AuthActionResult } from "@/server/auth/types";
 import sharedStyles from "../styles/loginShared.module.scss";
@@ -12,7 +13,7 @@ type LoginFormCardProps = {
   redirectTo?: string;
 };
 
-export function LoginFormCard({ redirectTo = "/admin" }: LoginFormCardProps) {
+export function LoginFormCard({ redirectTo = ADMIN_HOME_PATH }: LoginFormCardProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [state, formAction, isPending] = useActionState<
     AuthActionResult | null,

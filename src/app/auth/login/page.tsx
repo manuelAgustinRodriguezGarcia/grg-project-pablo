@@ -3,6 +3,7 @@ import { LandingFooter } from "@/features/landing/components/LandingFooter";
 import { LoginFormCard } from "@/features/auth/components/LoginFormCard";
 import { LoginHeader } from "@/features/auth/components/LoginHeader";
 import { LoginImagePanel } from "@/features/auth/components/LoginImagePanel";
+import { ADMIN_HOME_PATH } from "@/server/auth/config";
 import sharedStyles from "@/features/auth/styles/loginShared.module.scss";
 import styles from "./login.module.scss";
 
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 
 function resolveRedirectTo(redirectTo?: string): string {
   if (!redirectTo?.startsWith("/") || redirectTo.startsWith("//")) {
-    return "/admin";
+    return ADMIN_HOME_PATH;
   }
 
   return redirectTo;

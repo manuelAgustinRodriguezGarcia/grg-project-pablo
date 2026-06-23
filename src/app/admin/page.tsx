@@ -1,5 +1,6 @@
-import { AdminPlaceholder } from "@/features/admin/components/AdminPlaceholder";
+import { redirect } from "next/navigation";
+import { ADMIN_HOME_PATH } from "@/server/auth/config";
 
 export default function AdminPage() {
-  return <AdminPlaceholder />;
+  redirect(ADMIN_HOME_PATH);
 }

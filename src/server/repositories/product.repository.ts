@@ -96,6 +96,28 @@ export class ProductRepository {
     const result = await prisma.product.deleteMany({ where: { folderId } });
     return result.count;
   }
+
+  async hasNonEmptyDynamicValue(
+    folderId: string,
+    internalKey: string,
+  ): Promise<boolean> {
+    const products = await prisma.product.findMany({
+      where: { folderId },
+      select: { dynamicData: true },
+    });
+
+    return products.some((product) => {
+      const value = (product.dynamicData as Record<string, unknown> | null)?.[
+        internalKey
+      ];
+
+      if (value === null || value === undefined) {
+        return false;
+      }
+
+      return String(value).trim().length > 0;
+    });
+  }
 }
 
 export const productRepository = new ProductRepository();

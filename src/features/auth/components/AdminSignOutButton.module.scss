@@ -71,7 +71,8 @@
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: rgba(admin.$white, 0.12);
+      border-color: rgba(#c0392b, 0.55);
+      background: #c0392b;
       color: admin.$white;
     }
   }
@@ -83,9 +84,30 @@
   flex-shrink: 0;
 }
 
+.label {
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    opacity 0.2s ease,
+    max-width 0.3s ease;
+}
+
+.buttonSidebarCollapsed {
+  justify-content: center;
+  gap: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+
+  .label {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .button,
-  .buttonSidebar {
+  .buttonSidebar,
+  .label {
     transition: none;
   }
 }

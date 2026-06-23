@@ -28,6 +28,12 @@
   display: flex;
   flex-direction: column;
   line-height: 1.1;
+  overflow: hidden;
+  opacity: 1;
+  max-width: 12rem;
+  transition:
+    opacity 0.2s ease,
+    max-width 0.3s ease;
 }
 
 .brandPrimary {
@@ -44,4 +50,19 @@
   font-weight: 600;
   letter-spacing: 0.28em;
   color: $green;
+}
+
+.logoCollapsed {
+  justify-content: center;
+  gap: 0;
+
+  .textWrap {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .textWrap {
+    transition: none;
+  }
 }
