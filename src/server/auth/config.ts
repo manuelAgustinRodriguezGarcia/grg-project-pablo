@@ -10,6 +10,9 @@ export const AUTH_LOGIN_PATH = "/auth/login";
 export const AUTH_CALLBACK_PATH = "/auth/callback";
 export const AUTH_RESET_PASSWORD_PATH = "/auth/reset-password";
 
+/** Ruta principal del panel tras iniciar sesión. */
+export const ADMIN_HOME_PATH = "/admin/catalogos";
+
 /** Prefijos protegidos por middleware (requieren sesión Supabase válida). */
 export const PROTECTED_PATH_PREFIXES = ["/admin", "/api/admin"] as const;
 

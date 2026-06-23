@@ -1,7 +1,11 @@
 export {
+  AlertTriangle,
   Archive,
   ArrowLeft,
+  ArrowRight,
   Camera,
+  Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -17,13 +21,20 @@ export {
   Map,
   MapPin,
   MessageCircle,
+  Pencil,
   Phone,
   Plus,
+  Pointer,
   Route,
   Search,
   Share2,
   TableProperties,
+  Trash2,
+  Upload,
   User,
+  UserRound,
+  ShieldUser,
+  X,
 } from "lucide-react";
 
 export const ICON_STROKE = 1.5;

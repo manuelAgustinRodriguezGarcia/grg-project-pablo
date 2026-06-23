@@ -8,6 +8,7 @@ type AdminNavItemProps = {
   label: string;
   icon: LucideIcon;
   isActive: boolean;
+  isCollapsed?: boolean;
 };
 
 export function AdminNavItem({
@@ -15,15 +16,17 @@ export function AdminNavItem({
   label,
   icon: Icon,
   isActive,
+  isCollapsed = false,
 }: AdminNavItemProps) {
   return (
     <Link
       href={href}
-      className={`${styles.link} ${isActive ? styles.linkActive : ""}`}
+      className={`${styles.link} ${isActive ? styles.linkActive : ""} ${isCollapsed ? styles.linkCollapsed : ""}`}
       aria-current={isActive ? "page" : undefined}
+      title={isCollapsed ? label : undefined}
     >
       <Icon className={styles.icon} strokeWidth={ICON_STROKE} aria-hidden />
-      <span>{label}</span>
+      <span className={styles.label}>{label}</span>
     </Link>
   );
 }

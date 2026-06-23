@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import {
+  ADMIN_HOME_PATH,
   AUTH_LOGIN_PATH,
   AUTH_PUBLIC_PATHS,
   PROTECTED_PATH_PREFIXES,
@@ -36,7 +37,7 @@ export async function middleware(request: NextRequest) {
   if (isPublicAuthPath(pathname)) {
     if (user && pathname === AUTH_LOGIN_PATH) {
       const redirectTo =
-        request.nextUrl.searchParams.get("redirectTo") ?? "/admin";
+        request.nextUrl.searchParams.get("redirectTo") ?? ADMIN_HOME_PATH;
       return NextResponse.redirect(new URL(redirectTo, request.url));
     }
 

@@ -1,0 +1,1015 @@
+@use "../../admin/styles/variables" as *;
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.75rem, 3vw, 2rem);
+  background: rgba($navy, 0.55);
+  animation: overlayFade 0.18s ease-out;
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 52rem;
+  max-height: 92vh;
+  border-radius: $radius-lg;
+  background: $bg-content;
+  box-shadow: 0 24px 64px rgba($navy, 0.35);
+  overflow: hidden;
+  animation: modalRise 0.2s ease-out;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 1.1rem 1.35rem;
+  border-bottom: 1px solid rgba($navy, 0.08);
+  background: $white;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.titleIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: rgba($green, 0.14);
+  color: $green;
+
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+.title {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: $navy;
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.85rem 1.35rem;
+  border-bottom: 1px solid rgba($navy, 0.08);
+  background: $white;
+}
+
+.stepItem {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.stepIndex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  border: 1px solid rgba($navy, 0.18);
+  background: $white;
+  color: rgba($navy, 0.55);
+  font-family: $font-sans;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.stepLabel {
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba($navy, 0.55);
+  white-space: nowrap;
+}
+
+.stepActive {
+  .stepIndex {
+    border-color: $blue;
+    background: $blue;
+    color: $white;
+  }
+
+  .stepLabel {
+    color: $navy;
+  }
+}
+
+.stepDone {
+  .stepIndex {
+    border-color: $green;
+    background: $green;
+    color: $white;
+  }
+
+  .stepLabel {
+    color: rgba($navy, 0.75);
+  }
+}
+
+.stepDivider {
+  flex: 0 0 1.25rem;
+  height: 1px;
+  background: rgba($navy, 0.14);
+}
+
+.bodyArea {
+  flex: 1;
+  min-height: 0;
+  padding: 1.35rem;
+  overflow-y: auto;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.35rem;
+  border-top: 1px solid rgba($navy, 0.08);
+  background: $white;
+}
+
+.footerRight {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton,
+.ghostButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.6rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.primaryButton {
+  border: 1px solid transparent;
+  background: $blue;
+  color: $white;
+
+  &:hover:not(:disabled) {
+    background: #0056b8;
+  }
+}
+
+.secondaryButton {
+  border: 1px solid rgba($navy, 0.18);
+  background: $white;
+  color: $navy;
+
+  &:hover:not(:disabled) {
+    border-color: rgba($navy, 0.32);
+    background: rgba($navy, 0.03);
+  }
+}
+
+.dangerButton {
+  border: 1px solid transparent;
+  background: #c0392b;
+  color: $white;
+
+  &:hover:not(:disabled) {
+    background: #a93226;
+  }
+}
+
+.ghostButton {
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba($navy, 0.7);
+
+  &:hover:not(:disabled) {
+    background: rgba($navy, 0.05);
+    color: $navy;
+  }
+}
+
+.buttonIcon {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.95rem;
+  border-radius: $radius-md;
+  border: 1px solid rgba(#c0392b, 0.2);
+  background: rgba(#c0392b, 0.06);
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #9b2c2c;
+}
+
+.errorIcon {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+/* ---------- Loading ---------- */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 2.75rem 0.5rem;
+  opacity: 1;
+  transition: opacity 0.32s ease;
+}
+
+.loadingExiting {
+  opacity: 0;
+}
+
+.loadingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.loadingText {
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: $navy;
+}
+
+.loadingPercent {
+  flex-shrink: 0;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: $blue;
+}
+
+.progressTrack {
+  position: relative;
+  width: 100%;
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba($blue, 0.1);
+}
+
+.progressFill {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, $blue 0%, #3d8eff 55%, #5eb8ff 100%);
+  box-shadow: 0 0 12px rgba($blue, 0.35);
+  transition: width 0.28s ease-out;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba($white, 0.35) 45%,
+      transparent 90%
+    );
+    animation: progressShimmer 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes progressShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.spinner {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 3px solid rgba($blue, 0.2);
+  border-top-color: $blue;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ---------- Step: Upload ---------- */
+
+.stepIntro {
+  margin: 0 0 1.15rem;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: rgba($navy, 0.7);
+}
+
+.dropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  width: 100%;
+  min-height: 12rem;
+  padding: 2rem 1.25rem;
+  border: 2px dashed rgba($navy, 0.22);
+  border-radius: $radius-lg;
+  background: $white;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+
+  &:hover {
+    border-color: rgba($green, 0.5);
+    background: rgba($green, 0.02);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $green;
+    outline-offset: 2px;
+  }
+}
+
+.dropZoneActive {
+  border-color: $green;
+  background: rgba($green, 0.05);
+}
+
+.dropZoneIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: rgba($green, 0.12);
+  color: $green;
+
+  svg {
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+}
+
+.dropZoneTitle {
+  font-family: $font-sans;
+  font-size: 1rem;
+  font-weight: 700;
+  color: $navy;
+}
+
+.dropZoneHint {
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  color: rgba($navy, 0.6);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.fileCard {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  background: $white;
+}
+
+.fileIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: $radius-md;
+  background: rgba($green, 0.12);
+  color: $green;
+  flex-shrink: 0;
+
+  svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+}
+
+.fileMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.fileName {
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: $navy;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileSize {
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  color: rgba($navy, 0.6);
+}
+
+.fileRemove {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: rgba($navy, 0.55);
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    color: #c0392b;
+  }
+}
+
+/* ---------- Step: Destination ---------- */
+
+.importSourceField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.importSource {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  background: $white;
+}
+
+.importSourceIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: $radius-md;
+  background: rgba($green, 0.12);
+  color: $green;
+  flex-shrink: 0;
+
+  svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+}
+
+.importSourceFileName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: $navy;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.destinationHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-bottom: 1.15rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba($blue, 0.35);
+  border-radius: $radius-md;
+  background: rgba($blue, 0.06);
+}
+
+.destinationHintIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: $blue;
+  margin-top: 0.1rem;
+
+  svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.destinationHintText {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: $navy;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  & + & {
+    margin-top: 1.1rem;
+  }
+}
+
+.fieldHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.fieldLabel {
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: $navy-light;
+}
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid rgba($blue, 0.3);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  background: rgba($blue, 0.06);
+  color: $blue;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba($blue, 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+}
+
+.inlineForm {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.inlineInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.6rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba($navy, 0.18);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  color: $navy;
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 1px;
+  }
+}
+
+.sheetNote {
+  margin: 0.6rem 0 0;
+  font-family: $font-sans;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: rgba($navy, 0.6);
+}
+
+/* ---------- Step: Preview ---------- */
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.2rem;
+}
+
+.summaryCard {
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+}
+
+.summaryValue {
+  font-family: $font-sans;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: $navy;
+}
+
+.summaryValueMatch {
+  color: #b7791f;
+}
+
+.summaryLabel {
+  margin-top: 0.2rem;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  color: rgba($navy, 0.6);
+}
+
+.destinationInfo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  margin-bottom: 1.1rem;
+  padding: 0.75rem 0.95rem;
+  border-radius: $radius-md;
+  background: rgba($blue, 0.05);
+  font-family: $font-sans;
+  font-size: 0.85rem;
+  color: $navy;
+}
+
+.destinationInfoLabel {
+  color: rgba($navy, 0.6);
+}
+
+.previewTableWrap {
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  overflow: auto;
+  max-height: 18rem;
+}
+
+.previewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-sans;
+  font-size: 0.85rem;
+
+  th,
+  td {
+    padding: 0.55rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid rgba($navy, 0.08);
+    white-space: nowrap;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background: $white;
+    color: rgba($navy, 0.7);
+    font-weight: 700;
+    z-index: 1;
+  }
+
+  td {
+    color: $navy;
+  }
+}
+
+.matchRow {
+  background: rgba(#f1c40f, 0.16);
+}
+
+.matchBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(#b7791f, 0.16);
+  color: #92600f;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.sectionLabel {
+  margin: 1.2rem 0 0.6rem;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: $navy-light;
+}
+
+.actionChoices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem;
+}
+
+.actionChoice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+  border: 1.5px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: $white;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.4);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.actionChoiceActive {
+  border-color: $blue;
+  background: rgba($blue, 0.05);
+}
+
+.actionChoiceTitle {
+  font-family: $font-sans;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: $navy;
+}
+
+.actionChoiceText {
+  font-family: $font-sans;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: rgba($navy, 0.62);
+}
+
+.warnings {
+  margin: 1.1rem 0 0;
+  padding: 0.75rem 0.95rem 0.75rem 1.6rem;
+  border-radius: $radius-md;
+  border: 1px solid rgba(#b7791f, 0.25);
+  background: rgba(#f1c40f, 0.1);
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #92600f;
+}
+
+/* ---------- Confirm overlay ---------- */
+
+.confirmOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba($navy, 0.45);
+}
+
+.confirmCard {
+  width: 100%;
+  max-width: 24rem;
+  padding: 1.35rem;
+  border-radius: $radius-lg;
+  background: $white;
+  box-shadow: 0 16px 48px rgba($navy, 0.3);
+}
+
+.confirmTitle {
+  margin: 0 0 0.5rem;
+  font-family: $font-sans;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: $navy;
+}
+
+.confirmText {
+  margin: 0 0 1.25rem;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba($navy, 0.7);
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* ---------- Step: Result ---------- */
+
+.result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0 1rem;
+}
+
+.resultIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: rgba($green, 0.14);
+  color: $green;
+
+  svg {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+}
+
+.resultIconError {
+  background: rgba(#c0392b, 0.12);
+  color: #c0392b;
+}
+
+.resultTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: $navy;
+}
+
+.resultText {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  color: rgba($navy, 0.65);
+}
+
+.resultGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 1.25rem;
+}
+
+@keyframes overlayFade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .stepLabel {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .modal,
+  .spinner,
+  .progressFill::after {
+    animation: none;
+  }
+
+  .progressFill {
+    transition: none;
+  }
+
+  .loading {
+    transition: none;
+  }
+
+  .primaryButton,
+  .secondaryButton,
+  .dangerButton,
+  .ghostButton,
+  .dropZone,
+  .actionChoice,
+  .closeButton {
+    transition: none;
+  }
+}

@@ -4,13 +4,16 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 100%;
+  min-height: 0;
   gap: 0;
+  overflow: hidden;
 }
 
 .topBar {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
+  justify-content: center;
   min-height: 3.75rem;
   margin: 0;
   padding: 0.85rem clamp(1.25rem, 3vw, 2rem);
@@ -21,15 +24,15 @@
 .headerSearchWrap {
   position: relative;
   display: flex;
-  flex: 1;
   align-items: center;
-  width: 100%;
+  width: 60%;
+  max-width: 100%;
   min-width: 0;
 }
 
 .headerSearchIcon {
   position: absolute;
-  left: 0.85rem;
+  left: 1rem;
   width: 1rem;
   height: 1rem;
   color: rgba($navy, 0.45);
@@ -39,9 +42,9 @@
 .headerSearch {
   width: 100%;
   min-height: 2.5rem;
-  padding: 0.55rem 0.9rem 0.55rem 2.35rem;
+  padding: 0.55rem 1rem 0.55rem 2.5rem;
   border: 1px solid rgba($white, 0.12);
-  border-radius: $radius-md;
+  border-radius: 999px;
   background: $white;
   font-family: $font-sans;
   font-size: 0.88rem;
@@ -60,6 +63,7 @@
 
 .sectionIntro {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 1rem;
 }
@@ -73,11 +77,19 @@
   color: $navy;
 }
 
+.catalogToolbar {
+  display: flex;
+  align-items: stretch;
+  gap: 0.85rem;
+  width: 100%;
+  min-width: 0;
+}
+
 .actionCards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-template-columns: repeat(2, minmax(15rem, 1fr));
   gap: 0.85rem;
-  max-width: 42rem;
+  flex: 0 0 auto;
 }
 
 .actionCard {
@@ -93,19 +105,49 @@
   text-align: left;
   cursor: pointer;
   transition:
+    background-color 0.18s ease,
     border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.18s ease;
-
-  &:hover {
-    border-color: rgba($blue, 0.28);
-    box-shadow: 0 8px 28px rgba($navy, 0.1);
-    transform: translateY(-1px);
-  }
+    color 0.18s ease;
 
   &:focus-visible {
     outline: 2px solid $blue;
     outline-offset: 2px;
+  }
+}
+
+.actionCardBlue {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgba($blue, 0.2);
+      background: rgba($blue, 0.02);
+
+      .actionCardIconBlue {
+        background: rgba($blue, 0.13);
+        color: $blue;
+      }
+    }
+  }
+
+  &:focus-visible {
+    outline-color: $blue;
+  }
+}
+
+.actionCardGreen {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgba($green, 0.2);
+      background: rgba($green, 0.02);
+
+      .actionCardIconGreen {
+        background: rgba($green, 0.15);
+        color: $green;
+      }
+    }
+  }
+
+  &:focus-visible {
+    outline-color: $green;
   }
 }
 
@@ -117,6 +159,9 @@
   height: 3.35rem;
   border-radius: 50%;
   flex-shrink: 0;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
 
   svg {
     width: 1.65rem;
@@ -124,14 +169,14 @@
   }
 }
 
+.actionCardIconBlue {
+  background: rgba($blue, 0.12);
+  color: $blue;
+}
+
 .actionCardIconGreen {
   background: rgba($green, 0.14);
   color: $green;
-}
-
-.actionCardIconExcel {
-  background: rgba($blue, 0.1);
-  color: $blue;
 }
 
 .actionCardText {
@@ -147,6 +192,7 @@
   font-weight: 700;
   line-height: 1.3;
   color: $navy;
+  transition: color 0.18s ease;
 }
 
 .actionCardSubtitle {
@@ -154,16 +200,21 @@
   font-size: 0.84rem;
   line-height: 1.4;
   color: rgba($navy, 0.62);
+  transition: color 0.18s ease;
 }
 
 .body {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 1rem;
+  min-height: 0;
   padding: clamp(1.25rem, 3vw, 2rem);
+  overflow: hidden;
 }
 
 .inlineError {
+  flex-shrink: 0;
   margin: 0;
   padding: 0.75rem 0.95rem;
   border-radius: $radius-md;
@@ -177,8 +228,10 @@
 
 .selectionPanel {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.85rem;
+  min-width: 0;
   padding: 1rem;
   border-radius: $radius-lg;
   border: 1px solid rgba($navy, 0.08);
@@ -200,36 +253,44 @@
   min-width: 0;
 }
 
+.dropdownLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
 .dropdownLabel {
   font-family: $font-sans;
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
   text-transform: uppercase;
   color: $navy-light;
 }
 
-.dropdownTrigger {
-  display: flex;
+.dropdownAddButton {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  width: 100%;
-  min-height: 3.25rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid rgba($navy, 0.12);
-  border-radius: $radius-md;
-  background: $white;
-  text-align: left;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: 1.85rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid rgba($blue, 0.3);
+  border-radius: 999px;
+  background: rgba($blue, 0.06);
+  color: $blue;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1;
   cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background-color 0.18s ease;
+  transition: background-color 0.18s ease;
 
   &:hover:not(:disabled) {
-    border-color: rgba($blue, 0.35);
-    box-shadow: 0 2px 12px rgba($navy, 0.06);
+    background: rgba($blue, 0.12);
   }
 
   &:focus-visible {
@@ -238,22 +299,103 @@
   }
 
   &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.dropdownAddButtonLabel {
+  display: inline-flex;
+  align-items: center;
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.dropdownTriggerRow {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: 4rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: $white;
+  overflow: hidden;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+
+  &:hover:not(:has(:disabled)) {
+    border-color: rgba($blue, 0.35);
+    box-shadow: 0 2px 12px rgba($navy, 0.06);
+  }
+
+  &:focus-within {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.dropdownTrigger {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  padding: 0.75rem 0.9rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
     cursor: not-allowed;
     opacity: 0.65;
-    background: rgba($navy, 0.03);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.dropdownChevronButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  padding: 0;
+  border: none;
+  border-left: 1px solid rgba($navy, 0.08);
+  background: transparent;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+
+  &:focus-visible {
+    outline: none;
   }
 }
 
 .dropdownTriggerOpen {
-  border-color: rgba($blue, 0.45);
-  box-shadow: $shadow-active;
+  border-color: $blue;
+  box-shadow: none;
 }
 
 .dropdownTriggerContent {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  align-self: stretch;
+  justify-content: center;
   gap: 0.15rem;
   min-width: 0;
+}
+
+.dropdownTriggerContentWithMeta {
+  min-height: 2.35rem;
 }
 
 .dropdownTriggerLabel {
@@ -265,6 +407,13 @@
   color: $navy;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.dropdownTriggerMuted {
+  .dropdownTriggerLabel {
+    font-weight: 500;
+    color: rgba($navy, 0.45);
+  }
 }
 
 .dropdownTriggerMeta {
@@ -307,11 +456,72 @@
   list-style: none;
 }
 
-.dropdownOption {
+.dropdownOptionContent {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdownOptionActions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.dropdownOptionAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  padding: 0 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgba($blue, 0.08);
+  color: $blue;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+
+  &:hover {
+    background: rgba($blue, 0.14);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 1px;
+  }
+}
+
+.dropdownOptionActionDanger {
+  background: rgba(#c0392b, 0.08);
+  color: #c0392b;
+
+  &:hover {
+    background: rgba(#c0392b, 0.14);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #c0392b;
+  }
+}
+
+.dropdownOption {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   width: 100%;
   padding: 0.7rem 0.75rem;
   border: 1px solid transparent;
@@ -319,9 +529,18 @@
   background: transparent;
   text-align: left;
   cursor: pointer;
+  list-style: none;
   transition:
     border-color 0.18s ease,
     background-color 0.18s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover .dropdownOptionActions,
+    &:focus-within .dropdownOptionActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
 
   &:hover {
     border-color: rgba($blue, 0.2);
@@ -374,17 +593,22 @@
 
 .tablePanel {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0;
+  min-height: 0;
   padding: 1rem;
   border-radius: $radius-lg;
   border: 1px solid rgba($navy, 0.08);
   background: $white;
   box-shadow: 0 4px 24px rgba($navy, 0.06);
+  overflow: hidden;
 }
 
 .tableWrap {
-  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .productTable {
@@ -405,6 +629,9 @@
   }
 
   th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     font-size: 0.76rem;
     font-weight: 700;
     letter-spacing: 0.03em;
@@ -445,11 +672,15 @@
 
 .tableFooter {
   display: flex;
+  flex-shrink: 0;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding-top: 0.35rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba($navy, 0.08);
+  background: $white;
 }
 
 .tableSummary {
@@ -510,6 +741,135 @@
   white-space: nowrap;
 }
 
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba($navy, 0.45);
+}
+
+.confirmCard {
+  width: max-content;
+  max-width: calc(100vw - 2.5rem);
+  padding: 1.35rem;
+  border-radius: $radius-lg;
+  background: $white;
+  box-shadow: 0 16px 48px rgba($navy, 0.3);
+}
+
+.confirmTitle {
+  margin: 0 0 0.5rem;
+  font-family: $font-sans;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: $navy;
+  white-space: nowrap;
+}
+
+.confirmText {
+  margin: 0 0 1rem;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba($navy, 0.7);
+  white-space: nowrap;
+}
+
+.confirmHighlight {
+  font-weight: 700;
+  color: $navy;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.confirmInput {
+  width: 100%;
+  max-width: 100%;
+  min-height: 2.6rem;
+  margin-bottom: 1rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba($navy, 0.18);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  color: $navy;
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 1px;
+  }
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.confirmCancelButton,
+.confirmPrimaryButton,
+.confirmDangerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.confirmCancelButton {
+  border: 1px solid rgba($navy, 0.18);
+  background: $white;
+  color: $navy;
+}
+
+.confirmPrimaryButton {
+  border: 1px solid transparent;
+  background: $blue;
+  color: $white;
+}
+
+.confirmDangerButton {
+  border: 1px solid transparent;
+  background: #c0392b;
+  color: $white;
+}
+
+@media (max-width: 1100px) {
+  .catalogToolbar {
+    flex-direction: column;
+  }
+
+  .actionCards {
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+
+  .selectionPanel {
+    width: 100%;
+  }
+}
+
 @media (max-width: 900px) {
   .actionCards {
     max-width: none;
@@ -517,20 +877,45 @@
 }
 
 @media (max-width: 768px) {
+  .page {
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .body {
+    flex: none;
+    overflow: visible;
+  }
+
+  .tablePanel {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .tableWrap {
+    flex: none;
+    min-height: auto;
+    overflow-x: auto;
+  }
+
   .dropdownRow {
     grid-template-columns: 1fr;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .dropdownTriggerRow,
   .dropdownTrigger,
+  .dropdownChevronButton,
   .dropdownOption,
+  .dropdownOptionActions,
+  .dropdownOptionAction,
   .actionCard,
+  .actionCardIcon,
+  .actionCardTitle,
+  .actionCardSubtitle,
   .paginationButton {
     transition: none;
-  }
-
-  .actionCard:hover {
-    transform: none;
   }
 }

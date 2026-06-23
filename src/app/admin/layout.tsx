@@ -16,7 +16,7 @@ export default async function AdminLayout({
 
   return (
     <div className={layoutStyles.shell}>
-      <AdminSidebar userEmail={userEmail} />
+      <AdminSidebar userEmail={userEmail} userRole={auth.profile.role} />
       <main className={layoutStyles.content}>{children}</main>
     </div>
   );

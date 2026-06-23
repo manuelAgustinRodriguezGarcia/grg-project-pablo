@@ -4,6 +4,11 @@
   display: flex;
   min-height: 100vh;
   background: $bg-content;
+
+  @media (min-width: 769px) {
+    height: 100vh;
+    overflow: hidden;
+  }
 }
 
 .content {
@@ -13,6 +18,11 @@
   min-width: 0;
   min-height: 100vh;
   background: $bg-content;
+
+  @media (min-width: 769px) {
+    min-height: 0;
+    overflow: hidden;
+  }
 }
 
 @media (max-width: 768px) {

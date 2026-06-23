@@ -17,6 +17,12 @@ type CatalogFolderSelectorsProps = {
   isLoadingFolders: boolean;
   onSelectCatalog: (catalogId: string) => void;
   onSelectFolder: (folderId: string) => void;
+  onEditCatalog?: (catalogId: string) => void;
+  onDeleteCatalog?: (catalogId: string) => void;
+  onEditFolder?: (folderId: string) => void;
+  onDeleteFolder?: (folderId: string) => void;
+  onAddCatalog?: () => void;
+  onAddFolder?: () => void;
 };
 
 export function CatalogFolderSelectors({
@@ -27,6 +33,12 @@ export function CatalogFolderSelectors({
   isLoadingFolders,
   onSelectCatalog,
   onSelectFolder,
+  onEditCatalog,
+  onDeleteCatalog,
+  onEditFolder,
+  onDeleteFolder,
+  onAddCatalog,
+  onAddFolder,
 }: CatalogFolderSelectorsProps) {
   const sortedCatalogs = useMemo(() => sortByName(catalogs), [catalogs]);
   const sortedFolders = useMemo(() => sortByName(folders), [folders]);
@@ -66,7 +78,11 @@ export function CatalogFolderSelectors({
           options={catalogOptions}
           selectedId={selectedCatalogId}
           onSelect={onSelectCatalog}
+          onOptionEdit={onEditCatalog}
+          onOptionDelete={onDeleteCatalog}
+          onAdd={onAddCatalog}
           disabled={sortedCatalogs.length === 0}
+          addDisabled={false}
           emptyMessage="Sin catálogos disponibles"
         />
 
@@ -75,11 +91,15 @@ export function CatalogFolderSelectors({
           options={folderOptions}
           selectedId={selectedFolderId}
           onSelect={onSelectFolder}
+          onOptionEdit={onEditFolder}
+          onOptionDelete={onDeleteFolder}
+          onAdd={onAddFolder}
           disabled={
             !selectedCatalogId ||
             isLoadingFolders ||
             sortedFolders.length === 0
           }
+          addDisabled={!selectedCatalogId || isLoadingFolders}
           emptyMessage={
             isLoadingFolders ? "Cargando carpetas…" : "Sin carpetas disponibles"
           }

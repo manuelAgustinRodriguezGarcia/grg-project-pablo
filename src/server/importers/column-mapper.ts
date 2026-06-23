@@ -59,11 +59,11 @@ export function detectSemanticFlags(headerName: string): {
 }
 
 export function buildDetectedHeaders(
-  headerNames: string[],
+  entries: Array<{ originalName: string; columnIndex: number }>,
 ): DetectedHeader[] {
   const usedKeys = new Set<string>();
 
-  return headerNames.map((originalName, columnIndex) => ({
+  return entries.map(({ originalName, columnIndex }) => ({
     originalName,
     internalKey: headerToInternalKey(originalName, usedKeys),
     columnIndex,

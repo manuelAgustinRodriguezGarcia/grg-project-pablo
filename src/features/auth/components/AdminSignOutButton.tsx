@@ -6,10 +6,12 @@ import styles from "./AdminSignOutButton.module.scss";
 
 type AdminSignOutButtonProps = {
   variant?: "default" | "sidebar";
+  isCollapsed?: boolean;
 };
 
 export function AdminSignOutButton({
   variant = "default",
+  isCollapsed = false,
 }: AdminSignOutButtonProps) {
   const isSidebar = variant === "sidebar";
 
@@ -20,10 +22,11 @@ export function AdminSignOutButton({
     >
       <button
         type="submit"
-        className={isSidebar ? styles.buttonSidebar : styles.button}
+        className={`${isSidebar ? styles.buttonSidebar : styles.button} ${isSidebar && isCollapsed ? styles.buttonSidebarCollapsed : ""}`}
+        title={isSidebar && isCollapsed ? "Cerrar sesión" : undefined}
       >
         <LogOut className={styles.icon} strokeWidth={ICON_STROKE} aria-hidden />
-        <span>Cerrar sesión</span>
+        <span className={styles.label}>Cerrar sesión</span>
       </button>
     </form>
   );
