@@ -51,6 +51,7 @@ describe("ProductSearchCombobox", () => {
 
     const input = screen.getByRole("combobox");
     fireEvent.focus(input);
+    fireEvent.click(screen.getByRole("button", { name: "Abrir lista" }));
     fireEvent.mouseDown(screen.getByRole("option", { name: "R105-EMFREN 3204-FPM" }));
 
     expect(onSelect).toHaveBeenCalledWith("p1");

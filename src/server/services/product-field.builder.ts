@@ -1,10 +1,19 @@
 import type { FolderColumn } from "@/generated/prisma/client";
+import type { MappedProductRow } from "@/server/importers/types";
 import { normalizeCodeForMatch } from "@/server/importers/match-detector";
 import { ProductError } from "./product.errors";
 import {
   collectEquivalenceTokensFromColumns,
   type ParsedEquivalenceToken,
 } from "./equivalence.parser";
+
+export type BuildIndexedTextInput = {
+  primaryCode: string | null;
+  description: string | null;
+  columns: FolderColumn[];
+  dynamicData: Record<string, unknown>;
+  equivalenceTokens: ParsedEquivalenceToken[];
+};
 
 export type ProductFieldInput = {
   values: Record<string, unknown>;
@@ -62,13 +71,7 @@ function buildOriginalText(parts: string[]): string | null {
   return filtered.length > 0 ? filtered.join(" | ") : null;
 }
 
-function buildIndexedText(input: {
-  primaryCode: string | null;
-  description: string | null;
-  columns: FolderColumn[];
-  dynamicData: Record<string, unknown>;
-  equivalenceTokens: ParsedEquivalenceToken[];
-}): string | null {
+export function buildIndexedText(input: BuildIndexedTextInput): string | null {
   const parts: string[] = [];
 
   if (input.primaryCode) {
@@ -97,6 +100,49 @@ function buildIndexedText(input: {
 
   const unique = [...new Set(parts.map((part) => part.trim()).filter(Boolean))];
   return unique.length > 0 ? unique.join(" ") : null;
+}
+
+export function buildIndexedTextForMappedProduct(
+  columns: FolderColumn[],
+  product: Pick<
+    MappedProductRow,
+    "primaryCode" | "description" | "dynamicData"
+  >,
+): string | null {
+  const equivalenceTokens = collectEquivalenceTokensFromColumns(
+    columns,
+    product.dynamicData,
+  );
+
+  return buildIndexedText({
+    primaryCode: product.primaryCode,
+    description: product.description,
+    columns,
+    dynamicData: product.dynamicData,
+    equivalenceTokens,
+  });
+}
+
+export function buildIndexedTextForStoredProduct(
+  columns: FolderColumn[],
+  product: {
+    primaryCode: string | null;
+    description: string | null;
+    dynamicData: unknown;
+  },
+): string | null {
+  const dynamicData =
+    typeof product.dynamicData === "object" &&
+    product.dynamicData !== null &&
+    !Array.isArray(product.dynamicData)
+      ? (product.dynamicData as Record<string, unknown>)
+      : {};
+
+  return buildIndexedTextForMappedProduct(columns, {
+    primaryCode: product.primaryCode,
+    description: product.description,
+    dynamicData,
+  });
 }
 
 export function buildProductFields(

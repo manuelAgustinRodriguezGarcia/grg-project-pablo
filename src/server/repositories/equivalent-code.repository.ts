@@ -51,6 +51,31 @@ export class EquivalentCodeRepository {
     return result.count;
   }
 
+  async findProductIdsMatchingNormalizedCode(
+    normalizedCode: string,
+    folderIds?: string[],
+  ): Promise<string[]> {
+    const rows = await prisma.equivalentCode.findMany({
+      where: {
+        OR: [
+          { normalizedCode },
+          { normalizedCode: { startsWith: normalizedCode } },
+        ],
+        ...(folderIds && folderIds.length > 0
+          ? {
+              product: {
+                folderId: { in: folderIds },
+              },
+            }
+          : {}),
+      },
+      select: { productId: true },
+      distinct: ["productId"],
+    });
+
+    return rows.map((row) => row.productId);
+  }
+
   async deleteById(id: string): Promise<void> {
     await prisma.equivalentCode.delete({ where: { id } });
   }

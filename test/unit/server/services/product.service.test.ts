@@ -42,6 +42,7 @@ vi.mock("@/server/repositories/column.repository", () => ({
 vi.mock("@/server/repositories/product.repository", () => ({
   productRepository: {
     findByFolderPaginated: vi.fn(),
+    findPaginatedBasic: vi.fn(),
     findById: vi.fn(),
     countByFolder: vi.fn(),
     create: vi.fn(),
@@ -73,6 +74,45 @@ vi.mock("@/server/services/audit.service", () => ({
 }));
 vi.mock("@/server/storage", () => ({
   deleteFile: vi.fn(),
+}));
+vi.mock("@/server/services/column-help.service", () => ({
+  columnHelpService: {
+    resolveHelpForColumns: vi.fn(async (columns: Array<ReturnType<typeof createColumnFixture>>) =>
+      columns.map((column) => ({
+        id: column.id,
+        folderId: column.folderId,
+        originalName: column.originalName,
+        displayName: column.displayName,
+        internalKey: column.internalKey,
+        dataType: column.dataType,
+        order: column.order,
+        visibleToNormalUser: column.visibleToNormalUser,
+        isSearchable: column.isSearchable,
+        isGloballySearchable: column.isGloballySearchable,
+        isFilterable: column.isFilterable,
+        isGloballyFilterable: column.isGloballyFilterable,
+        isAdminEditable: column.isAdminEditable,
+        isPrimaryCode: column.isPrimaryCode,
+        isEquivalence: column.isEquivalence,
+        isDescription: column.isDescription,
+        isImageCode: column.isImageCode,
+        isRequired: column.isRequired,
+        isReadOnly: column.isReadOnly,
+        width: column.width,
+        format: column.format,
+        unit: column.unit,
+        label: column.label,
+        globalFieldKey: column.globalFieldKey,
+        helpText: column.helpText,
+        helpImageAltText: column.helpImageAltText,
+        hasContextualHelp: Boolean(column.helpText || column.helpImagePath),
+        helpImagePreviewUrl: null,
+        helpImageFullUrl: null,
+        createdAt: column.createdAt.toISOString(),
+        updatedAt: column.updatedAt.toISOString(),
+      })),
+    ),
+  },
 }));
 
 describe("ProductService", () => {
@@ -121,6 +161,8 @@ describe("ProductService", () => {
     expect(result.products).toHaveLength(1);
     expect(result.products[0]?.primaryImage).toBeNull();
     expect(result.pagination.total).toBe(1);
+    expect(result.search).toBeNull();
+    expect(result.activeFilters).toEqual([]);
   });
 
   it("CONSULTA no recibe columnas ocultas ni claves ocultas en dynamicData", async () => {
@@ -128,7 +170,7 @@ describe("ProductService", () => {
     vi.mocked(columnRepository.findByFolderIdOrdered).mockResolvedValue([
       createColumnFixture({ internalKey: "marca", visibleToNormalUser: true }),
     ]);
-    vi.mocked(productRepository.findByFolderPaginated).mockResolvedValue({
+    vi.mocked(productRepository.findPaginatedBasic).mockResolvedValue({
       items: [createProductFixture()],
       total: 1,
       page: 1,

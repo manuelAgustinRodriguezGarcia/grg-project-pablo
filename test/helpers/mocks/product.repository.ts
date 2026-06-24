@@ -3,7 +3,7 @@ import { productRepository } from "@/server/repositories/product.repository";
 import { createProductFixture } from "../fixtures/product.fixture";
 
 export function setupProductRepositoryMocks(): void {
-  vi.mocked(productRepository.findByFolderPaginated).mockResolvedValue({
+  vi.mocked(productRepository.findPaginatedBasic).mockResolvedValue({
     items: [],
     total: 0,
     page: 1,
@@ -15,9 +15,9 @@ export function setupProductRepositoryMocks(): void {
 }
 
 export function mockProductsPaginated(
-  overrides: Partial<Awaited<ReturnType<typeof productRepository.findByFolderPaginated>>> = {},
+  overrides: Partial<Awaited<ReturnType<typeof productRepository.findPaginatedBasic>>> = {},
 ): void {
-  vi.mocked(productRepository.findByFolderPaginated).mockResolvedValue({
+  vi.mocked(productRepository.findPaginatedBasic).mockResolvedValue({
     items: [createProductFixture()],
     total: 1,
     page: 1,

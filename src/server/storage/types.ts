@@ -1,6 +1,7 @@
 export const STORAGE_BUCKETS = {
   EXCEL_ORIGINALS: "excel-originals",
   PRODUCT_IMAGES: "product-images",
+  COLUMN_HELP_IMAGES: "column-help-images",
   TEMP_IMPORTS: "temp-imports",
 } as const;
 

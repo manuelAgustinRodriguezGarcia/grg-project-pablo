@@ -1,4 +1,6 @@
-import type { FolderColumn } from "@/generated/prisma/client";
+import type { ColumnListItem } from "@/features/catalog/types/column.types";
+import type { ActiveFilterPill } from "@/server/filters/column-filter.types";
+import type { SearchQueryMeta } from "@/server/search/search.types";
 
 export type ProductTableFolder = {
   id: string;
@@ -31,7 +33,9 @@ export type ProductTablePagination = {
 
 export type ProductTableResponse = {
   folder: ProductTableFolder;
-  columns: FolderColumn[];
+  columns: ColumnListItem[];
   products: ProductTableItem[];
   pagination: ProductTablePagination;
+  search: SearchQueryMeta | null;
+  activeFilters: ActiveFilterPill[];
 };

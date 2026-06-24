@@ -182,6 +182,13 @@ model FolderColumn {
   unit                  String?
   label                 String?
   globalFieldKey        String?
+  helpText              String?
+  helpImagePath         String?
+  helpImageThumbnailPath String?
+  helpImageMimeType     String?
+  helpImageSizeBytes    Int?
+  helpImageOriginalName String?
+  helpImageAltText      String?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
 
@@ -345,6 +352,17 @@ model ImportPreview {
   updatedAt          DateTime @updatedAt
 
   importJob ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+}
+
+/// Catálogo de campos globales para búsqueda/filtros cross-catálogo (RF-042).
+model GlobalField {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 /// Registro de operaciones importantes (login, CRUD, importaciones, etc.).

@@ -1,4 +1,5 @@
 import type { Catalog, CatalogStatus } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
 
 export type CreateCatalogData = {
@@ -30,9 +31,11 @@ export type ReorderCatalogItem = {
 };
 
 export class CatalogRepository {
-  async findActiveOrdered(): Promise<Catalog[]> {
+  async findActiveOrdered(
+    where: Prisma.CatalogWhereInput = {},
+  ): Promise<Catalog[]> {
     return prisma.catalog.findMany({
-      where: { status: "ACTIVE" },
+      where: { status: "ACTIVE", ...where },
       orderBy: [{ order: "asc" }, { name: "asc" }],
     });
   }
