@@ -20,7 +20,7 @@
 
 ## 1. Estado actual
 
-**Rama:** `backend` · **Fases completadas:** 1, 2, 3 (3.1–3.8), 4, 5
+**Rama:** `backend` · **Fases completadas:** 1, 2, 3 (3.1–3.8), 4, 5, 6
 
 ### 1.1 Roadmap PRD ↔ backend
 
@@ -28,7 +28,7 @@
 |----------------|--------------|--------|
 | 1 — Base visual y acceso | 2 — Base del sistema | ✅ |
 | 2 — Modelo Catálogo-Carpeta-Producto | 3 — Catálogos y carpetas | ✅ |
-| 3 — Administración manual | 6 | ⏳ |
+| 3 — Administración manual | 6 | ✅ |
 | 4 — Filtros y búsqueda | 7 | ⏳ |
 | 5 — Importador | 4 | ✅ |
 | 6 — Imágenes | 5 | ✅ |
@@ -42,14 +42,14 @@
 | Área | Detalle |
 |------|---------|
 | **Stack** | Next.js 16, React 19, TypeScript, Prisma 7, Supabase Auth + Storage |
-| **Modelos Prisma** | `User`, `Catalog`, `CatalogFolder`, `FolderColumn`, `Product`, `ProductImage`, `UploadedFile`, `ImportJob`, `ImportSheet`, `ImportPreview`, `AuditLog` |
-| **Migraciones** | `20260617182823_*`, `20260619214310_*`, `20260622225542_import_migration_backend`, `20260623134707_product_images_phase5` |
+| **Modelos Prisma** | `User`, `Catalog`, `CatalogFolder`, `FolderColumn`, `Product`, `ProductImage`, `EquivalentCode`, `UploadedFile`, `ImportJob`, `ImportSheet`, `ImportPreview`, `AuditLog` |
+| **Migraciones** | `20260617182823_*`, `20260619214310_*`, `20260622225542_import_migration_backend`, `20260623134707_product_images_phase5`, `20260624133350_equivalent_codes_phase6` |
 | **Auth** | `src/server/auth/`, middleware `/admin` + `/api/admin`, guards, rate limit login/upload, safe redirect, Server Actions |
 | **Storage** | Buckets privados `excel-originals`, `product-images`, `temp-imports` |
-| **Servicios** | Auth, User, Catalog, Folder, ColumnConfig, Product (lectura + bulk import + `primaryImage`), Visibility, Navigation, Directory, Audit, ExcelStructure, CatalogImportService, **ImageExtraction/MatchingService**, **ProductImageService** |
+| **Servicios** | Auth, User, Catalog, Folder, ColumnConfig, Product (CRUD + lectura + bulk import), **EquivalenceService**, Visibility, Navigation, Directory, Audit, ExcelStructure, CatalogImportService, **ImageExtraction/MatchingService**, **ProductImageService** |
 | **Importers / processors** | `src/server/importers/` — ExcelJS; `src/server/image-processors/` — sharp, ZIP seguro |
-| **APIs** | Directorio, navegación, productos (con miniatura), import upload/job/sheets/preview/report/**images/review**, galería por producto |
-| **Pendiente** | UI asistente import + revisión imágenes + modal ampliado, CRUD manual productos, búsqueda/filtros, listado archivos (Fase 8), offline |
+| **APIs** | Directorio, navegación, productos (CRUD + miniatura), equivalencias, import upload/job/sheets/preview/report/**images/review**, galería e imágenes manuales por producto |
+| **Pendiente** | UI asistente import + revisión imágenes + modal ampliado + formulario productos, búsqueda/filtros, listado archivos (Fase 8), offline |
 
 ### 1.3 Glosario PRD ↔ código
 
@@ -133,7 +133,8 @@ src/
 | `Catalog` | nombre, orden, status, `visibleToNormalUser`, `coverImagePath` | 2–3 |
 | `CatalogFolder` | catálogo, orden, `searchConfig`/`filterConfig` JSON, visibilidad | 3 |
 | `FolderColumn` | tipos semánticos, buscable/filtrable/global, `globalFieldKey` placeholder | 3 |
-| `Product` | `dynamicData` JSONB, código/descripción, texto indexado, imágenes | 3, 5 |
+| `Product` | `dynamicData` JSONB, código/descripción, texto indexado, imágenes, equivalencias | 3, 5, 6 |
+| `EquivalentCode` | códigos equivalentes normalizados por producto | 6 |
 | `ProductImage` | embebidas/externas; estados §4.3; miniatura + original en Storage | 5 |
 | `UploadedFile` | respaldo Excel en Storage, estado, usuario | 4 |
 | `ImportJob` | asistente, destino, estados, config/resultados JSON | 4 |
@@ -147,11 +148,10 @@ src/
 
 | Entidad | Fase | Propósito |
 |---------|------|-----------|
-| `EquivalentCode` | 6–7 | Equivalencias normalizadas |
 | `GlobalFieldMapping` | 7 | Filtros globales |
 | `OfflineSyncManifest` | 9 | Sincronización offline |
 
-> `UploadedFile` listado/reprocesar UI → Fase 8 (`UploadedFileService`).
+> `EquivalentCode` implementado en Fase 6. `UploadedFile` listado/reprocesar UI → Fase 8 (`UploadedFileService`).
 
 ### 4.3 Estados de imagen (PRD §27) — Fase 5 ✅
 
@@ -174,7 +174,8 @@ src/
 | AuthService, UserService | ✅ | Sesión, CRUD usuarios (ADMIN) |
 | CatalogService, FolderService | ✅ | CRUD, vaciado, visibilidad, orden |
 | ColumnConfigService | ✅ | CRUD columnas, metadatos semánticos |
-| ProductService | ✅ lectura / ⏳ CRUD | Paginación + JSONB filtrado |
+| ProductService | ✅ | Paginación, CRUD manual, duplicar, `indexedText`; validación por `FolderColumn` |
+| EquivalenceService | ✅ | Parseo multi-código, sync en import y CRUD, alta/baja manual |
 | VisibilityService | ✅ | Filtrado real para rol `CONSULTA` |
 | NavigationService, DirectoryService | ✅ | Directorio y navegación por catálogo |
 | ExcelStructureService | ✅ | Clasificación hojas + delegación parseo ExcelJS |
@@ -339,14 +340,26 @@ Extracción embebida, importación externa (ZIP/sueltas), matching por código/n
 
 ---
 
-### Fase 6 — Administración manual ⏳
+### Fase 6 — Administración manual ✅ (2026-06-24)
 
 **PRD fase 3** · Depende de Fases 3, 5
 
-- [ ] CRUD productos: crear, editar, eliminar, **duplicar** según `FolderColumn`
-- [ ] `EquivalenceService` — multi-código, revisión manual
-- [ ] Imágenes manuales: agregar, reemplazar, principal, orden, etiqueta
-- [ ] Auditoría con `createdAt`/`updatedAt`
+| # | Entregable | Componentes |
+|---|------------|-------------|
+| 6.1 | Modelo Prisma | `EquivalentCode` · migración `20260624133350_*` |
+| 6.2 | Builders | `product-field.builder.ts`, `equivalence.parser.ts` |
+| 6.3 | Equivalencias | `EquivalenceService`, `equivalent-code.repository`; hook en `CatalogImportService.apply` |
+| 6.4 | CRUD productos | `ProductService` create/update/delete/duplicate/get; `product.repository` |
+| 6.5 | Imágenes manuales | `ProductImageService` upload/replace/update/delete sin `importJobId` |
+| 6.6 | REST | `POST .../folders/{id}/products`, `GET/PATCH/DELETE .../products/{id}`, duplicate, equivalences, imágenes |
+| 6.7 | Server Actions | `features/records/actions/product.actions.ts`, `features/product-images/actions/` |
+| 6.8 | Auditoría | `PRODUCT_*`, `EQUIVALENCE_*` en `AuditLog` |
+| 6.9 | Tests | `equivalence.parser`, `product-field.builder`, `equivalence.service`, `product.service` |
+| 6.10 | Documentación | [`ENDPOINTS.md`](./ENDPOINTS.md) contratos Fase 6 |
+
+**Verificación:** `pnpm lint` · `pnpm test:run` (202 tests) · `pnpm db:verify` ✅
+
+**Pendiente UI:** formulario crear/editar producto, duplicar, gestión imágenes en tabla.
 
 ---
 
@@ -406,14 +419,14 @@ Extracción embebida, importación externa (ZIP/sueltas), matching por código/n
 | RF-005 | Estructura Catálogo-Carpeta-Producto | 3 | ✅ |
 | RF-006 | Gestión catálogos | 3 | ✅ |
 | RF-007 | Gestión carpetas | 3 | ✅ |
-| RF-008 | Gestión productos | 6 | ⏳ |
-| RF-009 | Edición columnas | 3/6 | 🔄 config ✅ / valores ⏳ |
+| RF-008 | Gestión productos | 6 | ✅ |
+| RF-009 | Edición columnas | 3/6 | ✅ config + valores |
 | RF-010–012 | Visibilidad catálogo/carpeta/columna | 3 | ✅ |
 | RF-013–016 | Subida y destino importación | 4 | ✅ |
 | RF-017 | Análisis hojas | 4 | ✅ |
 | RF-018–027 | Detección, vista previa, listas, fórmulas | 4 | ✅ |
 | RF-028–032 | Imágenes | 5 | ✅ backend / ⏳ UI modal (RF-032) |
-| RF-033 | Equivalencias | 6–7 | ⏳ |
+| RF-033 | Equivalencias | 6–7 | 🔄 persistencia ✅ / búsqueda Fase 7 |
 | RF-034–041 | Búsqueda y filtros | 7 | ⏳ |
 | RF-042 | Configuración columnas | 3 | ✅ |
 | RF-043 | Archivos subidos | 8 | ⏳ |
@@ -436,7 +449,7 @@ Extracción embebida, importación externa (ZIP/sueltas), matching por código/n
 | **Usuarios** | ✅ Admin edita; CONSULTA solo ve. Controles UI ocultos → frontend |
 | **Importación** | ✅ Backend (sin UI asistente) — ver [`ENDPOINTS.md`](./ENDPOINTS.md) |
 | **Imágenes** | ✅ Backend (extracción, matching, revisión, miniaturas API) — ⏳ UI modal/panel |
-| **Productos manuales** | ⏳ |
+| **Productos manuales** | ✅ Backend (CRUD, equivalencias, imágenes manuales) — ⏳ UI formulario |
 | **Búsqueda y filtros** | ⏳ |
 | **Archivos / Offline** | ⏳ |
 

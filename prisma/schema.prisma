@@ -205,12 +205,30 @@ model Product {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  folder CatalogFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  images ProductImage[]
+  folder           CatalogFolder    @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  images           ProductImage[]
+  equivalentCodes  EquivalentCode[]
 
   @@index([folderId])
   @@index([normalizedCode])
   @@index([dynamicData], type: Gin)
+}
+
+/// Código equivalente normalizado asociado a un producto.
+model EquivalentCode {
+  id              String   @id @default(cuid())
+  productId       String
+  originalCode    String
+  normalizedCode  String
+  sourceColumnKey String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, normalizedCode])
+  @@index([productId])
+  @@index([normalizedCode])
 }
 
 /// Imagen asociada a un producto (embebida, externa o manual).

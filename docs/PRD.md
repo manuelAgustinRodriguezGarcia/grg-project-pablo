@@ -169,7 +169,7 @@ Al **23/06/2026** (rama `backend`). Detalle técnico y contratos en [`BACKEND-IM
 | Productos (lectura paginada + miniatura) | ✅ |
 | Importador Excel (asistente 6 pasos, publicación segura) | ✅ |
 | Imágenes (extracción, matching, revisión, galería) | ✅ |
-| CRUD manual de productos | ⏳ |
+| CRUD manual de productos | ✅ backend / ⏳ UI |
 | Búsqueda, filtros, archivos subidos, offline | ⏳ |
 
 > Las **fases del roadmap PRD (§48)** no coinciden 1:1 con las fases backend. Ver tabla de mapeo en [`BACKEND-IMPLEMENTATION.md` §1.1](./BACKEND-IMPLEMENTATION.md#11-roadmap-prd--backend).
@@ -2566,7 +2566,7 @@ El catálogo y la carpeta quedan actualizados
 * Eliminar producto.
 * Reemplazar imágenes.
 
-**Estado:** 🔄 Catálogos/carpetas/columnas ✅ backend · productos e imágenes manuales ⏳ (backend Fase 6).
+**Estado:** 🔄 Catálogos/carpetas/columnas ✅ backend · productos e imágenes manuales ✅ backend (Fase 6) · UI formularios ⏳.
 
 ---
 

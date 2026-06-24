@@ -72,6 +72,52 @@ export class ProductRepository {
     });
   }
 
+  async findByFolderId(folderId: string): Promise<Product[]> {
+    return prisma.product.findMany({
+      where: { folderId },
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    });
+  }
+
+  async create(data: CreateProductData): Promise<Product> {
+    return prisma.product.create({
+      data: {
+        folderId: data.folderId,
+        primaryCode: data.primaryCode ?? null,
+        normalizedCode: data.normalizedCode ?? null,
+        description: data.description ?? null,
+        dynamicData: (data.dynamicData ?? {}) as Prisma.InputJsonValue,
+        originalText: data.originalText ?? null,
+        indexedText: data.indexedText ?? null,
+      },
+    });
+  }
+
+  async update(
+    id: string,
+    data: Omit<CreateProductData, "folderId">,
+  ): Promise<Product> {
+    return prisma.product.update({
+      where: { id },
+      data: {
+        ...(data.primaryCode !== undefined ? { primaryCode: data.primaryCode } : {}),
+        ...(data.normalizedCode !== undefined
+          ? { normalizedCode: data.normalizedCode }
+          : {}),
+        ...(data.description !== undefined ? { description: data.description } : {}),
+        ...(data.dynamicData !== undefined
+          ? { dynamicData: data.dynamicData as Prisma.InputJsonValue }
+          : {}),
+        ...(data.originalText !== undefined ? { originalText: data.originalText } : {}),
+        ...(data.indexedText !== undefined ? { indexedText: data.indexedText } : {}),
+      },
+    });
+  }
+
+  async delete(id: string): Promise<void> {
+    await prisma.product.delete({ where: { id } });
+  }
+
   async createMany(data: CreateProductData[]): Promise<number> {
     if (data.length === 0) {
       return 0;
