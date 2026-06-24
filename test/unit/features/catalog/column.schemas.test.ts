@@ -38,6 +38,25 @@ describe("column.schemas", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("valida campos de ayuda contextual", () => {
+    const parsed = updateColumnSchema.safeParse({
+      id: "clh3pb1a3000012345678903ef",
+      helpText: "Explica la medida entre tapa.",
+      helpImageAltText: "Diagrama de pieza",
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rechaza helpText demasiado largo", () => {
+    const parsed = updateColumnSchema.safeParse({
+      id: "clh3pb1a3000012345678903ef",
+      helpText: "a".repeat(2001),
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
   it("valida setColumnVisibilitySchema", () => {
     const parsed = setColumnVisibilitySchema.safeParse({
       id: "clh3pb1a3000012345678903ef",

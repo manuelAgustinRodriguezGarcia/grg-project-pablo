@@ -10,6 +10,7 @@ export {
   type ExtractedZipImage,
 } from "./zip-extractor";
 export {
+  buildColumnHelpImageStoragePaths,
   buildImportExternalImagePath,
   buildProductImageStoragePaths,
 } from "./image-paths";

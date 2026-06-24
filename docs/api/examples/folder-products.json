@@ -1,0 +1,31 @@
+{
+  "folder": { "id": "clx...", "name": "Rodamientos", "catalogId": "clx..." },
+  "columns": [],
+  "products": [
+    {
+      "id": "clx...",
+      "primaryCode": "6205",
+      "description": "Ruleman 6205",
+      "dynamicData": { "marca": "SKF" },
+      "primaryImage": {
+        "id": "clx...",
+        "thumbnailUrl": "https://...signed...",
+        "fullUrl": "https://...signed..."
+      },
+      "createdAt": "2026-06-19T12:00:00.000Z",
+      "updatedAt": "2026-06-19T12:00:00.000Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 50, "total": 120, "totalPages": 3 },
+  "search": { "query": "2902", "normalizedQuery": "2902" },
+  "activeFilters": [
+    {
+      "id": "marca",
+      "columnInternalKey": "marca",
+      "columnDisplayName": "Marca",
+      "operator": "contains",
+      "value": "SKF",
+      "label": "Marca contiene \"SKF\""
+    }
+  ]
+}

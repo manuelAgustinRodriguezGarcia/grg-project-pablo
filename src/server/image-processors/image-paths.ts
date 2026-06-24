@@ -13,6 +13,19 @@ export function buildProductImageStoragePaths(
   };
 }
 
+export function buildColumnHelpImageStoragePaths(
+  folderId: string,
+  columnId: string,
+  imageId: string,
+  originalFilename: string,
+): { storagePath: string; thumbnailPath: string } {
+  const ext = getFileExtension(originalFilename) || ".jpg";
+  return {
+    storagePath: `${folderId}/${columnId}/${imageId}${ext}`,
+    thumbnailPath: `${folderId}/${columnId}/${imageId}-thumb.webp`,
+  };
+}
+
 export function buildImportExternalImagePath(
   jobId: string,
   uniqueId: string,

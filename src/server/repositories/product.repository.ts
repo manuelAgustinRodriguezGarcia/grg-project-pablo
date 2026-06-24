@@ -7,6 +7,10 @@ export type ProductPaginationOptions = {
   pageSize: number;
 };
 
+export type ProductListQueryOptions = ProductPaginationOptions & {
+  where?: Prisma.ProductWhereInput;
+};
+
 export type PaginatedProducts = {
   items: Product[];
   total: number;
@@ -29,6 +33,17 @@ export class ProductRepository {
   async findByFolderPaginated(
     folderId: string,
     options: ProductPaginationOptions,
+    extraWhere: Prisma.ProductWhereInput = {},
+  ): Promise<PaginatedProducts> {
+    return this.findPaginated(
+      { folderId, ...extraWhere },
+      options,
+    );
+  }
+
+  async findPaginated(
+    where: Prisma.ProductWhereInput,
+    options: ProductPaginationOptions,
   ): Promise<PaginatedProducts> {
     const page = Math.max(1, options.page);
     const pageSize = Math.min(Math.max(1, options.pageSize), 200);
@@ -36,12 +51,20 @@ export class ProductRepository {
 
     const [items, total] = await Promise.all([
       prisma.product.findMany({
-        where: { folderId },
+        where,
         orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
         skip,
         take: pageSize,
+        include: {
+          equivalentCodes: true,
+          folder: {
+            include: {
+              catalog: true,
+            },
+          },
+        },
       }),
-      prisma.product.count({ where: { folderId } }),
+      prisma.product.count({ where }),
     ]);
 
     return {
@@ -51,6 +74,47 @@ export class ProductRepository {
       pageSize,
       totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
     };
+  }
+
+  async findPaginatedBasic(
+    where: Prisma.ProductWhereInput,
+    options: ProductPaginationOptions,
+  ): Promise<PaginatedProducts> {
+    const page = Math.max(1, options.page);
+    const pageSize = Math.min(Math.max(1, options.pageSize), 200);
+    const skip = (page - 1) * pageSize;
+
+    const [items, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+        skip,
+        take: pageSize,
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
+    };
+  }
+
+  async updateIndexedText(id: string, indexedText: string | null): Promise<void> {
+    await prisma.product.update({
+      where: { id },
+      data: { indexedText },
+    });
+  }
+
+  async findByFolderIdForReindex(folderId: string): Promise<Product[]> {
+    return prisma.product.findMany({
+      where: { folderId },
+      orderBy: [{ id: "asc" }],
+    });
   }
 
   async findById(id: string): Promise<Product | null> {

@@ -63,6 +63,17 @@ describe("validateUpload", () => {
     ).not.toThrow();
   });
 
+  it("acepta un upload válido en column-help-images", () => {
+    expect(() =>
+      validateUpload(
+        STORAGE_BUCKETS.COLUMN_HELP_IMAGES,
+        Buffer.from("jpeg-data"),
+        "image/jpeg",
+        "ayuda.jpg",
+      ),
+    ).not.toThrow();
+  });
+
   it("acepta .xlsm con MIME en minúsculas (navegador)", () => {
     expect(() =>
       validateUpload(

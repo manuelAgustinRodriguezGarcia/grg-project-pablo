@@ -30,6 +30,7 @@ import { productRepository } from "@/server/repositories/product.repository";
 import { uploadedFileRepository } from "@/server/repositories/uploaded-file.repository";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
 import { folderRepository } from "@/server/repositories/folder.repository";
+import { buildIndexedTextForMappedProduct } from "@/server/services/product-field.builder";
 import { prisma } from "@/server/database/prisma";
 import {
   buildStoragePath,
@@ -953,7 +954,7 @@ export class CatalogImportService {
               description: product.description,
               dynamicData: product.dynamicData,
               originalText: product.originalText,
-              indexedText: product.originalText,
+              indexedText: buildIndexedTextForMappedProduct(columns, product),
             })),
           );
         }

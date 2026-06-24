@@ -1,4 +1,6 @@
 import type { FolderColumn } from "@/generated/prisma/client";
+import { hasContextualHelp } from "@/server/services/column-help.utils";
+import type { ColumnHelpResolvedUrls } from "@/server/services/column-help.utils";
 
 export type ColumnActionResult<T = void> =
   | { success: true; data: T }
@@ -29,11 +31,19 @@ export type ColumnListItem = {
   unit: string | null;
   label: string | null;
   globalFieldKey: string | null;
+  helpText: string | null;
+  helpImageAltText: string | null;
+  hasContextualHelp: boolean;
+  helpImagePreviewUrl: string | null;
+  helpImageFullUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-export function toColumnListItem(column: FolderColumn): ColumnListItem {
+export function toColumnDisplayItem(
+  column: FolderColumn,
+  resolvedUrls?: ColumnHelpResolvedUrls,
+): ColumnListItem {
   return {
     id: column.id,
     folderId: column.folderId,
@@ -59,7 +69,17 @@ export function toColumnListItem(column: FolderColumn): ColumnListItem {
     unit: column.unit,
     label: column.label,
     globalFieldKey: column.globalFieldKey,
+    helpText: column.helpText,
+    helpImageAltText: column.helpImageAltText,
+    hasContextualHelp: hasContextualHelp(column),
+    helpImagePreviewUrl: resolvedUrls?.helpImagePreviewUrl ?? null,
+    helpImageFullUrl: resolvedUrls?.helpImageFullUrl ?? null,
     createdAt: column.createdAt.toISOString(),
     updatedAt: column.updatedAt.toISOString(),
   };
+}
+
+/** @deprecated Use toColumnDisplayItem */
+export function toColumnListItem(column: FolderColumn): ColumnListItem {
+  return toColumnDisplayItem(column);
 }

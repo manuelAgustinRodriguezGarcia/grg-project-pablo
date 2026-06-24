@@ -1,7 +1,7 @@
 # BACKEND-IMPLEMENTATION — Plan de implementación backend
 
 > Derivado de [`PRD.md`](./PRD.md). Orden por **dependencias técnicas**, alineado con el estado del repositorio.  
-> **Detalle de API y contratos:** [`ENDPOINTS.md`](./ENDPOINTS.md) · **Schema:** [`prisma/schema.prisma`](../prisma/schema.prisma)
+> **Contexto rápido para agentes:** [`AGENT-BRIEF.md`](./AGENT-BRIEF.md) · **API:** [`ENDPOINTS.md`](./ENDPOINTS.md) · **Schema:** [`prisma/schema.prisma`](../prisma/schema.prisma)
 
 ---
 
@@ -20,7 +20,7 @@
 
 ## 1. Estado actual
 
-**Rama:** `backend` · **Fases completadas:** 1, 2, 3 (3.1–3.8), 4, 5, 6
+**Rama:** `backend` · **Fases completadas:** 1, 2, 3 (3.1–3.8), 4, 5, 6, 7
 
 ### 1.1 Roadmap PRD ↔ backend
 
@@ -29,7 +29,7 @@
 | 1 — Base visual y acceso | 2 — Base del sistema | ✅ |
 | 2 — Modelo Catálogo-Carpeta-Producto | 3 — Catálogos y carpetas | ✅ |
 | 3 — Administración manual | 6 | ✅ |
-| 4 — Filtros y búsqueda | 7 | ⏳ |
+| 4 — Filtros y búsqueda | 7 | ✅ |
 | 5 — Importador | 4 | ✅ |
 | 6 — Imágenes | 5 | ✅ |
 | 7 — Archivos subidos | 8 | ⏳ |
@@ -42,14 +42,11 @@
 | Área | Detalle |
 |------|---------|
 | **Stack** | Next.js 16, React 19, TypeScript, Prisma 7, Supabase Auth + Storage |
-| **Modelos Prisma** | `User`, `Catalog`, `CatalogFolder`, `FolderColumn`, `Product`, `ProductImage`, `EquivalentCode`, `UploadedFile`, `ImportJob`, `ImportSheet`, `ImportPreview`, `AuditLog` |
-| **Migraciones** | `20260617182823_*`, `20260619214310_*`, `20260622225542_import_migration_backend`, `20260623134707_product_images_phase5`, `20260624133350_equivalent_codes_phase6` |
-| **Auth** | `src/server/auth/`, middleware `/admin` + `/api/admin`, guards, rate limit login/upload, safe redirect, Server Actions |
-| **Storage** | Buckets privados `excel-originals`, `product-images`, `temp-imports` |
-| **Servicios** | Auth, User, Catalog, Folder, ColumnConfig, Product (CRUD + lectura + bulk import), **EquivalenceService**, Visibility, Navigation, Directory, Audit, ExcelStructure, CatalogImportService, **ImageExtraction/MatchingService**, **ProductImageService** |
-| **Importers / processors** | `src/server/importers/` — ExcelJS; `src/server/image-processors/` — sharp, ZIP seguro |
-| **APIs** | Directorio, navegación, productos (CRUD + miniatura), equivalencias, import upload/job/sheets/preview/report/**images/review**, galería e imágenes manuales por producto |
-| **Pendiente** | UI asistente import + revisión imágenes + modal ampliado + formulario productos, búsqueda/filtros, listado archivos (Fase 8), offline |
+| **Modelos Prisma** | … + `GlobalField` (Fase 7) |
+| **Migraciones** | … + `20260624211539_*`, `20260624220000_phase7_search_indexes` |
+| **Servicios** | … + **SearchService**, **ColumnFilterService**, **GlobalFieldService** |
+| **APIs** | … + búsqueda catálogo/global, listado carpeta con `q`/`filters` |
+| **Pendiente** | UI (import, imágenes, productos, ayuda columnas, buscador/filtros en tabla), listado archivos (Fase 8), offline |
 
 ### 1.3 Glosario PRD ↔ código
 
@@ -98,7 +95,7 @@ src/
     ├── auth/, storage/, database/
     ├── importers/   → parseo ExcelJS
     ├── image-processors/ → sharp, ZIP seguro, integridad
-    └── (futuro) search/, filters/
+    └── search/, filters/  → SearchService, ColumnFilterService
 ```
 
 | Capa | Uso |
@@ -148,7 +145,7 @@ src/
 
 | Entidad | Fase | Propósito |
 |---------|------|-----------|
-| `GlobalFieldMapping` | 7 | Filtros globales |
+| `GlobalField` | 7 | ✅ Registry + seeds; mapeo vía `FolderColumn.globalFieldKey` |
 | `OfflineSyncManifest` | 9 | Sincronización offline |
 
 > `EquivalentCode` implementado en Fase 6. `UploadedFile` listado/reprocesar UI → Fase 8 (`UploadedFileService`).
@@ -174,6 +171,7 @@ src/
 | AuthService, UserService | ✅ | Sesión, CRUD usuarios (ADMIN) |
 | CatalogService, FolderService | ✅ | CRUD, vaciado, visibilidad, orden |
 | ColumnConfigService | ✅ | CRUD columnas, metadatos semánticos |
+| ColumnHelpService | ✅ | Texto/imagen de ayuda, URLs firmadas, `hasContextualHelp` |
 | ProductService | ✅ | Paginación, CRUD manual, duplicar, `indexedText`; validación por `FolderColumn` |
 | EquivalenceService | ✅ | Parseo multi-código, sync en import y CRUD, alta/baja manual |
 | VisibilityService | ✅ | Filtrado real para rol `CONSULTA` |
@@ -182,7 +180,7 @@ src/
 | AuditService | ✅ | Operaciones críticas; `IMPORT_PUBLISHED` |
 | CatalogImportService | ✅ | Asistente 6 pasos, publicación segura, combinar/reemplazar |
 | ImageExtractionService, ImageMatchingService, ProductImageService | ✅ | Extracción embebida, matching externo, revisión, URLs firmadas (Fase 5) |
-| SearchService, ColumnFilterService | ⏳ | Búsqueda normalizada, filtros acumulables |
+| SearchService, ColumnFilterService, GlobalFieldService | ✅ | Búsqueda normalizada, filtros acumulables, campos globales |
 | UploadedFileService, OfflineSyncService | ⏳ | Listado archivos (Fase 8), sync |
 
 ### 5.2 Visibilidad (PRD §9) ✅
@@ -356,24 +354,35 @@ Extracción embebida, importación externa (ZIP/sueltas), matching por código/n
 | 6.8 | Auditoría | `PRODUCT_*`, `EQUIVALENCE_*` en `AuditLog` |
 | 6.9 | Tests | `equivalence.parser`, `product-field.builder`, `equivalence.service`, `product.service` |
 | 6.10 | Documentación | [`ENDPOINTS.md`](./ENDPOINTS.md) contratos Fase 6 |
+| 6.11 | Ayuda contextual columnas | `ColumnHelpService`, bucket `column-help-images`, campos en `FolderColumn`, REST + actions · migración `20260624211539_*` |
 
-**Verificación:** `pnpm lint` · `pnpm test:run` (202 tests) · `pnpm db:verify` ✅
+**Verificación:** `pnpm lint` · `pnpm test:run` · `pnpm db:verify` · `pnpm storage:verify` ✅
 
-**Pendiente UI:** formulario crear/editar producto, duplicar, gestión imágenes en tabla.
+**Pendiente UI:** formulario crear/editar producto, duplicar, gestión imágenes en tabla, ícono Info / popover / modal de ayuda en cabeceras.
 
 ---
 
-### Fase 7 — Búsqueda y filtros ⏳
+### Fase 7 — Búsqueda y filtros ✅
 
 **PRD fase 4** · Depende de Fases 3, 6
 
-- [ ] Normalización: mayúsculas, espacios, guiones, `_`, puntos, barras (RF-034)
-- [ ] Búsqueda por carpeta, catálogo y global con origen en resultado (RF-035–038)
-- [ ] Índices PostgreSQL; debounce 250–300 ms
-- [ ] `ColumnFilterService` — filtros acumulables (AND), pills, limpieza (RF-039–041)
-- [ ] `GlobalFieldMapping` operativo (RF-042 parcial)
+| # | Entregable | Detalle |
+|---|------------|---------|
+| 7.1 | Normalización | `search-normalizer.ts` — RF-034 |
+| 7.2 | Búsqueda | `SearchService` — carpeta (en listado), catálogo, global — RF-035–038 |
+| 7.3 | Índices | `pg_trgm` GIN en `indexedText`/`description`; migración `20260624220000_*` |
+| 7.4 | Filtros | `ColumnFilterService` — AND, `activeFilters` pills — RF-039–041 |
+| 7.5 | GlobalField | Modelo + seeds; validación `globalFieldKey` — RF-042 parcial |
+| 7.6 | Indexación import | `buildIndexedTextForMappedProduct` en `CatalogImportService.apply` |
+| 7.7 | REST | `GET .../products?q&filters`, `GET .../catalogs/{id}/search`, `GET /api/admin/search/global` |
+| 7.8 | Backfill | `scripts/reindex-folder-products.ts` |
+| 7.9 | Tests | `search-normalizer`, `search-config`, `search.service`, `column-filter.service` |
 
-**Completitud:** `2902`, `1408`, `0193-SILVA` encuentran equivalencias; filtros acumulables operativos.
+**Verificación:** `pnpm lint` · `pnpm test:run` (243) · `pnpm db:verify` · `pnpm storage:verify` ✅
+
+**Pendiente UI:** barra búsqueda, filtros por columna, pills, debounce 250–300 ms en `CatalogNavigator`/`ProductTable`.
+
+**Completitud backend:** `2902`, `1408`, `0193-SILVA` vía equivalencias normalizadas; filtros acumulables operativos en API.
 
 ---
 
@@ -426,12 +435,17 @@ Extracción embebida, importación externa (ZIP/sueltas), matching por código/n
 | RF-017 | Análisis hojas | 4 | ✅ |
 | RF-018–027 | Detección, vista previa, listas, fórmulas | 4 | ✅ |
 | RF-028–032 | Imágenes | 5 | ✅ backend / ⏳ UI modal (RF-032) |
-| RF-033 | Equivalencias | 6–7 | 🔄 persistencia ✅ / búsqueda Fase 7 |
-| RF-034–041 | Búsqueda y filtros | 7 | ⏳ |
+| RF-033 | Equivalencias | 6–7 | ✅ persistencia + búsqueda |
+| RF-034–041 | Búsqueda y filtros | 7 | ✅ backend |
 | RF-042 | Configuración columnas | 3 | ✅ |
 | RF-043 | Archivos subidos | 8 | ⏳ |
 | RF-044 | Publicación segura | 4 | ✅ |
 | RF-045–047 | Offline | 9 | ⏳ |
+| RF-048 | Nombre visible de columnas | 3/6 | ✅ |
+| RF-049 | Nombre original no editable | 3/6 | ✅ |
+| RF-050 | Ayuda contextual de columnas | 6.11 | ✅ backend |
+| RF-051 | Ícono Info en columnas | 6.11 | ✅ backend (`hasContextualHelp`) / ⏳ UI |
+| RF-052 | Modal imagen de ayuda | 6.11 | ✅ backend (URLs firmadas) / ⏳ UI |
 
 ### 8.2 Requerimientos no funcionales (PRD §41)
 
@@ -450,7 +464,8 @@ Extracción embebida, importación externa (ZIP/sueltas), matching por código/n
 | **Importación** | ✅ Backend (sin UI asistente) — ver [`ENDPOINTS.md`](./ENDPOINTS.md) |
 | **Imágenes** | ✅ Backend (extracción, matching, revisión, miniaturas API) — ⏳ UI modal/panel |
 | **Productos manuales** | ✅ Backend (CRUD, equivalencias, imágenes manuales) — ⏳ UI formulario |
-| **Búsqueda y filtros** | ⏳ |
+| **Ayuda contextual columnas** | ✅ Backend (texto, imagen Storage, `hasContextualHelp`, URLs firmadas) — ⏳ UI ícono Info / popover / modal |
+| **Búsqueda y filtros** | ✅ Backend — ⏳ UI buscador/pills en tabla |
 | **Archivos / Offline** | ⏳ |
 
 ### 8.4 Criterios de éxito (PRD §51)

@@ -19,6 +19,24 @@ export const columnIdSchema = z.object({
   id: z.string().cuid("Identificador de columna inválido."),
 });
 
+export const columnIdParamSchema = z.object({
+  columnId: z.string().cuid("Identificador de columna inválido."),
+});
+
+const helpTextSchema = z
+  .string()
+  .trim()
+  .max(2000, "El texto de ayuda no puede superar 2000 caracteres.")
+  .optional()
+  .nullable();
+
+const helpImageAltTextSchema = z
+  .string()
+  .trim()
+  .max(200, "El texto alternativo no puede superar 200 caracteres.")
+  .optional()
+  .nullable();
+
 export const createColumnSchema = z.object({
   folderId: z.string().cuid("Identificador de carpeta inválido."),
   originalName: z
@@ -88,17 +106,13 @@ export const createColumnSchema = z.object({
     .max(120, "El campo global no puede superar 120 caracteres.")
     .optional()
     .nullable(),
+  helpText: helpTextSchema,
+  helpImageAltText: helpImageAltTextSchema,
 });
 
 export const updateColumnSchema = z
   .object({
     id: z.string().cuid("Identificador de columna inválido."),
-    originalName: z
-      .string()
-      .trim()
-      .min(1, "El nombre original no puede estar vacío.")
-      .max(200, "El nombre original no puede superar 200 caracteres.")
-      .optional(),
     displayName: z
       .string()
       .trim()
@@ -163,13 +177,15 @@ export const updateColumnSchema = z
       .max(120, "El campo global no puede superar 120 caracteres.")
       .optional()
       .nullable(),
+    helpText: helpTextSchema,
+    helpImageAltText: helpImageAltTextSchema,
   })
   .refine(
     (data) =>
       Object.keys(data).some((key) => key !== "id" && data[key as keyof typeof data] !== undefined),
     {
       message: "Debes indicar al menos un campo para actualizar.",
-      path: ["originalName"],
+      path: ["displayName"],
     },
   );
 

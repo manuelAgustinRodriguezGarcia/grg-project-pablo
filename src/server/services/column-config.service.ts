@@ -10,6 +10,9 @@ import { folderRepository } from "@/server/repositories/folder.repository";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { ColumnConfigError } from "./column-config.errors";
+import { ColumnHelpError } from "./column-help.errors";
+import { columnHelpService } from "./column-help.service";
+import { globalFieldService } from "./global-field.service";
 import { visibilityService } from "./visibility.service";
 
 const VALID_COLUMN_DATA_TYPES: ColumnDataType[] = [
@@ -133,6 +136,7 @@ export class ColumnConfigService {
     }
 
     await assertUniquePrimaryCode(input.folderId, input.isPrimaryCode ?? false);
+    await globalFieldService.assertValidGlobalFieldKey(input.globalFieldKey);
 
     const order =
       input.order !== undefined
@@ -182,12 +186,36 @@ export class ColumnConfigService {
       await assertUniquePrimaryCode(existing.folderId, true, existing.id);
     }
 
+    const nextGlobalFieldKey =
+      input.globalFieldKey !== undefined ? input.globalFieldKey : existing.globalFieldKey;
+    await globalFieldService.assertValidGlobalFieldKey(nextGlobalFieldKey);
+
     const hasChanges = Object.keys(input).some((key) => key !== "id");
     if (!hasChanges) {
       return existing;
     }
 
-    const { id, ...data } = input;
+    const { id, ...rawData } = input;
+    const data: UpdateColumnData = { ...rawData };
+
+    try {
+      if (data.helpText !== undefined) {
+        data.helpText = columnHelpService.normalizeHelpText(data.helpText);
+      }
+
+      if (data.helpImageAltText !== undefined) {
+        data.helpImageAltText = columnHelpService.normalizeHelpImageAltText(
+          data.helpImageAltText,
+        );
+      }
+    } catch (error) {
+      if (error instanceof ColumnHelpError) {
+        throw new ColumnConfigError(error.message, "VALIDATION_ERROR");
+      }
+
+      throw error;
+    }
+
     const column = await handleColumnWrite(() => columnRepository.update(id, data));
 
     auditService.logOperationSafe({
@@ -270,7 +298,8 @@ export class ColumnConfigService {
   async deleteColumn(id: string): Promise<void> {
     const { profile: admin } = await requireRole("ADMIN");
 
-    await requireColumn(id);
+    const existing = await requireColumn(id);
+    await columnHelpService.deleteHelpImageBestEffort(existing);
     await columnRepository.delete(id);
 
     auditService.logOperationSafe({

@@ -5,6 +5,7 @@ import { folderRepository } from "@/server/repositories/folder.repository";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/server/services/audit.constants";
 import { auditService } from "@/server/services/audit.service";
 import { columnConfigService } from "@/server/services/column-config.service";
+import { columnHelpService } from "@/server/services/column-help.service";
 import {
   adminUserFixture,
   consultaUserFixture,
@@ -47,6 +48,28 @@ vi.mock("@/server/services/audit.service", () => ({
   auditService: {
     logOperation: vi.fn(),
     logOperationSafe: vi.fn(),
+  },
+}));
+vi.mock("@/server/services/column-help.service", () => ({
+  columnHelpService: {
+    deleteHelpImageBestEffort: vi.fn(async () => undefined),
+    normalizeHelpText: vi.fn((value: string | null | undefined) => {
+      if (value === null || value === undefined) return null;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }),
+    normalizeHelpImageAltText: vi.fn((value: string | null | undefined) => {
+      if (value === null || value === undefined) return null;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }),
+  },
+}));
+
+vi.mock("@/server/services/global-field.service", () => ({
+  globalFieldService: {
+    assertValidGlobalFieldKey: vi.fn(async () => undefined),
+    listGlobalFields: vi.fn(async () => []),
   },
 }));
 
@@ -133,5 +156,31 @@ describe("ColumnConfigService", () => {
       entityType: AUDIT_ENTITY_TYPES.COLUMN,
       entityId: COLUMN_ID,
     });
+  });
+
+  it("actualiza texto de ayuda", async () => {
+    vi.mocked(columnRepository.update).mockResolvedValue(
+      createColumnFixture({ helpText: "Medida entre tapa" }),
+    );
+
+    const column = await columnConfigService.updateColumn({
+      id: COLUMN_ID,
+      helpText: "Medida entre tapa",
+    });
+
+    expect(column.helpText).toBe("Medida entre tapa");
+  });
+
+  it("elimina imagen de ayuda al borrar columna", async () => {
+    vi.mocked(columnRepository.findById).mockResolvedValue(
+      createColumnFixture({
+        helpImagePath: `${FOLDER_ID}/${COLUMN_ID}/img.jpg`,
+      }),
+    );
+
+    await columnConfigService.deleteColumn(COLUMN_ID);
+
+    expect(columnHelpService.deleteHelpImageBestEffort).toHaveBeenCalled();
+    expect(columnRepository.delete).toHaveBeenCalledWith(COLUMN_ID);
   });
 });

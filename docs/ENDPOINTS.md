@@ -1,7 +1,7 @@
 # ENDPOINTS — Referencia para frontend
 
-> Contratos de API y Server Actions **implementados** (Fases 2–6 backend). Plan futuro: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md). Producto: [`PRD.md`](./PRD.md).  
-> Última actualización: 2026-06-24.
+> Contratos de API y Server Actions **implementados** (Fases 2–7 backend). Contexto compacto: [`AGENT-BRIEF.md`](./AGENT-BRIEF.md). Plan: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md). Producto: [`PRD.md`](./PRD.md).  
+> Última actualización: 2026-06-24 (búsqueda y filtros Fase 7).
 
 ---
 
@@ -16,10 +16,13 @@
 | `GET /api/admin/session` | ❌ | Hidratar sesión en cliente |
 | `GET /api/admin/directory` | ❌ | Tarjetas de catálogos (directorio) |
 | `GET /api/admin/catalogs/{id}/navigation` | ❌ | Selector catálogo → carpetas |
-| `GET /api/admin/folders/{id}/products` | ❌ | Tabla de productos paginada |
+| `GET /api/admin/folders/{id}/products` | ❌ | Tabla paginada; admite `q` y `filters` (Fase 7) |
+| `GET /api/admin/catalogs/{id}/search` | ❌ | Búsqueda en catálogo |
+| `GET /api/admin/search/global` | ❌ | Búsqueda global |
 | CRUD productos / equivalencias / imágenes manuales (REST + actions) | ❌ | APIs Fase 6 listas; UI formulario/edición pendiente |
 | Acciones de usuarios | ❌ | Falta `/admin/users` |
 | Acciones de catálogos / carpetas / columnas | ❌ | CRUD admin sin UI |
+| Ayuda contextual columnas (REST + actions) | ❌ | Backend listo; UI ícono Info / popover / modal pendiente |
 | Importador Excel (REST + actions) | ❌ | APIs listas; UI `/admin/archivos` pendiente |
 | Imágenes import / galería producto (REST + actions) | ❌ | APIs Fase 5 listas; UI revisión/modal pendiente |
 | `requestPasswordResetAction` / `updatePasswordAction` | ❌ | Faltan `/auth/forgot-password` y `/auth/reset-password` |
@@ -28,7 +31,9 @@
 
 1. `GET /api/admin/directory` → listar catálogos activos (tarjetas o dropdown).
 2. Al elegir catálogo → `GET /api/admin/catalogs/{catalogId}/navigation` → carpetas.
-3. Al elegir carpeta → `GET /api/admin/folders/{folderId}/products?page=&pageSize=` → columnas + filas.
+3. Al elegir carpeta → `GET /api/admin/folders/{folderId}/products?page=&pageSize=&q=&filters=` → columnas + filas + pills.
+
+**Debounce recomendado (UI):** 250–300 ms al escribir en `q` o filtros de columna.
 
 ---
 
@@ -184,38 +189,41 @@ Metadatos del catálogo y carpetas visibles (`ACTIVE` + visibles para el rol).
 
 ### `GET /api/admin/folders/{folderId}/products`
 
-Columnas visibles + productos paginados.
+Columnas visibles + productos paginados, con búsqueda y filtros opcionales.
 
-**Query:** `page` (default `1`), `pageSize` (default `50`, máx. `200`).
+**Query:** `page` (default `1`), `pageSize` (default `50`, máx. `200`), `q` (texto, máx. 200), `filters` (JSON URL-encoded: `[{ columnInternalKey, operator: "contains"|"equals", value }]`).
 
-**200:**
+**200:** `ProductTableResponse` — `folder`, `columns`, `products`, `pagination`, `search` (`{ query, normalizedQuery }` | `null`), `activeFilters` (pills para UI).
 
-```json
-{
-  "folder": { "id": "clx...", "name": "Rodamientos", "catalogId": "clx..." },
-  "columns": [ /* ColumnListItem[] */ ],
-  "products": [
-    {
-      "id": "clx...",
-      "primaryCode": "6205",
-      "description": "Ruleman 6205",
-      "dynamicData": { "marca": "SKF" },
-      "primaryImage": {
-        "id": "clx...",
-        "thumbnailUrl": "https://...signed...",
-        "fullUrl": "https://...signed..."
-      },
-      "createdAt": "2026-06-19T12:00:00.000Z",
-      "updatedAt": "2026-06-19T12:00:00.000Z"
-    }
-  ],
-  "pagination": { "page": 1, "pageSize": 50, "total": 120, "totalPages": 3 }
-}
-```
+Ejemplo completo: [`docs/api/examples/folder-products.json`](./api/examples/folder-products.json).
 
-`CONSULTA`: `dynamicData` excluye claves de columnas ocultas.
+`CONSULTA`: `dynamicData` excluye columnas ocultas. Respeta `searchConfig`/`filterConfig` de carpeta ∩ flags `isSearchable`/`isFilterable`.
 
-→ `src/features/records/schemas/product.schemas.ts`
+→ `src/features/catalog/schemas/search.schemas.ts` · `src/server/services/product.service.ts`
+
+---
+
+### `GET /api/admin/catalogs/{catalogId}/search`
+
+Búsqueda en todas las carpetas visibles del catálogo. Cada ítem incluye carpeta de origen.
+
+**Query:** `q` (obligatorio), `page`, `pageSize`.
+
+**200:** `{ catalog, search, items[], pagination }` — cada `item`: `productId`, `primaryCode`, `description`, `matchType`, `matchValue`, `folder`, `catalog`, `primaryImage`.
+
+→ `src/app/api/admin/catalogs/[catalogId]/search/route.ts`
+
+---
+
+### `GET /api/admin/search/global`
+
+Búsqueda en catálogos/carpetas activos visibles. Filtro global opcional por campo mapeado.
+
+**Query:** `q` o (`globalFieldKey` + `globalFieldValue`), `page`, `pageSize`, `catalogId?`, `folderId?`.
+
+**200:** `{ search, items[], pagination }` — misma forma de `item` que búsqueda por catálogo.
+
+→ `src/app/api/admin/search/global/route.ts`
 
 ---
 
@@ -504,8 +512,8 @@ Import: `@/features/catalog/actions/folder.actions`
 | `setFolderVisibilityAction` | `{ folderId, visible }` | `FolderListItem` | |
 | `deleteFolderAction` | `{ folderId }` | `undefined` | Cascada columnas/productos; modal |
 | `clearFolderAction` | `{ folderId }` | `{ deletedProductCount }` | Conserva carpeta/columnas; modal |
-| `setFolderSearchConfigAction` | `{ folderId, config: FolderColumnKeysConfig \| null }` | `FolderListItem` | Motor búsqueda: Fase 7 |
-| `setFolderFilterConfigAction` | `{ folderId, config: FolderColumnKeysConfig \| null }` | `FolderListItem` | Motor filtros: Fase 7 |
+| `setFolderSearchConfigAction` | `{ folderId, config: FolderColumnKeysConfig \| null }` | `FolderListItem` | Motor búsqueda ✅ (consumido en listado Fase 7) |
+| `setFolderFilterConfigAction` | `{ folderId, config: FolderColumnKeysConfig \| null }` | `FolderListItem` | Motor filtros ✅ (consumido en listado Fase 7) |
 
 **`FolderListItem`:** `{ id, catalogId, name, description, status, order, visibleToNormalUser, searchConfig, filterConfig, productCount, createdAt, updatedAt }`.
 
@@ -528,11 +536,56 @@ Import: `@/features/catalog/actions/column.actions`
 | `setColumnVisibilityAction` | ADMIN | `{ id, visible }` | `ColumnListItem` |
 | `deleteColumnAction` | ADMIN | `{ id }` | `undefined` |
 
-**`ColumnListItem`:** metadatos completos — `id`, `folderId`, `originalName`, `displayName`, `internalKey`, `dataType`, `order`, `visibleToNormalUser`, flags (`isSearchable`, `isFilterable`, `isPrimaryCode`, `isDescription`, `isImageCode`, …), `globalFieldKey`, `width`, `format`, `unit`, `label`, timestamps.
+Import ayuda contextual: `@/features/catalog/actions/column-help.actions`
 
-**Errores:** `FOLDER_NOT_FOUND`, `COLUMN_DUPLICATE_KEY`, `COLUMN_PRIMARY_CODE_CONFLICT`, `VALIDATION_ERROR`, `FORBIDDEN`.
+| Acción | Auth | Entrada | Respuesta `data` |
+|--------|------|---------|------------------|
+| `getColumnHelpAction` | Sesión (CONSULTA filtrado) | `{ columnId }` | `ColumnListItem` |
+| `deleteColumnHelpImageAction` | ADMIN | `{ columnId }` | `ColumnListItem` |
 
-Campos opcionales de create/update: ver `src/features/catalog/schemas/column.schemas.ts`.
+El texto de ayuda (`helpText`) y el alt de imagen (`helpImageAltText`) se editan con `updateColumnAction`.
+
+**`ColumnListItem`:** metadatos completos — `id`, `folderId`, `originalName`, `displayName`, `internalKey`, `dataType`, `order`, `visibleToNormalUser`, flags (`isSearchable`, `isFilterable`, `isPrimaryCode`, `isDescription`, `isImageCode`, …), `globalFieldKey`, `width`, `format`, `unit`, `label`, ayuda contextual (`helpText`, `helpImageAltText`, `hasContextualHelp`, `helpImagePreviewUrl`, `helpImageFullUrl`), timestamps.
+
+**Errores:** `FOLDER_NOT_FOUND`, `COLUMN_DUPLICATE_KEY`, `COLUMN_PRIMARY_CODE_CONFLICT`, `COLUMN_NOT_FOUND`, `HELP_IMAGE_NOT_FOUND`, `VALIDATION_ERROR`, `FORBIDDEN`.
+
+Campos opcionales de create/update: ver `src/features/catalog/schemas/column.schemas.ts`. `originalName` no es editable en update (RF-049).
+
+---
+
+### `GET /api/admin/columns/{columnId}/help`
+
+Detalle de ayuda contextual de una columna (texto + URLs firmadas de imagen). Respeta visibilidad por rol.
+
+**200:** `{ "column": ColumnListItem }`
+
+**404:** `COLUMN_NOT_FOUND` | `FOLDER_NOT_FOUND` | `CATALOG_NOT_FOUND`
+
+→ `src/app/api/admin/columns/[columnId]/help/route.ts`
+
+---
+
+### `POST /api/admin/columns/{columnId}/help-image`
+
+Sube o reemplaza la imagen de ayuda de una columna. Solo `ADMIN`.
+
+**Body:** `multipart/form-data` — `file` (obligatorio), `altText` (opcional).
+
+**201:** `{ "column": ColumnListItem }`
+
+**400:** `VALIDATION_ERROR` · **404:** `COLUMN_NOT_FOUND`
+
+---
+
+### `DELETE /api/admin/columns/{columnId}/help-image`
+
+Elimina la imagen de ayuda de una columna. Solo `ADMIN`. Conserva `helpText` si existe.
+
+**200:** `{ "column": ColumnListItem }`
+
+**404:** `COLUMN_NOT_FOUND` | `HELP_IMAGE_NOT_FOUND`
+
+→ `src/app/api/admin/columns/[columnId]/help-image/route.ts`
 
 ---
 
@@ -630,13 +683,13 @@ Navegación: `src/features/admin/data/adminNav.ts`. Destino post-login: `/admin`
 
 ## Auditoría (interno)
 
-Sin endpoint de consulta. Eventos en `AuditLog`: login/logout, CRUD usuarios, CRUD/vaciado catálogos, `FILE_UPLOADED`, `IMPORT_PUBLISHED`, `PRODUCT_CREATED`, `PRODUCT_UPDATED`, `PRODUCT_DELETED`, `PRODUCT_DUPLICATED`, `EQUIVALENCE_ADDED`, `EQUIVALENCE_REMOVED`, `PRODUCT_IMAGE_ASSOCIATED`, `PRODUCT_IMAGE_UPDATED`, `PRODUCT_IMAGE_DELETED`. Fallos de auditoría no interrumpen la operación.
+Sin endpoint de consulta. Eventos en `AuditLog`: login/logout, CRUD usuarios, CRUD/vaciado catálogos, `FILE_UPLOADED`, `IMPORT_PUBLISHED`, `PRODUCT_CREATED`, `PRODUCT_UPDATED`, `PRODUCT_DELETED`, `PRODUCT_DUPLICATED`, `EQUIVALENCE_ADDED`, `EQUIVALENCE_REMOVED`, `PRODUCT_IMAGE_ASSOCIATED`, `PRODUCT_IMAGE_UPDATED`, `PRODUCT_IMAGE_DELETED`, `COLUMN_HELP_IMAGE_UPLOADED`, `COLUMN_HELP_IMAGE_DELETED`. Fallos de auditoría no interrumpen la operación.
 
 ---
 
 ## Pendiente (sin contrato aún)
 
-Búsqueda/filtros (Fase 7), listado archivos subidos (Fase 8), offline/sync, **UI** productos manuales e imágenes (miniaturas tabla, panel revisión, modal ampliado RF-032). Detalle por fase: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md).
+Listado archivos subidos (Fase 8), offline/sync, **UI** productos/búsqueda/filtros/imágenes/ayuda columnas. Detalle: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) · resumen: [`AGENT-BRIEF.md`](./AGENT-BRIEF.md).
 
 ---
 
@@ -649,8 +702,10 @@ Búsqueda/filtros (Fase 7), listado archivos subidos (Fase 8), offline/sync, **U
 | Usuarios | `src/features/users/actions/user.actions.ts`, `schemas/user.schemas.ts` |
 | Catálogos | `src/features/catalog/actions/catalog.actions.ts`, `schemas/catalog.schemas.ts`, `types/catalog.types.ts` |
 | Carpetas | `folder.actions.ts`, `schemas/folder.schemas.ts`, `types/folder.types.ts` |
-| Columnas | `column.actions.ts`, `schemas/column.schemas.ts`, `types/column.types.ts` |
-| REST productos / navegación | `src/app/api/admin/folders/[folderId]/products/route.ts`, `src/app/api/admin/products/`, `.../catalogs/[catalogId]/navigation/route.ts` |
+| Columnas | `column.actions.ts`, `column-help.actions.ts`, `schemas/column.schemas.ts`, `types/column.types.ts` |
+| Ayuda contextual columnas | `src/server/services/column-help.service.ts`, `src/app/api/admin/columns/` |
+| Búsqueda / filtros | `src/server/search/`, `src/server/filters/`, `src/features/catalog/schemas/search.schemas.ts` |
+| REST productos / navegación / búsqueda | `src/app/api/admin/folders/.../products/`, `.../catalogs/.../search/`, `.../search/global/` |
 | Productos manuales | `src/features/records/`, `src/server/services/product.service.ts`, `product-field.builder.ts`, `equivalence.service.ts` |
 | Importador | `src/app/api/admin/imports/`, `src/features/imports/actions/import.actions.ts`, `src/server/services/catalog-import.service.ts`, `src/server/importers/` |
 | Imágenes | `src/server/image-processors/`, `src/server/services/image-*.service.ts`, `src/server/services/product-image.service.ts`, `src/server/repositories/product-image.repository.ts` |

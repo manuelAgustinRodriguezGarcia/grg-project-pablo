@@ -1,4 +1,5 @@
 import type { FolderColumn } from "@/generated/prisma/client";
+import type { ColumnListItem } from "@/features/catalog/types/column.types";
 import { requireAuth, requireRole } from "@/server/auth";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
 import { columnRepository } from "@/server/repositories/column.repository";
@@ -22,6 +23,15 @@ import {
 } from "./product-field.builder";
 import { equivalenceService } from "./equivalence.service";
 import type { EquivalenceListItem } from "./equivalence.service";
+import { columnHelpService } from "./column-help.service";
+import { columnFilterService } from "@/server/filters/column-filter.service";
+import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
+import { buildFolderProductWhere } from "@/server/search/search.service";
+import {
+  resolveFilterableKeys,
+  resolveSearchableKeys,
+} from "@/server/search/search-config.resolver";
+import { normalizeSearchTerm } from "@/server/search/search-normalizer";
 
 export type ProductTableFolder = {
   id: string;
@@ -52,7 +62,7 @@ export type ProductTablePagination = {
 
 export type ProductTableResponse = {
   folder: ProductTableFolder;
-  columns: FolderColumn[];
+  columns: ColumnListItem[];
   products: ProductTableItem[];
   pagination: ProductTablePagination;
 };
@@ -66,6 +76,8 @@ export type ListProductsInput = {
   folderId: string;
   page?: number;
   pageSize?: number;
+  query?: string;
+  filters?: ColumnFilterInput[] | unknown;
 };
 
 export type MutateProductInput = {
@@ -190,12 +202,36 @@ export class ProductService {
       visibilityService.columnWhereForRole(role),
     );
 
-    const paginated = await productRepository.findByFolderPaginated(folder.id, {
+    const columnItems = await columnHelpService.resolveHelpForColumns(columns, role);
+
+    const parsedFilters = columnFilterService.parseFilters(input.filters);
+    const filterableKeys = resolveFilterableKeys(folder, columns);
+    columnFilterService.validateFiltersForColumns(
+      parsedFilters,
+      columns,
+      filterableKeys,
+    );
+
+    const searchableKeys = resolveSearchableKeys(folder, columns);
+    const query = input.query?.trim() ?? "";
+    const hasSearchOrFilters = query.length > 0 || parsedFilters.length > 0;
+
+    const where = hasSearchOrFilters
+      ? buildFolderProductWhere({
+          folderId: folder.id,
+          query: query || undefined,
+          searchableKeys,
+          filters: parsedFilters,
+          columns,
+        })
+      : { folderId: folder.id };
+
+    const paginated = await productRepository.findPaginatedBasic(where, {
       page,
       pageSize,
     });
 
-    const visibleColumnKeys = columns.map((column) => column.internalKey);
+    const visibleColumnKeys = columnItems.map((column) => column.internalKey);
     const productIds = paginated.items.map((product) => product.id);
     const primaryImages =
       await productImageService.resolvePrimaryImagesForProducts(productIds);
@@ -206,7 +242,7 @@ export class ProductService {
         name: folder.name,
         catalogId: folder.catalogId,
       },
-      columns,
+      columns: columnItems,
       products: paginated.items.map((product) =>
         toProductTableItem(
           product,
@@ -221,6 +257,13 @@ export class ProductService {
         total: paginated.total,
         totalPages: paginated.totalPages,
       },
+      search: query
+        ? {
+            query,
+            normalizedQuery: normalizeSearchTerm(query),
+          }
+        : null,
+      activeFilters: columnFilterService.toActiveFilterPills(parsedFilters, columns),
     };
   }
 

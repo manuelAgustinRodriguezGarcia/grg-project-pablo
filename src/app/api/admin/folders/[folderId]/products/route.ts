@@ -4,8 +4,8 @@ import { ProductError } from "@/server/services/product.errors";
 import { productService } from "@/server/services/product.service";
 import {
   createProductBodySchema,
-  productPaginationQuerySchema,
 } from "@/features/records/schemas/product.schemas";
+import { folderProductListQuerySchema } from "@/features/catalog/schemas/search.schemas";
 
 type RouteContext = {
   params: Promise<{ folderId: string }>;
@@ -28,9 +28,11 @@ export async function GET(request: Request, context: RouteContext) {
     const { folderId } = await context.params;
     const { searchParams } = new URL(request.url);
 
-    const parsed = productPaginationQuerySchema.safeParse({
+    const parsed = folderProductListQuerySchema.safeParse({
       page: searchParams.get("page") ?? undefined,
       pageSize: searchParams.get("pageSize") ?? undefined,
+      q: searchParams.get("q") ?? undefined,
+      filters: searchParams.get("filters") ?? undefined,
     });
 
     if (!parsed.success) {
@@ -47,6 +49,8 @@ export async function GET(request: Request, context: RouteContext) {
       folderId,
       page: parsed.data.page,
       pageSize: parsed.data.pageSize,
+      query: parsed.data.q,
+      filters: parsed.data.filters,
     });
 
     return NextResponse.json(table);

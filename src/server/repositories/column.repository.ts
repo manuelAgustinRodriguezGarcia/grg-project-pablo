@@ -26,6 +26,13 @@ export type CreateColumnData = {
   unit?: string | null;
   label?: string | null;
   globalFieldKey?: string | null;
+  helpText?: string | null;
+  helpImageAltText?: string | null;
+  helpImagePath?: string | null;
+  helpImageThumbnailPath?: string | null;
+  helpImageMimeType?: string | null;
+  helpImageSizeBytes?: number | null;
+  helpImageOriginalName?: string | null;
 };
 
 export type UpdateColumnData = Partial<
@@ -63,6 +70,29 @@ export class ColumnRepository {
 
     return prisma.folderColumn.findMany({
       where: { id: { in: ids } },
+    });
+  }
+
+  async findByGlobalFieldKey(
+    globalFieldKey: string,
+    where: Prisma.FolderColumnWhereInput = {},
+  ): Promise<FolderColumn[]> {
+    return prisma.folderColumn.findMany({
+      where: {
+        globalFieldKey,
+        ...where,
+      },
+    });
+  }
+
+  async findGloballySearchable(
+    where: Prisma.FolderColumnWhereInput = {},
+  ): Promise<FolderColumn[]> {
+    return prisma.folderColumn.findMany({
+      where: {
+        isGloballySearchable: true,
+        ...where,
+      },
     });
   }
 
@@ -105,6 +135,13 @@ export class ColumnRepository {
         unit: data.unit ?? null,
         label: data.label ?? null,
         globalFieldKey: data.globalFieldKey ?? null,
+        helpText: data.helpText ?? null,
+        helpImageAltText: data.helpImageAltText ?? null,
+        helpImagePath: data.helpImagePath ?? null,
+        helpImageThumbnailPath: data.helpImageThumbnailPath ?? null,
+        helpImageMimeType: data.helpImageMimeType ?? null,
+        helpImageSizeBytes: data.helpImageSizeBytes ?? null,
+        helpImageOriginalName: data.helpImageOriginalName ?? null,
       },
     });
   }
@@ -171,6 +208,13 @@ export class ColumnRepository {
       unit: item.unit ?? null,
       label: item.label ?? null,
       globalFieldKey: item.globalFieldKey ?? null,
+      helpText: item.helpText ?? null,
+      helpImageAltText: item.helpImageAltText ?? null,
+      helpImagePath: item.helpImagePath ?? null,
+      helpImageThumbnailPath: item.helpImageThumbnailPath ?? null,
+      helpImageMimeType: item.helpImageMimeType ?? null,
+      helpImageSizeBytes: item.helpImageSizeBytes ?? null,
+      helpImageOriginalName: item.helpImageOriginalName ?? null,
     })) });
 
     return result.count;
