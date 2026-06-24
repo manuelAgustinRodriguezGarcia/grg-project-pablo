@@ -72,6 +72,7 @@ export type ProcessExternalImagesInput = {
   folderId: string;
   images: ExternalImageInput[];
   imageCodeColumnKeys: string[];
+  includePrimaryCodeInMatch?: boolean;
 };
 
 export type ProcessExternalImagesResult = {
@@ -264,7 +265,9 @@ export class ProductImageService {
       }),
     );
 
-    const index = buildProductMatchIndex(fullProducts, input.imageCodeColumnKeys);
+    const index = buildProductMatchIndex(fullProducts, input.imageCodeColumnKeys, {
+      includePrimaryCode: input.includePrimaryCodeInMatch ?? true,
+    });
     const seenNames = new Map<string, number>();
     const warnings: string[] = [];
     const stats = {

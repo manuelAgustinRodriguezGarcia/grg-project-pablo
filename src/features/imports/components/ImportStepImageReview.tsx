@@ -9,6 +9,8 @@ import {
 } from "@/features/imports/actions/import.actions";
 import type { ImportImageReviewItem } from "@/features/imports/types/import-job.types";
 import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
+import { ProductImagePreviewModal } from "@/features/catalog/components/ProductImagePreviewModal";
+import { ImportYesNoRadio } from "./ImportYesNoRadio";
 import { ProductSearchCombobox } from "./ProductSearchCombobox";
 import styles from "./ImportWizard.module.scss";
 
@@ -18,6 +20,13 @@ type ImportStepImageReviewProps = {
   disabled: boolean;
   onCompleted: () => void;
   onError: (message: string) => void;
+  onFooterStateChange?: (state: ImageReviewFooterState | null) => void;
+};
+
+export type ImageReviewFooterState = {
+  finishLabel: string;
+  onFinish: () => void;
+  disabled: boolean;
 };
 
 type FolderProductOption = {
@@ -38,18 +47,35 @@ function formatProductLabel(
   return code ?? description ?? product.id;
 }
 
+function shouldLinkImage(
+  linkByImage: Record<string, boolean>,
+  imageId: string,
+): boolean {
+  return linkByImage[imageId] ?? false;
+}
+
+function getPreviewImageUrl(item: ImportImageReviewItem): string | null {
+  return item.fullUrl ?? item.thumbnailUrl;
+}
+
 export function ImportStepImageReview({
   jobId,
   folderId,
   disabled,
   onCompleted,
   onError,
+  onFooterStateChange,
 }: ImportStepImageReviewProps) {
   const [items, setItems] = useState<ImportImageReviewItem[]>([]);
   const [products, setProducts] = useState<FolderProductOption[]>([]);
   const [selectedProductByImage, setSelectedProductByImage] = useState<
     Record<string, string>
   >({});
+  const [linkByImage, setLinkByImage] = useState<Record<string, boolean>>({});
+  const [previewImage, setPreviewImage] = useState<{
+    url: string;
+    alt: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -82,6 +108,8 @@ export function ImportStepImageReview({
           label: formatProductLabel(product),
         })),
       );
+      setSelectedProductByImage({});
+      setLinkByImage({});
     } catch (caught) {
       onError(
         caught instanceof Error
@@ -97,111 +125,98 @@ export function ImportStepImageReview({
     void loadReviewData();
   }, [loadReviewData]);
 
-  async function handleAssociate(imageId: string) {
-    const productId = selectedProductByImage[imageId];
-    if (!productId) {
-      onError("Seleccioná un producto para asociar la imagen.");
-      return;
-    }
+  function handleProductSelect(imageId: string, productId: string) {
+    setSelectedProductByImage((current) => ({
+      ...current,
+      [imageId]: productId,
+    }));
+    setLinkByImage((current) => ({
+      ...current,
+      [imageId]: Boolean(productId),
+    }));
+  }
 
-    setIsSubmitting(true);
-    try {
-      const result = await associateImportImageAction({ jobId, imageId, productId });
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-      await loadReviewData();
-    } catch (caught) {
-      onError(
-        caught instanceof Error
-          ? caught.message
-          : "No se pudo asociar la imagen.",
-      );
-    } finally {
-      setIsSubmitting(false);
+  function handleLinkChoice(imageId: string, link: boolean) {
+    setLinkByImage((current) => ({
+      ...current,
+      [imageId]: link,
+    }));
+
+    if (!link) {
+      setSelectedProductByImage((current) => ({
+        ...current,
+        [imageId]: "",
+      }));
     }
   }
 
-  async function handleReject(imageId: string) {
-    setIsSubmitting(true);
-    try {
-      const result = await deleteImportImageAction({ jobId, imageId });
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-      await loadReviewData();
-    } catch (caught) {
-      onError(
-        caught instanceof Error ? caught.message : "No se pudo rechazar la imagen.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  async function applyReviewDecisions(
+    decisions: Array<{ imageId: string; link: boolean; productId?: string }>,
+  ) {
+    for (const decision of decisions) {
+      if (decision.link) {
+        if (!decision.productId) {
+          throw new Error(
+            "Seleccione un producto para vincular cada imagen marcada como Vincular.",
+          );
+        }
 
-  async function handleAssociateAll() {
-    const pendingAssociations = items
-      .map((item) => ({
-        imageId: item.id,
-        productId: selectedProductByImage[item.id],
-      }))
-      .filter((entry): entry is { imageId: string; productId: string } =>
-        Boolean(entry.productId),
-      );
-
-    if (pendingAssociations.length === 0) {
-      onError("Seleccioná al menos un producto para asociar las imágenes.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      for (const association of pendingAssociations) {
         const result = await associateImportImageAction({
           jobId,
-          imageId: association.imageId,
-          productId: association.productId,
+          imageId: decision.imageId,
+          productId: decision.productId,
         });
         if (!result.success) {
           throw new Error(result.error);
         }
+        continue;
       }
-      await loadReviewData();
+
+      const result = await deleteImportImageAction({
+        jobId,
+        imageId: decision.imageId,
+      });
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+    }
+  }
+
+  async function handleIgnoreAll() {
+    setIsSubmitting(true);
+    try {
+      await applyReviewDecisions(
+        items.map((item) => ({
+          imageId: item.id,
+          link: false,
+        })),
+      );
+      const result = await completeImageReviewAction({ jobId });
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      onCompleted();
     } catch (caught) {
       onError(
         caught instanceof Error
           ? caught.message
-          : "No se pudieron asociar todas las imágenes.",
+          : "No se pudieron ignorar todas las imágenes.",
       );
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  async function handleRejectAll() {
+  const handleCompleteReview = useCallback(async () => {
     setIsSubmitting(true);
     try {
-      for (const item of items) {
-        const result = await deleteImportImageAction({ jobId, imageId: item.id });
-        if (!result.success) {
-          throw new Error(result.error);
-        }
-      }
-      await loadReviewData();
-    } catch (caught) {
-      onError(
-        caught instanceof Error
-          ? caught.message
-          : "No se pudieron rechazar todas las imágenes.",
+      await applyReviewDecisions(
+        items.map((item) => ({
+          imageId: item.id,
+          link: shouldLinkImage(linkByImage, item.id),
+          productId: selectedProductByImage[item.id],
+        })),
       );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleCompleteReview() {
-    setIsSubmitting(true);
-    try {
       const result = await completeImageReviewAction({ jobId });
       if (!result.success) {
         throw new Error(result.error);
@@ -216,7 +231,47 @@ export function ImportStepImageReview({
     } finally {
       setIsSubmitting(false);
     }
-  }
+  }, [
+    items,
+    jobId,
+    linkByImage,
+    onCompleted,
+    onError,
+    selectedProductByImage,
+  ]);
+
+  useEffect(() => {
+    if (!onFooterStateChange) {
+      return;
+    }
+
+    if (isLoading) {
+      onFooterStateChange(null);
+      return;
+    }
+
+    onFooterStateChange({
+      finishLabel:
+        items.length === 0 ? "Continuar al resultado" : "Finalizar Revisión",
+      onFinish: () => {
+        void handleCompleteReview();
+      },
+      disabled: disabled || isSubmitting,
+    });
+  }, [
+    disabled,
+    handleCompleteReview,
+    isLoading,
+    isSubmitting,
+    items.length,
+    onFooterStateChange,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      onFooterStateChange?.(null);
+    };
+  }, [onFooterStateChange]);
 
   if (isLoading) {
     return <p className={styles.stepIntro}>Cargando imágenes pendientes…</p>;
@@ -224,118 +279,114 @@ export function ImportStepImageReview({
 
   if (items.length === 0) {
     return (
-      <div>
-        <p className={styles.stepIntro}>
-          No quedan imágenes pendientes de revisión.
-        </p>
-        <button
-          type="button"
-          className={styles.primaryButton}
-          onClick={() => void handleCompleteReview()}
-          disabled={disabled || isSubmitting}
-        >
-          Continuar al resultado
-        </button>
-      </div>
+      <p className={styles.stepIntro}>
+        No quedan imágenes pendientes de revisión.
+      </p>
     );
   }
 
   return (
-    <div>
-      <p className={styles.stepIntro}>
-        Algunas imágenes no se pudieron asociar automáticamente. Revisalas y
-        vinculalas a un producto o rechazalas antes de finalizar.
-      </p>
-
-      <div className={styles.imageReviewToolbar}>
+    <div className={styles.imageReviewStep}>
+      <div className={styles.imageReviewIntroRow}>
+        <p className={`${styles.stepIntro} ${styles.imageReviewIntroText}`}>
+          Si desea vincular las imágenes con los productos en otro momento,
+          presione el botón.
+        </p>
         <button
           type="button"
-          className={styles.successButton}
-          onClick={() => void handleAssociateAll()}
+          className={`${styles.primaryButton} ${styles.imageReviewIgnoreAllButton}`}
+          onClick={() => void handleIgnoreAll()}
           disabled={disabled || isSubmitting}
         >
-          Asociar todas
-        </button>
-        <button
-          type="button"
-          className={styles.dangerButton}
-          onClick={() => void handleRejectAll()}
-          disabled={disabled || isSubmitting}
-        >
-          Rechazar todas
+          Ignorar todas
         </button>
       </div>
 
       <div className={styles.imageReviewList}>
-        {items.map((item) => (
-          <article key={item.id} className={styles.imageReviewItem}>
-            {item.thumbnailUrl ? (
-              <img
-                src={item.thumbnailUrl}
-                alt=""
-                className={styles.imageReviewThumb}
-              />
-            ) : (
-              <span className={styles.imageReviewThumb} aria-hidden />
-            )}
+        {items.map((item) => {
+          const selectedProductId = selectedProductByImage[item.id] ?? "";
+          const linkImage = shouldLinkImage(linkByImage, item.id);
 
-            <div className={styles.imageReviewMeta}>
-              <span className={styles.imageReviewName} title={item.originalName}>
-                {item.originalName}
-              </span>
-              <span className={styles.imageReviewDetail}>
-                Estado: {item.status}
-              </span>
-              {item.sourceRow ? (
-                <span className={styles.imageReviewDetail}>
-                  Fila origen: {item.sourceRow}
-                  {item.sourceColumn ? ` · ${item.sourceColumn}` : ""}
-                </span>
-              ) : null}
-            </div>
+          return (
+            <article key={item.id} className={styles.imageReviewItem}>
+              <div className={styles.imageReviewTop}>
+                {item.thumbnailUrl ? (
+                  <button
+                    type="button"
+                    className={styles.imageReviewThumbButton}
+                    onClick={() => {
+                      const imageUrl = getPreviewImageUrl(item);
+                      if (!imageUrl) {
+                        return;
+                      }
 
-            <div className={styles.imageReviewActions}>
-              <ProductSearchCombobox
-                options={products}
-                selectedId={selectedProductByImage[item.id] ?? ""}
-                onSelect={(productId) =>
-                  setSelectedProductByImage((current) => ({
-                    ...current,
-                    [item.id]: productId,
-                  }))
-                }
-                disabled={disabled || isSubmitting}
-                placeholder="Buscar producto…"
-              />
-              <button
-                type="button"
-                className={styles.successButton}
-                onClick={() => void handleAssociate(item.id)}
-                disabled={disabled || isSubmitting}
-              >
-                Asociar
-              </button>
-              <button
-                type="button"
-                className={styles.dangerButton}
-                onClick={() => void handleReject(item.id)}
-                disabled={disabled || isSubmitting}
-              >
-                Rechazar
-              </button>
-            </div>
-          </article>
-        ))}
+                      setPreviewImage({
+                        url: imageUrl,
+                        alt: item.originalName,
+                      });
+                    }}
+                    aria-label={`Ver imagen ${item.originalName}`}
+                  >
+                    <img
+                      src={item.thumbnailUrl}
+                      alt=""
+                      className={styles.imageReviewThumb}
+                    />
+                  </button>
+                ) : (
+                  <span className={styles.imageReviewThumb} aria-hidden />
+                )}
+
+                <div className={styles.imageReviewMeta}>
+                  <span
+                    className={styles.imageReviewName}
+                    title={item.originalName}
+                  >
+                    {item.originalName}
+                  </span>
+                  {item.sourceRow ? (
+                    <span className={styles.imageReviewDetail}>
+                      Fila origen: {item.sourceRow}
+                      {item.sourceColumn ? ` · ${item.sourceColumn}` : ""}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className={styles.imageReviewActionsRow}>
+                <div className={styles.imageReviewComboboxWrap}>
+                  <ProductSearchCombobox
+                    options={products}
+                    selectedId={selectedProductId}
+                    onSelect={(productId) =>
+                      handleProductSelect(item.id, productId)
+                    }
+                    disabled={disabled || isSubmitting}
+                    placeholder="Buscar producto…"
+                  />
+                </div>
+                <ImportYesNoRadio
+                  name={`image-action-${item.id}`}
+                  value={linkImage}
+                  onChange={(link) => handleLinkChoice(item.id, link)}
+                  disabled={disabled || isSubmitting}
+                  yesDisabled={!selectedProductId}
+                  yesLabel="Vincular"
+                  noLabel="Ignorar"
+                />
+              </div>
+            </article>
+          );
+        })}
       </div>
 
-      <button
-        type="button"
-        className={`${styles.primaryButton} ${styles.imageReviewFinishButton}`}
-        onClick={() => void handleCompleteReview()}
-        disabled={disabled || isSubmitting}
-      >
-        Finalizar revisión de imágenes
-      </button>
+      {previewImage ? (
+        <ProductImagePreviewModal
+          imageUrl={previewImage.url}
+          imageAlt={previewImage.alt}
+          onClose={() => setPreviewImage(null)}
+        />
+      ) : null}
     </div>
   );
 }

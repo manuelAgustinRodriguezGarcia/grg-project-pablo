@@ -10,11 +10,13 @@
   * [4. Archivos de muestra analizados](#4-archivos-de-muestra-analizados)
   * [5. Objetivos](#5-objetivos)
   * [6. Principios del producto](#6-principios-del-producto)
+
 * [Parte II — Modelo de dominio y usuarios](#parte-ii--modelo-de-dominio-y-usuarios)
 
   * [7. Estructura conceptual del contenido](#7-estructura-conceptual-del-contenido)
   * [8. Usuarios y permisos](#8-usuarios-y-permisos)
   * [9. Visibilidad por rol](#9-visibilidad-por-rol)
+
 * [Parte III — Experiencia de usuario](#parte-iii--experiencia-de-usuario)
 
   * [10. Landing pública](#10-landing-pública)
@@ -23,6 +25,10 @@
   * [13. Navegación de catálogos y carpetas](#13-navegación-de-catálogos-y-carpetas)
   * [14. Gestión de catálogos y carpetas](#14-gestión-de-catálogos-y-carpetas)
   * [15. Gestión manual de productos](#15-gestión-manual-de-productos)
+  * [15.1 Configuración manual de columnas](#151-configuración-manual-de-columnas)
+  * [15.2 Ayuda contextual en cabeceras de columna](#152-ayuda-contextual-en-cabeceras-de-columna)
+  * [15.3 Sección Precios](#153-sección-precios)
+
 * [Parte IV — Importación de datos](#parte-iv--importación-de-datos)
 
   * [16. Importación de archivos Excel](#16-importación-de-archivos-excel)
@@ -32,6 +38,7 @@
   * [20. Macros de Visual Basic](#20-macros-de-visual-basic)
   * [21. Publicación segura de importaciones](#21-publicación-segura-de-importaciones)
   * [22. Informe de importación](#22-informe-de-importación)
+
 * [Parte V — Imágenes](#parte-v--imágenes)
 
   * [23. Gestión de imágenes](#23-gestión-de-imágenes)
@@ -40,6 +47,7 @@
   * [26. Formatos de imagen](#26-formatos-de-imagen)
   * [27. Asociación y revisión de imágenes](#27-asociación-y-revisión-de-imágenes)
   * [28. Visualización ampliada de imágenes](#28-visualización-ampliada-de-imágenes)
+
 * [Parte VI — Búsqueda, códigos y filtros](#parte-vi--búsqueda-códigos-y-filtros)
 
   * [29. Códigos y equivalencias](#29-códigos-y-equivalencias)
@@ -50,15 +58,18 @@
   * [34. Filtros acumulables por columna](#34-filtros-acumulables-por-columna)
   * [35. Filtros globales](#35-filtros-globales)
   * [36. Configuración de columnas](#36-configuración-de-columnas)
+
 * [Parte VII — Archivos y modo offline](#parte-vii--archivos-y-modo-offline)
 
   * [37. Archivos subidos](#37-archivos-subidos)
   * [38. Modo offline](#38-modo-offline)
   * [39. Imágenes offline](#39-imágenes-offline)
+
 * [Parte VIII — Requerimientos](#parte-viii--requerimientos)
 
   * [40. Requerimientos funcionales](#40-requerimientos-funcionales)
   * [41. Requerimientos no funcionales](#41-requerimientos-no-funcionales)
+
 * [Parte IX — Arquitectura técnica](#parte-ix--arquitectura-técnica)
 
   * [42. Modelo conceptual de datos](#42-modelo-conceptual-de-datos)
@@ -67,6 +78,7 @@
   * [45. Arquitectura propuesta](#45-arquitectura-propuesta)
   * [46. Servicios principales](#46-servicios-principales)
   * [47. Flujo resumido de importación](#47-flujo-resumido-de-importación)
+
 * [Parte X — Planificación y cierre](#parte-x--planificación-y-cierre)
 
   * [48. Roadmap funcional](#48-roadmap-funcional)
@@ -151,26 +163,27 @@ Al **23/06/2026** (rama `backend`). Detalle técnico y contratos en [`BACKEND-IM
 
 #### UI
 
-| Área | Estado |
-|------|--------|
-| Landing pública (`/`) | ✅ Primera versión |
-| Login (`/auth/login`) | ✅ Funcional |
-| Panel admin (sidebar, layout) | ✅ Estructura base |
-| `/admin/catalogos` | ⚠️ `CatalogNavigator` con **datos mock** — APIs REST listas |
-| `/admin/archivos` (importador) | ⏳ Placeholder — backend listo |
-| `/admin/users`, recuperación contraseña | ⏳ Sin página |
+| Área                                    | Estado                                                      |
+| --------------------------------------- | ----------------------------------------------------------- |
+| Landing pública (`/`)                   | ✅ Primera versión                                           |
+| Login (`/auth/login`)                   | ✅ Funcional                                                 |
+| Panel admin (sidebar, layout)           | ✅ Estructura base                                           |
+| `/admin/catalogos`                      | ⚠️ `CatalogNavigator` con **datos mock** — APIs REST listas |
+| `/admin/precios`                        | ⏳ Nueva sección a implementar                               |
+| `/admin/archivos` (importador)          | ⏳ Placeholder — backend listo                               |
+| `/admin/users`, recuperación contraseña | ⏳ Sin página                                                |
 
 #### Backend (fases técnicas 1–5 ✅)
 
-| Capacidad | Estado |
-|-----------|--------|
-| Auth, usuarios, directorio, auditoría | ✅ |
-| Catálogos, carpetas, columnas, visibilidad | ✅ |
-| Productos (lectura paginada + miniatura) | ✅ |
-| Importador Excel (asistente 6 pasos, publicación segura) | ✅ |
-| Imágenes (extracción, matching, revisión, galería) | ✅ |
-| CRUD manual de productos | ⏳ |
-| Búsqueda, filtros, archivos subidos, offline | ⏳ |
+| Capacidad                                                | Estado |
+| -------------------------------------------------------- | ------ |
+| Auth, usuarios, directorio, auditoría                    | ✅      |
+| Catálogos, carpetas, columnas, visibilidad               | ✅      |
+| Productos (lectura paginada + miniatura)                 | ✅      |
+| Importador Excel (asistente 6 pasos, publicación segura) | ✅      |
+| Imágenes (extracción, matching, revisión, galería)       | ✅      |
+| CRUD manual de productos                                 | ⏳      |
+| Búsqueda, filtros, archivos subidos, precios, offline    | ⏳      |
 
 > Las **fases del roadmap PRD (§48)** no coinciden 1:1 con las fases backend. Ver tabla de mapeo en [`BACKEND-IMPLEMENTATION.md` §1.1](./BACKEND-IMPLEMENTATION.md#11-roadmap-prd--backend).
 
@@ -275,6 +288,7 @@ Crear una plataforma web que permita:
 * Procesar imágenes embebidas y externas.
 * Mantener los archivos originales respaldados.
 * Consultar información sin conexión en modo lectura.
+* Gestionar listas de precios independientes de los catálogos.
 
 ---
 
@@ -285,19 +299,23 @@ Crear una plataforma web que permita:
 * Permitir que cada archivo conserve su estructura particular.
 * Representar cada hoja relevante como una carpeta configurable.
 * Permitir editar nombres de catálogos y carpetas.
+* Permitir editar el nombre visible de cada columna sin perder su nombre original importado.
+* Permitir agregar ayuda contextual opcional a columnas mediante texto, imagen o ambos.
 * Generar automáticamente el directorio general.
 * Permitir agregar nuevos catálogos desde el panel.
 * Permitir agregar nuevas carpetas dentro de cada catálogo.
 * Permitir reemplazar o combinar listas de productos.
+* Permitir importar y actualizar listas de precios desde Excel.
 * Procesar archivos Excel con estructuras variables.
 * Conservar columnas que no estén estandarizadas.
-* Extraer imágenes pegadas dentro de Excel.
-* Asociar imágenes externas mediante códigos o nombres.
+* Extraer imágenes pegadas dentro de Excel para catálogos.
+* Asociar imágenes externas mediante códigos o nombres para catálogos.
+* Omitir procesamiento de imágenes en la sección Precios.
 * Permitir correcciones manuales de asociaciones.
 * Normalizar códigos para mejorar las búsquedas.
 * Permitir filtros acumulables por columna.
 * Permitir que el usuario encuentre un producto en menos de 5 minutos mediante búsqueda y filtros.
-* Permitir controlar la visibilidad de catálogos, carpetas y columnas para usuarios normales.
+* Permitir controlar la visibilidad de catálogos, carpetas, listas de precios y columnas para usuarios normales.
 * Mantener una interfaz simple para usuarios no técnicos.
 
 ---
@@ -308,12 +326,12 @@ Crear una plataforma web que permita:
 
 La plataforma no deberá depender de una estructura fija de Excel.
 
-Cada catálogo y cada carpeta podrán tener:
+Cada catálogo, carpeta o lista de precios podrá tener:
 
 * Columnas diferentes.
 * Filtros diferentes.
 * Campos buscables diferentes.
-* Distintas formas de asociar imágenes.
+* Distintas formas de asociar imágenes, cuando corresponda.
 * Reglas particulares de visualización.
 
 ---
@@ -324,13 +342,15 @@ El sistema deberá conservar:
 
 * Archivo original.
 * Nombre original de columnas.
+* Nombre visible editable por el administrador.
 * Contenido original de las celdas.
 * Saltos de línea relevantes.
 * Códigos escritos por Pablo.
 * Fórmulas originales cuando sea necesario.
 * Valor calculado de las fórmulas.
-* Imágenes.
-* Relación de cada imagen con su fila y columna de origen.
+* Imágenes de productos, cuando correspondan.
+* Imágenes de ayuda de columnas, cuando existan.
+* Relación de cada imagen de producto con su fila y columna de origen.
 
 ---
 
@@ -341,17 +361,22 @@ La plataforma deberá evitar que Pablo necesite conocimientos de bases de datos 
 Las operaciones complejas deberán presentarse mediante asistentes guiados, especialmente:
 
 * Importación de Excel.
+* Selección de tipo de destino.
 * Selección de catálogo y carpeta destino.
+* Selección de lista de precios destino.
 * Creación de nuevas carpetas.
+* Creación de nuevas listas de precios.
 * Reemplazo o combinación de listas.
 * Configuración de visibilidad.
+* Configuración de columnas.
 * Revisión de imágenes.
+* Carga de ayudas contextuales.
 
 ---
 
 #### 6.4 Seguridad
 
-Los catálogos no serán públicos.
+Los catálogos y listas de precios no serán públicos.
 
 Solo podrán acceder usuarios autenticados y autorizados.
 
@@ -367,13 +392,22 @@ El sistema deberá estar diseñado para que un usuario pueda filtrar una lista a
 
 ### 7. Estructura conceptual del contenido
 
-El sistema utilizará tres niveles principales visibles para el usuario:
+El sistema utilizará tres niveles principales visibles para catálogos:
 
 ```text
 Catálogo
 └── Carpeta
     └── Producto
 ```
+
+La sección Precios utilizará una estructura independiente:
+
+```text
+Lista de precios
+└── Ítem de precio
+```
+
+---
 
 #### 7.1 Catálogo
 
@@ -450,7 +484,52 @@ Todos los productos deberán poder conservar columnas dinámicas provenientes de
 
 ---
 
-#### 7.4 Relación conceptual
+#### 7.4 Lista de precios
+
+Representa una tabla independiente de precios importada desde Excel.
+
+Una lista de precios no pertenece a un catálogo ni a una carpeta.
+
+Ejemplos:
+
+* Lista general de precios.
+* Lista de precios de proveedor.
+* Lista de precios de repuestos pesados.
+* Lista de precios por marca.
+
+Cada lista de precios podrá tener:
+
+* Nombre.
+* Descripción opcional.
+* Columnas dinámicas.
+* Ítems de precio.
+* Archivo de origen.
+* Fecha de actualización.
+* Configuración de visibilidad.
+
+---
+
+#### 7.5 Ítem de precio
+
+Representa una fila dentro de una lista de precios.
+
+Puede contener campos como:
+
+* Código.
+* Descripción.
+* Precio.
+* Monto.
+* Marca.
+* Aplicación.
+* Proveedor.
+* Observaciones.
+* Otros campos dinámicos detectados desde Excel.
+
+Los ítems de precio no tendrán imágenes asociadas.
+
+---
+
+#### 7.6 Relación conceptual
 
 ```text
 Catálogo: Rulemanes
@@ -466,6 +545,18 @@ Catálogo: Rulemanes
 └── Carpeta: Tensores livianos
     ├── Producto 1
     └── Producto 2
+```
+
+```text
+Precios
+├── Lista de precios: Lista general
+│   ├── Ítem 1
+│   ├── Ítem 2
+│   └── Ítem 3
+│
+└── Lista de precios: Proveedor X
+    ├── Ítem 1
+    └── Ítem 2
 ```
 
 ---
@@ -490,6 +581,7 @@ No podrá:
 * Consultar catálogos.
 * Consultar carpetas.
 * Consultar productos.
+* Consultar precios.
 * Ver información técnica privada.
 * Descargar archivos.
 * Acceder al panel privado.
@@ -522,12 +614,26 @@ El administrador podrá:
 * Editar productos.
 * Eliminar productos.
 * Editar todas las columnas de un producto.
-* Reemplazar imágenes.
-* Eliminar imágenes.
-* Agregar imágenes.
+* Editar el nombre visible de cada columna.
+* Consultar el nombre original de cada columna como dato no editable.
 * Configurar columnas visibles para usuarios normales.
 * Configurar columnas buscables.
 * Configurar columnas filtrables.
+* Agregar texto de ayuda opcional a una columna.
+* Agregar imagen de ayuda opcional a una columna.
+* Reemplazar o eliminar la imagen de ayuda de una columna.
+* Reemplazar imágenes de productos.
+* Eliminar imágenes de productos.
+* Agregar imágenes de productos.
+* Administrar la sección Precios.
+* Crear listas de precios.
+* Editar listas de precios.
+* Borrar listas de precios.
+* Vaciar listas de precios.
+* Importar listas de precios desde Excel.
+* Combinar listas de precios.
+* Reemplazar listas de precios.
+* Editar columnas de listas de precios.
 * Descargar archivos originales.
 * Consultar errores de importación.
 * Gestionar usuarios, si se habilita esta función en el panel.
@@ -545,7 +651,10 @@ El usuario normal podrá:
 * Consultar productos visibles.
 * Buscar productos.
 * Filtrar productos por columnas visibles y filtrables.
-* Abrir imágenes ampliadas.
+* Abrir imágenes ampliadas de productos.
+* Consultar ayudas contextuales de columnas visibles, cuando existan.
+* Consultar listas de precios visibles, si el administrador lo permite.
+* Filtrar listas de precios visibles según las opciones disponibles.
 * Consultar información offline previamente sincronizada.
 
 El usuario normal no podrá:
@@ -567,7 +676,15 @@ El usuario normal no podrá:
 * Combinar listas.
 * Reemplazar imágenes.
 * Configurar columnas.
+* Editar nombres visibles de columnas.
+* Editar ayudas contextuales de columnas.
 * Modificar visibilidad.
+* Crear listas de precios.
+* Editar listas de precios.
+* Borrar listas de precios.
+* Vaciar listas de precios.
+* Reemplazar listas de precios.
+* Combinar listas de precios.
 * Descargar archivos originales, salvo que el administrador lo habilite explícitamente.
 
 Los controles de edición no deberán mostrarse para usuarios normales.
@@ -580,12 +697,14 @@ El sistema deberá permitir controlar qué información ve el usuario normal.
 
 El administrador siempre verá todo.
 
-La visibilidad deberá configurarse en tres niveles:
+La visibilidad deberá configurarse en estos niveles:
 
 ```text
 Catálogo
 Carpeta
 Columna
+Lista de precios
+Columna de lista de precios
 ```
 
 ---
@@ -659,6 +778,53 @@ Observaciones internas → visible para admin, no visible para user.
 
 ---
 
+#### 9.5 Ayuda contextual de columnas
+
+Cada columna podrá tener una ayuda contextual opcional.
+
+La ayuda contextual podrá contener:
+
+* Texto descriptivo.
+* Imagen descriptiva.
+* Texto e imagen al mismo tiempo.
+
+Esta ayuda servirá para explicar el significado de una cabecera de columna cuando el nombre no sea suficientemente claro.
+
+Ejemplo:
+
+```text
+Columna: Entre tapa
+
+Ayuda:
+Texto: Explica la medida o referencia técnica correspondiente a la pieza.
+Imagen: Muestra visualmente qué parte de la pieza se considera “entre tapa”.
+```
+
+La ayuda contextual será completamente opcional.
+
+Si una columna no tiene texto de ayuda ni imagen de ayuda, no deberá mostrarse ningún ícono adicional en la cabecera.
+
+Si una columna tiene texto de ayuda o imagen de ayuda, deberá mostrarse un ícono `Info` de Lucide junto al nombre visible de la columna.
+
+El ícono de ayuda deberá estar disponible para:
+
+* Administradores.
+* Usuarios normales, únicamente cuando la columna sea visible para ellos.
+
+---
+
+#### 9.6 Visibilidad de listas de precios
+
+Cada lista de precios podrá tener un control:
+
+```text
+Visible para usuarios normales: Sí / No
+```
+
+Si una lista de precios está oculta, el usuario normal no podrá verla ni acceder a sus ítems.
+
+---
+
 ## Parte III — Experiencia de usuario
 
 ### 10. Landing pública
@@ -679,7 +845,7 @@ Deberá incluir:
 * Botón de contacto por WhatsApp.
 * Acceso al sistema mediante botón “Iniciar Sesión”.
 
-La landing no mostrará información privada de los catálogos.
+La landing no mostrará información privada de los catálogos ni de las listas de precios.
 
 Los textos dirigidos al cliente deberán utilizar un tono formal y tratarlo de “Usted”.
 
@@ -717,12 +883,27 @@ El panel tendrá una navegación lateral con acceso a:
 
 ```text
 Catálogos
+Precios
 Archivos
 ```
 
-La sección Catálogos concentrará la consulta y gestión de catálogos, carpetas y productos.
+La sección **Catálogos** concentrará la consulta y gestión de catálogos, carpetas y productos.
 
-La sección Archivos concentrará la administración de archivos Excel subidos, historial e informes de importación.
+La sección **Precios** concentrará la consulta y gestión de listas de precios importadas desde Excel. Esta sección será independiente de los catálogos y no tendrá relación directa con la estructura Catálogo → Carpeta → Producto.
+
+La sección **Archivos** concentrará la administración de archivos Excel subidos, historial e informes de importación.
+
+La sección Precios deberá seguir el mismo criterio general de tablas dinámicas del sistema, pero con diferencias funcionales:
+
+* No reconocerá imágenes.
+* No extraerá imágenes embebidas.
+* No permitirá asociar imágenes a registros.
+* No utilizará modal de imagen de producto.
+* Reconocerá columnas, filas y campos del Excel.
+* Permitirá columnas variables según cada archivo.
+* Permitirá combinar o reemplazar listas importadas.
+* Permitirá administrar columnas de la lista.
+* Permitirá editar nombre visible, visibilidad y ayuda contextual de columnas.
 
 ---
 
@@ -737,6 +918,7 @@ El usuario podrá navegar mediante:
 * Buscador dentro del catálogo o carpeta.
 * Filtros acumulables por columna.
 * Pills de filtros activos.
+* Ayuda contextual en cabeceras de columna, cuando exista.
 
 Ejemplo:
 
@@ -884,6 +1066,168 @@ El usuario normal solo podrá visualizar los productos. No tendrá acceso a cont
 
 ---
 
+### 15.1 Configuración manual de columnas
+
+El administrador podrá configurar las columnas de cada carpeta o tabla dinámica.
+
+Cada columna tendrá:
+
+* Nombre original.
+* Nombre visible.
+* Visibilidad para usuario normal.
+* Estado buscable.
+* Estado filtrable.
+* Texto de ayuda opcional.
+* Imagen de ayuda opcional.
+
+El **nombre original** provendrá del Excel y deberá conservarse como referencia interna.
+
+El nombre original:
+
+* No será editable.
+* Deberá poder visualizarse en el panel de edición de columna.
+* Servirá para rastrear la columna original importada.
+
+El **nombre visible** será la cabecera que se mostrará en la tabla.
+
+El nombre visible:
+
+* Será obligatorio.
+* Será editable únicamente por el administrador.
+* Podrá ser distinto del nombre original.
+* No deberá alterar el nombre original importado desde Excel.
+
+Ejemplo:
+
+```text
+Nombre original: CANT. ESTRIAS
+Nombre visible: Cant. de estrías
+```
+
+La visibilidad para usuario normal se manejará mediante un toggle.
+
+La ayuda contextual será opcional. Si no se carga texto ni imagen de ayuda, la columna funcionará normalmente y no mostrará ícono de información.
+
+---
+
+### 15.2 Ayuda contextual en cabeceras de columna
+
+Cuando una columna tenga texto de ayuda o imagen de ayuda, la cabecera de la tabla deberá mostrar un ícono `Info` de Lucide junto al nombre visible de la columna.
+
+Ejemplo visual:
+
+```text
+Cant. de estrías  [Info]
+```
+
+El ícono `Info` solo deberá mostrarse si existe al menos uno de estos datos:
+
+* Texto de ayuda.
+* Imagen de ayuda.
+
+Si la columna no tiene ayuda contextual, no deberá mostrarse el ícono.
+
+#### Comportamiento del ícono Info
+
+Al hacer hover o focus sobre el ícono `Info`, se mostrará un popover o tooltip con la ayuda disponible.
+
+Casos posibles:
+
+1. Columna con solo texto de ayuda:
+
+   * El popover mostrará únicamente el texto.
+
+2. Columna con solo imagen de ayuda:
+
+   * El popover mostrará una miniatura o previsualización de la imagen.
+
+3. Columna con texto e imagen de ayuda:
+
+   * El popover mostrará ambos elementos.
+
+En dispositivos móviles, donde no existe hover real, el ícono deberá responder mediante tap o click.
+
+#### Modal de imagen de ayuda
+
+Si la ayuda contextual contiene una imagen, esa imagen deberá ser clickeable.
+
+Al hacer click sobre la imagen de ayuda:
+
+* Se abrirá un modal.
+* La imagen se mostrará en tamaño ampliado.
+* Si existe texto de ayuda, se mostrará junto a la imagen o debajo de ella.
+* Si no existe texto de ayuda, el modal mostrará solo la imagen.
+* El modal tendrá una cruz de cierre arriba a la derecha.
+* El modal podrá cerrarse con `Escape`.
+* El modal podrá cerrarse haciendo click fuera del contenido.
+
+No deberá abrirse un modal vacío.
+
+---
+
+### 15.3 Sección Precios
+
+El sistema contará con una sección privada llamada **Precios**.
+
+La sección Precios será independiente de Catálogos.
+
+No dependerá de:
+
+* Catálogos.
+* Carpetas.
+* Productos de catálogos.
+* Imágenes de productos.
+* Galerías.
+* Revisión de imágenes.
+
+La sección Precios permitirá administrar listas de precios importadas desde archivos Excel.
+
+Cada lista de precios podrá tener:
+
+* Nombre.
+* Descripción opcional.
+* Columnas dinámicas.
+* Filas o ítems de precio.
+* Fecha de última actualización.
+* Archivo de origen.
+* Estado visible u oculto para usuario normal, si corresponde.
+
+Ejemplos de columnas posibles:
+
+```text
+Código
+Descripción
+Precio
+Monto
+Marca
+Aplicación
+Proveedor
+Observaciones
+```
+
+El sistema deberá reconocer columnas desde Excel de forma similar al sistema de catálogos, pero sin procesar imágenes.
+
+El administrador podrá:
+
+* Crear una lista de precios.
+* Editar el nombre de una lista de precios.
+* Borrar una lista de precios.
+* Vaciar una lista de precios.
+* Importar una lista de precios desde Excel.
+* Combinar una lista importada con una lista existente.
+* Reemplazar una lista existente.
+* Editar columnas de la lista.
+* Editar el nombre visible de las columnas.
+* Configurar visibilidad de columnas.
+* Agregar ayuda contextual opcional a columnas.
+* Consultar el archivo original asociado.
+
+El usuario normal podrá consultar listas de precios visibles, si el administrador habilita esa visibilidad.
+
+Los filtros de la sección Precios serán más simples que los filtros de Catálogos y se definirán posteriormente.
+
+---
+
 ## Parte IV — Importación de datos
 
 ### 16. Importación de archivos Excel
@@ -910,14 +1254,26 @@ El soporte para `.xls` antiguo quedará sujeto a validación técnica.
 
 #### 16.2 Principio de importación
 
-Cada archivo Excel deberá importarse hacia un destino exacto:
+Los archivos Excel podrán importarse hacia dos tipos de destino:
 
 ```text
+Destino tipo Catálogo:
 Catálogo elegido
 └── Carpeta elegida
 ```
 
+```text
+Destino tipo Precios:
+Lista de precios elegida
+```
+
 El sistema no deberá decidir automáticamente el destino final sin confirmación del administrador.
+
+Para importaciones de Catálogos, el administrador deberá seleccionar catálogo y carpeta.
+
+Para importaciones de Precios, el administrador deberá seleccionar una lista de precios existente o crear una nueva.
+
+La importación de Precios no deberá procesar imágenes.
 
 ---
 
@@ -947,11 +1303,21 @@ El sistema valida:
 
 El archivo original se almacena como respaldo antes de procesarse.
 
+Cuando el destino sea Precios, no se solicitará ZIP de imágenes ni imágenes sueltas.
+
 ---
 
 #### 17.2 Paso 2 — Seleccionar destino
 
-Antes de aplicar los productos, el sistema deberá solicitar:
+Antes de aplicar los productos o registros, el sistema deberá solicitar el tipo de destino.
+
+```text
+Tipo de destino:
+Catálogos
+Precios
+```
+
+Si el administrador selecciona **Catálogos**, el flujo continuará con:
 
 ```text
 Catálogo: [dropdown] [+]
@@ -963,6 +1329,14 @@ El dropdown de carpeta dependerá del catálogo seleccionado.
 El botón `+` junto al catálogo permitirá crear un catálogo nuevo.
 
 El botón `+` junto a la carpeta permitirá crear una carpeta nueva dentro del catálogo seleccionado.
+
+Si el administrador selecciona **Precios**, el flujo continuará con:
+
+```text
+Lista de precios: [dropdown] [+]
+```
+
+El botón `+` junto a la lista de precios permitirá crear una nueva lista de precios.
 
 ---
 
@@ -977,46 +1351,65 @@ El sistema deberá analizar el archivo y reconocer:
 * Campo de referencia principal.
 * Posibles códigos únicos.
 * Fórmulas.
-* Imágenes embebidas.
-* Referencias a imágenes externas.
 * Filas vacías.
 * Encabezados duplicados.
 * Celdas combinadas.
 
-El sistema deberá mostrar una vista previa.
+Para importaciones de Catálogos, el sistema también podrá reconocer:
+
+* Imágenes embebidas.
+* Referencias a imágenes externas.
+* Código de imagen.
+
+Para importaciones de Precios, el sistema no deberá reconocer ni procesar imágenes.
+
+Si el Excel de Precios contiene imágenes, estas deberán ser ignoradas o informadas como contenido no procesado, sin bloquear la importación.
+
+El sistema deberá mostrar una vista previa antes de aplicar cualquier cambio.
 
 ---
 
-#### 17.4 Paso 4 — Mostrar productos reconocidos
+#### 17.4 Paso 4 — Mostrar registros reconocidos
 
-Una vez seleccionado el destino, el sistema mostrará una lista preliminar de productos reconocidos.
+Una vez seleccionado el destino, el sistema mostrará una lista preliminar de registros reconocidos.
+
+Si el destino es Catálogos, los registros serán productos.
+
+Si el destino es Precios, los registros serán ítems de lista de precios.
 
 La vista previa deberá incluir:
 
 * Columnas detectadas.
-* Productos reconocidos.
+* Registros reconocidos.
 * Código o campo de referencia.
-* Imágenes asociadas, si existen.
-* Productos con errores.
-* Productos posiblemente coincidentes con productos existentes.
-* Cantidad total de productos.
-* Cantidad de imágenes detectadas.
+* Registros con errores.
+* Registros posiblemente coincidentes con registros existentes.
+* Cantidad total de registros.
 * Cantidad de advertencias.
+
+Para Catálogos, también podrá incluir:
+
+* Imágenes asociadas.
+* Cantidad de imágenes detectadas.
+* Imágenes pendientes.
+* Imágenes rechazadas.
+
+Para Precios, no deberá incluir datos de imágenes.
 
 ---
 
 #### 17.5 Paso 5 — Resolver destino existente
 
-Si la carpeta seleccionada está vacía, el sistema deberá permitir aplicar la lista directamente después de la vista previa.
+Si el destino seleccionado está vacío, el sistema deberá permitir aplicar la lista directamente después de la vista previa.
 
-Si la carpeta seleccionada ya contiene productos, el sistema deberá ofrecer:
+Si el destino seleccionado ya contiene registros, el sistema deberá ofrecer:
 
 ```text
 Combinar lista
 Reemplazar lista
 ```
 
-Los productos coincidentes deberán resaltarse con color amarillo o una señal visual clara, indicando que ya existen dentro de la carpeta.
+Los registros coincidentes deberán resaltarse con color amarillo o una señal visual clara, indicando que ya existen dentro del destino.
 
 ---
 
@@ -1032,33 +1425,45 @@ Deberán requerir confirmación:
 * Vaciar catálogo.
 * Borrar carpeta.
 * Vaciar carpeta.
+* Borrar lista de precios.
+* Vaciar lista de precios.
 * Eliminar producto.
 * Eliminar imagen.
+* Eliminar ítem de precio.
+* Eliminar imagen de ayuda de columna.
 
 ---
 
 ### 18. Combinar, reemplazar e importar listas
 
-#### 18.1 Carpeta vacía
+El sistema deberá permitir aplicar listas importadas tanto en Catálogos como en Precios.
 
-Si la carpeta destino está vacía, el sistema deberá mostrar:
+En Catálogos, la lista se aplicará sobre una carpeta.
+
+En Precios, la lista se aplicará sobre una lista de precios.
+
+---
+
+#### 18.1 Destino vacío
+
+Si el destino está vacío, el sistema deberá mostrar:
 
 ```text
 Cancelar
 Aplicar lista
 ```
 
-`Cancelar` detendrá el proceso y no agregará productos.
+`Cancelar` detendrá el proceso y no agregará registros.
 
-`Aplicar lista` cerrará el asistente y agregará los productos reconocidos a la carpeta seleccionada.
+`Aplicar lista` cerrará el asistente y agregará los registros reconocidos al destino seleccionado.
 
-No será necesario un modal de confirmación adicional en este caso, porque no existen productos previos que puedan perderse.
+No será necesario un modal de confirmación adicional en este caso, porque no existen registros previos que puedan perderse.
 
 ---
 
-#### 18.2 Carpeta con productos existentes
+#### 18.2 Destino con registros existentes
 
-Si la carpeta destino ya contiene productos, el sistema deberá mostrar:
+Si el destino ya contiene registros, el sistema deberá mostrar:
 
 ```text
 Combinar lista
@@ -1069,47 +1474,54 @@ Reemplazar lista
 
 #### 18.3 Combinar lista
 
-La acción `Combinar lista` agregará productos nuevos a la carpeta existente.
+La acción `Combinar lista` agregará registros nuevos al destino existente.
 
 Para el MVP, la estrategia recomendada será:
 
 ```text
-Agregar productos nuevos y omitir productos coincidentes.
+Agregar registros nuevos y omitir registros coincidentes.
 ```
 
-Los productos coincidentes deberán aparecer resaltados en amarillo en la previsualización.
+Los registros coincidentes deberán aparecer resaltados en amarillo en la previsualización.
 
-El sistema deberá mostrar un modal de confirmación antes de aplicar la combinación.
+El sistema deberá mostrar un modal de confirmación antes de aplicar la combinación cuando existan coincidencias.
 
 ---
 
 #### 18.4 Reemplazar lista
 
-La acción `Reemplazar lista` sustituirá la lista actual de productos por la lista reconocida desde el Excel.
+La acción `Reemplazar lista` sustituirá la lista actual por la lista reconocida desde el Excel.
 
 Antes de aplicar esta acción, el sistema deberá mostrar un modal de confirmación.
 
 El modal deberá indicar claramente:
 
-* Que se eliminarán o reemplazarán los productos actuales de esa carpeta.
-* Qué carpeta será afectada.
-* Cuántos productos actuales existen.
-* Cuántos productos nuevos serán cargados.
+* Qué destino será afectado.
+* Cuántos registros actuales existen.
+* Cuántos registros nuevos serán cargados.
 * Que el archivo original quedará respaldado.
-
-La importación fallida no deberá borrar la lista vigente.
+* Que una importación fallida no deberá borrar la lista vigente.
 
 ---
 
-#### 18.5 Productos coincidentes
+#### 18.5 Registros coincidentes
 
 El sistema deberá detectar posibles coincidencias mediante:
 
 * Código principal.
 * Código normalizado.
-* Código de imagen, si aplica.
 * Campo de referencia elegido.
-* Equivalencias.
+* Equivalencias, cuando correspondan.
+
+Para Catálogos, también podrá considerar:
+
+* Código de imagen, si aplica.
+
+Para Precios, la coincidencia deberá basarse principalmente en:
+
+* Código.
+* Código normalizado.
+* Campo de referencia elegido.
 
 Cuando existan coincidencias, deberán destacarse visualmente.
 
@@ -1176,7 +1588,7 @@ Estados posibles:
 * Fallido.
 * Cancelado.
 
-Los productos nuevos no deberán reemplazar la versión activa hasta que la importación se complete correctamente y sea confirmada.
+Los registros nuevos no deberán reemplazar la versión activa hasta que la importación se complete correctamente y sea confirmada.
 
 ---
 
@@ -1185,23 +1597,30 @@ Los productos nuevos no deberán reemplazar la versión activa hasta que la impo
 Al finalizar, el sistema deberá informar:
 
 * Archivo procesado.
-* Catálogo destino.
-* Carpeta destino.
+* Tipo de destino: Catálogos o Precios.
+* Catálogo destino, cuando corresponda.
+* Carpeta destino, cuando corresponda.
+* Lista de precios destino, cuando corresponda.
 * Hojas detectadas.
 * Hojas importadas.
-* Productos procesados.
-* Productos creados.
-* Productos omitidos.
-* Productos coincidentes.
+* Registros procesados.
+* Registros creados.
+* Registros omitidos.
+* Registros coincidentes.
 * Fórmulas detectadas.
-* Imágenes detectadas.
-* Imágenes asociadas.
-* Imágenes pendientes.
-* Imágenes rechazadas.
 * Columnas detectadas.
 * Errores.
 * Advertencias.
 * Acción aplicada: importar, combinar o reemplazar.
+
+Para importaciones de Catálogos, también deberá informar:
+
+* Imágenes detectadas.
+* Imágenes asociadas.
+* Imágenes pendientes.
+* Imágenes rechazadas.
+
+Para importaciones de Precios, el informe no deberá incluir métricas de imágenes.
 
 Los errores deberán presentarse con lenguaje comprensible.
 
@@ -1220,6 +1639,9 @@ El sistema deberá manejar:
 3. Imágenes externas asociadas por nombre de archivo.
 4. Imágenes cargadas manualmente.
 5. Varias imágenes dentro de una misma fila.
+6. Imágenes de ayuda de columnas.
+
+Las imágenes de ayuda de columnas no deberán tratarse como imágenes de producto.
 
 ---
 
@@ -1233,6 +1655,15 @@ Un producto podrá tener:
 
 La ausencia de una imagen no deberá impedir la importación.
 
+Una columna podrá tener:
+
+* Ningún contenido de ayuda.
+* Texto de ayuda.
+* Imagen de ayuda.
+* Texto e imagen de ayuda.
+
+La ausencia de ayuda contextual no deberá impedir el uso de la columna.
+
 ---
 
 #### 23.3 Permisos sobre imágenes
@@ -1245,17 +1676,22 @@ El administrador podrá:
 * Marcar una imagen como principal.
 * Corregir asociaciones.
 * Ver imágenes ampliadas.
+* Agregar imágenes de ayuda de columna.
+* Reemplazar imágenes de ayuda de columna.
+* Eliminar imágenes de ayuda de columna.
 
 El usuario normal solo podrá:
 
 * Ver miniaturas.
 * Abrir imágenes ampliadas.
+* Ver ayudas contextuales de columnas visibles.
+* Abrir imágenes de ayuda en modal, si existen.
 
 ---
 
 ### 24. Imágenes embebidas
 
-Las imágenes pegadas dentro de las hojas deberán extraerse durante la importación.
+Las imágenes pegadas dentro de las hojas deberán extraerse durante la importación de catálogos.
 
 El sistema deberá considerar:
 
@@ -1269,6 +1705,8 @@ El sistema deberá considerar:
 La columna de origen podrá utilizarse para identificar la función de la imagen.
 
 Cuando la asociación no sea segura, la imagen deberá quedar pendiente de revisión.
+
+En importaciones de Precios, las imágenes embebidas deberán ignorarse o informarse como contenido no procesado.
 
 ---
 
@@ -1303,6 +1741,8 @@ Ambos deberán asociarse automáticamente.
 
 Las rutas locales originales de Windows no deberán almacenarse como dependencia de funcionamiento.
 
+La sección Precios no deberá asociar imágenes externas a sus registros.
+
 ---
 
 ### 26. Formatos de imagen
@@ -1329,7 +1769,7 @@ Una imagen dañada no deberá cancelar toda la importación.
 
 ### 27. Asociación y revisión de imágenes
 
-Cada imagen podrá tener uno de estos estados:
+Cada imagen de producto podrá tener uno de estos estados:
 
 * Asociada automáticamente.
 * Asociada manualmente.
@@ -1352,6 +1792,8 @@ El administrador podrá:
 * Marcar una imagen como principal.
 * Cambiar el orden.
 * Cambiar su etiqueta o función.
+
+Las imágenes de ayuda de columnas no participarán en este flujo de asociación de productos.
 
 ---
 
@@ -1379,6 +1821,8 @@ Si el producto tiene varias imágenes, el sistema podrá:
 
 Para el MVP, la prioridad será abrir la imagen seleccionada en tamaño ampliado.
 
+Las imágenes de ayuda de columnas también podrán abrirse en modal ampliado, pero se mostrarán dentro del flujo de ayuda contextual de cabeceras y no como imágenes de producto.
+
 ---
 
 ## Parte VI — Búsqueda, códigos y filtros
@@ -1389,6 +1833,8 @@ Para el MVP, la prioridad será abrir la imagen seleccionada en tamaño ampliado
 
 Cada producto podrá tener un código principal opcional.
 
+Cada ítem de precio también podrá tener un código principal opcional.
+
 ---
 
 #### 29.2 Equivalencias
@@ -1398,6 +1844,8 @@ Un producto podrá contener:
 * Ninguna equivalencia.
 * Una equivalencia.
 * Múltiples equivalencias.
+
+Las equivalencias en listas de precios podrán evaluarse posteriormente si Pablo lo requiere.
 
 ---
 
@@ -1534,11 +1982,13 @@ Cada resultado deberá mostrar:
 
 El usuario no deberá conocer previamente en qué archivo, catálogo o carpeta se encuentra el repuesto.
 
+La inclusión de listas de precios dentro de una búsqueda global general podrá evaluarse posteriormente. En la primera versión, Precios podrá tener su propia búsqueda o filtrado independiente.
+
 ---
 
 ### 34. Filtros acumulables por columna
 
-Esta será una funcionalidad central del sistema.
+Esta será una funcionalidad central del sistema de Catálogos.
 
 El objetivo es permitir que el usuario reduzca rápidamente una lista amplia de productos hasta encontrar opciones relevantes, incluso cuando el cliente no conoce el código exacto.
 
@@ -1676,6 +2126,8 @@ Fabricante o marca
 
 Este mapeo no deberá realizarse automáticamente sin confirmación.
 
+Los filtros de la sección Precios serán más simples que los filtros de Catálogos y se definirán posteriormente.
+
 ---
 
 ### 36. Configuración de columnas
@@ -1706,8 +2158,38 @@ También se podrá configurar:
 * Formato.
 * Unidad.
 * Etiqueta.
+* Texto de ayuda.
+* Imagen de ayuda.
+* Texto alternativo de imagen de ayuda.
 
-El administrador podrá modificar la visibilidad de columnas mediante toggles simples.
+El nombre original provendrá del Excel y deberá conservarse como referencia.
+
+El nombre original:
+
+* No será editable.
+* Deberá mostrarse en el CRUD de columnas.
+* Servirá para identificar la cabecera original del archivo importado.
+
+El nombre visible será obligatorio.
+
+El nombre visible:
+
+* Será editable por el administrador.
+* Será la cabecera utilizada en la tabla.
+* Podrá diferir del nombre original.
+* No deberá modificar el nombre original almacenado.
+
+La visibilidad para usuario normal será obligatoria y se manejará mediante un toggle.
+
+El texto de ayuda y la imagen de ayuda serán opcionales.
+
+Si una columna no tiene texto de ayuda ni imagen de ayuda, no deberá mostrar ícono `Info`.
+
+Si una columna tiene texto de ayuda o imagen de ayuda, deberá mostrar el ícono `Info` de Lucide junto al nombre visible.
+
+La imagen de ayuda, si existe, deberá poder ampliarse en un modal.
+
+Esta configuración aplicará tanto a columnas de Catálogos como a columnas de Precios.
 
 ---
 
@@ -1724,14 +2206,17 @@ Por cada archivo se mostrará:
 * Tamaño.
 * Fecha de carga.
 * Usuario.
-* Catálogo relacionado.
+* Tipo de destino: Catálogos o Precios.
+* Catálogo relacionado, cuando corresponda.
 * Carpeta relacionada, cuando corresponda.
+* Lista de precios relacionada, cuando corresponda.
 * Cantidad de hojas.
 * Hojas importadas.
 * Estado.
 * Fecha del último procesamiento.
 * Cantidad de productos.
-* Cantidad de imágenes.
+* Cantidad de registros de precios importados, cuando corresponda.
+* Cantidad de imágenes, cuando corresponda.
 * Errores encontrados.
 
 Acciones:
@@ -1741,12 +2226,16 @@ Acciones:
 * Reprocesar.
 * Crear un nuevo catálogo.
 * Crear una nueva carpeta.
+* Crear una nueva lista de precios.
 * Combinar lista.
 * Reemplazar lista.
+* Combinar una lista de precios.
+* Reemplazar una lista de precios.
 * Eliminar el archivo.
 * Consultar el informe de importación.
+* Consultar informe de importación de precios.
 
-La eliminación de un catálogo o carpeta no deberá eliminar automáticamente el archivo original.
+La eliminación de un catálogo, carpeta o lista de precios no deberá eliminar automáticamente el archivo original.
 
 ---
 
@@ -1772,6 +2261,10 @@ El modo offline será exclusivamente de lectura.
 * Consultar equivalencias.
 * Ver miniaturas sincronizadas.
 * Abrir imágenes sincronizadas.
+* Consultar ayudas contextuales sincronizadas.
+* Consultar listas de precios sincronizadas, si la sección Precios se habilita offline.
+* Consultar ítems de precios.
+* Aplicar filtros simples en listas de precios sincronizadas.
 
 ---
 
@@ -1794,6 +2287,15 @@ El modo offline será exclusivamente de lectura.
 * Gestionar usuarios.
 * Cambiar configuraciones.
 * Modificar visibilidad.
+* Crear listas de precios.
+* Editar listas de precios.
+* Borrar listas de precios.
+* Vaciar listas de precios.
+* Importar listas de precios.
+* Combinar listas de precios.
+* Reemplazar listas de precios.
+* Editar columnas de listas de precios.
+* Editar ayudas contextuales de columnas.
 
 ---
 
@@ -1830,6 +2332,7 @@ Para controlar el espacio del dispositivo:
 * Se podrá ofrecer una opción para sincronizar imágenes completas.
 * Se mostrará un reemplazo cuando una imagen no esté disponible localmente.
 * Los archivos Excel originales no se almacenarán offline.
+* Las imágenes de ayuda de columnas podrán sincronizarse como recursos livianos cuando sea necesario.
 
 ---
 
@@ -1837,55 +2340,67 @@ Para controlar el espacio del dispositivo:
 
 ### 40. Requerimientos funcionales
 
-| ID     | Requerimiento                        | Descripción                                                                                  |
-| ------ | ------------------------------------ | -------------------------------------------------------------------------------------------- |
-| RF-001 | Autenticación                        | El sistema deberá permitir iniciar y cerrar sesión con correo y contraseña.                  |
-| RF-002 | Roles                                | El sistema deberá diferenciar administradores y usuarios normales.                           |
-| RF-003 | Landing pública                      | La información institucional deberá ser pública, pero los catálogos serán privados.          |
-| RF-004 | Dominio                              | El sistema utilizará el dominio `www.rothamelrepuestos.com.ar`.                              |
-| RF-005 | Estructura Catálogo-Carpeta-Producto | El sistema deberá organizar la información en catálogos, carpetas y productos.               |
-| RF-006 | Gestión de catálogos                 | El administrador podrá crear, editar, ordenar, ocultar, mostrar, borrar y vaciar catálogos.  |
-| RF-007 | Gestión de carpetas                  | El administrador podrá crear, editar, ordenar, ocultar, mostrar, borrar y vaciar carpetas.   |
-| RF-008 | Gestión de productos                 | El administrador podrá crear, editar, duplicar y eliminar productos.                         |
-| RF-009 | Edición de columnas                  | El administrador podrá editar todas las columnas de un producto.                             |
-| RF-010 | Visibilidad de catálogos             | El administrador podrá definir si un catálogo es visible para usuarios normales.             |
-| RF-011 | Visibilidad de carpetas              | El administrador podrá definir si una carpeta es visible para usuarios normales.             |
-| RF-012 | Visibilidad de columnas              | El administrador podrá definir si una columna es visible para usuarios normales.             |
-| RF-013 | Subida de Excel                      | El administrador podrá subir archivos `.xlsx` y `.xlsm`.                                     |
-| RF-014 | Respaldo                             | El archivo original deberá almacenarse antes de procesarse.                                  |
-| RF-015 | Selección de destino                 | El administrador deberá seleccionar catálogo y carpeta antes de aplicar una lista importada. |
-| RF-016 | Creación rápida de destino           | El asistente de importación deberá permitir crear catálogos y carpetas desde botones `+`.    |
-| RF-017 | Análisis de hojas                    | El sistema deberá detectar hojas del archivo.                                                |
-| RF-018 | Detección de columnas                | El sistema deberá detectar encabezados y columnas.                                           |
-| RF-019 | Campos dinámicos                     | Las columnas particulares deberán conservarse sin modificar la base de datos.                |
-| RF-020 | Vista previa                         | El sistema deberá mostrar productos reconocidos antes de aplicar cambios.                    |
-| RF-021 | Coincidencias                        | El sistema deberá detectar y resaltar productos coincidentes.                                |
-| RF-022 | Combinar lista                       | El administrador podrá combinar una lista importada con una carpeta existente.               |
-| RF-023 | Reemplazar lista                     | El administrador podrá reemplazar los productos de una carpeta existente.                    |
-| RF-024 | Importar lista vacía                 | El administrador podrá aplicar una lista a una carpeta vacía.                                |
-| RF-025 | Confirmaciones                       | Las acciones destructivas deberán solicitar confirmación.                                    |
-| RF-026 | Fórmulas                             | El sistema deberá importar valores calculados sin ejecutar fórmulas arbitrarias.             |
-| RF-027 | Macros                               | El sistema no deberá ejecutar macros.                                                        |
-| RF-028 | Imágenes embebidas                   | El sistema deberá extraer imágenes pegadas cuando sea técnicamente posible.                  |
-| RF-029 | Imágenes externas                    | El sistema deberá asociar imágenes externas mediante códigos o nombres.                      |
-| RF-030 | Imágenes múltiples                   | Un producto podrá contener varias imágenes.                                                  |
-| RF-031 | Revisión de imágenes                 | Las asociaciones dudosas deberán quedar pendientes de revisión.                              |
-| RF-032 | Modal de imagen                      | Las imágenes de productos deberán poder abrirse en un modal ampliado.                        |
-| RF-033 | Equivalencias                        | Los productos podrán tener múltiples códigos equivalentes.                                   |
-| RF-034 | Normalización                        | El sistema deberá normalizar códigos y consultas.                                            |
-| RF-035 | Búsqueda por carpeta                 | Cada carpeta deberá tener un buscador configurable.                                          |
-| RF-036 | Búsqueda por catálogo                | El sistema deberá buscar entre todas las carpetas de un catálogo.                            |
-| RF-037 | Búsqueda global                      | El sistema deberá buscar entre todos los catálogos activos.                                  |
-| RF-038 | Origen del resultado                 | Cada resultado deberá indicar catálogo y carpeta.                                            |
-| RF-039 | Filtros acumulables                  | Las columnas filtrables deberán admitir filtros acumulables.                                 |
-| RF-040 | Pills de filtros activos             | El sistema deberá mostrar filtros activos encima de la tabla.                                |
-| RF-041 | Limpieza de filtros                  | Cada filtro activo deberá poder eliminarse individualmente.                                  |
-| RF-042 | Configuración de columnas            | El administrador podrá definir columnas visibles, buscables y filtrables.                    |
-| RF-043 | Archivos subidos                     | El administrador podrá consultar y descargar los archivos originales.                        |
-| RF-044 | Publicación segura                   | Una importación fallida no deberá afectar los datos vigentes.                                |
-| RF-045 | Consulta offline                     | Los catálogos sincronizados deberán estar disponibles sin conexión.                          |
-| RF-046 | Bloqueo offline                      | Las modificaciones deberán bloquearse sin conexión.                                          |
-| RF-047 | Sincronización                       | La copia local deberá actualizarse al recuperar Internet.                                    |
+| ID     | Requerimiento                        | Descripción                                                                                                             |
+| ------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| RF-001 | Autenticación                        | El sistema deberá permitir iniciar y cerrar sesión con correo y contraseña.                                             |
+| RF-002 | Roles                                | El sistema deberá diferenciar administradores y usuarios normales.                                                      |
+| RF-003 | Landing pública                      | La información institucional deberá ser pública, pero los catálogos serán privados.                                     |
+| RF-004 | Dominio                              | El sistema utilizará el dominio `www.rothamelrepuestos.com.ar`.                                                         |
+| RF-005 | Estructura Catálogo-Carpeta-Producto | El sistema deberá organizar la información en catálogos, carpetas y productos.                                          |
+| RF-006 | Gestión de catálogos                 | El administrador podrá crear, editar, ordenar, ocultar, mostrar, borrar y vaciar catálogos.                             |
+| RF-007 | Gestión de carpetas                  | El administrador podrá crear, editar, ordenar, ocultar, mostrar, borrar y vaciar carpetas.                              |
+| RF-008 | Gestión de productos                 | El administrador podrá crear, editar, duplicar y eliminar productos.                                                    |
+| RF-009 | Edición de columnas                  | El administrador podrá editar todas las columnas de un producto.                                                        |
+| RF-010 | Visibilidad de catálogos             | El administrador podrá definir si un catálogo es visible para usuarios normales.                                        |
+| RF-011 | Visibilidad de carpetas              | El administrador podrá definir si una carpeta es visible para usuarios normales.                                        |
+| RF-012 | Visibilidad de columnas              | El administrador podrá definir si una columna es visible para usuarios normales.                                        |
+| RF-013 | Subida de Excel                      | El administrador podrá subir archivos `.xlsx` y `.xlsm`.                                                                |
+| RF-014 | Respaldo                             | El archivo original deberá almacenarse antes de procesarse.                                                             |
+| RF-015 | Selección de destino                 | El administrador deberá seleccionar el destino antes de aplicar una lista importada.                                    |
+| RF-016 | Creación rápida de destino           | El asistente de importación deberá permitir crear catálogos, carpetas o listas de precios desde botones `+`.            |
+| RF-017 | Análisis de hojas                    | El sistema deberá detectar hojas del archivo.                                                                           |
+| RF-018 | Detección de columnas                | El sistema deberá detectar encabezados y columnas.                                                                      |
+| RF-019 | Campos dinámicos                     | Las columnas particulares deberán conservarse sin modificar la base de datos.                                           |
+| RF-020 | Vista previa                         | El sistema deberá mostrar registros reconocidos antes de aplicar cambios.                                               |
+| RF-021 | Coincidencias                        | El sistema deberá detectar y resaltar registros coincidentes.                                                           |
+| RF-022 | Combinar lista                       | El administrador podrá combinar una lista importada con un destino existente.                                           |
+| RF-023 | Reemplazar lista                     | El administrador podrá reemplazar los registros de un destino existente.                                                |
+| RF-024 | Importar lista vacía                 | El administrador podrá aplicar una lista a un destino vacío.                                                            |
+| RF-025 | Confirmaciones                       | Las acciones destructivas deberán solicitar confirmación.                                                               |
+| RF-026 | Fórmulas                             | El sistema deberá importar valores calculados sin ejecutar fórmulas arbitrarias.                                        |
+| RF-027 | Macros                               | El sistema no deberá ejecutar macros.                                                                                   |
+| RF-028 | Imágenes embebidas                   | El sistema deberá extraer imágenes pegadas cuando sea técnicamente posible en catálogos.                                |
+| RF-029 | Imágenes externas                    | El sistema deberá asociar imágenes externas mediante códigos o nombres en catálogos.                                    |
+| RF-030 | Imágenes múltiples                   | Un producto podrá contener varias imágenes.                                                                             |
+| RF-031 | Revisión de imágenes                 | Las asociaciones dudosas deberán quedar pendientes de revisión.                                                         |
+| RF-032 | Modal de imagen                      | Las imágenes de productos deberán poder abrirse en un modal ampliado.                                                   |
+| RF-033 | Equivalencias                        | Los productos podrán tener múltiples códigos equivalentes.                                                              |
+| RF-034 | Normalización                        | El sistema deberá normalizar códigos y consultas.                                                                       |
+| RF-035 | Búsqueda por carpeta                 | Cada carpeta deberá tener un buscador configurable.                                                                     |
+| RF-036 | Búsqueda por catálogo                | El sistema deberá buscar entre todas las carpetas de un catálogo.                                                       |
+| RF-037 | Búsqueda global                      | El sistema deberá buscar entre todos los catálogos activos.                                                             |
+| RF-038 | Origen del resultado                 | Cada resultado deberá indicar catálogo y carpeta.                                                                       |
+| RF-039 | Filtros acumulables                  | Las columnas filtrables deberán admitir filtros acumulables.                                                            |
+| RF-040 | Pills de filtros activos             | El sistema deberá mostrar filtros activos encima de la tabla.                                                           |
+| RF-041 | Limpieza de filtros                  | Cada filtro activo deberá poder eliminarse individualmente.                                                             |
+| RF-042 | Configuración de columnas            | El administrador podrá definir columnas visibles, buscables y filtrables.                                               |
+| RF-043 | Archivos subidos                     | El administrador podrá consultar y descargar los archivos originales.                                                   |
+| RF-044 | Publicación segura                   | Una importación fallida no deberá afectar los datos vigentes.                                                           |
+| RF-045 | Consulta offline                     | Los catálogos sincronizados deberán estar disponibles sin conexión.                                                     |
+| RF-046 | Bloqueo offline                      | Las modificaciones deberán bloquearse sin conexión.                                                                     |
+| RF-047 | Sincronización                       | La copia local deberá actualizarse al recuperar Internet.                                                               |
+| RF-048 | Nombre visible de columnas           | El administrador podrá editar el nombre visible de cada columna sin modificar el nombre original importado desde Excel. |
+| RF-049 | Nombre original no editable          | El nombre original de cada columna deberá conservarse y mostrarse como dato no editable.                                |
+| RF-050 | Ayuda contextual de columnas         | Las columnas podrán tener texto de ayuda opcional e imagen de ayuda opcional.                                           |
+| RF-051 | Ícono Info en columnas               | El ícono `Info` solo deberá mostrarse cuando exista texto o imagen de ayuda en la columna.                              |
+| RF-052 | Modal de imagen de ayuda             | La imagen de ayuda de una columna deberá poder abrirse en un modal ampliado.                                            |
+| RF-053 | Sección Precios                      | El sistema deberá contar con una sección privada llamada Precios, independiente de Catálogos.                           |
+| RF-054 | Listas de precios                    | El administrador podrá crear, editar, borrar, vaciar e importar listas de precios.                                      |
+| RF-055 | Importación de precios               | La sección Precios deberá importar archivos Excel reconociendo columnas, filas y campos.                                |
+| RF-056 | Precios sin imágenes                 | La importación de Precios no deberá procesar imágenes embebidas, imágenes externas ni galerías.                         |
+| RF-057 | Combinar precios                     | El administrador podrá combinar una lista de precios importada con una lista existente.                                 |
+| RF-058 | Reemplazar precios                   | El administrador podrá reemplazar una lista de precios existente mediante importación desde Excel.                      |
+| RF-059 | Columnas de precios                  | Las columnas de listas de precios deberán admitir nombre visible, visibilidad y ayuda contextual opcional.              |
 
 ---
 
@@ -1902,6 +2417,7 @@ Para controlar el espacio del dispositivo:
 * Los filtros por columna deberán responder con fluidez.
 * El filtrado deberá utilizar debounce para evitar cálculos excesivos.
 * El usuario deberá poder reducir una lista amplia a resultados relevantes en menos de 5 minutos.
+* La sección Precios deberá cargar y filtrar listas con fluidez.
 
 ---
 
@@ -1921,6 +2437,10 @@ Para controlar el espacio del dispositivo:
 * Registro de operaciones importantes.
 * Protección de datos offline.
 * Ocultamiento real de datos no visibles para usuario normal.
+* Las imágenes de ayuda de columnas deberán almacenarse de forma segura.
+* El usuario normal solo podrá ver ayudas contextuales de columnas visibles.
+* La sección Precios será privada y no deberá exponerse en la landing pública.
+* Las listas de precios ocultas no deberán ser accesibles por usuarios normales.
 
 ---
 
@@ -1938,6 +2458,12 @@ Para controlar el espacio del dispositivo:
 * Filtros por columna rápidos y acumulables.
 * Pills visibles para comprender qué filtros están activos.
 * Modal de imagen simple y rápido.
+* Las cabeceras de tabla deberán poder mostrar ayuda contextual mediante ícono `Info`.
+* La ayuda contextual deberá ser clara, breve y no invasiva.
+* El ícono `Info` deberá responder a hover, focus y click/tap.
+* Las imágenes de ayuda deberán poder ampliarse en modal.
+* La sección Precios deberá ser simple y rápida de consultar.
+* La sección Precios no deberá mezclar su navegación con Catálogos.
 
 ---
 
@@ -2017,7 +2543,7 @@ Campos principales:
 
 #### FolderColumn
 
-Representa una columna configurada dentro de una carpeta.
+Representa una columna configurada dentro de una carpeta de catálogo.
 
 Campos principales:
 
@@ -2039,6 +2565,17 @@ Campos principales:
 * Es equivalencia.
 * Es descripción.
 * Es código de imagen.
+* Texto de ayuda opcional.
+* Imagen de ayuda opcional.
+* Texto alternativo de imagen de ayuda.
+* Fecha de creación.
+* Fecha de modificación.
+
+El nombre original no será editable.
+
+El nombre visible será editable por el administrador.
+
+El texto de ayuda y la imagen de ayuda serán opcionales.
 
 ---
 
@@ -2098,6 +2635,80 @@ Campos principales:
 
 ---
 
+#### PriceList
+
+Representa una lista de precios independiente de los catálogos.
+
+Campos principales:
+
+* ID.
+* Nombre.
+* Descripción.
+* Estado.
+* Orden.
+* Visible para usuario normal.
+* Archivo de origen opcional.
+* Fecha de creación.
+* Fecha de actualización.
+
+Una lista de precios no pertenece a un catálogo ni a una carpeta.
+
+---
+
+#### PriceColumn
+
+Representa una columna configurada dentro de una lista de precios.
+
+Campos principales:
+
+* ID.
+* Lista de precios.
+* Nombre original.
+* Nombre visible.
+* Clave interna.
+* Tipo.
+* Orden.
+* Visible para usuario normal.
+* Buscable.
+* Filtrable.
+* Editable por administrador.
+* Es código.
+* Es descripción.
+* Es precio o monto.
+* Texto de ayuda opcional.
+* Imagen de ayuda opcional.
+* Texto alternativo de imagen de ayuda.
+* Fecha de creación.
+* Fecha de modificación.
+
+El nombre original no será editable.
+
+El nombre visible será editable por el administrador.
+
+El texto de ayuda y la imagen de ayuda serán opcionales.
+
+---
+
+#### PriceItem
+
+Representa una fila dentro de una lista de precios.
+
+Campos principales:
+
+* ID.
+* Lista de precios.
+* Código principal opcional.
+* Código normalizado opcional.
+* Descripción opcional.
+* Precio o monto opcional.
+* Datos dinámicos en JSONB.
+* Texto original.
+* Texto indexado.
+* Fecha de creación.
+* Fecha de modificación.
+
+---
+
 #### UploadedFile
 
 Representa un archivo almacenado.
@@ -2123,14 +2734,23 @@ Campos principales:
 
 * ID.
 * Archivo.
-* Catálogo destino.
-* Carpeta destino.
+* Tipo de destino.
+* Catálogo destino opcional.
+* Carpeta destino opcional.
+* Lista de precios destino opcional.
 * Estado.
 * Tipo de acción.
 * Configuración.
 * Resultados.
 * Fecha de inicio.
 * Fecha de finalización.
+
+Tipos de destino:
+
+```text
+CATALOG_FOLDER
+PRICE_LIST
+```
 
 Tipos de acción:
 
@@ -2140,18 +2760,22 @@ COMBINAR_LISTA
 REEMPLAZAR_LISTA
 ```
 
+Cuando el tipo de destino sea `CATALOG_FOLDER`, la importación podrá procesar imágenes.
+
+Cuando el tipo de destino sea `PRICE_LIST`, la importación no deberá procesar imágenes.
+
 ---
 
 #### ImportPreview
 
-Representa la vista previa de productos reconocidos antes de aplicar cambios.
+Representa la vista previa de registros reconocidos antes de aplicar cambios.
 
 Campos principales:
 
 * ID.
 * Importación.
-* Productos reconocidos.
-* Productos coincidentes.
+* Registros reconocidos.
+* Registros coincidentes.
 * Errores.
 * Advertencias.
 * Estado.
@@ -2181,6 +2805,7 @@ Campos principales:
 * Dispositivo.
 * Catálogos sincronizados.
 * Carpetas sincronizadas.
+* Listas de precios sincronizadas.
 * Versión.
 * Fecha de sincronización.
 
@@ -2202,13 +2827,14 @@ Campos principales:
 
 ### 43. Estrategia de almacenamiento
 
-No se creará una tabla física en PostgreSQL por cada Excel, catálogo o carpeta.
+No se creará una tabla física en PostgreSQL por cada Excel, catálogo, carpeta o lista de precios.
 
 Se utilizará:
 
-* Estructura relacional para usuarios, catálogos, carpetas, archivos, productos e imágenes.
+* Estructura relacional para usuarios, catálogos, carpetas, archivos, productos, precios e imágenes.
 * Columnas específicas para campos importantes.
 * JSONB para datos variables de productos.
+* JSONB para datos variables de ítems de precios.
 * Índices para búsquedas.
 * Índices para filtros frecuentes.
 * Storage privado para Excel e imágenes.
@@ -2220,8 +2846,18 @@ Esto permitirá:
 * Mantener un buscador global.
 * Incorporar nuevos catálogos sin modificar el código.
 * Crear carpetas dinámicamente.
+* Crear listas de precios dinámicamente.
 * Configurar visibilidad.
 * Simplificar el modo offline.
+
+Además:
+
+* Las listas de precios se almacenarán de forma independiente de los catálogos.
+* Las listas de precios utilizarán estructura relacional para listas y columnas.
+* Los ítems de precios utilizarán JSONB para datos variables.
+* Las imágenes de ayuda de columnas se almacenarán como recursos privados.
+* Las imágenes de ayuda no serán imágenes de producto.
+* Las importaciones de Precios no deberán generar miniaturas ni galerías.
 
 ---
 
@@ -2279,6 +2915,7 @@ Se utilizará para:
 * Miniaturas.
 * Archivos temporales.
 * ZIP de imágenes.
+* Imágenes de ayuda de columnas.
 
 ---
 
@@ -2298,6 +2935,8 @@ Se deberán utilizar herramientas compatibles con Node.js para:
 * Generar miniaturas.
 * Optimizar archivos.
 * Leer metadatos.
+
+La sección Precios no deberá procesar imágenes asociadas a sus ítems.
 
 ---
 
@@ -2333,6 +2972,10 @@ src/
 │   ├── search/
 │   ├── global-search/
 │   ├── filters/
+│   ├── prices/
+│   ├── price-lists/
+│   ├── price-imports/
+│   ├── column-help/
 │   ├── users/
 │   └── offline/
 │
@@ -2351,6 +2994,8 @@ src/
     ├── image-processors/
     ├── search/
     ├── filters/
+    ├── prices/
+    ├── column-help/
     ├── storage/
     ├── auth/
     └── database/
@@ -2388,6 +3033,28 @@ src/
 * Elimina productos.
 * Gestiona datos dinámicos.
 * Gestiona equivalencias.
+
+---
+
+#### ColumnConfigurationService
+
+* Edita nombres visibles de columnas.
+* Conserva nombres originales no editables.
+* Gestiona visibilidad de columnas.
+* Gestiona configuración buscable y filtrable.
+* Gestiona texto de ayuda de columnas.
+* Gestiona imagen de ayuda de columnas.
+
+---
+
+#### ColumnHelpService
+
+* Guarda textos de ayuda.
+* Valida imágenes de ayuda.
+* Almacena imágenes de ayuda.
+* Elimina imágenes de ayuda.
+* Devuelve la información necesaria para mostrar el ícono `Info`.
+* Devuelve la información necesaria para mostrar el modal de ayuda.
 
 ---
 
@@ -2453,6 +3120,32 @@ src/
 * Determina qué catálogos ve cada rol.
 * Determina qué carpetas ve cada rol.
 * Determina qué columnas ve cada rol.
+* Determina qué listas de precios ve cada rol.
+
+---
+
+#### PriceListService
+
+* Crea listas de precios.
+* Edita listas de precios.
+* Borra listas de precios.
+* Vacía listas de precios.
+* Gestiona visibilidad de listas de precios.
+* Gestiona columnas de listas de precios.
+
+---
+
+#### PriceImportService
+
+* Analiza archivos Excel de precios.
+* Detecta columnas.
+* Detecta filas.
+* Reconoce campos como código, descripción, precio o monto.
+* Genera vista previa.
+* Detecta coincidencias.
+* Combina listas.
+* Reemplaza listas.
+* Omite procesamiento de imágenes.
 
 ---
 
@@ -2462,6 +3155,7 @@ src/
 * Actualiza IndexedDB.
 * Gestiona versiones.
 * Sincroniza miniaturas.
+* Sincroniza datos de precios cuando corresponda.
 
 ---
 
@@ -2471,33 +3165,52 @@ src/
 Administrador
       │
       ▼
-Sube Excel y, si corresponde, ZIP de imágenes
+Selecciona tipo de importación
+      │
+      ├── Catálogos
+      │
+      └── Precios
+      │
+      ▼
+Sube Excel
+      │
+      ▼
+Si corresponde a Catálogos, puede subir ZIP o imágenes externas
+      │
+      ▼
+Si corresponde a Precios, no se solicitan imágenes
       │
       ▼
 Se almacenan los archivos originales
       │
       ▼
-Selecciona catálogo destino o crea uno nuevo
+Si es Catálogos:
+      │     ├── Selecciona catálogo destino o crea uno nuevo
+      │     └── Selecciona carpeta destino o crea una nueva
       │
       ▼
-Selecciona carpeta destino o crea una nueva
+Si es Precios:
+      │     └── Selecciona lista de precios o crea una nueva
       │
       ▼
-Se detectan hojas, columnas, fórmulas e imágenes
+Se detectan hojas, columnas, fórmulas y filas
       │
       ▼
-Se muestra una vista previa de productos reconocidos
+Si es Catálogos, también se detectan imágenes
       │
       ▼
-Se detectan coincidencias con productos existentes
+Se muestra una vista previa de registros reconocidos
       │
       ▼
-Si la carpeta está vacía:
+Se detectan coincidencias con registros existentes
+      │
+      ▼
+Si el destino está vacío:
       │     ├── Cancelar
       │     └── Aplicar lista
       │
       ▼
-Si la carpeta tiene productos:
+Si el destino tiene registros:
       │     ├── Combinar lista
       │     └── Reemplazar lista
       │
@@ -2508,13 +3221,16 @@ Se confirma la acción cuando corresponde
 Se procesa una versión preliminar
       │
       ▼
-Se revisan errores y asociaciones de imágenes
+Se revisan errores
+      │
+      ▼
+Si es Catálogos, se revisan asociaciones de imágenes
       │
       ▼
 Se aplica la lista
       │
       ▼
-El catálogo y la carpeta quedan actualizados
+El destino queda actualizado
 ```
 
 ---
@@ -2546,6 +3262,11 @@ El catálogo y la carpeta quedan actualizados
 * Crear configuración de columnas.
 * Crear visibilidad por rol.
 * Crear estructura base de tablas.
+* Edición de nombre visible de columnas.
+* Visibilidad de columnas para usuario normal.
+* Ayuda contextual de columnas.
+* Imagen de ayuda opcional por columna.
+* Modal de imagen de ayuda.
 
 **Estado:** ✅ Backend completo (backend Fase 3). UI catálogos aún con mock.
 
@@ -2565,6 +3286,8 @@ El catálogo y la carpeta quedan actualizados
 * Editar producto.
 * Eliminar producto.
 * Reemplazar imágenes.
+* Configurar columnas.
+* Configurar ayudas contextuales.
 
 **Estado:** 🔄 Catálogos/carpetas/columnas ✅ backend · productos e imágenes manuales ⏳ (backend Fase 6).
 
@@ -2589,7 +3312,9 @@ El catálogo y la carpeta quedan actualizados
 
 * Subida de Excel.
 * Respaldo.
+* Selección de tipo de destino.
 * Selección de catálogo y carpeta.
+* Selección de lista de precios.
 * Creación rápida mediante `+`.
 * Análisis de hojas.
 * Detección de encabezados.
@@ -2618,6 +3343,24 @@ El catálogo y la carpeta quedan actualizados
 
 ---
 
+#### Fase adicional — Precios
+
+* Crear sección Precios en el sidenav.
+* Crear listas de precios.
+* Crear columnas dinámicas de precios.
+* Importar Excel de precios.
+* Detectar columnas y filas.
+* Omitir procesamiento de imágenes.
+* Combinar listas de precios.
+* Reemplazar listas de precios.
+* Consultar precios desde el panel.
+* Configurar columnas de precios.
+* Definir filtros simples para precios en una etapa posterior.
+
+**Estado:** ⏳ Nueva funcionalidad a implementar.
+
+---
+
 #### Fase 7 — Archivos subidos
 
 * Historial.
@@ -2625,7 +3368,7 @@ El catálogo y la carpeta quedan actualizados
 * Estado de importaciones.
 * Informes.
 * Reprocesamiento.
-* Relación con catálogos y carpetas.
+* Relación con catálogos, carpetas y listas de precios.
 
 **Estado:** ⏳ (backend Fase 8).
 
@@ -2640,6 +3383,7 @@ El catálogo y la carpeta quedan actualizados
 * Filtros offline.
 * Miniaturas offline.
 * Bloqueo de edición.
+* Consulta offline de precios, si se habilita.
 
 **Estado:** ⏳ (backend Fase 9). Señal `grg:offline:clear` preparada en logout.
 
@@ -2653,6 +3397,8 @@ El catálogo y la carpeta quedan actualizados
 * Pruebas de filtros acumulables.
 * Pruebas de combinar/reemplazar.
 * Pruebas de visibilidad por usuario.
+* Pruebas de ayudas contextuales.
+* Pruebas de listas de precios.
 * Pruebas offline.
 * Capacitación.
 * Documentación.
@@ -2685,6 +3431,12 @@ No se incluyen inicialmente:
 * Conversión automática de cualquier estructura sin configuración.
 * Reconocimiento visual del contenido de las imágenes.
 * Edición avanzada de fotografías.
+* Asociación de imágenes a listas de precios.
+* Galerías de imágenes en Precios.
+* Reconocimiento de imágenes en Excel de Precios.
+* Filtros avanzados de Precios en la primera versión.
+* Relación automática entre productos de Catálogos y registros de Precios.
+* Sincronización automática de precios con proveedores externos.
 * NestJS.
 
 ---
@@ -2704,6 +3456,26 @@ No se incluyen inicialmente:
 
 ---
 
+#### Columnas
+
+* El administrador puede ver el nombre original de cada columna.
+* El nombre original de la columna no es editable.
+* El administrador puede editar el nombre visible de cada columna.
+* El nombre visible se muestra como cabecera de la tabla.
+* El administrador puede activar o desactivar la visibilidad de la columna para usuarios normales.
+* El administrador puede configurar si una columna es buscable.
+* El administrador puede configurar si una columna es filtrable.
+* El administrador puede agregar texto de ayuda opcional a una columna.
+* El administrador puede agregar imagen de ayuda opcional a una columna.
+* Si una columna no tiene texto ni imagen de ayuda, no se muestra el ícono `Info`.
+* Si una columna tiene texto o imagen de ayuda, se muestra el ícono `Info`.
+* Al hacer hover, focus o tap sobre el ícono `Info`, se muestra la ayuda disponible.
+* Si la ayuda contiene imagen, la imagen puede abrirse en un modal ampliado.
+* El modal de imagen de ayuda muestra la descripción si existe.
+* El modal no se abre vacío.
+
+---
+
 #### Usuarios y permisos
 
 * El admin puede editar.
@@ -2712,6 +3484,7 @@ No se incluyen inicialmente:
 * El admin puede ocultar catálogos para users normales.
 * El admin puede ocultar carpetas para users normales.
 * El admin puede ocultar columnas para users normales.
+* El user normal solo puede ver ayudas contextuales de columnas visibles.
 
 ---
 
@@ -2719,13 +3492,16 @@ No se incluyen inicialmente:
 
 * El archivo original queda respaldado.
 * El sistema detecta hojas y columnas.
-* El administrador selecciona catálogo y carpeta destino.
+* El administrador selecciona tipo de destino.
+* El administrador selecciona catálogo y carpeta destino para Catálogos.
+* El administrador selecciona lista de precios destino para Precios.
 * El administrador puede crear catálogo desde el asistente.
 * El administrador puede crear carpeta desde el asistente.
-* Se muestra una vista previa de productos reconocidos.
-* Los productos coincidentes se resaltan.
-* Si la carpeta está vacía, se puede aplicar la lista.
-* Si la carpeta tiene productos, se puede combinar o reemplazar.
+* El administrador puede crear lista de precios desde el asistente.
+* Se muestra una vista previa de registros reconocidos.
+* Los registros coincidentes se resaltan.
+* Si el destino está vacío, se puede aplicar la lista.
+* Si el destino tiene registros, se puede combinar o reemplazar.
 * Las acciones de combinar y reemplazar muestran confirmación cuando corresponde.
 * Los campos dinámicos se conservan.
 * Las fórmulas se importan mediante su valor calculado.
@@ -2747,8 +3523,8 @@ No se incluyen inicialmente:
 
 #### Imágenes
 
-* Se extraen imágenes embebidas compatibles.
-* Se importan imágenes externas.
+* Se extraen imágenes embebidas compatibles en catálogos.
+* Se importan imágenes externas en catálogos.
 * Las asociaciones por código funcionan.
 * Las imágenes ambiguas quedan pendientes.
 * Un producto admite múltiples imágenes.
@@ -2757,6 +3533,7 @@ No se incluyen inicialmente:
 * Al hacer click en una imagen existente, se abre un modal ampliado.
 * No se abre modal si el producto no tiene imagen.
 * El modal tiene cruz de cierre.
+* Las imágenes de ayuda de columna no se tratan como imágenes de producto.
 
 ---
 
@@ -2776,11 +3553,34 @@ No se incluyen inicialmente:
 
 ---
 
+#### Precios
+
+* Existe una sección `Precios` en el sidenav.
+* La sección Precios es independiente de Catálogos.
+* La sección Precios no utiliza imágenes de producto.
+* El administrador puede crear listas de precios.
+* El administrador puede editar listas de precios.
+* El administrador puede borrar listas de precios.
+* El administrador puede vaciar listas de precios.
+* El administrador puede importar Excel de precios.
+* El importador de Precios reconoce columnas y filas.
+* El importador de Precios no reconoce ni procesa imágenes.
+* El administrador puede combinar listas de precios.
+* El administrador puede reemplazar listas de precios.
+* Las acciones destructivas de Precios muestran confirmación.
+* Las columnas de Precios pueden tener nombre visible editable.
+* Las columnas de Precios pueden tener visibilidad configurable.
+* Las columnas de Precios pueden tener ayuda contextual opcional.
+* El usuario normal solo puede consultar listas de precios visibles, si están habilitadas.
+
+---
+
 #### Archivos
 
 * Existe una sección de archivos subidos.
 * Los archivos originales pueden descargarse.
 * Se pueden relacionar archivos con catálogos y carpetas.
+* Se pueden relacionar archivos con listas de precios.
 * Se pueden consultar informes de importación.
 * Los archivos anteriores permanecen respaldados.
 
@@ -2793,6 +3593,7 @@ No se incluyen inicialmente:
 * Las búsquedas funcionan offline.
 * Los filtros funcionan offline.
 * Las miniaturas sincronizadas se muestran.
+* Las listas de precios sincronizadas pueden consultarse, si se habilita esta opción.
 * Las modificaciones quedan bloqueadas.
 * La fecha de sincronización es visible.
 
@@ -2807,6 +3608,9 @@ El proyecto será considerado exitoso cuando:
 * Los archivos nuevos puedan incorporarse desde el panel.
 * Los productos puedan organizarse por catálogo y carpeta.
 * Los nombres de catálogos y carpetas puedan editarse.
+* El administrador pueda adaptar los títulos de columnas sin perder la referencia del Excel original.
+* El usuario pueda comprender columnas técnicas mediante ayudas contextuales.
+* Las columnas técnicas puedan incluir texto o imagen explicativa.
 * Las hojas de Excel puedan transformarse en carpetas utilizables.
 * Los productos puedan buscarse sin conocer el archivo de origen.
 * Los códigos equivalentes puedan encontrarse.
@@ -2817,6 +3621,8 @@ El proyecto será considerado exitoso cuando:
 * El administrador pueda corregir datos e imágenes.
 * El administrador pueda ocultar catálogos, carpetas o columnas para usuarios normales.
 * El usuario normal pueda ver, buscar y filtrar sin editar.
+* Las listas de precios puedan importarse y actualizarse desde Excel sin mezclarse con Catálogos.
+* El negocio pueda consultar precios desde una sección independiente del panel.
 * Los archivos originales permanezcan respaldados.
 * La información pueda consultarse sin conexión.
 * El sistema sea comprensible para Pablo y su hermano.
@@ -2829,6 +3635,10 @@ El proyecto será considerado exitoso cuando:
 * Pablo deberá confirmar qué columnas deben ser visibles para usuarios normales.
 * Pablo deberá confirmar qué columnas deben ser filtrables.
 * Pablo deberá confirmar qué columnas deben ser buscables.
+* Pablo deberá definir qué columnas necesitan ayuda contextual.
+* Pablo deberá proveer las imágenes explicativas de columnas cuando correspondan.
+* Las ayudas contextuales serán opcionales y no bloquearán el uso de una columna.
+* Las imágenes de ayuda de columnas no reemplazan imágenes de productos.
 * Pablo deberá proporcionar las imágenes externas con sus nombres originales.
 * Deberá conservarse la estructura de carpetas de muestra durante el análisis.
 * Algunas asociaciones de imágenes podrán requerir revisión manual.
@@ -2836,6 +3646,9 @@ El proyecto será considerado exitoso cuando:
 * No se ejecutarán macros.
 * Los filtros definitivos se acordarán por carpeta.
 * Los filtros globales se definirán después de mapear los campos comunes.
+* La sección Precios no tendrá relación automática con Catálogos en la primera versión.
+* Los filtros específicos de Precios se definirán posteriormente.
+* Los Excel de Precios podrán tener estructuras variables y requerir configuración inicial.
 * El modo offline requerirá una sincronización previa.
 * La primera importación podrá requerir configuración y asistencia de GRG.
 * Los nuevos catálogos podrán reutilizar configuraciones anteriores cuando posean estructuras similares.

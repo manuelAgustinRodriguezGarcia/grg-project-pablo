@@ -1,4 +1,5 @@
 import type { FolderColumn } from "@/generated/prisma/client";
+import { generateImportPrimaryCode } from "./generated-primary-code";
 import { mapHeadersToFolderColumns } from "./column-mapper";
 import { normalizeCodeForMatch } from "./match-detector";
 import type {
@@ -39,6 +40,10 @@ function findPrimaryCodeColumnKey(
   columns: FolderColumn[],
   config: ImportJobConfig,
 ): string | undefined {
+  if (config.useGeneratedPrimaryCodes) {
+    return undefined;
+  }
+
   if (config.primaryCodeColumnKey) {
     return config.primaryCodeColumnKey;
   }
@@ -128,16 +133,29 @@ export function mapSheetToProducts(
   const columnsByKey = new Map(columns.map((column) => [column.internalKey, column]));
   const primaryCodeColumnKey = findPrimaryCodeColumnKey(sheet, columns, config);
   const descriptionColumnKey = findDescriptionColumnKey(sheet, columns, config);
+  const usedGeneratedCodes = new Set<string>();
 
-  return sheet.rows.map((row) =>
-    mapRowToProduct(
+  return sheet.rows.map((row) => {
+    const mapped = mapRowToProduct(
       row,
       keyMap,
       primaryCodeColumnKey,
       descriptionColumnKey,
       columnsByKey,
-    ),
-  );
+    );
+
+    if (!config.useGeneratedPrimaryCodes) {
+      return mapped;
+    }
+
+    const primaryCode = generateImportPrimaryCode(usedGeneratedCodes);
+
+    return {
+      ...mapped,
+      primaryCode,
+      normalizedCode: normalizeCodeForMatch(primaryCode),
+    };
+  });
 }
 
 export type { ColumnMappingEntry, ImportJobConfig };

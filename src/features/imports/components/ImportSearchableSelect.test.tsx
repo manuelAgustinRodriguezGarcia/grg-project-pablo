@@ -22,6 +22,38 @@ describe("ImportSearchableSelect", () => {
     cleanup();
   });
 
+  it("muestra la etiqueta seleccionada con espacios cuando el control está cerrado", () => {
+    render(
+      <ImportSearchableSelect
+        options={OPTIONS}
+        value="a"
+        onChange={vi.fn()}
+        listboxLabel="Columnas"
+      />,
+    );
+
+    expect(screen.getByText("CÓDIGO DE CRAPODINAS")).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("oculta la etiqueta superpuesta al enfocar para buscar", () => {
+    const { container } = render(
+      <ImportSearchableSelect
+        options={OPTIONS}
+        value="a"
+        onChange={vi.fn()}
+        listboxLabel="Columnas"
+      />,
+    );
+
+    expect(container.querySelector(".searchableSelectDisplay")).toBeTruthy();
+
+    fireEvent.focus(screen.getByRole("combobox"));
+
+    expect(container.querySelector(".searchableSelectDisplay")).toBeNull();
+    expect(screen.getByRole("combobox")).toHaveValue("CÓDIGO DE CRAPODINAS");
+  });
+
   it("filtra opciones al escribir", () => {
     render(
       <ImportSearchableSelect
@@ -78,5 +110,69 @@ describe("ImportSearchableSelect", () => {
     fireEvent.change(input, { target: { value: "imagen" } });
 
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("mantiene el valor seleccionado al perder foco sin editar con clearOnQueryChange", () => {
+    const onChange = vi.fn();
+
+    render(
+      <ImportSearchableSelect
+        options={OPTIONS}
+        value="a"
+        onChange={onChange}
+        listboxLabel="Productos"
+        clearOnQueryChange
+      />,
+    );
+
+    const input = screen.getByRole("combobox");
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input).toHaveValue("CÓDIGO DE CRAPODINAS");
+  });
+
+  it("limpia la selección al borrar el producto con clearOnQueryChange", () => {
+    const onChange = vi.fn();
+
+    render(
+      <ImportSearchableSelect
+        options={OPTIONS}
+        value="a"
+        onChange={onChange}
+        listboxLabel="Productos"
+        clearOnQueryChange
+      />,
+    );
+
+    const input = screen.getByRole("combobox");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "" } });
+
+    expect(onChange).toHaveBeenCalledWith("");
+    expect(input).toHaveValue("");
+  });
+
+  it("cierra el dropdown al seleccionar con clearOnQueryChange", () => {
+    const onChange = vi.fn();
+
+    render(
+      <ImportSearchableSelect
+        options={OPTIONS}
+        value=""
+        onChange={onChange}
+        listboxLabel="Productos"
+        clearOnQueryChange
+      />,
+    );
+
+    const input = screen.getByRole("combobox");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "imagen" } });
+    fireEvent.mouseDown(screen.getByRole("option", { name: "CÓDIGO DE IMÁGEN" }));
+
+    expect(onChange).toHaveBeenCalledWith("b");
+    expect(input).toHaveAttribute("aria-expanded", "false");
   });
 });

@@ -16,12 +16,24 @@ export const columnMappingEntrySchema = z.object({
   folderColumnInternalKey: z.string().min(1),
 });
 
-export const importConfigSchema = z.object({
-  jobId: z.string().min(1),
-  columnMapping: z.array(columnMappingEntrySchema).optional(),
-  primaryCodeColumnKey: z.string().min(1).optional(),
-  descriptionColumnKey: z.string().min(1).optional(),
-});
+export const importConfigSchema = z
+  .object({
+    jobId: z.string().min(1),
+    columnMapping: z.array(columnMappingEntrySchema).optional(),
+    primaryCodeColumnKey: z.string().min(1).optional(),
+    descriptionColumnKey: z.string().min(1).optional(),
+    useGeneratedPrimaryCodes: z.boolean().optional(),
+  })
+  .superRefine((data, context) => {
+    if (!data.useGeneratedPrimaryCodes && !data.primaryCodeColumnKey) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "Debe seleccionar una columna código principal o activar la generación automática de códigos.",
+        path: ["primaryCodeColumnKey"],
+      });
+    }
+  });
 
 export const importApplySchema = z.object({
   jobId: z.string().min(1),

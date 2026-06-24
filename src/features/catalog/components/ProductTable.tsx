@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, ICON_STROKE } from "@/shared/icons";
+import { ChevronLeft, ChevronRight, File, ICON_STROKE, TableProperties } from "@/shared/icons";
 import type {
   ProductTablePrimaryImage,
   ProductTableResponse,
@@ -112,8 +112,19 @@ export function ProductTable({
 
   if (isLoading) {
     return (
-      <section className={styles.tablePanel} aria-label="Tabla de productos">
-        <p className={styles.tableState}>Cargando productos…</p>
+      <section
+        className={`${styles.tablePanel} ${styles.tablePanelLoading}`}
+        aria-label="Tabla de productos"
+        aria-busy="true"
+      >
+        <div className={styles.tableLoading} role="status" aria-live="polite">
+          <TableProperties
+            className={styles.tableLoadingIcon}
+            strokeWidth={ICON_STROKE}
+            aria-hidden
+          />
+          <p className={styles.tableLoadingText}>Cargando productos</p>
+        </div>
       </section>
     );
   }
@@ -136,13 +147,24 @@ export function ProductTable({
 
   const sortedColumns = [...data.columns].sort((left, right) => left.order - right.order);
   const showImageColumn = data.products.some((product) => product.primaryImage !== null);
-  const totalColumnCount = sortedColumns.length + (showImageColumn ? 1 : 0);
   const { from, to } = getPaginationRange(data.pagination);
   const { pagination } = data;
 
   return (
     <section className={styles.tablePanel} aria-label="Tabla de productos">
-      <div className={styles.tableWrap}>
+      <div
+        className={`${styles.tableWrap} ${data.products.length === 0 ? styles.tableWrapEmpty : ""}`}
+      >
+        {data.products.length === 0 ? (
+          <div className={styles.tableEmpty} role="status">
+            <File
+              className={styles.tableEmptyIcon}
+              strokeWidth={ICON_STROKE}
+              aria-hidden
+            />
+            <p className={styles.tableEmptyText}>No hay productos en esta carpeta.</p>
+          </div>
+        ) : (
         <table className={styles.productTable}>
           <thead>
             <tr>
@@ -171,14 +193,7 @@ export function ProductTable({
             </tr>
           </thead>
           <tbody>
-            {data.products.length === 0 ? (
-              <tr>
-                <td colSpan={Math.max(totalColumnCount, 1)} className={styles.tableEmptyCell}>
-                  No hay productos en esta carpeta.
-                </td>
-              </tr>
-            ) : (
-              data.products.map((product) => {
+            {data.products.map((product) => {
                 const previewUrl = getProductImagePreviewUrl(product.primaryImage);
 
                 return (
@@ -232,11 +247,11 @@ export function ProductTable({
                     );
                   })}
                 </tr>
-              );
-              })
-            )}
+                );
+            })}
           </tbody>
         </table>
+        )}
       </div>
 
       <footer className={styles.tableFooter}>

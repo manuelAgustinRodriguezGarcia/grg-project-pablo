@@ -18,6 +18,10 @@ import {
   type ParsedSheet,
   type DetectedHeader,
 } from "@/server/importers";
+import {
+  GENERATED_PRIMARY_CODE_COLUMN_KEY,
+  GENERATED_PRIMARY_CODE_DISPLAY_NAME,
+} from "@/server/importers/generated-primary-code";
 import { extractImagesFromZip, ZipExtractionError } from "@/server/image-processors/zip-extractor";
 import { columnRepository } from "@/server/repositories/column.repository";
 import { importJobRepository } from "@/server/repositories/import-job.repository";
@@ -318,8 +322,11 @@ export class CatalogImportService {
     const config: ImportJobConfig = {
       ...existingConfig,
       columnMapping: input.columnMapping,
-      primaryCodeColumnKey: input.primaryCodeColumnKey,
+      primaryCodeColumnKey: input.useGeneratedPrimaryCodes
+        ? undefined
+        : input.primaryCodeColumnKey,
       descriptionColumnKey: input.descriptionColumnKey,
+      useGeneratedPrimaryCodes: input.useGeneratedPrimaryCodes ?? false,
     };
 
     await importJobRepository.update(jobId, {
@@ -434,6 +441,7 @@ export class CatalogImportService {
         folderId: input.folderId,
         images: imageInputs,
         imageCodeColumnKeys,
+        includePrimaryCodeInMatch: !input.config.useGeneratedPrimaryCodes,
       });
 
       warnings.push(...external.warnings);
@@ -649,9 +657,11 @@ export class CatalogImportService {
         }
 
         const flags = detectSemanticFlags(header.originalName);
-        const isPrimaryCode = config.primaryCodeColumnKey
-          ? config.primaryCodeColumnKey === targetKey
-          : !semanticUsed.primary && flags.isPrimaryCode;
+        const isPrimaryCode = config.useGeneratedPrimaryCodes
+          ? false
+          : config.primaryCodeColumnKey
+            ? config.primaryCodeColumnKey === targetKey
+            : !semanticUsed.primary && flags.isPrimaryCode;
         const isDescription = config.descriptionColumnKey
           ? config.descriptionColumnKey === targetKey
           : !semanticUsed.description && flags.isDescription;
@@ -677,6 +687,10 @@ export class CatalogImportService {
       if (columnsToCreate.length > 0) {
         await columnRepository.createMany(columnsToCreate);
         columns = await columnRepository.findByFolderIdOrdered(folderId);
+      }
+
+      if (config.useGeneratedPrimaryCodes) {
+        columns = await this.syncGeneratedPrimaryCodeColumn(folderId, columns);
       }
 
       return columns;
@@ -711,11 +725,13 @@ export class CatalogImportService {
         internalKey: targetKey,
         dataType: header.inferredDataType,
         order: columns.length + index,
-        isPrimaryCode: config.primaryCodeColumnKey === targetKey,
+        isPrimaryCode:
+          !config.useGeneratedPrimaryCodes && config.primaryCodeColumnKey === targetKey,
         isDescription: config.descriptionColumnKey === targetKey,
         isImageCode: flags.isImageCode,
         isSearchable:
-          config.primaryCodeColumnKey === targetKey ||
+          (!config.useGeneratedPrimaryCodes &&
+            config.primaryCodeColumnKey === targetKey) ||
           config.descriptionColumnKey === targetKey,
         isFilterable: false,
       });
@@ -728,7 +744,9 @@ export class CatalogImportService {
 
     if (config.primaryCodeColumnKey || config.descriptionColumnKey) {
       for (const column of columns) {
-        const nextPrimary = column.internalKey === config.primaryCodeColumnKey;
+        const nextPrimary =
+          !config.useGeneratedPrimaryCodes &&
+          column.internalKey === config.primaryCodeColumnKey;
         const nextDescription = column.internalKey === config.descriptionColumnKey;
 
         if (
@@ -746,7 +764,50 @@ export class CatalogImportService {
       columns = await columnRepository.findByFolderIdOrdered(folderId);
     }
 
+    if (config.useGeneratedPrimaryCodes) {
+      columns = await this.syncGeneratedPrimaryCodeColumn(folderId, columns);
+    }
+
     return columns;
+  }
+
+  private async syncGeneratedPrimaryCodeColumn(
+    folderId: string,
+    columns: Awaited<ReturnType<typeof columnRepository.findByFolderIdOrdered>>,
+  ) {
+    const hasGeneratedColumn = columns.some(
+      (column) => column.internalKey === GENERATED_PRIMARY_CODE_COLUMN_KEY,
+    );
+
+    if (!hasGeneratedColumn) {
+      await columnRepository.create({
+        folderId,
+        originalName: GENERATED_PRIMARY_CODE_DISPLAY_NAME,
+        displayName: GENERATED_PRIMARY_CODE_DISPLAY_NAME,
+        internalKey: GENERATED_PRIMARY_CODE_COLUMN_KEY,
+        dataType: "TEXT",
+        order: columns.length,
+        isPrimaryCode: true,
+        isDescription: false,
+        isImageCode: false,
+        isSearchable: true,
+        isFilterable: false,
+      });
+      columns = await columnRepository.findByFolderIdOrdered(folderId);
+    }
+
+    for (const column of columns) {
+      const nextPrimary = column.internalKey === GENERATED_PRIMARY_CODE_COLUMN_KEY;
+
+      if (column.isPrimaryCode !== nextPrimary) {
+        await columnRepository.update(column.id, {
+          isPrimaryCode: nextPrimary,
+          isSearchable: nextPrimary || column.isDescription || column.isSearchable,
+        });
+      }
+    }
+
+    return columnRepository.findByFolderIdOrdered(folderId);
   }
 
   async buildPreview(jobId: string, configOverride?: ImportJobConfig) {

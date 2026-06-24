@@ -31,10 +31,16 @@ export type ImageMatchOutcome =
   | { status: "PENDING_REVIEW" }
   | { status: "DUPLICATE_NAME" };
 
+export type BuildProductMatchIndexOptions = {
+  includePrimaryCode?: boolean;
+};
+
 export function buildProductMatchIndex(
   products: ProductForMatching[],
   imageCodeColumnKeys: string[],
+  options: BuildProductMatchIndexOptions = {},
 ): ProductMatchIndex {
+  const includePrimaryCode = options.includePrimaryCode ?? true;
   const byCode = new Map<string, string[]>();
 
   const addCode = (code: string | null | undefined, productId: string): void => {
@@ -53,8 +59,10 @@ export function buildProductMatchIndex(
   };
 
   for (const product of products) {
-    addCode(product.primaryCode, product.id);
-    addCode(product.normalizedCode, product.id);
+    if (includePrimaryCode) {
+      addCode(product.primaryCode, product.id);
+      addCode(product.normalizedCode, product.id);
+    }
 
     for (const columnKey of imageCodeColumnKeys) {
       const value = product.dynamicData[columnKey];
@@ -114,8 +122,9 @@ export class ImageMatchingService {
   buildIndex(
     products: ProductForMatching[],
     imageCodeColumnKeys: string[],
+    options?: BuildProductMatchIndexOptions,
   ): ProductMatchIndex {
-    return buildProductMatchIndex(products, imageCodeColumnKeys);
+    return buildProductMatchIndex(products, imageCodeColumnKeys, options);
   }
 
   matchExternalImage(

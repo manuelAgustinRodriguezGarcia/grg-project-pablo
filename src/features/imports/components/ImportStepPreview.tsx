@@ -2,6 +2,7 @@
 
 import type { ImportActionType } from "@/generated/prisma/client";
 import type { ImportPreviewResponse } from "@/features/imports/types/import-job.types";
+import { FileDown, ICON_STROKE, RefreshCcw } from "@/shared/icons";
 import styles from "./ImportWizard.module.scss";
 
 const PREVIEW_ROW_LIMIT = 50;
@@ -14,6 +15,18 @@ type ImportStepPreviewProps = {
   selectedAction: ImportActionType | null;
   onSelectAction: (action: ImportActionType) => void;
 };
+
+async function copyPrimaryCode(code: string) {
+  if (!code) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(code);
+  } catch {
+    // Clipboard may be unavailable outside a secure context.
+  }
+}
 
 export function ImportStepPreview({
   preview,
@@ -28,20 +41,14 @@ export function ImportStepPreview({
 
   return (
     <div>
-      <div className={styles.destinationInfo}>
-        <span>
-          <span className={styles.destinationInfoLabel}>Catálogo: </span>
-          {catalogName}
-        </span>
-        <span>
-          <span className={styles.destinationInfoLabel}>Carpeta: </span>
-          {folderName}
-        </span>
-        <span>
-          <span className={styles.destinationInfoLabel}>Hoja: </span>
-          {sheetName}
-        </span>
-      </div>
+      <p className={styles.destinationInfo}>
+        Importando hoja{" "}
+        <strong className={styles.destinationInfoBold}>{sheetName}</strong> en
+        catálogo{" "}
+        <strong className={styles.destinationInfoBold}>{catalogName}</strong>,
+        carpeta:{" "}
+        <strong className={styles.destinationInfoBold}>{folderName}</strong>
+      </p>
 
       <div className={styles.summaryGrid}>
         <div className={styles.summaryCard}>
@@ -69,30 +76,36 @@ export function ImportStepPreview({
           <thead>
             <tr>
               <th>Código</th>
-              <th>Descripción</th>
-              <th>Estado</th>
+              <th>Columna Nueva</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr
-                key={`${row.rowNumber}-${row.primaryCode ?? ""}`}
-                className={row.isMatch ? styles.matchRow : undefined}
-              >
-                <td>{row.primaryCode ?? "—"}</td>
-                <td>{row.description ?? "—"}</td>
-                <td>
-                  {row.isMatch ? (
-                    <span className={styles.matchBadge}>Ya existe</span>
-                  ) : (
-                    "Nuevo"
-                  )}
-                </td>
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const primaryCode = row.primaryCode ?? "";
+
+              return (
+                <tr
+                  key={`${row.rowNumber}-${primaryCode}`}
+                  className={row.isMatch ? styles.matchRow : undefined}
+                >
+                  <td
+                    className={styles.previewTableCodeCell}
+                    title={primaryCode || undefined}
+                    onClick={() => {
+                      void copyPrimaryCode(primaryCode);
+                    }}
+                  >
+                    {primaryCode || "—"}
+                  </td>
+                  <td className={styles.previewTableNewColumnCell}>
+                    {row.isMatch ? "No" : "Sí"}
+                  </td>
+                </tr>
+              );
+            })}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={3}>No se detectaron productos en la hoja.</td>
+                <td colSpan={2}>No se detectaron productos en la hoja.</td>
               </tr>
             ) : null}
           </tbody>
@@ -114,7 +127,7 @@ export function ImportStepPreview({
         </div>
       ) : null}
 
-      <p className={styles.sectionLabel}>¿Qué querés hacer?</p>
+      <p className={styles.sectionLabel}>¿Qué desea hacer?</p>
 
       {summary.folderIsEmpty ? (
         <div className={styles.actionChoices}>
@@ -123,10 +136,15 @@ export function ImportStepPreview({
             className={`${styles.actionChoice} ${selectedAction === "IMPORTAR_LISTA" ? styles.actionChoiceActive : ""}`}
             onClick={() => onSelectAction("IMPORTAR_LISTA")}
           >
-            <span className={styles.actionChoiceTitle}>Importar lista</span>
-            <span className={styles.actionChoiceText}>
-              La carpeta está vacía. Se agregarán los {summary.totalProducts}{" "}
-              productos detectados.
+            <span className={styles.actionChoiceIcon} aria-hidden>
+              <FileDown strokeWidth={ICON_STROKE} />
+            </span>
+            <span className={styles.actionChoiceContent}>
+              <span className={styles.actionChoiceTitle}>Importar lista</span>
+              <span className={styles.actionChoiceText}>
+                La carpeta está vacía. Se agregarán los {summary.totalProducts}{" "}
+                productos detectados.
+              </span>
             </span>
           </button>
         </div>
@@ -137,10 +155,12 @@ export function ImportStepPreview({
             className={`${styles.actionChoice} ${selectedAction === "COMBINAR_LISTA" ? styles.actionChoiceActive : ""}`}
             onClick={() => onSelectAction("COMBINAR_LISTA")}
           >
-            <span className={styles.actionChoiceTitle}>Combinar</span>
-            <span className={styles.actionChoiceText}>
-              Mantiene los {summary.folderProductCount} productos actuales y
-              agrega solo los nuevos.
+            <span className={styles.actionChoiceContent}>
+              <span className={styles.actionChoiceTitle}>Combinar</span>
+              <span className={styles.actionChoiceText}>
+                Mantiene los {summary.folderProductCount} productos actuales y
+                agrega solo los nuevos.
+              </span>
             </span>
           </button>
           <button
@@ -148,10 +168,15 @@ export function ImportStepPreview({
             className={`${styles.actionChoice} ${selectedAction === "REEMPLAZAR_LISTA" ? styles.actionChoiceActive : ""}`}
             onClick={() => onSelectAction("REEMPLAZAR_LISTA")}
           >
-            <span className={styles.actionChoiceTitle}>Reemplazar</span>
-            <span className={styles.actionChoiceText}>
-              Borra los {summary.folderProductCount} productos actuales y los
-              sustituye por la nueva lista.
+            <span className={styles.actionChoiceIcon} aria-hidden>
+              <RefreshCcw strokeWidth={ICON_STROKE} />
+            </span>
+            <span className={styles.actionChoiceContent}>
+              <span className={styles.actionChoiceTitle}>Reemplazar</span>
+              <span className={styles.actionChoiceText}>
+                Borra los {summary.folderProductCount} productos actuales y los
+                sustituye por la nueva lista.
+              </span>
             </span>
           </button>
         </div>

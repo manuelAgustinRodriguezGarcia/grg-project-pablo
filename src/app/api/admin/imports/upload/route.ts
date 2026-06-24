@@ -91,7 +91,21 @@ async function collectOptionalImages(
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        {
+          error:
+            "No se pudo leer el archivo enviado. Si el Excel pesa más de 50 MB, reduzca su tamaño o quite imágenes embebidas.",
+          code: "PAYLOAD_TOO_LARGE",
+        },
+        { status: 413 },
+      );
+    }
+
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
