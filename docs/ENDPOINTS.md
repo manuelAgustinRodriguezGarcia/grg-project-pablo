@@ -1,7 +1,7 @@
 # ENDPOINTS — Referencia para frontend
 
-> Contratos de API y Server Actions **implementados** (Fases 2–5 backend). Plan futuro: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md). Producto: [`PRD.md`](./PRD.md).  
-> Última actualización: 2026-06-23.
+> Contratos de API y Server Actions **implementados** (Fases 2–6 backend). Plan futuro: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md). Producto: [`PRD.md`](./PRD.md).  
+> Última actualización: 2026-06-24.
 
 ---
 
@@ -17,6 +17,7 @@
 | `GET /api/admin/directory` | ❌ | Tarjetas de catálogos (directorio) |
 | `GET /api/admin/catalogs/{id}/navigation` | ❌ | Selector catálogo → carpetas |
 | `GET /api/admin/folders/{id}/products` | ❌ | Tabla de productos paginada |
+| CRUD productos / equivalencias / imágenes manuales (REST + actions) | ❌ | APIs Fase 6 listas; UI formulario/edición pendiente |
 | Acciones de usuarios | ❌ | Falta `/admin/users` |
 | Acciones de catálogos / carpetas / columnas | ❌ | CRUD admin sin UI |
 | Importador Excel (REST + actions) | ❌ | APIs listas; UI `/admin/archivos` pendiente |
@@ -214,7 +215,87 @@ Columnas visibles + productos paginados.
 
 `CONSULTA`: `dynamicData` excluye claves de columnas ocultas.
 
-→ `src/features/catalog/schemas/product.schemas.ts`
+→ `src/features/records/schemas/product.schemas.ts`
+
+---
+
+### `POST /api/admin/folders/{folderId}/products`
+
+Crea un producto manual en la carpeta. Solo `ADMIN`. Valida columnas según `FolderColumn` (`isAdminEditable`, `isRequired`, `isReadOnly`).
+
+**Body JSON:** `{ "values": { "<internalKey>": <valor>, ... } }`
+
+**201:** `ProductDetail` (producto + equivalencias parseadas + `createdAt`/`updatedAt`).
+
+**400:** `VALIDATION_ERROR` | `COLUMN_NOT_EDITABLE`
+
+→ `src/app/api/admin/folders/[folderId]/products/route.ts`
+
+---
+
+### `GET /api/admin/products/{productId}`
+
+Detalle de producto para edición admin. **200:** `ProductDetail`.
+
+---
+
+### `PATCH /api/admin/products/{productId}`
+
+Actualiza valores de columnas editables. **Body:** `{ "values": { ... } }`. **200:** `ProductDetail`.
+
+---
+
+### `DELETE /api/admin/products/{productId}`
+
+Elimina producto, imágenes asociadas (Storage best-effort) y equivalencias. **200:** `{ "success": true }`.
+
+---
+
+### `POST /api/admin/products/{productId}/duplicate`
+
+Duplica producto (sufijo `(copia)` en código principal), imágenes en Storage y equivalencias. **201:** `ProductDetail`.
+
+→ `src/app/api/admin/products/[productId]/route.ts`, `.../duplicate/route.ts`
+
+---
+
+### `GET /api/admin/products/{productId}/equivalences`
+
+Lista códigos equivalentes normalizados del producto. Solo `ADMIN`.
+
+**200:** `{ "productId": "clx...", "equivalences": EquivalenceListItem[] }`
+
+---
+
+### `POST /api/admin/products/{productId}/equivalences`
+
+Agrega equivalencia manual. **Body:** `{ "originalCode": "0193-SILVA" }`. **201:** `EquivalenceListItem`.
+
+**400:** `DUPLICATE_CODE` | `VALIDATION_ERROR`
+
+---
+
+### `DELETE /api/admin/products/{productId}/equivalences/{equivalenceId}`
+
+Elimina una equivalencia. **200:** `{ "success": true }`.
+
+→ `src/app/api/admin/products/[productId]/equivalences/`
+
+---
+
+### Imágenes manuales de producto
+
+Además del `GET` de galería (Fase 5):
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/api/admin/products/{productId}/images` | `multipart/form-data`: `file` (+ opc. `isPrimary`, `sortOrder`, `label`) |
+| `PATCH` | `.../images/{imageId}` | JSON metadatos **o** `multipart` con `file` para reemplazar imagen |
+| `DELETE` | `.../images/{imageId}` | Soft-delete (`status: DELETED`) |
+
+`source: MANUAL` · `status: ASSOCIATED_MANUAL` · bucket `product-images`.
+
+→ `src/app/api/admin/products/[productId]/images/`
 
 ---
 
@@ -455,6 +536,42 @@ Campos opcionales de create/update: ver `src/features/catalog/schemas/column.sch
 
 ---
 
+## Server Actions — Productos (solo `ADMIN`)
+
+Import: `@/features/records/actions/product.actions`
+
+| Acción | Entrada | Respuesta `data` | Notas |
+|--------|---------|------------------|-------|
+| `getProductAction` | `{ productId }` | `ProductDetail` | Incluye equivalencias y timestamps |
+| `createProductAction` | `{ folderId, values }` | `ProductDetail` | Valida según columnas de la carpeta |
+| `updateProductAction` | `{ productId, values }` | `ProductDetail` | Merge con valores actuales |
+| `deleteProductAction` | `{ productId }` | `undefined` | |
+| `duplicateProductAction` | `{ productId }` | `ProductDetail` | Copia imágenes y equivalencias |
+| `listEquivalencesAction` | `{ productId }` | `EquivalenceListItem[]` | |
+| `addEquivalenceAction` | `{ productId, originalCode }` | `EquivalenceListItem` | |
+| `removeEquivalenceAction` | `{ productId, equivalenceId }` | `undefined` | |
+
+**Errores:** `PRODUCT_NOT_FOUND`, `FOLDER_NOT_FOUND`, `VALIDATION_ERROR`, `COLUMN_NOT_EDITABLE`, `DUPLICATE_CODE`, `EQUIVALENCE_NOT_FOUND`, `FORBIDDEN`.
+
+Schemas: `src/features/records/schemas/product.schemas.ts` · Tipos: `src/features/records/types/product.types.ts`
+
+---
+
+## Server Actions — Imágenes manuales de producto (solo `ADMIN`)
+
+Import: `@/features/product-images/actions/product-image.actions`
+
+| Acción | Entrada | Respuesta `data` |
+|--------|---------|------------------|
+| `uploadProductImageAction` | `FormData`: `productId`, `file`, opc. `isPrimary`, `sortOrder`, `label` | `ProductImageReviewItem` |
+| `replaceProductImageAction` | `FormData`: `productId`, `imageId`, `file` | `ProductImageReviewItem` |
+| `updateProductImageAction` | `{ productId, imageId, isPrimary?, sortOrder?, label? }` | `ProductImageReviewItem` |
+| `deleteProductImageAction` | `{ productId, imageId }` | `undefined` |
+
+**Códigos error:** `IMAGE_NOT_FOUND`, `PRODUCT_NOT_FOUND`, `VALIDATION_ERROR`, `FORBIDDEN`.
+
+---
+
 ## Server Actions — Importación (solo `ADMIN`)
 
 Import: `@/features/imports/actions/import.actions`
@@ -513,13 +630,13 @@ Navegación: `src/features/admin/data/adminNav.ts`. Destino post-login: `/admin`
 
 ## Auditoría (interno)
 
-Sin endpoint de consulta. Eventos en `AuditLog`: login/logout, CRUD usuarios, CRUD/vaciado catálogos, `FILE_UPLOADED`, `IMPORT_PUBLISHED`, `PRODUCT_IMAGE_ASSOCIATED`, `PRODUCT_IMAGE_UPDATED`, `PRODUCT_IMAGE_DELETED`. Fallos de auditoría no interrumpen la operación.
+Sin endpoint de consulta. Eventos en `AuditLog`: login/logout, CRUD usuarios, CRUD/vaciado catálogos, `FILE_UPLOADED`, `IMPORT_PUBLISHED`, `PRODUCT_CREATED`, `PRODUCT_UPDATED`, `PRODUCT_DELETED`, `PRODUCT_DUPLICATED`, `EQUIVALENCE_ADDED`, `EQUIVALENCE_REMOVED`, `PRODUCT_IMAGE_ASSOCIATED`, `PRODUCT_IMAGE_UPDATED`, `PRODUCT_IMAGE_DELETED`. Fallos de auditoría no interrumpen la operación.
 
 ---
 
 ## Pendiente (sin contrato aún)
 
-CRUD manual de productos, búsqueda/filtros, listado archivos subidos (Fase 8), offline/sync, **UI** imágenes (miniaturas tabla, panel revisión, modal ampliado RF-032). Detalle por fase: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md).
+Búsqueda/filtros (Fase 7), listado archivos subidos (Fase 8), offline/sync, **UI** productos manuales e imágenes (miniaturas tabla, panel revisión, modal ampliado RF-032). Detalle por fase: [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md).
 
 ---
 
@@ -533,7 +650,8 @@ CRUD manual de productos, búsqueda/filtros, listado archivos subidos (Fase 8), 
 | Catálogos | `src/features/catalog/actions/catalog.actions.ts`, `schemas/catalog.schemas.ts`, `types/catalog.types.ts` |
 | Carpetas | `folder.actions.ts`, `schemas/folder.schemas.ts`, `types/folder.types.ts` |
 | Columnas | `column.actions.ts`, `schemas/column.schemas.ts`, `types/column.types.ts` |
-| REST productos / navegación | `src/app/api/admin/folders/[folderId]/products/route.ts`, `.../catalogs/[catalogId]/navigation/route.ts` |
+| REST productos / navegación | `src/app/api/admin/folders/[folderId]/products/route.ts`, `src/app/api/admin/products/`, `.../catalogs/[catalogId]/navigation/route.ts` |
+| Productos manuales | `src/features/records/`, `src/server/services/product.service.ts`, `product-field.builder.ts`, `equivalence.service.ts` |
 | Importador | `src/app/api/admin/imports/`, `src/features/imports/actions/import.actions.ts`, `src/server/services/catalog-import.service.ts`, `src/server/importers/` |
 | Imágenes | `src/server/image-processors/`, `src/server/services/image-*.service.ts`, `src/server/services/product-image.service.ts`, `src/server/repositories/product-image.repository.ts` |
 | Directorio | `src/app/api/admin/directory/route.ts`, `src/features/directory/types/directory.types.ts` |

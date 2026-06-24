@@ -36,6 +36,7 @@ import { STORAGE_BUCKETS } from "@/server/storage/types";
 import { StorageError } from "@/server/storage/errors";
 import { imageExtractionService } from "./image-extraction.service";
 import { productImageService } from "./product-image.service";
+import { equivalenceService } from "./equivalence.service";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { ImportError } from "./import.errors";
@@ -896,6 +897,18 @@ export class CatalogImportService {
           );
         }
       });
+
+      const folderProducts = await productRepository.findByFolderId(job.folderId!);
+      for (const product of folderProducts) {
+        const dynamicData =
+          typeof product.dynamicData === "object" &&
+          product.dynamicData !== null &&
+          !Array.isArray(product.dynamicData)
+            ? (product.dynamicData as Record<string, unknown>)
+            : {};
+
+        await equivalenceService.syncFromProduct(product.id, columns, dynamicData);
+      }
 
       await importJobRepository.update(jobId, {
         status: "PROCESSING",
