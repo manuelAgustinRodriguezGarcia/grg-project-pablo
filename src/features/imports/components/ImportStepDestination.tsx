@@ -8,7 +8,7 @@ import type { ImportSheetItem } from "@/features/imports/types/import-job.types"
 import type { StagedExternalImagesSummary } from "@/features/imports/utils/external-images";
 import { hasStagedExternalImagesSummary } from "@/features/imports/utils/external-images";
 import { ImportStagedExternalImagesField } from "./ImportStagedExternalImagesField";
-import { Plus, FileSpreadsheet, TableProperties, ICON_STROKE } from "@/shared/icons";
+import { Plus, FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
 import styles from "./ImportWizard.module.scss";
 
 type ImportStepDestinationProps = {
@@ -74,11 +74,9 @@ export function ImportStepDestination({
         id: folder.id,
         label: folder.name,
         meta:
-          folder.productCount === 0
-            ? "vacía"
-            : folder.productCount === 1
-              ? "1 producto"
-              : `${folder.productCount} productos`,
+          folder.productCount === 1
+            ? "1 producto"
+            : `${folder.productCount} productos`,
       })),
     [folders],
   );
@@ -133,15 +131,6 @@ export function ImportStepDestination({
       {hasStagedExternalImagesSummary(stagedExternalImages) ? (
         <ImportStagedExternalImagesField summary={stagedExternalImages} />
       ) : null}
-
-      <div className={styles.destinationHint}>
-        <span className={styles.destinationHintIcon} aria-hidden>
-          <TableProperties strokeWidth={ICON_STROKE} />
-        </span>
-        <p className={styles.destinationHintText}>
-          Seleccione en que catálogo y carpeta desea guardar la lista de productos.
-        </p>
-      </div>
 
       <div className={styles.field}>
         <div className={styles.fieldHeader}>
@@ -260,7 +249,7 @@ export function ImportStepDestination({
 
       <div className={styles.field}>
         <div className={styles.fieldHeader}>
-          <span className={styles.fieldLabel}>Página a importar</span>
+          <span className={styles.fieldLabel}>Página del Excel a importar</span>
         </div>
 
         <CustomDropdown

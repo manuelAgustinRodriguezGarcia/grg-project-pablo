@@ -2,7 +2,6 @@
 
 import { Camera, CheckCircle2, ICON_STROKE } from "@/shared/icons";
 import {
-  formatExternalFileSize,
   type StagedExternalImagesSummary,
 } from "@/features/imports/utils/external-images";
 import styles from "./ImportWizard.module.scss";
@@ -35,10 +34,6 @@ export function ImportStagedExternalImagesField({
           </span>
           <span className={styles.importSourceMeta}>
             <span className={styles.importSourceFileName}>{source.name}</span>
-            <span className={styles.importSourceFileSize}>
-              {source.kind === "zip" ? "ZIP" : "Imagen"} ·{" "}
-              {formatExternalFileSize(source.sizeBytes)}
-            </span>
           </span>
         </div>
       ))}

@@ -6,22 +6,24 @@ import {
   IGNORE_COLUMN_VALUE,
   buildDefaultColumnMappingRows,
   detectColumnSemanticKind,
-  semanticKindLabel,
   type ColumnMappingRow,
   type ImportDetectedHeader,
 } from "@/features/imports/utils/column-mapping";
+import { Info, ICON_STROKE } from "@/shared/icons";
+import { ImportSearchableSelect } from "./ImportSearchableSelect";
 import styles from "./ImportWizard.module.scss";
+
+const PRIMARY_CODE_HELP_TEXT =
+  "Seleccione la columna del Excel que identificará de forma única a cada producto. Esto ayudará a facilitar la búsqueda de productos.";
 
 type ImportStepColumnsProps = {
   headers: ImportDetectedHeader[];
   folderColumns: FolderColumn[];
   mappingRows: ColumnMappingRow[];
   primaryCodeHeaderKey: string;
-  descriptionHeaderKey: string;
   disabled: boolean;
   onMappingRowsChange: (rows: ColumnMappingRow[]) => void;
   onPrimaryCodeHeaderKeyChange: (headerKey: string) => void;
-  onDescriptionHeaderKeyChange: (headerKey: string) => void;
 };
 
 function buildTargetOptions(folderColumns: FolderColumn[]) {
@@ -40,11 +42,9 @@ export function ImportStepColumns({
   folderColumns,
   mappingRows,
   primaryCodeHeaderKey,
-  descriptionHeaderKey,
   disabled,
   onMappingRowsChange,
   onPrimaryCodeHeaderKeyChange,
-  onDescriptionHeaderKeyChange,
 }: ImportStepColumnsProps) {
   const headerOptions = headers.map((header) => ({
     value: header.internalKey,
@@ -70,46 +70,32 @@ export function ImportStepColumns({
 
   return (
     <div>
-      <p className={styles.stepIntro}>
-        Revisá cómo se mapean las columnas del Excel con la carpeta destino. Podés
-        ajustar el código principal, la descripción y cada columna.
-      </p>
-
-      <div className={styles.field}>
+      <div className={`${styles.field} ${styles.primaryCodeField}`}>
         <div className={styles.fieldHeader}>
-          <span className={styles.fieldLabel}>Columna código principal</span>
+          <span className={styles.fieldLabelRow}>
+            <span className={styles.fieldLabel}>Columna código principal</span>
+            <span className={styles.fieldInfoWrap}>
+              <button
+                type="button"
+                className={styles.fieldInfoButton}
+                aria-label={PRIMARY_CODE_HELP_TEXT}
+              >
+                <Info strokeWidth={ICON_STROKE} aria-hidden />
+              </button>
+              <span className={styles.fieldInfoTooltip} role="tooltip">
+                {PRIMARY_CODE_HELP_TEXT}
+              </span>
+            </span>
+          </span>
         </div>
-        <select
-          className={styles.mappingSelect}
+        <ImportSearchableSelect
+          options={headerOptions}
           value={primaryCodeHeaderKey}
-          onChange={(event) => onPrimaryCodeHeaderKeyChange(event.target.value)}
+          onChange={onPrimaryCodeHeaderKeyChange}
           disabled={disabled}
-        >
-          {headerOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className={styles.field}>
-        <div className={styles.fieldHeader}>
-          <span className={styles.fieldLabel}>Columna descripción</span>
-        </div>
-        <select
-          className={styles.mappingSelect}
-          value={descriptionHeaderKey}
-          onChange={(event) => onDescriptionHeaderKeyChange(event.target.value)}
-          disabled={disabled}
-        >
-          <option value="">Sin descripción</option>
-          {headerOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          placeholder="Buscar columna del Excel…"
+          listboxLabel="Columna código principal"
+        />
       </div>
 
       <table className={styles.columnMappingTable}>
@@ -120,38 +106,23 @@ export function ImportStepColumns({
           </tr>
         </thead>
         <tbody>
-          {mappingRows.map((row) => {
-            const semantic = semanticKindLabel(
-              detectColumnSemanticKind(row.headerOriginalName),
-            );
-
-            return (
+          {mappingRows.map((row) => (
               <tr key={row.headerInternalKey}>
+                <td>{row.headerOriginalName}</td>
                 <td>
-                  {row.headerOriginalName}
-                  {semantic ? (
-                    <span className={styles.semanticBadge}>{semantic}</span>
-                  ) : null}
-                </td>
-                <td>
-                  <select
-                    className={styles.mappingSelect}
+                  <ImportSearchableSelect
+                    options={targetOptions}
                     value={row.targetValue}
-                    onChange={(event) =>
-                      updateRow(row.headerInternalKey, event.target.value)
+                    onChange={(targetValue) =>
+                      updateRow(row.headerInternalKey, targetValue)
                     }
                     disabled={disabled}
-                  >
-                    {targetOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Buscar destino…"
+                    listboxLabel={`Destino para ${row.headerOriginalName}`}
+                  />
                 </td>
               </tr>
-            );
-          })}
+            ))}
         </tbody>
       </table>
     </div>

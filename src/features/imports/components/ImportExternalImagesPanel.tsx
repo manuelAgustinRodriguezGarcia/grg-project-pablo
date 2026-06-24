@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, CheckCircle2, Upload, ICON_STROKE } from "@/shared/icons";
+import { Camera, ICON_STROKE } from "@/shared/icons";
 import {
   formatExternalFileSize,
   validateExternalImageFile,
@@ -56,6 +56,7 @@ export function ImportExternalImagesPanel({
 }: ImportExternalImagesPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const hasSelection = Boolean(selection.zipFile) || selection.imageFiles.length > 0;
 
   function handlePick(files: FileList | null) {
@@ -69,24 +70,28 @@ export function ImportExternalImagesPanel({
     onChange(result.selection);
   }
 
+  function handleDrop(event: React.DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+    if (disabled) {
+      return;
+    }
+    handlePick(event.dataTransfer.files);
+  }
+
   return (
-    <div className={styles.externalImagesSection}>
-      <div className={styles.externalImagesHeader}>
-        <span className={styles.externalImagesTitle}>
+    <div
+      className={`${styles.externalImagesSection} ${hasSelection ? styles.uploadSectionHasFile : ""}`}
+    >
+      <div className={styles.uploadSectionHeader}>
+        <span className={styles.uploadSectionTitle}>
           <Camera strokeWidth={ICON_STROKE} aria-hidden />
-          Imágenes externas (opcional)
+          Vincular imágenes
         </span>
-        {hasSelection ? (
-          <span className={styles.externalImagesReadyBadge}>
-            <CheckCircle2 strokeWidth={ICON_STROKE} aria-hidden />
-            Listo para importar
-          </span>
-        ) : null}
       </div>
 
       <p className={styles.externalImagesHint}>
-        Podés adjuntar un ZIP o imágenes sueltas (.jpg, .png, .webp). Se subirán junto
-        con el Excel al continuar y se asociarán por código de imagen.
+        Puede arrastrar una carpeta ZIP, una carpeta comúnño con imágenes o archivos sueltos.
       </p>
 
       {selectionError ? (
@@ -96,12 +101,27 @@ export function ImportExternalImagesPanel({
       {!hasSelection ? (
         <button
           type="button"
-          className={styles.externalImagesDropZone}
+          className={`${styles.dropZone} ${styles.dropZoneExternal} ${isDragging ? styles.dropZoneActive : ""}`}
           onClick={() => inputRef.current?.click()}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!disabled) {
+              setIsDragging(true);
+            }
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
           disabled={disabled}
         >
-          <Upload strokeWidth={ICON_STROKE} aria-hidden />
-          <span>Agregar ZIP o imágenes</span>
+          <span className={`${styles.dropZoneIcon} ${styles.dropZoneIconExternal}`}>
+            <Camera strokeWidth={ICON_STROKE} aria-hidden />
+          </span>
+          <span className={styles.dropZoneTitle}>
+            Arrastre un ZIP, carpeta o imágenes, o haga clic para buscarlas
+          </span>
+          <span className={styles.dropZoneHint}>
+            Formatos admitidos: .zip, .jpg, .jpeg, .png, .webp
+          </span>
         </button>
       ) : null}
 
@@ -167,17 +187,6 @@ export function ImportExternalImagesPanel({
         </div>
       ))}
 
-      {hasSelection ? (
-        <button
-          type="button"
-          className={styles.externalImagesAddMore}
-          onClick={() => inputRef.current?.click()}
-          disabled={disabled}
-        >
-          <Upload strokeWidth={ICON_STROKE} aria-hidden />
-          Agregar más archivos
-        </button>
-      ) : null}
     </div>
   );
 }

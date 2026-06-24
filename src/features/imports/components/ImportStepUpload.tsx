@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileSpreadsheet, Upload, ICON_STROKE } from "@/shared/icons";
+import { FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
 import { ImportExternalImagesPanel } from "./ImportExternalImagesPanel";
 import type { ExternalImageSelection } from "@/features/imports/utils/external-images";
 import styles from "./ImportWizard.module.scss";
@@ -63,61 +63,72 @@ export function ImportStepUpload({
 
   return (
     <div>
-      <p className={styles.stepIntro}>
-        Subí un archivo de Excel (.xlsx o .xlsm). Vamos a analizar sus hojas
-        para que puedas elegir cuál importar.
-      </p>
-
-      <button
-        type="button"
-        className={`${styles.dropZone} ${isDragging ? styles.dropZoneActive : ""}`}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(event) => {
-          event.preventDefault();
-          if (!disabled) setIsDragging(true);
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        disabled={disabled}
-      >
-        <span className={styles.dropZoneIcon}>
-          <Upload strokeWidth={ICON_STROKE} aria-hidden />
-        </span>
-        <span className={styles.dropZoneTitle}>
-          Arrastrá tu archivo o hacé clic para buscarlo
-        </span>
-        <span className={styles.dropZoneHint}>Formatos admitidos: .xlsx, .xlsm</span>
-      </button>
-
-      <input
-        ref={inputRef}
-        type="file"
-        className={styles.hiddenInput}
-        accept={ACCEPT_ATTR}
-        onChange={(event) => pickFromList(event.target.files)}
-        disabled={disabled}
-      />
-
-      {file ? (
-        <div className={`${styles.fileCard} ${styles.fileCardReady}`}>
-          <span className={styles.fileIcon}>
+      <div className={`${styles.uploadSection} ${file ? styles.uploadSectionHasFile : ""}`}>
+        <div className={styles.uploadSectionHeader}>
+          <span className={`${styles.uploadSectionTitle} ${styles.uploadSectionTitleExcel}`}>
             <FileSpreadsheet strokeWidth={ICON_STROKE} aria-hidden />
+            Archivo Excel
           </span>
-          <span className={styles.fileMeta}>
-            <span className={styles.fileName}>{file.name}</span>
-            <span className={styles.fileSize}>{formatSize(file.size)}</span>
-            <span className={styles.fileReadyNote}>Se importará al continuar</span>
-          </span>
+        </div>
+
+        <p className={styles.stepIntro}>
+          Suba un archivo de Excel (.xlsx o .xlsm). Analizaremos sus hojas para que
+          pueda elegir cuál importar.
+        </p>
+
+        {!file ? (
           <button
             type="button"
-            className={styles.fileRemove}
-            onClick={() => onFileSelected(null)}
+            className={`${styles.dropZone} ${isDragging ? styles.dropZoneActive : ""}`}
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (!disabled) setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
             disabled={disabled}
           >
-            Quitar
+            <span className={styles.dropZoneIcon}>
+              <FileSpreadsheet strokeWidth={ICON_STROKE} aria-hidden />
+            </span>
+            <span className={styles.dropZoneTitle}>
+              Arrastre su archivo o haga clic para buscarlo
+            </span>
+            <span className={styles.dropZoneHint}>Formatos admitidos: .xlsx, .xlsm</span>
           </button>
-        </div>
-      ) : null}
+        ) : null}
+
+        <input
+          ref={inputRef}
+          type="file"
+          className={styles.hiddenInput}
+          accept={ACCEPT_ATTR}
+          onChange={(event) => pickFromList(event.target.files)}
+          disabled={disabled}
+        />
+
+        {file ? (
+          <div className={`${styles.fileCard} ${styles.fileCardReady}`}>
+            <span className={styles.fileIcon}>
+              <FileSpreadsheet strokeWidth={ICON_STROKE} aria-hidden />
+            </span>
+            <span className={styles.fileMeta}>
+              <span className={styles.fileName}>{file.name}</span>
+              <span className={styles.fileSize}>{formatSize(file.size)}</span>
+              <span className={styles.fileReadyNote}>Se importará al continuar</span>
+            </span>
+            <button
+              type="button"
+              className={styles.fileRemove}
+              onClick={() => onFileSelected(null)}
+              disabled={disabled}
+            >
+              Quitar
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       <ImportExternalImagesPanel
         selection={externalImages}
