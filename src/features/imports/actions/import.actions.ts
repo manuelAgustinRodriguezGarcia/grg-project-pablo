@@ -107,8 +107,11 @@ export async function setImportConfigAction(
   try {
     await catalogImportService.setConfig(parsed.data.jobId, {
       columnMapping: parsed.data.columnMapping,
-      primaryCodeColumnKey: parsed.data.primaryCodeColumnKey,
+      primaryCodeColumnKey: parsed.data.useGeneratedPrimaryCodes
+        ? undefined
+        : parsed.data.primaryCodeColumnKey,
       descriptionColumnKey: parsed.data.descriptionColumnKey,
+      useGeneratedPrimaryCodes: parsed.data.useGeneratedPrimaryCodes ?? false,
     });
     const job = await catalogImportService.getJob(parsed.data.jobId);
     return { success: true, data: toImportJobDetail(job) };

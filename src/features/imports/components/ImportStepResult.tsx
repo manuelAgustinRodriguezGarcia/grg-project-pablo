@@ -31,42 +31,10 @@ export function ImportStepResult({ report, errorMessage }: ImportStepResultProps
       </span>
       <h3 className={styles.resultTitle}>¡Importación completada!</h3>
       <p className={styles.resultText}>
-        Los productos se guardaron en {report.folderName ?? "la carpeta"}
-        {report.catalogName ? ` (${report.catalogName})` : ""}.
+        Los productos se guardaron en{" "}
+        {report.folderName ?? "la carpeta"} dentro del catálogo{" "}
+        {report.catalogName ?? "el catálogo"}.
       </p>
-
-      <div className={styles.resultGrid}>
-        <div className={styles.summaryCard}>
-          <div className={styles.summaryValue}>{report.productsCreated}</div>
-          <div className={styles.summaryLabel}>Productos agregados</div>
-        </div>
-        <div className={styles.summaryCard}>
-          <div className={styles.summaryValue}>{report.productsSkipped}</div>
-          <div className={styles.summaryLabel}>Omitidos</div>
-        </div>
-        <div className={styles.summaryCard}>
-          <div className={styles.summaryValue}>{report.productsMatched}</div>
-          <div className={styles.summaryLabel}>Coincidencias</div>
-        </div>
-        <div className={styles.summaryCard}>
-          <div className={styles.summaryValue}>{report.columnsDetected}</div>
-          <div className={styles.summaryLabel}>Columnas</div>
-        </div>
-        <div className={styles.summaryCard}>
-          <div className={styles.summaryValue}>{report.imagesDetected}</div>
-          <div className={styles.summaryLabel}>Imágenes detectadas</div>
-        </div>
-        <div className={styles.summaryCard}>
-          <div className={styles.summaryValue}>{report.imagesAssociated ?? 0}</div>
-          <div className={styles.summaryLabel}>Imágenes asociadas</div>
-        </div>
-        <div className={styles.summaryCard}>
-          <div className={`${styles.summaryValue} ${report.imagesPendingReview > 0 ? styles.summaryValueMatch : ""}`}>
-            {report.imagesPendingReview ?? 0}
-          </div>
-          <div className={styles.summaryLabel}>Pendientes de revisión</div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -63,6 +63,7 @@ export type ImportJobConfig = {
   columnMapping?: ColumnMappingEntry[];
   primaryCodeColumnKey?: string;
   descriptionColumnKey?: string;
+  useGeneratedPrimaryCodes?: boolean;
   externalImages?: ExternalImageRef[];
 };
 

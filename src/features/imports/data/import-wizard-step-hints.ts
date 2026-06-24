@@ -6,11 +6,11 @@ export const IMPORT_WIZARD_STEP_HINTS: Partial<Record<ImportWizardStep, string>>
   destination:
     "Seleccione en qué catálogo y carpeta desea guardar la lista de productos.",
   columns:
-    "Revise cómo se mapean las columnas del Excel con la carpeta destino y ajuste el código principal y cada columna.",
+    "Revise cómo se reconocen las columnas del Excel con la carpeta destino y ajuste el código principal y cada columna.",
   preview:
     "Revise la vista previa y confirme cómo desea aplicar la lista de productos.",
   imageReview:
-    "Revise las imágenes pendientes y vincúlelas a un producto antes de finalizar.",
+    "Revise las imágenes pendientes y vincúlelas a un producto antes de finalizar. O ignorelas para continuar con la importación.",
 };
 
 export function getImportWizardStepHint(step: ImportWizardStep): string | null {

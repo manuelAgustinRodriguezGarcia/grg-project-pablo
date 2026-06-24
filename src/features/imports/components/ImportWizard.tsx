@@ -52,14 +52,17 @@ import {
   fetchStagedImageCount,
   uploadExternalImagesToJob,
 } from "@/features/imports/utils/upload-external-images";
-import { AlertTriangle, ArrowLeft, ArrowRight, FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
 import { ImportExternalImagesPanel } from "./ImportExternalImagesPanel";
 import {
   ImportStepColumns,
   createInitialColumnMappingState,
 } from "./ImportStepColumns";
 import { ImportStepDestination } from "./ImportStepDestination";
-import { ImportStepImageReview } from "./ImportStepImageReview";
+import {
+  ImportStepImageReview,
+  type ImageReviewFooterState,
+} from "./ImportStepImageReview";
 import { ImportStepPreview } from "./ImportStepPreview";
 import { ImportStepResult } from "./ImportStepResult";
 import { ImportStepUpload } from "./ImportStepUpload";
@@ -176,6 +179,7 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
   const [mappingRows, setMappingRows] = useState<ColumnMappingRow[]>([]);
   const [primaryCodeHeaderKey, setPrimaryCodeHeaderKey] = useState("");
   const [descriptionHeaderKey, setDescriptionHeaderKey] = useState("");
+  const [useGeneratedPrimaryCodes, setUseGeneratedPrimaryCodes] = useState(false);
 
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
   const [selectedAction, setSelectedAction] = useState<ImportActionType | null>(null);
@@ -183,6 +187,8 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
 
   const [report, setReport] = useState<ImportReportData | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [imageReviewFooter, setImageReviewFooter] =
+    useState<ImageReviewFooterState | null>(null);
 
   const importableSheets = sheets.filter(
     (sheet) => sheet.classification === "IMPORTABLE",
@@ -606,6 +612,7 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
       setMappingRows(initialMapping.mappingRows);
       setPrimaryCodeHeaderKey(initialMapping.primaryCodeHeaderKey);
       setDescriptionHeaderKey(initialMapping.descriptionHeaderKey);
+      setUseGeneratedPrimaryCodes(false);
 
       updateLoadingOverlay("Destino configurado…", 93);
       await completeLoadingOverlay();
@@ -634,10 +641,9 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
       updateLoadingOverlay("Generando la vista previa…", 45);
 
       const columnMapping = buildImportColumnMapping(mappingRows);
-      const primaryCodeColumnKey = resolveFolderColumnKey(
-        primaryCodeHeaderKey,
-        mappingRows,
-      );
+      const primaryCodeColumnKey = useGeneratedPrimaryCodes
+        ? undefined
+        : resolveFolderColumnKey(primaryCodeHeaderKey, mappingRows) ?? undefined;
       const descriptionColumnKey = descriptionHeaderKey
         ? resolveFolderColumnKey(descriptionHeaderKey, mappingRows) ?? undefined
         : undefined;
@@ -645,8 +651,9 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
       const configResult = await setImportConfigAction({
         jobId,
         columnMapping,
-        primaryCodeColumnKey: primaryCodeColumnKey ?? undefined,
+        primaryCodeColumnKey,
         descriptionColumnKey,
+        useGeneratedPrimaryCodes,
       });
       if (!configResult.success) {
         throw new Error(configResult.error);
@@ -891,9 +898,11 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
                   folderColumns={folderColumns}
                   mappingRows={mappingRows}
                   primaryCodeHeaderKey={primaryCodeHeaderKey}
+                  useGeneratedPrimaryCodes={useGeneratedPrimaryCodes}
                   disabled={isBusy}
                   onMappingRowsChange={setMappingRows}
                   onPrimaryCodeHeaderKeyChange={setPrimaryCodeHeaderKey}
+                  onUseGeneratedPrimaryCodesChange={setUseGeneratedPrimaryCodes}
                 />
               ) : null}
 
@@ -915,6 +924,7 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
                   disabled={isBusy}
                   onCompleted={() => void handleImageReviewCompleted()}
                   onError={setError}
+                  onFooterStateChange={setImageReviewFooter}
                 />
               ) : null}
 
@@ -925,7 +935,9 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
           )}
         </div>
 
-        <footer className={styles.footer}>
+        <footer
+          className={`${styles.footer} ${step === "imageReview" ? styles.imageReviewWizardFooter : ""} ${step === "result" ? styles.resultWizardFooter : ""}`}
+        >
           {step === "destination" || step === "columns" || step === "preview" ? (
             <button
               type="button"
@@ -951,6 +963,17 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
           ) : null}
 
           <div className={styles.footerRight}>
+            {step === "imageReview" && imageReviewFooter ? (
+              <button
+                type="button"
+                className={`${styles.primaryButton} ${styles.imageReviewFinishButton}`}
+                onClick={imageReviewFooter.onFinish}
+                disabled={isBusy || imageReviewFooter.disabled}
+              >
+                {imageReviewFooter.finishLabel}
+              </button>
+            ) : null}
+
             {step === "upload" ? (
               <button
                 type="button"
@@ -1001,10 +1024,11 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
             {step === "result" ? (
               <button
                 type="button"
-                className={styles.primaryButton}
+                className={`${styles.primaryButton} ${styles.resultFinishButton}`}
                 onClick={handleFinish}
               >
-                Finalizar
+                <Check className={styles.buttonIcon} strokeWidth={ICON_STROKE} aria-hidden />
+                Finalizar Importación
               </button>
             ) : null}
           </div>

@@ -54,6 +54,29 @@ describe("ProductTable", () => {
     cleanup();
   });
 
+  it("muestra el estado de carga a pantalla completa", () => {
+    render(
+      <ProductTable data={null} isLoading error={null} onPageChange={vi.fn()} />,
+    );
+
+    expect(screen.getByText("Cargando productos")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tabla de productos")).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("muestra el estado vacío centrado con icono", () => {
+    const data = createTableData([]);
+
+    const { container } = render(
+      <ProductTable data={data} isLoading={false} error={null} onPageChange={vi.fn()} />,
+    );
+
+    expect(screen.getByText("No hay productos en esta carpeta.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(container.querySelector(".tableEmptyIcon")).toBeInTheDocument();
+    expect(container.querySelector(".productTable")).toBeNull();
+  });
+
   it("renders a thumbnail when primaryImage is available", () => {
     const data = createTableData([
       {

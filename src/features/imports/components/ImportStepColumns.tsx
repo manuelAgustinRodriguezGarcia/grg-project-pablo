@@ -9,53 +9,57 @@ import {
   type ColumnMappingRow,
   type ImportDetectedHeader,
 } from "@/features/imports/utils/column-mapping";
-import { Info, ICON_STROKE } from "@/shared/icons";
 import { ImportSearchableSelect } from "./ImportSearchableSelect";
+import { ImportYesNoRadio } from "./ImportYesNoRadio";
 import styles from "./ImportWizard.module.scss";
 
 const PRIMARY_CODE_HELP_TEXT =
   "Seleccione la columna del Excel que identificará de forma única a cada producto. Esto ayudará a facilitar la búsqueda de productos.";
+
+const GENERATED_PRIMARY_CODE_HELP_TEXT =
+  "Se generará un ID corto automático por cada fila del Excel. Las imágenes se asociarán por otras columnas o por la fila, no por estos códigos generados. Al combinar listas, los productos importados se tratarán como nuevos.";
 
 type ImportStepColumnsProps = {
   headers: ImportDetectedHeader[];
   folderColumns: FolderColumn[];
   mappingRows: ColumnMappingRow[];
   primaryCodeHeaderKey: string;
+  useGeneratedPrimaryCodes: boolean;
   disabled: boolean;
   onMappingRowsChange: (rows: ColumnMappingRow[]) => void;
   onPrimaryCodeHeaderKeyChange: (headerKey: string) => void;
+  onUseGeneratedPrimaryCodesChange: (value: boolean) => void;
 };
 
-function buildTargetOptions(folderColumns: FolderColumn[]) {
-  return [
-    { value: CREATE_COLUMN_VALUE, label: "Crear columna nueva" },
-    { value: IGNORE_COLUMN_VALUE, label: "Ignorar" },
-    ...folderColumns.map((column) => ({
-      value: column.internalKey,
-      label: column.displayName,
-    })),
-  ];
+function isCreateColumnTarget(targetValue: string): boolean {
+  return targetValue !== IGNORE_COLUMN_VALUE;
 }
 
 export function ImportStepColumns({
   headers,
-  folderColumns,
+  folderColumns: _folderColumns,
   mappingRows,
   primaryCodeHeaderKey,
+  useGeneratedPrimaryCodes,
   disabled,
   onMappingRowsChange,
   onPrimaryCodeHeaderKeyChange,
+  onUseGeneratedPrimaryCodesChange,
 }: ImportStepColumnsProps) {
   const headerOptions = headers.map((header) => ({
     value: header.internalKey,
     label: header.originalName,
   }));
-  const targetOptions = buildTargetOptions(folderColumns);
 
-  function updateRow(headerInternalKey: string, targetValue: string) {
+  function updateRow(headerInternalKey: string, createColumn: boolean) {
     onMappingRowsChange(
       mappingRows.map((row) =>
-        row.headerInternalKey === headerInternalKey ? { ...row, targetValue } : row,
+        row.headerInternalKey === headerInternalKey
+          ? {
+              ...row,
+              targetValue: createColumn ? CREATE_COLUMN_VALUE : IGNORE_COLUMN_VALUE,
+            }
+          : row,
       ),
     );
   }
@@ -72,57 +76,63 @@ export function ImportStepColumns({
     <div>
       <div className={`${styles.field} ${styles.primaryCodeField}`}>
         <div className={styles.fieldHeader}>
-          <span className={styles.fieldLabelRow}>
-            <span className={styles.fieldLabel}>Columna código principal</span>
-            <span className={styles.fieldInfoWrap}>
-              <button
-                type="button"
-                className={styles.fieldInfoButton}
-                aria-label={PRIMARY_CODE_HELP_TEXT}
-              >
-                <Info strokeWidth={ICON_STROKE} aria-hidden />
-              </button>
-              <span className={styles.fieldInfoTooltip} role="tooltip">
-                {PRIMARY_CODE_HELP_TEXT}
-              </span>
-            </span>
-          </span>
+          <span className={styles.fieldLabel}>Columna código principal</span>
         </div>
-        <ImportSearchableSelect
-          options={headerOptions}
-          value={primaryCodeHeaderKey}
-          onChange={onPrimaryCodeHeaderKeyChange}
-          disabled={disabled}
-          placeholder="Buscar columna del Excel…"
-          listboxLabel="Columna código principal"
-        />
+        <p className={styles.fieldHelpText}>
+          {useGeneratedPrimaryCodes
+            ? GENERATED_PRIMARY_CODE_HELP_TEXT
+            : PRIMARY_CODE_HELP_TEXT}
+        </p>
+        <div className={styles.primaryCodeSelectWrap}>
+          <div className={styles.primaryCodeSelectRow}>
+            <div className={styles.primaryCodeSelectControl}>
+              <ImportSearchableSelect
+                options={headerOptions}
+                value={primaryCodeHeaderKey}
+                onChange={onPrimaryCodeHeaderKeyChange}
+                disabled={disabled || useGeneratedPrimaryCodes}
+                placeholder="Buscar columna del Excel…"
+                listboxLabel="Columna código principal"
+              />
+            </div>
+            <button
+              type="button"
+              className={`${styles.secondaryButton} ${styles.generateCodesButton} ${useGeneratedPrimaryCodes ? styles.generateCodesButtonActive : ""}`}
+              aria-pressed={useGeneratedPrimaryCodes}
+              disabled={disabled}
+              onClick={() =>
+                onUseGeneratedPrimaryCodesChange(!useGeneratedPrimaryCodes)
+              }
+            >
+              Generar Códigos
+            </button>
+          </div>
+        </div>
       </div>
 
       <table className={styles.columnMappingTable}>
         <thead>
           <tr>
             <th>Columna Excel</th>
-            <th>Destino en carpeta</th>
+            <th>Crear columna nueva</th>
           </tr>
         </thead>
         <tbody>
           {mappingRows.map((row) => (
-              <tr key={row.headerInternalKey}>
-                <td>{row.headerOriginalName}</td>
-                <td>
-                  <ImportSearchableSelect
-                    options={targetOptions}
-                    value={row.targetValue}
-                    onChange={(targetValue) =>
-                      updateRow(row.headerInternalKey, targetValue)
-                    }
-                    disabled={disabled}
-                    placeholder="Buscar destino…"
-                    listboxLabel={`Destino para ${row.headerOriginalName}`}
-                  />
-                </td>
-              </tr>
-            ))}
+            <tr key={row.headerInternalKey}>
+              <td>{row.headerOriginalName}</td>
+              <td>
+                <ImportYesNoRadio
+                  name={`create-column-${row.headerInternalKey}`}
+                  value={isCreateColumnTarget(row.targetValue)}
+                  onChange={(createColumn) =>
+                    updateRow(row.headerInternalKey, createColumn)
+                  }
+                  disabled={disabled}
+                />
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

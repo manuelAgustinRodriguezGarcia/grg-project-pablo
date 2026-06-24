@@ -40,6 +40,8 @@ export function ImportSearchableSelect({
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isFocusedRef = useRef(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
@@ -63,6 +65,10 @@ export function ImportSearchableSelect({
   }, [options, query, selectedOption]);
 
   useEffect(() => {
+    if (isFocusedRef.current) {
+      return;
+    }
+
     if (selectedOption) {
       setQuery(selectedOption.label);
       return;
@@ -81,7 +87,7 @@ export function ImportSearchableSelect({
     function handlePointerDown(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
-        if (selectedOption) {
+        if (value && selectedOption) {
           setQuery(selectedOption.label);
         }
       }
@@ -90,7 +96,7 @@ export function ImportSearchableSelect({
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
-        if (selectedOption) {
+        if (value && selectedOption) {
           setQuery(selectedOption.label);
         }
         inputRef.current?.blur();
@@ -104,12 +110,18 @@ export function ImportSearchableSelect({
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, selectedOption]);
+  }, [isOpen, selectedOption, value]);
 
   function handleSelect(nextValue: string, label: string) {
     onChange(nextValue);
     setQuery(label);
     setIsOpen(false);
+
+    if (clearOnQueryChange) {
+      queueMicrotask(() => {
+        inputRef.current?.blur();
+      });
+    }
   }
 
   function handleInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -126,7 +138,22 @@ export function ImportSearchableSelect({
     }
   }
 
+  function handleQueryChange(nextQuery: string) {
+    setQuery(nextQuery);
+    setIsOpen(true);
+
+    if (!clearOnQueryChange || !value || !selectedOption) {
+      return;
+    }
+
+    if (nextQuery !== selectedOption.label) {
+      onChange("");
+    }
+  }
+
   const isControlDisabled = disabled || options.length === 0;
+  const showSelectedLabelOverlay =
+    !clearOnQueryChange && selectedOption !== null && !isFocused && !isOpen;
 
   return (
     <div ref={rootRef} className={styles.searchableSelect}>
@@ -138,34 +165,57 @@ export function ImportSearchableSelect({
           strokeWidth={ICON_STROKE}
           aria-hidden
         />
-        <input
-          ref={inputRef}
-          type="text"
-          className={styles.searchableSelectInput}
-          value={query}
-          placeholder={placeholder}
-          disabled={isControlDisabled}
-          role="combobox"
-          aria-expanded={isOpen}
-          aria-controls={listboxId}
-          aria-autocomplete="list"
-          onFocus={() => {
-            setIsOpen(true);
-            if (selectedOption && query === selectedOption.label) {
-              inputRef.current?.select();
+        <div className={styles.searchableSelectInputWrap}>
+          <input
+            ref={inputRef}
+            type="text"
+            className={`${styles.searchableSelectInput} ${showSelectedLabelOverlay ? styles.searchableSelectInputWithOverlay : ""}`}
+            value={query}
+            placeholder={placeholder}
+            disabled={isControlDisabled}
+            role="combobox"
+            aria-expanded={isOpen}
+            aria-controls={listboxId}
+            aria-autocomplete="list"
+            onFocus={() => {
+              isFocusedRef.current = true;
+              setIsFocused(true);
+
+              if (!clearOnQueryChange) {
+                setIsOpen(true);
+              }
+
+              if (selectedOption && query === selectedOption.label) {
+                queueMicrotask(() => {
+                  inputRef.current?.select();
+                });
+              }
+            }}
+            onBlur={() => {
+              isFocusedRef.current = false;
+              setIsFocused(false);
+              setIsOpen(false);
+
+            if (value && selectedOption) {
+              setQuery(selectedOption.label);
+              return;
+            }
+
+            if (!value && !query.trim()) {
+              setQuery("");
             }
           }}
           onKeyDown={handleInputKeyDown}
-          onChange={(event) => {
-            const nextQuery = event.target.value;
-            setQuery(nextQuery);
-            setIsOpen(true);
-
-            if (clearOnQueryChange && value && nextQuery !== selectedOption?.label) {
-              onChange("");
-            }
-          }}
-        />
+            onChange={(event) => {
+              handleQueryChange(event.target.value);
+            }}
+          />
+          {showSelectedLabelOverlay ? (
+            <span className={styles.searchableSelectDisplay} aria-hidden>
+              {selectedOption.label}
+            </span>
+          ) : null}
+        </div>
         <button
           type="button"
           className={styles.searchableSelectToggle}

@@ -96,4 +96,27 @@ describe("image-matching.service", () => {
 
     expect(outcome).toEqual({ status: "ASSOCIATED_AUTO", productId: "prod-img" });
   });
+
+  it("omite primaryCode del índice cuando includePrimaryCode es false", () => {
+    const index = buildProductMatchIndex(
+      [
+        {
+          id: "prod-generated",
+          primaryCode: "a3f9c2",
+          normalizedCode: "A3F9C2",
+          dynamicData: {},
+        },
+      ],
+      [],
+      { includePrimaryCode: false },
+    );
+
+    const outcome = matchExternalImage(
+      { originalName: "a3f9c2.jpg" },
+      index,
+      new Map<string, number>(),
+    );
+
+    expect(outcome.status).toBe("PENDING_REVIEW");
+  });
 });
