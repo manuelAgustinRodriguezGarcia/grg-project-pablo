@@ -44,7 +44,6 @@ import {
 import {
   appendExternalImagesToFormData,
   hasExternalImages,
-  hasStagedExternalImagesSummary,
   snapshotExternalImageSources,
   type ExternalImageSelection,
   type StagedExternalImagesSummary,
@@ -55,7 +54,6 @@ import {
 } from "@/features/imports/utils/upload-external-images";
 import { AlertTriangle, ArrowLeft, ArrowRight, FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
 import { ImportExternalImagesPanel } from "./ImportExternalImagesPanel";
-import { ImportStagedExternalImagesField } from "./ImportStagedExternalImagesField";
 import {
   ImportStepColumns,
   createInitialColumnMappingState,
@@ -66,6 +64,8 @@ import { ImportStepPreview } from "./ImportStepPreview";
 import { ImportStepResult } from "./ImportStepResult";
 import { ImportStepUpload } from "./ImportStepUpload";
 import { ImportWizardLoading } from "./ImportWizardLoading";
+import { ImportWizardStepContextHint } from "./ImportWizardStepContextHint";
+import { getImportWizardStepHint } from "@/features/imports/data/import-wizard-step-hints";
 import styles from "./ImportWizard.module.scss";
 
 type ImportWizardProps = {
@@ -767,6 +767,7 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
   }
 
   const currentStepIndex = getStepIndicatorIndex(step);
+  const stepContextHint = getImportWizardStepHint(step);
   const canContinueDestination = Boolean(
     selectedCatalogId && selectedFolderId && selectedSheetName,
   );
@@ -795,6 +796,9 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
             </span>
             <h2 className={styles.title}>Importar Excel</h2>
           </div>
+          {stepContextHint ? (
+            <ImportWizardStepContextHint text={stepContextHint} />
+          ) : null}
         </header>
 
         <div className={styles.steps} aria-hidden>
@@ -882,22 +886,15 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
               ) : null}
 
               {step === "columns" ? (
-                <>
-                  {hasStagedExternalImagesSummary(stagedExternalImagesSummary) ? (
-                    <ImportStagedExternalImagesField summary={stagedExternalImagesSummary} />
-                  ) : null}
-                  <ImportStepColumns
-                    headers={detectedHeaders}
-                    folderColumns={folderColumns}
-                    mappingRows={mappingRows}
-                    primaryCodeHeaderKey={primaryCodeHeaderKey}
-                    descriptionHeaderKey={descriptionHeaderKey}
-                    disabled={isBusy}
-                    onMappingRowsChange={setMappingRows}
-                    onPrimaryCodeHeaderKeyChange={setPrimaryCodeHeaderKey}
-                    onDescriptionHeaderKeyChange={setDescriptionHeaderKey}
-                  />
-                </>
+                <ImportStepColumns
+                  headers={detectedHeaders}
+                  folderColumns={folderColumns}
+                  mappingRows={mappingRows}
+                  primaryCodeHeaderKey={primaryCodeHeaderKey}
+                  disabled={isBusy}
+                  onMappingRowsChange={setMappingRows}
+                  onPrimaryCodeHeaderKeyChange={setPrimaryCodeHeaderKey}
+                />
               ) : null}
 
               {step === "preview" && preview ? (

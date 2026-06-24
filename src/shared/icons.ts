@@ -8,6 +8,7 @@ export {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Clock,
   Cog,
   Eye,
