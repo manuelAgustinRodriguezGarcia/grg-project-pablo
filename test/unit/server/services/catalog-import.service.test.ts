@@ -16,6 +16,7 @@ vi.mock("@/server/storage", () => ({
 vi.mock("@/server/repositories/uploaded-file.repository", () => ({
   uploadedFileRepository: {
     create: vi.fn(),
+    findById: vi.fn(),
     updateStatus: vi.fn(),
   },
 }));
@@ -25,6 +26,7 @@ vi.mock("@/server/repositories/import-job.repository", () => ({
     create: vi.fn(),
     findById: vi.fn(),
     findByIdWithRelations: vi.fn(),
+    findActiveByUploadedFileId: vi.fn(),
     update: vi.fn(),
     replaceSheets: vi.fn(),
     deletePreview: vi.fn(),
@@ -125,6 +127,8 @@ vi.mock("exceljs", () => ({
 import { catalogImportService } from "@/server/services/catalog-import.service";
 import { importJobRepository } from "@/server/repositories/import-job.repository";
 import { folderRepository } from "@/server/repositories/folder.repository";
+import { uploadedFileRepository } from "@/server/repositories/uploaded-file.repository";
+import { uploadFile } from "@/server/storage";
 
 describe("CatalogImportService", () => {
   beforeEach(() => {
@@ -186,6 +190,31 @@ describe("CatalogImportService", () => {
     ).rejects.toMatchObject({
       code: "CONFIRMATION_REQUIRED",
     } satisfies Partial<ImportError>);
+  });
+
+  it("createJobFromUploadedFile crea job STORED sin re-subir a Storage", async () => {
+    vi.mocked(uploadedFileRepository.findById).mockResolvedValue({
+      id: "file-1",
+      originalName: "a.xlsx",
+      storagePath: "imports/a.xlsx",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      sizeBytes: 100,
+      status: "STORED",
+      uploadedById: "admin-1",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    vi.mocked(importJobRepository.findActiveByUploadedFileId).mockResolvedValue(null);
+    vi.mocked(importJobRepository.create).mockResolvedValue({ id: "job-2" } as never);
+
+    const result = await catalogImportService.createJobFromUploadedFile("file-1");
+
+    expect(result).toEqual({ jobId: "job-2", uploadedFileId: "file-1" });
+    expect(importJobRepository.create).toHaveBeenCalledWith({
+      uploadedFileId: "file-1",
+      status: "STORED",
+    });
+    expect(uploadFile).not.toHaveBeenCalled();
   });
 
   it("completeImageReview pasa de PENDING_REVIEW a PUBLISHED", async () => {

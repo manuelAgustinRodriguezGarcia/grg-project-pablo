@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { AuthError } from "@/server/auth/errors";
 import { ImportError } from "@/server/services/import.errors";
+import { UploadedFileError } from "@/server/services/uploaded-file.errors";
 
 type DomainErrorHandler = (error: unknown) => NextResponse | null;
 
@@ -14,6 +15,22 @@ export function mapImportErrorToResponse(error: ImportError): NextResponse {
     ANALYSIS_FAILED: 422,
     PUBLISH_FAILED: 500,
     SHEET_NOT_IMPORTABLE: 400,
+    VALIDATION_ERROR: 400,
+  };
+
+  return NextResponse.json(
+    { error: error.message, code: error.code },
+    { status: statusByCode[error.code] ?? 400 },
+  );
+}
+
+export function mapUploadedFileErrorToResponse(
+  error: UploadedFileError,
+): NextResponse {
+  const statusByCode: Record<string, number> = {
+    FILE_NOT_FOUND: 404,
+    ACTIVE_JOB_EXISTS: 409,
+    CONFIRMATION_REQUIRED: 400,
     VALIDATION_ERROR: 400,
   };
 
@@ -43,6 +60,10 @@ export function handleAdminApiError(
 
   if (error instanceof ImportError) {
     return mapImportErrorToResponse(error);
+  }
+
+  if (error instanceof UploadedFileError) {
+    return mapUploadedFileErrorToResponse(error);
   }
 
   if (domainHandler) {

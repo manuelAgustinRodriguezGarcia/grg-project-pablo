@@ -4,6 +4,7 @@ import type { DetectedHeader } from "./types";
 const IMAGE_HEADER_PATTERNS = [/imagen/i, /image/i, /foto/i, /photo/i];
 const CODE_HEADER_PATTERNS = [/c[oó]digo/i, /^cod\./i, /referencia/i, /^ref\.?$/i];
 const DESCRIPTION_HEADER_PATTERNS = [/descripci[oó]n/i, /^desc\.?$/i, /detalle/i];
+const PRICE_HEADER_PATTERNS = [/precio/i, /importe/i, /monto/i, /costo/i, /valor/i];
 
 function slugifyHeader(name: string): string {
   const normalized = name
@@ -48,6 +49,7 @@ export function detectSemanticFlags(headerName: string): {
   isPrimaryCode: boolean;
   isDescription: boolean;
   isImageCode: boolean;
+  isPrice: boolean;
 } {
   return {
     isPrimaryCode: CODE_HEADER_PATTERNS.some((pattern) => pattern.test(headerName)),
@@ -55,6 +57,7 @@ export function detectSemanticFlags(headerName: string): {
       pattern.test(headerName),
     ),
     isImageCode: IMAGE_HEADER_PATTERNS.some((pattern) => pattern.test(headerName)),
+    isPrice: PRICE_HEADER_PATTERNS.some((pattern) => pattern.test(headerName)),
   };
 }
 

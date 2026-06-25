@@ -93,6 +93,16 @@ enum ImportSheetClassification {
   IGNORED
 }
 
+enum ImportDestinationType {
+  CATALOG_FOLDER
+  PRICE_LIST
+}
+
+enum PriceListStatus {
+  ACTIVE
+  INACTIVE
+}
+
 /// Perfil local sincronizado con Supabase Auth (`auth.users.id` → `User.id`).
 model User {
   id           String     @id @db.Uuid
@@ -104,8 +114,9 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  auditLogs    AuditLog[]
-  uploadedFiles UploadedFile[]
+  auditLogs           AuditLog[]
+  uploadedFiles       UploadedFile[]
+  offlineSyncManifests OfflineSyncManifest[]
 
   @@index([status])
 }
@@ -289,27 +300,111 @@ model UploadedFile {
   @@index([createdAt])
 }
 
-/// Operación de importación Excel hacia una carpeta.
+/// Lista de precios independiente de catálogos (RF-053–059).
+model PriceList {
+  id                   String          @id @default(cuid())
+  name                 String          @unique
+  description          String?
+  status               PriceListStatus @default(ACTIVE)
+  order                Int             @default(0)
+  visibleToNormalUser  Boolean         @default(true)
+  sourceUploadedFileId String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  columns    PriceColumn[]
+  items      PriceItem[]
+  importJobs ImportJob[]
+
+  @@index([status])
+  @@index([order])
+  @@index([visibleToNormalUser])
+}
+
+/// Columna configurada dentro de una lista de precios.
+model PriceColumn {
+  id                     String         @id @default(cuid())
+  priceListId            String
+  originalName           String
+  displayName            String
+  internalKey            String
+  dataType               ColumnDataType @default(UNKNOWN)
+  order                  Int            @default(0)
+  visibleToNormalUser    Boolean        @default(true)
+  isSearchable           Boolean        @default(false)
+  isFilterable           Boolean        @default(false)
+  isAdminEditable        Boolean        @default(true)
+  isPrimaryCode          Boolean        @default(false)
+  isDescription          Boolean        @default(false)
+  isPrice                Boolean        @default(false)
+  isRequired             Boolean        @default(false)
+  isReadOnly             Boolean        @default(false)
+  width                  Int?
+  format                 String?
+  unit                   String?
+  label                  String?
+  helpText               String?
+  helpImagePath          String?
+  helpImageThumbnailPath String?
+  helpImageMimeType      String?
+  helpImageSizeBytes     Int?
+  helpImageOriginalName  String?
+  helpImageAltText       String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  priceList PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+
+  @@unique([priceListId, internalKey])
+  @@index([priceListId])
+  @@index([priceListId, order])
+}
+
+/// Ítem (fila) dentro de una lista de precios.
+model PriceItem {
+  id             String   @id @default(cuid())
+  priceListId    String
+  primaryCode    String?
+  normalizedCode String?
+  description    String?
+  amount         Decimal? @db.Decimal(18, 4)
+  dynamicData    Json     @default("{}")
+  originalText   String?  @db.Text
+  indexedText    String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  priceList PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+
+  @@index([priceListId])
+  @@index([normalizedCode])
+  @@index([dynamicData], type: Gin)
+}
+
+/// Operación de importación Excel hacia una carpeta o lista de precios.
 model ImportJob {
-  id              String           @id @default(cuid())
+  id              String                @id @default(cuid())
   uploadedFileId  String
+  destinationType ImportDestinationType @default(CATALOG_FOLDER)
   catalogId       String?
   folderId        String?
+  priceListId     String?
   targetSheetName String?
-  status          ImportJobStatus  @default(STORED)
+  status          ImportJobStatus       @default(STORED)
   actionType      ImportActionType?
   config          Json?
   resultados      Json?
   progress        Json?
   errorMessage    String?
-  startedAt       DateTime         @default(now())
+  startedAt       DateTime              @default(now())
   finishedAt      DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 
   uploadedFile UploadedFile   @relation(fields: [uploadedFileId], references: [id], onDelete: Cascade)
   catalog      Catalog?       @relation(fields: [catalogId], references: [id], onDelete: SetNull)
   folder       CatalogFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  priceList    PriceList?     @relation(fields: [priceListId], references: [id], onDelete: SetNull)
   sheets        ImportSheet[]
   preview       ImportPreview?
   productImages ProductImage[]
@@ -318,6 +413,8 @@ model ImportJob {
   @@index([status])
   @@index([folderId])
   @@index([catalogId])
+  @@index([priceListId])
+  @@index([destinationType])
 }
 
 /// Hoja detectada durante el análisis de un archivo Excel.
@@ -363,6 +460,26 @@ model GlobalField {
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+/// Manifest de sincronización offline por usuario/dispositivo (RF-045–047).
+model OfflineSyncManifest {
+  id           String   @id @default(cuid())
+  userId       String   @db.Uuid
+  deviceId     String
+  version      Int      @default(1)
+  catalogIds   String[]
+  folderIds    String[]
+  priceListIds String[] @default([])
+  syncedAt     DateTime @default(now())
+  payloadHash  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@index([userId])
 }
 
 /// Registro de operaciones importantes (login, CRUD, importaciones, etc.).
