@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ImportStepColumns } from "@/features/imports/components/ImportStepColumns";
 
@@ -21,7 +21,7 @@ vi.mock("@/features/imports/components/ImportSearchableSelect", () => ({
   }) => (
     <input
       role="combobox"
-      aria-label="Columna código principal"
+      aria-label="Código para vincular imágenes del ZIP"
       disabled={disabled}
       value={value}
       readOnly
@@ -43,9 +43,7 @@ describe("ImportStepColumns", () => {
     cleanup();
   });
 
-  it("deshabilita el selector y activa el toggle al usar códigos generados", () => {
-    const onUseGeneratedPrimaryCodesChange = vi.fn();
-
+  it("muestra el selector de código ZIP cuando hay ZIP adjunto", () => {
     render(
       <ImportStepColumns
         headers={HEADERS}
@@ -56,50 +54,45 @@ describe("ImportStepColumns", () => {
             headerOriginalName: "NÚMERO DE ORDEN",
             targetValue: "__create__",
           },
-          {
-            headerInternalKey: "detalle",
-            headerOriginalName: "Detalle",
-            targetValue: "__create__",
-          },
         ]}
         primaryCodeHeaderKey="numero_de_orden"
-        useGeneratedPrimaryCodes
+        showPrimaryCodeSelection
         disabled={false}
         onMappingRowsChange={vi.fn()}
         onPrimaryCodeHeaderKeyChange={vi.fn()}
-        onUseGeneratedPrimaryCodesChange={onUseGeneratedPrimaryCodesChange}
       />,
     );
 
-    expect(screen.getByRole("combobox")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Generar Códigos" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(
-      screen.getByText(/las imágenes se asociarán por otras columnas/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/vinculará las imágenes del archivo zip/i)).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).not.toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Generar Códigos" })).not.toBeInTheDocument();
   });
 
-  it("activa el modo generado al pulsar el botón", () => {
-    const onUseGeneratedPrimaryCodesChange = vi.fn();
-
+  it("oculta la selección de código ZIP cuando no hay ZIP adjunto", () => {
     render(
       <ImportStepColumns
         headers={HEADERS}
         folderColumns={[]}
-        mappingRows={[]}
+        mappingRows={[
+          {
+            headerInternalKey: "numero_de_orden",
+            headerOriginalName: "NÚMERO DE ORDEN",
+            targetValue: "__create__",
+          },
+        ]}
         primaryCodeHeaderKey="numero_de_orden"
-        useGeneratedPrimaryCodes={false}
+        showPrimaryCodeSelection={false}
         disabled={false}
         onMappingRowsChange={vi.fn()}
         onPrimaryCodeHeaderKeyChange={vi.fn()}
-        onUseGeneratedPrimaryCodesChange={onUseGeneratedPrimaryCodesChange}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Generar Códigos" }));
-
-    expect(onUseGeneratedPrimaryCodesChange).toHaveBeenCalledWith(true);
+    expect(screen.queryByText(/vincular imágenes del zip/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generar Códigos" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Columna Excel" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Crear columna nueva" }),
+    ).toBeInTheDocument();
   });
 });

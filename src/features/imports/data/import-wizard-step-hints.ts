@@ -6,7 +6,7 @@ export const IMPORT_WIZARD_STEP_HINTS: Partial<Record<ImportWizardStep, string>>
   destination:
     "Seleccione en qué catálogo y carpeta desea guardar la lista de productos.",
   columns:
-    "Revise cómo se reconocen las columnas del Excel con la carpeta destino y ajuste el código principal y cada columna.",
+    "Revise qué columnas del Excel desea crear en la carpeta destino.",
   preview:
     "Revise la vista previa y confirme cómo desea aplicar la lista de productos.",
   imageReview:

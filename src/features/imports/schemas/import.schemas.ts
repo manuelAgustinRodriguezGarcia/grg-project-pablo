@@ -29,7 +29,7 @@ export const importConfigSchema = z
       context.addIssue({
         code: "custom",
         message:
-          "Debe seleccionar una columna código principal o activar la generación automática de códigos.",
+          "Debe seleccionar una columna para vincular las imágenes del ZIP.",
         path: ["primaryCodeColumnKey"],
       });
     }

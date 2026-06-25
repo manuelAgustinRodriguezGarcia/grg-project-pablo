@@ -1,4 +1,5 @@
 import type { Cell } from "exceljs";
+import { normalizeMultilineText } from "@/shared/text/normalize-multiline-text";
 import type { ParsedFormula } from "./types";
 
 export type ExtractedCellValue = {
@@ -14,6 +15,22 @@ function isRichText(value: unknown): value is { richText: Array<{ text: string }
     "richText" in value &&
     Array.isArray((value as { richText: unknown }).richText)
   );
+}
+
+function shouldPreferCellText(value: unknown): boolean {
+  if (typeof value === "string") {
+    return true;
+  }
+
+  if (isRichText(value)) {
+    return true;
+  }
+
+  if (typeof value === "object" && value !== null && "text" in value) {
+    return true;
+  }
+
+  return false;
 }
 
 function flattenCellValue(value: unknown): unknown {
@@ -40,6 +57,20 @@ function flattenCellValue(value: unknown): unknown {
   return value;
 }
 
+function resolveDisplayValue(cell: Cell, rawValue: unknown): unknown {
+  if (shouldPreferCellText(rawValue) && typeof cell.text === "string") {
+    return normalizeMultilineText(cell.text);
+  }
+
+  const flattened = flattenCellValue(rawValue);
+
+  if (typeof flattened === "string") {
+    return normalizeMultilineText(flattened);
+  }
+
+  return flattened;
+}
+
 export function extractCellValue(cell: Cell | undefined): ExtractedCellValue {
   if (!cell || cell.value === null || cell.value === undefined) {
     return { displayValue: null, hasCachedValue: true };
@@ -49,16 +80,16 @@ export function extractCellValue(cell: Cell | undefined): ExtractedCellValue {
   const hasResult = cell.result !== undefined && cell.result !== null;
 
   if (formula) {
-    const cached = hasResult ? flattenCellValue(cell.result) : flattenCellValue(cell.value);
+    const rawValue = hasResult ? cell.result : cell.value;
     return {
-      displayValue: cached,
+      displayValue: resolveDisplayValue(cell, rawValue),
       formula,
       hasCachedValue: hasResult,
     };
   }
 
   return {
-    displayValue: flattenCellValue(cell.value),
+    displayValue: resolveDisplayValue(cell, cell.value),
     hasCachedValue: true,
   };
 }

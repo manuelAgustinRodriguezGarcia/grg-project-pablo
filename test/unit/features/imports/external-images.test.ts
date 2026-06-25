@@ -1,50 +1,48 @@
 import { describe, expect, it } from "vitest";
 import {
-  hasStagedExternalImagesSummary,
-  snapshotExternalImageSources,
+  hasAttachedZip,
+  type ExternalImageSelection,
+  type StagedExternalImagesSummary,
 } from "@/features/imports/utils/external-images";
 
-describe("snapshotExternalImageSources", () => {
-  it("captura zip e imágenes sueltas", () => {
-    const zip = new File([new Uint8Array([1, 2, 3])], "fotos.zip", {
-      type: "application/zip",
-    });
-    const image = new File([new Uint8Array([4, 5])], "a.jpg", {
-      type: "image/jpeg",
-    });
+describe("hasAttachedZip", () => {
+  const emptySelection: ExternalImageSelection = {
+    zipFile: null,
+    imageFiles: [],
+  };
 
-    expect(
-      snapshotExternalImageSources({
-        zipFile: zip,
-        imageFiles: [image],
-      }),
-    ).toEqual([
-      { name: "fotos.zip", sizeBytes: 3, kind: "zip" },
-      { name: "a.jpg", sizeBytes: 2, kind: "image" },
-    ]);
+  it("devuelve true si hay un ZIP en la selección actual", () => {
+    const selection: ExternalImageSelection = {
+      zipFile: new File(["zip"], "imagenes.zip", { type: "application/zip" }),
+      imageFiles: [],
+    };
+
+    expect(hasAttachedZip(selection, null)).toBe(true);
   });
-});
 
-describe("hasStagedExternalImagesSummary", () => {
-  it("detecta resúmenes con archivos o imágenes importadas", () => {
-    expect(hasStagedExternalImagesSummary(null)).toBe(false);
-    expect(
-      hasStagedExternalImagesSummary({
-        sources: [],
-        imageCount: 0,
-      }),
-    ).toBe(false);
-    expect(
-      hasStagedExternalImagesSummary({
-        sources: [{ name: "fotos.zip", sizeBytes: 10, kind: "zip" }],
-        imageCount: 0,
-      }),
-    ).toBe(true);
-    expect(
-      hasStagedExternalImagesSummary({
-        sources: [],
-        imageCount: 3,
-      }),
-    ).toBe(true);
+  it("devuelve true si el ZIP ya quedó registrado en el resumen del job", () => {
+    const summary: StagedExternalImagesSummary = {
+      sources: [{ name: "imagenes.zip", sizeBytes: 1024, kind: "zip" }],
+      imageCount: 12,
+    };
+
+    expect(hasAttachedZip(emptySelection, summary)).toBe(true);
+  });
+
+  it("devuelve false si solo hay imágenes sueltas sin ZIP", () => {
+    const selection: ExternalImageSelection = {
+      zipFile: null,
+      imageFiles: [new File(["img"], "foto.jpg", { type: "image/jpeg" })],
+    };
+    const summary: StagedExternalImagesSummary = {
+      sources: [{ name: "foto.jpg", sizeBytes: 512, kind: "image" }],
+      imageCount: 1,
+    };
+
+    expect(hasAttachedZip(selection, summary)).toBe(false);
+  });
+
+  it("devuelve false sin ZIP ni resumen", () => {
+    expect(hasAttachedZip(emptySelection, null)).toBe(false);
   });
 });

@@ -13,22 +13,20 @@ import { ImportSearchableSelect } from "./ImportSearchableSelect";
 import { ImportYesNoRadio } from "./ImportYesNoRadio";
 import styles from "./ImportWizard.module.scss";
 
-const PRIMARY_CODE_HELP_TEXT =
-  "Seleccione la columna del Excel que identificará de forma única a cada producto. Esto ayudará a facilitar la búsqueda de productos.";
+const PRIMARY_CODE_FIELD_LABEL = "Código para vincular imágenes del ZIP";
 
-const GENERATED_PRIMARY_CODE_HELP_TEXT =
-  "Se generará un ID corto automático por cada fila del Excel. Las imágenes se asociarán por otras columnas o por la fila, no por estos códigos generados. Al combinar listas, los productos importados se tratarán como nuevos.";
+const PRIMARY_CODE_HELP_TEXT =
+  "Seleccione la columna del Excel que vinculará las imágenes del archivo ZIP con los productos del catálogo.";
 
 type ImportStepColumnsProps = {
   headers: ImportDetectedHeader[];
   folderColumns: FolderColumn[];
   mappingRows: ColumnMappingRow[];
   primaryCodeHeaderKey: string;
-  useGeneratedPrimaryCodes: boolean;
+  showPrimaryCodeSelection: boolean;
   disabled: boolean;
   onMappingRowsChange: (rows: ColumnMappingRow[]) => void;
   onPrimaryCodeHeaderKeyChange: (headerKey: string) => void;
-  onUseGeneratedPrimaryCodesChange: (value: boolean) => void;
 };
 
 function isCreateColumnTarget(targetValue: string): boolean {
@@ -40,11 +38,10 @@ export function ImportStepColumns({
   folderColumns: _folderColumns,
   mappingRows,
   primaryCodeHeaderKey,
-  useGeneratedPrimaryCodes,
+  showPrimaryCodeSelection,
   disabled,
   onMappingRowsChange,
   onPrimaryCodeHeaderKeyChange,
-  onUseGeneratedPrimaryCodesChange,
 }: ImportStepColumnsProps) {
   const headerOptions = headers.map((header) => ({
     value: header.internalKey,
@@ -74,41 +71,24 @@ export function ImportStepColumns({
 
   return (
     <div>
-      <div className={`${styles.field} ${styles.primaryCodeField}`}>
-        <div className={styles.fieldHeader}>
-          <span className={styles.fieldLabel}>Columna código principal</span>
-        </div>
-        <p className={styles.fieldHelpText}>
-          {useGeneratedPrimaryCodes
-            ? GENERATED_PRIMARY_CODE_HELP_TEXT
-            : PRIMARY_CODE_HELP_TEXT}
-        </p>
-        <div className={styles.primaryCodeSelectWrap}>
-          <div className={styles.primaryCodeSelectRow}>
-            <div className={styles.primaryCodeSelectControl}>
-              <ImportSearchableSelect
-                options={headerOptions}
-                value={primaryCodeHeaderKey}
-                onChange={onPrimaryCodeHeaderKeyChange}
-                disabled={disabled || useGeneratedPrimaryCodes}
-                placeholder="Buscar columna del Excel…"
-                listboxLabel="Columna código principal"
-              />
-            </div>
-            <button
-              type="button"
-              className={`${styles.secondaryButton} ${styles.generateCodesButton} ${useGeneratedPrimaryCodes ? styles.generateCodesButtonActive : ""}`}
-              aria-pressed={useGeneratedPrimaryCodes}
+      {showPrimaryCodeSelection ? (
+        <div className={`${styles.field} ${styles.primaryCodeField}`}>
+          <div className={styles.fieldHeader}>
+            <span className={styles.fieldLabel}>{PRIMARY_CODE_FIELD_LABEL}</span>
+          </div>
+          <p className={styles.fieldHelpText}>{PRIMARY_CODE_HELP_TEXT}</p>
+          <div className={styles.primaryCodeSelectWrap}>
+            <ImportSearchableSelect
+              options={headerOptions}
+              value={primaryCodeHeaderKey}
+              onChange={onPrimaryCodeHeaderKeyChange}
               disabled={disabled}
-              onClick={() =>
-                onUseGeneratedPrimaryCodesChange(!useGeneratedPrimaryCodes)
-              }
-            >
-              Generar Códigos
-            </button>
+              placeholder="Buscar columna del Excel…"
+              listboxLabel={PRIMARY_CODE_FIELD_LABEL}
+            />
           </div>
         </div>
-      </div>
+      ) : null}
 
       <table className={styles.columnMappingTable}>
         <thead>

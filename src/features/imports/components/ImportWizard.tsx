@@ -43,6 +43,7 @@ import {
 } from "@/features/imports/utils/column-mapping";
 import {
   appendExternalImagesToFormData,
+  hasAttachedZip,
   hasExternalImages,
   snapshotExternalImageSources,
   type ExternalImageSelection,
@@ -52,7 +53,8 @@ import {
   fetchStagedImageCount,
   uploadExternalImagesToJob,
 } from "@/features/imports/utils/upload-external-images";
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
+import { useNativeFilePickerOutsideClickGuard } from "@/features/imports/utils/native-file-picker-outside-click-guard";
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, FileSpreadsheet, ICON_STROKE, X } from "@/shared/icons";
 import { ImportExternalImagesPanel } from "./ImportExternalImagesPanel";
 import {
   ImportStepColumns,
@@ -146,6 +148,8 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
   const [deleteCatalogTarget, setDeleteCatalogTarget] = useState<CatalogTarget | null>(null);
   const [editCatalogTarget, setEditCatalogTarget] = useState<CatalogTarget | null>(null);
   const [editCatalogNameDraft, setEditCatalogNameDraft] = useState("");
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const nativeFilePickerGuard = useNativeFilePickerOutsideClickGuard();
   const loadingExitResolver = useRef<(() => void) | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -179,7 +183,6 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
   const [mappingRows, setMappingRows] = useState<ColumnMappingRow[]>([]);
   const [primaryCodeHeaderKey, setPrimaryCodeHeaderKey] = useState("");
   const [descriptionHeaderKey, setDescriptionHeaderKey] = useState("");
-  const [useGeneratedPrimaryCodes, setUseGeneratedPrimaryCodes] = useState(false);
 
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
   const [selectedAction, setSelectedAction] = useState<ImportActionType | null>(null);
@@ -197,6 +200,7 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
 
   const selectedSheet = sheets.find((sheet) => sheet.sheetName === selectedSheetName);
   const detectedHeaders = parseDetectedHeaders(selectedSheet);
+  const zipAttached = hasAttachedZip(externalImages, stagedExternalImagesSummary);
 
   const uploadPendingExternalImages = useCallback(
     async (options?: { clearAfter?: boolean }) => {
@@ -321,15 +325,44 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
     onClose();
   }, [isBusy, jobId, step, onClose]);
 
+  const requestCloseConfirm = useCallback(() => {
+    if (isBusy) {
+      return;
+    }
+    setShowCloseConfirm(true);
+  }, [isBusy]);
+
+  function handleOverlayMouseUp(event: React.MouseEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    if (nativeFilePickerGuard.shouldIgnoreOutsideClose()) {
+      return;
+    }
+    requestCloseConfirm();
+  }
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        handleClose();
+      if (event.key !== "Escape") {
+        return;
       }
+
+      if (showCloseConfirm) {
+        setShowCloseConfirm(false);
+        return;
+      }
+
+      if (confirmAction) {
+        setConfirmAction(null);
+        return;
+      }
+
+      requestCloseConfirm();
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleClose]);
+  }, [confirmAction, requestCloseConfirm, showCloseConfirm]);
 
   async function handleUploadContinue() {
     if (!file) {
@@ -612,7 +645,6 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
       setMappingRows(initialMapping.mappingRows);
       setPrimaryCodeHeaderKey(initialMapping.primaryCodeHeaderKey);
       setDescriptionHeaderKey(initialMapping.descriptionHeaderKey);
-      setUseGeneratedPrimaryCodes(false);
 
       updateLoadingOverlay("Destino configurado…", 93);
       await completeLoadingOverlay();
@@ -641,9 +673,10 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
       updateLoadingOverlay("Generando la vista previa…", 45);
 
       const columnMapping = buildImportColumnMapping(mappingRows);
-      const primaryCodeColumnKey = useGeneratedPrimaryCodes
-        ? undefined
-        : resolveFolderColumnKey(primaryCodeHeaderKey, mappingRows) ?? undefined;
+      const shouldUseGeneratedPrimaryCodes = !zipAttached;
+      const primaryCodeColumnKey = zipAttached
+        ? resolveFolderColumnKey(primaryCodeHeaderKey, mappingRows) ?? undefined
+        : undefined;
       const descriptionColumnKey = descriptionHeaderKey
         ? resolveFolderColumnKey(descriptionHeaderKey, mappingRows) ?? undefined
         : undefined;
@@ -653,7 +686,7 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
         columnMapping,
         primaryCodeColumnKey,
         descriptionColumnKey,
-        useGeneratedPrimaryCodes,
+        useGeneratedPrimaryCodes: shouldUseGeneratedPrimaryCodes,
       });
       if (!configResult.success) {
         throw new Error(configResult.error);
@@ -789,13 +822,14 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
       role="dialog"
       aria-modal="true"
       aria-label="Asistente de importación de Excel"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          handleClose();
-        }
-      }}
+      onMouseUp={handleOverlayMouseUp}
     >
-      <div className={styles.modal}>
+      <div
+        className={styles.modal}
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
+      >
         <header className={styles.header}>
           <div className={styles.titleRow}>
             <span className={styles.titleIcon} aria-hidden>
@@ -866,6 +900,10 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
                     setExternalImages(selection);
                     setError(null);
                   }}
+                  onNativeFilePickerOpen={nativeFilePickerGuard.armForNativeFilePicker}
+                  onNativeFilePickerSettled={
+                    nativeFilePickerGuard.notifyNativeFilePickerSettled
+                  }
                 />
               ) : null}
 
@@ -898,11 +936,10 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
                   folderColumns={folderColumns}
                   mappingRows={mappingRows}
                   primaryCodeHeaderKey={primaryCodeHeaderKey}
-                  useGeneratedPrimaryCodes={useGeneratedPrimaryCodes}
+                  showPrimaryCodeSelection={zipAttached}
                   disabled={isBusy}
                   onMappingRowsChange={setMappingRows}
                   onPrimaryCodeHeaderKeyChange={setPrimaryCodeHeaderKey}
-                  onUseGeneratedPrimaryCodesChange={setUseGeneratedPrimaryCodes}
                 />
               ) : null}
 
@@ -938,6 +975,18 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
         <footer
           className={`${styles.footer} ${step === "imageReview" ? styles.imageReviewWizardFooter : ""} ${step === "result" ? styles.resultWizardFooter : ""}`}
         >
+          {step === "upload" ? (
+            <button
+              type="button"
+              className={styles.ghostButton}
+              onClick={handleClose}
+              disabled={isBusy}
+            >
+              <X className={styles.buttonIcon} strokeWidth={ICON_STROKE} aria-hidden />
+              Cerrar
+            </button>
+          ) : null}
+
           {step === "destination" || step === "columns" || step === "preview" ? (
             <button
               type="button"
@@ -1140,6 +1189,53 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
                   onClick={() => void applyImport(confirmAction)}
                 >
                   {confirmAction === "REEMPLAZAR_LISTA" ? "Reemplazar" : "Combinar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {showCloseConfirm ? (
+          <div className={styles.confirmOverlay}>
+            <div
+              className={`${styles.confirmCard} ${styles.closeConfirmCard}`}
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="import-wizard-close-confirm-title"
+              aria-describedby="import-wizard-close-confirm-text"
+              onMouseDown={(event) => {
+                event.stopPropagation();
+              }}
+            >
+              <div className={styles.closeConfirmIcon} aria-hidden>
+                <AlertTriangle strokeWidth={ICON_STROKE} />
+              </div>
+              <h3
+                id="import-wizard-close-confirm-title"
+                className={styles.closeConfirmTitle}
+              >
+                ¿Cerrar importación?
+              </h3>
+              <p id="import-wizard-close-confirm-text" className={styles.closeConfirmText}>
+                Los cambios realizados no se guardarán si cierra el asistente ahora.
+              </p>
+              <div className={styles.closeConfirmActions}>
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  onClick={() => setShowCloseConfirm(false)}
+                >
+                  Continuar importación
+                </button>
+                <button
+                  type="button"
+                  className={styles.dangerButton}
+                  onClick={() => {
+                    setShowCloseConfirm(false);
+                    handleClose();
+                  }}
+                >
+                  Cerrar importación
                 </button>
               </div>
             </div>

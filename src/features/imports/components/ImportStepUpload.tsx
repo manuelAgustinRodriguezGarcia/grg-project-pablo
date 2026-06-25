@@ -15,6 +15,8 @@ type ImportStepUploadProps = {
   disabled: boolean;
   onFileSelected: (file: File | null) => void;
   onExternalImagesChange: (selection: ExternalImageSelection) => void;
+  onNativeFilePickerOpen?: () => void;
+  onNativeFilePickerSettled?: () => void;
 };
 
 function formatSize(bytes: number): string {
@@ -39,6 +41,8 @@ export function ImportStepUpload({
   disabled,
   onFileSelected,
   onExternalImagesChange,
+  onNativeFilePickerOpen,
+  onNativeFilePickerSettled,
 }: ImportStepUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -50,6 +54,16 @@ export function ImportStepUpload({
       return;
     }
     onFileSelected(selected);
+  }
+
+  function openExcelFilePicker() {
+    onNativeFilePickerOpen?.();
+    inputRef.current?.click();
+  }
+
+  function handleExcelInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    pickFromList(event.target.files);
+    onNativeFilePickerSettled?.();
   }
 
   function handleDrop(event: React.DragEvent<HTMLButtonElement>) {
@@ -80,7 +94,7 @@ export function ImportStepUpload({
           <button
             type="button"
             className={`${styles.dropZone} ${isDragging ? styles.dropZoneActive : ""}`}
-            onClick={() => inputRef.current?.click()}
+            onClick={openExcelFilePicker}
             onDragOver={(event) => {
               event.preventDefault();
               if (!disabled) setIsDragging(true);
@@ -104,7 +118,7 @@ export function ImportStepUpload({
           type="file"
           className={styles.hiddenInput}
           accept={ACCEPT_ATTR}
-          onChange={(event) => pickFromList(event.target.files)}
+          onChange={handleExcelInputChange}
           disabled={disabled}
         />
 
@@ -134,6 +148,8 @@ export function ImportStepUpload({
         selection={externalImages}
         disabled={disabled}
         onChange={onExternalImagesChange}
+        onNativeFilePickerOpen={onNativeFilePickerOpen}
+        onNativeFilePickerSettled={onNativeFilePickerSettled}
       />
     </div>
   );

@@ -22,6 +22,7 @@ import {
   productToFieldValues,
 } from "./product-field.builder";
 import { equivalenceService } from "./equivalence.service";
+import { getProductTableColumns } from "@/features/catalog/utils/product-table-columns";
 import type { EquivalenceListItem } from "./equivalence.service";
 import { columnHelpService } from "./column-help.service";
 import { columnFilterService } from "@/server/filters/column-filter.service";
@@ -212,7 +213,9 @@ export class ProductService {
       visibilityService.columnWhereForRole(role),
     );
 
-    const columnItems = await columnHelpService.resolveHelpForColumns(columns, role);
+    const columnItems = getProductTableColumns(
+      await columnHelpService.resolveHelpForColumns(columns, role),
+    );
 
     const parsedFilters = columnFilterService.parseFilters(input.filters);
     const filterableKeys = resolveFilterableKeys(folder, columns);
