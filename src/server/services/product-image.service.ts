@@ -39,6 +39,10 @@ import { ProductImageError } from "./product-image.errors";
 import { VisibilityError } from "./visibility.errors";
 import { visibilityService } from "./visibility.service";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
+import {
+  resolveImageColumnInternalKey,
+  type ColumnLabelRef,
+} from "./product-image-column-map";
 
 export type ProductImageUrls = {
   id: string;
@@ -721,6 +725,40 @@ export class ProductImageService {
           thumbnailUrl: urls.thumbnailUrl,
           fullUrl: urls.fullUrl,
         });
+      }),
+    );
+
+    return result;
+  }
+
+  async resolveColumnImagesForProducts(
+    productIds: string[],
+    columns: ColumnLabelRef[],
+  ): Promise<Map<string, Record<string, ProductImageUrls[]>>> {
+    const images = await productImageRepository.findAssociatedByProductIds(productIds);
+    const result = new Map<string, Record<string, ProductImageUrls[]>>();
+
+    await Promise.all(
+      images.map(async (image) => {
+        if (!image.productId) {
+          return;
+        }
+
+        const columnKey = resolveImageColumnInternalKey(image, columns);
+        if (!columnKey) {
+          return;
+        }
+
+        const urls = await resolveImageUrls(image);
+        const entry = result.get(image.productId) ?? {};
+        const bucket = entry[columnKey] ?? [];
+        bucket.push({
+          id: image.id,
+          thumbnailUrl: urls.thumbnailUrl,
+          fullUrl: urls.fullUrl,
+        });
+        entry[columnKey] = bucket;
+        result.set(image.productId, entry);
       }),
     );
 

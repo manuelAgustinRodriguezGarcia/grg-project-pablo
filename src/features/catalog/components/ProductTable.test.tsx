@@ -46,6 +46,8 @@ function createTableData(
       total: products.length,
       totalPages: 1,
     },
+    search: null,
+    activeFilters: [],
   };
 }
 
@@ -89,6 +91,7 @@ describe("ProductTable", () => {
           thumbnailUrl: "https://example.com/thumb.jpg",
           fullUrl: "https://example.com/full.jpg",
         },
+        imagesByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -117,6 +120,7 @@ describe("ProductTable", () => {
           thumbnailUrl: "https://example.com/thumb.jpg",
           fullUrl: "https://example.com/full.jpg",
         },
+        imagesByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -145,6 +149,7 @@ describe("ProductTable", () => {
           thumbnailUrl: "https://example.com/thumb.jpg",
           fullUrl: null,
         },
+        imagesByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -154,6 +159,7 @@ describe("ProductTable", () => {
         description: "Sin imagen",
         dynamicData: {},
         primaryImage: null,
+        imagesByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -178,6 +184,7 @@ describe("ProductTable", () => {
           thumbnailUrl: "https://example.com/thumb.jpg",
           fullUrl: null,
         },
+        imagesByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -187,6 +194,7 @@ describe("ProductTable", () => {
         description: "Sin imagen",
         dynamicData: {},
         primaryImage: null,
+        imagesByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -197,24 +205,72 @@ describe("ProductTable", () => {
     expect(screen.getAllByText("—")).toHaveLength(1);
   });
 
-  it("does not render the image column when no product has primaryImage", () => {
-    const data = createTableData([
-      {
-        id: "product-1",
-        primaryCode: "6205",
-        description: "Ruleman",
-        dynamicData: {},
-        primaryImage: null,
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z",
+  it("renders images inside their mapped column instead of the global image column", () => {
+    const data: ProductTableResponse = {
+      ...createTableData([]),
+      columns: [
+        {
+          id: "col-1",
+          folderId: "folder-1",
+          originalName: "Foto",
+          displayName: "Foto",
+          internalKey: "foto",
+          dataType: "TEXT",
+          order: 0,
+          isPrimaryCode: false,
+          isDescription: false,
+          isImageCode: false,
+          isSearchable: false,
+          isFilterable: false,
+          visibleToNormalUser: true,
+          isGloballySearchable: false,
+          isGloballyFilterable: false,
+          globalFieldKey: null,
+          createdAt: new Date("2026-01-01"),
+          updatedAt: new Date("2026-01-01"),
+        },
+      ],
+      products: [
+        {
+          id: "product-1",
+          primaryCode: "6205",
+          description: "Ruleman",
+          dynamicData: { foto: "Texto del campo" },
+          primaryImage: {
+            id: "image-1",
+            thumbnailUrl: "https://example.com/thumb.jpg",
+            fullUrl: "https://example.com/full.jpg",
+          },
+          imagesByColumnKey: {
+            foto: [
+              {
+                id: "image-1",
+                thumbnailUrl: "https://example.com/thumb.jpg",
+                fullUrl: "https://example.com/full.jpg",
+              },
+            ],
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      pagination: {
+        page: 1,
+        pageSize: 25,
+        total: 1,
+        totalPages: 1,
       },
-    ]);
+    };
 
     const { container } = render(
       <ProductTable data={data} isLoading={false} error={null} onPageChange={vi.fn()} />,
     );
 
     expect(screen.queryByRole("columnheader", { name: "Imagen" })).not.toBeInTheDocument();
-    expect(container.querySelector(".tableThumb")).toBeNull();
+    expect(screen.getByText("Texto del campo")).toBeInTheDocument();
+    expect(container.querySelector(".tableCellThumb")).toHaveAttribute(
+      "src",
+      "https://example.com/thumb.jpg",
+    );
   });
 });

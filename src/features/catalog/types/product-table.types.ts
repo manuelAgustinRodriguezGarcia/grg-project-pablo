@@ -20,6 +20,7 @@ export type ProductTableItem = {
   description: string | null;
   dynamicData: Record<string, unknown>;
   primaryImage: ProductTablePrimaryImage | null;
+  imagesByColumnKey: Record<string, ProductTablePrimaryImage[]>;
   createdAt: string;
   updatedAt: string;
 };

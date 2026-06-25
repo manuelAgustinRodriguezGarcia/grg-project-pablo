@@ -49,6 +49,11 @@ function createSheet(): ParsedSheet {
     columnCount: 2,
     imageCount: 0,
     imagesByRow: {},
+    embeddedImageSummary: {
+      embeddedImagesDetected: 0,
+      rowsWithEmbeddedImages: 0,
+      productsWithMultipleEmbeddedImages: 0,
+    },
   };
 }
 

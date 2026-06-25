@@ -3,6 +3,7 @@ import type {
   ImportJobStatus,
   ImportSheetClassification,
   Prisma,
+  ProductImageStatus,
 } from "@/generated/prisma/client";
 import ExcelJS from "exceljs";
 import { requireRole } from "@/server/auth";
@@ -58,6 +59,80 @@ const TERMINAL_STATUSES: ImportJobStatus[] = [
   "CANCELLED",
 ];
 
+type ImportJobProgress = {
+  phase?: string;
+  percent?: number;
+  message?: string;
+};
+
+function readImportProgress(progress: unknown): ImportJobProgress {
+  if (typeof progress === "object" && progress !== null) {
+    return progress as ImportJobProgress;
+  }
+
+  return {};
+}
+
+function isImageProcessingResume(job: {
+  status: ImportJobStatus;
+  progress: unknown;
+}): boolean {
+  const progress = readImportProgress(job.progress);
+  return job.status === "PROCESSING" && progress.phase === "images";
+}
+
+function assertCanConfigureImport(job: {
+  status: ImportJobStatus;
+  progress: unknown;
+}): void {
+  const progress = readImportProgress(job.progress);
+  const allowed =
+    job.status === "PENDING_CONFIG" ||
+    job.status === "READY_TO_APPLY" ||
+    (job.status === "PROCESSING" && progress.phase === "preview");
+
+  if (!allowed) {
+    throw new ImportError(
+      `Estado de importación inválido: ${job.status}.`,
+      "INVALID_STATE",
+    );
+  }
+}
+
+function previewGenerationRestoreStatus(
+  previousStatus: ImportJobStatus,
+): ImportJobStatus {
+  if (previousStatus === "READY_TO_APPLY") {
+    return "READY_TO_APPLY";
+  }
+
+  return "PENDING_CONFIG";
+}
+
+function toPrismaJsonValue<T>(value: T): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
+function formatPreviewError(error: unknown): string {
+  const base = "No se pudo generar la vista previa.";
+
+  if (!(error instanceof Error) || !error.message) {
+    return base;
+  }
+
+  const message = error.message.replace(/\s+/g, " ").trim();
+
+  if (message.includes("Unknown argument")) {
+    return `${base} Error de configuración de columnas en base de datos. Reinicie el servidor de desarrollo y ejecute «pnpm db:generate».`;
+  }
+
+  if (message.length <= 220) {
+    return `${base} ${message}`;
+  }
+
+  return base;
+}
+
 export type UploadImportFileInput = {
   buffer: Buffer;
   originalFilename: string;
@@ -108,6 +183,13 @@ export type ImportReport = {
   imagesPendingReview: number;
   imagesRejected: number;
   imagesAmbiguous: number;
+  embeddedImagesDetected: number;
+  embeddedImagesAssociated: number;
+  embeddedImagesPendingReview: number;
+  embeddedImagesRejected: number;
+  rowsWithEmbeddedImages: number;
+  productsWithEmbeddedImages: number;
+  productsWithMultipleEmbeddedImages: number;
   columnsDetected: number;
   columnsCreated: number;
   errors: string[];
@@ -233,6 +315,7 @@ export class CatalogImportService {
             classificationReason: sheet.classificationReason,
             headerRow: sheet.headerRow,
             imageCount: sheet.imageCount,
+            embeddedImageSummary: sheet.embeddedImageSummary,
           },
         })),
       );
@@ -318,8 +401,9 @@ export class CatalogImportService {
       throw new ImportError("Importación no encontrada.", "IMPORT_NOT_FOUND");
     }
 
-    assertStatus(job.status, ["PENDING_CONFIG", "READY_TO_APPLY"]);
+    assertCanConfigureImport(job);
 
+    const previousStatus = job.status;
     const existingConfig = (job.config as ImportJobConfig | null) ?? {};
     const config: ImportJobConfig = {
       ...existingConfig,
@@ -333,7 +417,6 @@ export class CatalogImportService {
 
     await importJobRepository.update(jobId, {
       config,
-      status: "PROCESSING",
       progress: {
         phase: "preview",
         percent: 70,
@@ -341,7 +424,26 @@ export class CatalogImportService {
       },
     });
 
-    return this.buildPreview(jobId, config);
+    try {
+      return await this.buildPreview(jobId, config);
+    } catch (error) {
+      console.error("[catalogImportService.setConfig]", error);
+
+      await importJobRepository.update(jobId, {
+        status: previewGenerationRestoreStatus(previousStatus),
+        progress: {
+          phase: "config",
+          percent: 55,
+          message: "Configure columnas y genere la vista previa.",
+        },
+      });
+
+      if (error instanceof ImportError) {
+        throw error;
+      }
+
+      throw new ImportError(formatPreviewError(error), "PREVIEW_FAILED");
+    }
   }
 
   private async loadWorkbookFromJob(
@@ -391,6 +493,15 @@ export class CatalogImportService {
       rejected: number;
       ambiguous: number;
     };
+    embedded: {
+      extracted: number;
+      associated: number;
+      pendingReview: number;
+      rejected: number;
+      rowsWithEmbeddedImages: number;
+      productsWithEmbeddedImages: number;
+      productsWithMultipleEmbeddedImages: number;
+    };
   }> {
     const warnings: string[] = [];
     const stats = {
@@ -400,6 +511,15 @@ export class CatalogImportService {
       rejected: 0,
       ambiguous: 0,
     };
+    const embedded = {
+      extracted: 0,
+      associated: 0,
+      pendingReview: 0,
+      rejected: 0,
+      rowsWithEmbeddedImages: 0,
+      productsWithEmbeddedImages: 0,
+      productsWithMultipleEmbeddedImages: 0,
+    };
 
     const rowToProductId = await this.buildRowToProductMap(
       input.folderId,
@@ -407,54 +527,74 @@ export class CatalogImportService {
     );
 
     if (input.sheet.imageCount > 0) {
-      const embedded = await imageExtractionService.processEmbeddedImages({
+      const embeddedResult = await imageExtractionService.processEmbeddedImages({
         workbook: input.workbook,
         sheet: input.sheet,
         folderId: input.folderId,
         importJobId: input.jobId,
         rowToProductId,
+        folderColumns: input.columns.map((column) => ({
+          internalKey: column.internalKey,
+          originalName: column.originalName,
+          displayName: column.displayName,
+        })),
       });
 
-      warnings.push(...embedded.warnings);
-      stats.extracted += embedded.stats.extracted;
-      stats.associated += embedded.stats.associated;
-      stats.pendingReview += embedded.stats.pendingReview;
-      stats.rejected += embedded.stats.rejected;
-      stats.ambiguous += embedded.stats.ambiguous;
+      warnings.push(...embeddedResult.warnings);
+      stats.extracted += embeddedResult.stats.extracted;
+      stats.associated += embeddedResult.stats.associated;
+      stats.pendingReview += embeddedResult.stats.pendingReview;
+      stats.rejected += embeddedResult.stats.rejected;
+      stats.ambiguous += embeddedResult.stats.ambiguous;
+      embedded.extracted = embeddedResult.stats.extracted;
+      embedded.associated = embeddedResult.stats.associated;
+      embedded.pendingReview = embeddedResult.stats.pendingReview;
+      embedded.rejected = embeddedResult.stats.rejected;
+      embedded.rowsWithEmbeddedImages = embeddedResult.stats.rowsWithEmbeddedImages;
+      embedded.productsWithEmbeddedImages = embeddedResult.stats.productsWithEmbeddedImages;
+      embedded.productsWithMultipleEmbeddedImages =
+        embeddedResult.stats.productsWithMultipleEmbeddedImages;
     }
 
     const externalImages = input.config.externalImages ?? [];
     if (externalImages.length > 0) {
-      const imageInputs = await Promise.all(
-        externalImages.map(async (ref) => ({
-          buffer: await downloadFile(STORAGE_BUCKETS.TEMP_IMPORTS, ref.storagePath),
-          originalName: ref.originalName,
-          mimeType: ref.mimeType,
-          source: ref.source,
-        })),
+      const existingExternalCount = await productImageRepository.countByImportJobSources(
+        input.jobId,
+        ["EXTERNAL_ZIP", "EXTERNAL_UPLOAD"],
       );
 
-      const imageCodeColumnKeys = input.columns
-        .filter((column) => column.isImageCode)
-        .map((column) => column.internalKey);
+      if (existingExternalCount === 0) {
+        const imageInputs = await Promise.all(
+          externalImages.map(async (ref) => ({
+            buffer: await downloadFile(STORAGE_BUCKETS.TEMP_IMPORTS, ref.storagePath),
+            originalName: ref.originalName,
+            mimeType: ref.mimeType,
+            source: ref.source,
+          })),
+        );
 
-      const external = await productImageService.processExternalImages({
-        importJobId: input.jobId,
-        folderId: input.folderId,
-        images: imageInputs,
-        imageCodeColumnKeys,
-        includePrimaryCodeInMatch: !input.config.useGeneratedPrimaryCodes,
-      });
+        const imageCodeColumnKeys = input.columns
+          .filter((column) => column.isImageCode)
+          .map((column) => column.internalKey);
 
-      warnings.push(...external.warnings);
-      stats.extracted += external.stats.processed;
-      stats.associated += external.stats.associated;
-      stats.pendingReview += external.stats.pendingReview;
-      stats.rejected += external.stats.rejected;
-      stats.ambiguous += external.stats.ambiguous;
+        const external = await productImageService.processExternalImages({
+          importJobId: input.jobId,
+          folderId: input.folderId,
+          images: imageInputs,
+          imageCodeColumnKeys,
+          includePrimaryCodeInMatch: !input.config.useGeneratedPrimaryCodes,
+        });
+
+        warnings.push(...external.warnings);
+        stats.extracted += external.stats.processed;
+        stats.associated += external.stats.associated;
+        stats.pendingReview += external.stats.pendingReview;
+        stats.rejected += external.stats.rejected;
+        stats.ambiguous += external.stats.ambiguous;
+      }
     }
 
-    return { warnings, stats };
+    return { warnings, stats, embedded };
   }
 
   async uploadImportImages(jobId: string, files: UploadImportImageInput[]) {
@@ -782,6 +922,17 @@ export class CatalogImportService {
     );
 
     if (!hasGeneratedColumn) {
+      for (const column of columns) {
+        if (!column.isPrimaryCode) {
+          continue;
+        }
+
+        await columnRepository.update(column.id, {
+          isPrimaryCode: false,
+          isSearchable: column.isDescription || column.isSearchable,
+        });
+      }
+
       await columnRepository.create({
         folderId,
         originalName: GENERATED_PRIMARY_CODE_DISPLAY_NAME,
@@ -838,7 +989,7 @@ export class CatalogImportService {
       return {
         ...product,
         isMatch: Boolean(matchedProductId),
-        matchedProductId,
+        ...(matchedProductId ? { matchedProductId } : {}),
       };
     });
 
@@ -850,7 +1001,11 @@ export class CatalogImportService {
     const summary = {
       totalProducts: recognizedProducts.length,
       matchedCount: matchedProducts.length,
-      imageCount: sheet.imageCount,
+      imageCount: sheet.embeddedImageSummary.embeddedImagesDetected,
+      embeddedImagesDetected: sheet.embeddedImageSummary.embeddedImagesDetected,
+      rowsWithEmbeddedImages: sheet.embeddedImageSummary.rowsWithEmbeddedImages,
+      productsWithMultipleEmbeddedImages:
+        sheet.embeddedImageSummary.productsWithMultipleEmbeddedImages,
       columnCount: sheet.columnCount,
       folderProductCount: productCount,
       folderIsEmpty: productCount === 0,
@@ -860,11 +1015,11 @@ export class CatalogImportService {
 
     await importJobRepository.upsertPreview({
       importJobId: jobId,
-      recognizedProducts: recognizedProducts as unknown as Prisma.InputJsonValue,
-      matchedProducts: matchedProducts as unknown as Prisma.InputJsonValue,
+      recognizedProducts: toPrismaJsonValue(recognizedProducts),
+      matchedProducts: toPrismaJsonValue(matchedProducts),
       errors: [],
       warnings: allWarnings,
-      summary: summary as unknown as Prisma.InputJsonValue,
+      summary: toPrismaJsonValue(summary),
     });
 
     return importJobRepository.update(jobId, {
@@ -877,6 +1032,61 @@ export class CatalogImportService {
     });
   }
 
+  private async summarizeEmbeddedImageReport(
+    importJobId: string,
+    sheet: ParsedSheet,
+  ): Promise<{
+    extracted: number;
+    associated: number;
+    pendingReview: number;
+    rejected: number;
+    rowsWithEmbeddedImages: number;
+    productsWithEmbeddedImages: number;
+    productsWithMultipleEmbeddedImages: number;
+  }> {
+    const embeddedImages = await productImageRepository.findEmbeddedByImportJob(importJobId);
+    const associatedStatuses = new Set<ProductImageStatus>([
+      "ASSOCIATED_AUTO",
+      "ASSOCIATED_MANUAL",
+    ]);
+    const imagesByProduct = new Map<string, number>();
+
+    let associated = 0;
+    let pendingReview = 0;
+    let rejected = 0;
+
+    for (const image of embeddedImages) {
+      if (associatedStatuses.has(image.status)) {
+        associated += 1;
+
+        if (image.productId) {
+          imagesByProduct.set(
+            image.productId,
+            (imagesByProduct.get(image.productId) ?? 0) + 1,
+          );
+        }
+      } else if (image.status === "PENDING_REVIEW") {
+        pendingReview += 1;
+      } else if (image.status === "FORMAT_REJECTED") {
+        rejected += 1;
+      }
+    }
+
+    const productsWithMultipleEmbeddedImages = Array.from(imagesByProduct.values()).filter(
+      (count) => count > 1,
+    ).length;
+
+    return {
+      extracted: embeddedImages.length,
+      associated,
+      pendingReview,
+      rejected,
+      rowsWithEmbeddedImages: sheet.embeddedImageSummary.rowsWithEmbeddedImages,
+      productsWithEmbeddedImages: imagesByProduct.size,
+      productsWithMultipleEmbeddedImages,
+    };
+  }
+
   async apply(jobId: string, input: ApplyImportInput) {
     const { profile: admin } = await requireRole("ADMIN");
     const job = await importJobRepository.findByIdWithRelations(jobId);
@@ -885,7 +1095,19 @@ export class CatalogImportService {
       throw new ImportError("Importación no encontrada.", "IMPORT_NOT_FOUND");
     }
 
-    assertStatus(job.status, ["READY_TO_APPLY"]);
+    assertStatus(
+      job.status,
+      isImageProcessingResume(job) ? ["READY_TO_APPLY", "PROCESSING"] : ["READY_TO_APPLY"],
+    );
+
+    const resumingImages = isImageProcessingResume(job);
+
+    if (resumingImages && job.actionType && job.actionType !== input.actionType) {
+      throw new ImportError(
+        "La importación se interrumpió con otra acción. Use la misma opción para reintentar.",
+        "INVALID_STATE",
+      );
+    }
 
     if (!job.folderId || !job.preview) {
       throw new ImportError("La importación no tiene vista previa.", "INVALID_STATE");
@@ -899,7 +1121,7 @@ export class CatalogImportService {
     const productCount = folder.productCount;
     const recognizedProducts = job.preview.recognizedProducts as MappedProductRow[];
 
-    if (input.actionType === "IMPORTAR_LISTA" && productCount > 0) {
+    if (!resumingImages && input.actionType === "IMPORTAR_LISTA" && productCount > 0) {
       throw new ImportError(
         "La carpeta no está vacía. Use combinar o reemplazar.",
         "FOLDER_NOT_EMPTY",
@@ -907,6 +1129,7 @@ export class CatalogImportService {
     }
 
     if (
+      !resumingImages &&
       (input.actionType === "COMBINAR_LISTA" ||
         input.actionType === "REEMPLAZAR_LISTA") &&
       !input.confirmed
@@ -938,42 +1161,49 @@ export class CatalogImportService {
         ? skippedCount
         : (job.preview.matchedProducts as unknown[]).length;
 
+    let reachedImageProcessing = resumingImages;
+
     try {
-      await prisma.$transaction(async () => {
-        if (input.actionType === "REEMPLAZAR_LISTA") {
-          await productRepository.deleteByFolder(job.folderId!);
+      if (!resumingImages) {
+        await prisma.$transaction(async () => {
+          if (input.actionType === "REEMPLAZAR_LISTA") {
+            await productRepository.deleteByFolder(job.folderId!);
+          }
+
+          for (let offset = 0; offset < productsToInsert.length; offset += BATCH_SIZE) {
+            const batch = productsToInsert.slice(offset, offset + BATCH_SIZE);
+            await productRepository.createMany(
+              batch.map((product) => ({
+                folderId: job.folderId!,
+                primaryCode: product.primaryCode,
+                normalizedCode: product.normalizedCode,
+                description: product.description,
+                dynamicData: product.dynamicData,
+                originalText: product.originalText,
+                indexedText: buildIndexedTextForMappedProduct(columns, product),
+              })),
+            );
+          }
+        });
+
+        const folderProducts = await productRepository.findByFolderId(job.folderId!);
+        for (const product of folderProducts) {
+          const dynamicData =
+            typeof product.dynamicData === "object" &&
+            product.dynamicData !== null &&
+            !Array.isArray(product.dynamicData)
+              ? (product.dynamicData as Record<string, unknown>)
+              : {};
+
+          await equivalenceService.syncFromProduct(product.id, columns, dynamicData);
         }
-
-        for (let offset = 0; offset < productsToInsert.length; offset += BATCH_SIZE) {
-          const batch = productsToInsert.slice(offset, offset + BATCH_SIZE);
-          await productRepository.createMany(
-            batch.map((product) => ({
-              folderId: job.folderId!,
-              primaryCode: product.primaryCode,
-              normalizedCode: product.normalizedCode,
-              description: product.description,
-              dynamicData: product.dynamicData,
-              originalText: product.originalText,
-              indexedText: buildIndexedTextForMappedProduct(columns, product),
-            })),
-          );
-        }
-      });
-
-      const folderProducts = await productRepository.findByFolderId(job.folderId!);
-      for (const product of folderProducts) {
-        const dynamicData =
-          typeof product.dynamicData === "object" &&
-          product.dynamicData !== null &&
-          !Array.isArray(product.dynamicData)
-            ? (product.dynamicData as Record<string, unknown>)
-            : {};
-
-        await equivalenceService.syncFromProduct(product.id, columns, dynamicData);
       }
+
+      reachedImageProcessing = true;
 
       await importJobRepository.update(jobId, {
         status: "PROCESSING",
+        actionType: input.actionType,
         progress: {
           phase: "images",
           percent: 85,
@@ -992,6 +1222,8 @@ export class CatalogImportService {
         workbook,
       });
 
+      const embeddedReport = await this.summarizeEmbeddedImageReport(jobId, sheet);
+
       const pendingCount = await productImageRepository.countByImportJobAndStatuses(
         jobId,
         ["PENDING_REVIEW", "AMBIGUOUS"],
@@ -1008,17 +1240,25 @@ export class CatalogImportService {
         sheetImported: job.targetSheetName,
         sheetsDetected: job.sheets.length,
         productsProcessed: mappedProducts.length,
-        productsCreated: productsToInsert.length,
+        productsCreated: resumingImages ? 0 : productsToInsert.length,
         productsSkipped: skippedCount,
         productsMatched: matchedCount,
         formulasDetected: formulaStats.formulasDetected,
         formulasWithoutCachedValue: formulaStats.formulasWithoutCachedValue,
-        imagesDetected: sheet.imageCount,
-        imagesExtracted: imageProcessing.stats.extracted,
+        imagesDetected: sheet.embeddedImageSummary.embeddedImagesDetected,
+        imagesExtracted: embeddedReport.extracted,
         imagesAssociated: imageProcessing.stats.associated,
         imagesPendingReview: pendingCount,
         imagesRejected: imageProcessing.stats.rejected,
         imagesAmbiguous: imageProcessing.stats.ambiguous,
+        embeddedImagesDetected: sheet.embeddedImageSummary.embeddedImagesDetected,
+        embeddedImagesAssociated: embeddedReport.associated,
+        embeddedImagesPendingReview: embeddedReport.pendingReview,
+        embeddedImagesRejected: embeddedReport.rejected,
+        rowsWithEmbeddedImages: embeddedReport.rowsWithEmbeddedImages,
+        productsWithEmbeddedImages: embeddedReport.productsWithEmbeddedImages,
+        productsWithMultipleEmbeddedImages:
+          embeddedReport.productsWithMultipleEmbeddedImages,
         columnsDetected: sheet.columnCount,
         columnsCreated: columns.length,
         errors: [],
@@ -1056,6 +1296,25 @@ export class CatalogImportService {
       return updated;
     } catch (error) {
       console.error("[catalogImportService.publish]", error);
+
+      if (reachedImageProcessing) {
+        await importJobRepository.update(jobId, {
+          status: "PROCESSING",
+          actionType: input.actionType,
+          errorMessage: null,
+          progress: {
+            phase: "images",
+            percent: 85,
+            message: "Procesamiento de imágenes interrumpido. Puede reintentar.",
+          },
+        });
+
+        throw new ImportError(
+          "El procesamiento de imágenes fue interrumpido. Pulse importar de nuevo para continuar.",
+          "IMAGE_PROCESSING_INTERRUPTED",
+        );
+      }
+
       const clientMessage = "Error al publicar la importación.";
 
       await importJobRepository.update(jobId, {

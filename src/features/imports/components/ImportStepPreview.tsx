@@ -66,10 +66,26 @@ export function ImportStepPreview({
           <div className={styles.summaryLabel}>Columnas</div>
         </div>
         <div className={styles.summaryCard}>
-          <div className={styles.summaryValue}>{summary.imageCount}</div>
-          <div className={styles.summaryLabel}>Imágenes</div>
+          <div className={styles.summaryValue}>{summary.embeddedImagesDetected}</div>
+          <div className={styles.summaryLabel}>Imágenes embebidas</div>
         </div>
+        {summary.productsWithMultipleEmbeddedImages > 0 ? (
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryValue}>
+              {summary.productsWithMultipleEmbeddedImages}
+            </div>
+            <div className={styles.summaryLabel}>Filas con varias imágenes</div>
+          </div>
+        ) : null}
       </div>
+
+      {summary.embeddedImagesDetected > summary.totalProducts ? (
+        <p className={styles.sheetNote}>
+          Se detectaron {summary.embeddedImagesDetected} imágenes embebidas en{" "}
+          {summary.rowsWithEmbeddedImages} filas del Excel ({summary.totalProducts}{" "}
+          productos). Varias imágenes por fila se importarán como galería del producto.
+        </p>
+      ) : null}
 
       <div className={styles.previewTableWrap}>
         <table className={styles.previewTable}>

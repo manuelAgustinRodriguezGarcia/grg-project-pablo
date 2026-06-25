@@ -23,6 +23,12 @@ export type ParsedFormula = {
   hasCachedValue: boolean;
 };
 
+export type EmbeddedImageSummary = {
+  embeddedImagesDetected: number;
+  rowsWithEmbeddedImages: number;
+  productsWithMultipleEmbeddedImages: number;
+};
+
 export type ParsedSheet = {
   sheetName: string;
   classification: SheetClassification;
@@ -34,6 +40,7 @@ export type ParsedSheet = {
   columnCount: number;
   imageCount: number;
   imagesByRow: Record<number, number>;
+  embeddedImageSummary: EmbeddedImageSummary;
 };
 
 export type ParsedWorkbook = {

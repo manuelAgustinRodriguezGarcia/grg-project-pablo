@@ -54,6 +54,9 @@ export type ImportPreviewSummary = {
   totalProducts: number;
   matchedCount: number;
   imageCount: number;
+  embeddedImagesDetected: number;
+  rowsWithEmbeddedImages: number;
+  productsWithMultipleEmbeddedImages: number;
   columnCount: number;
   folderProductCount: number;
   folderIsEmpty: boolean;

@@ -139,6 +139,24 @@ export class ProductImageRepository {
     });
   }
 
+  async findAssociatedByProductIds(productIds: string[]): Promise<ProductImage[]> {
+    if (productIds.length === 0) {
+      return [];
+    }
+
+    return prisma.productImage.findMany({
+      where: {
+        productId: { in: productIds },
+        status: { in: ["ASSOCIATED_AUTO", "ASSOCIATED_MANUAL"] },
+      },
+      orderBy: [
+        { productId: "asc" },
+        { sortOrder: "asc" },
+        { createdAt: "asc" },
+      ],
+    });
+  }
+
   async findPrimaryByProductIds(
     productIds: string[],
   ): Promise<ProductImage[]> {
@@ -158,9 +176,41 @@ export class ProductImageRepository {
   async countByImportJobAndStatuses(
     importJobId: string,
     statuses: ProductImageStatus[],
+    source?: ProductImageSource,
   ): Promise<number> {
     return prisma.productImage.count({
-      where: { importJobId, status: { in: statuses } },
+      where: {
+        importJobId,
+        status: { in: statuses },
+        ...(source ? { source } : {}),
+      },
+    });
+  }
+
+  async countByImportJobSources(
+    importJobId: string,
+    sources: ProductImageSource[],
+  ): Promise<number> {
+    if (sources.length === 0) {
+      return 0;
+    }
+
+    return prisma.productImage.count({
+      where: {
+        importJobId,
+        source: { in: sources },
+        status: { not: "DELETED" },
+      },
+    });
+  }
+
+  async findEmbeddedByImportJob(importJobId: string): Promise<ProductImage[]> {
+    return prisma.productImage.findMany({
+      where: {
+        importJobId,
+        source: "EMBEDDED",
+        status: { not: "DELETED" },
+      },
     });
   }
 

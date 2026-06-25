@@ -35,6 +35,18 @@ export function ImportStepResult({ report, errorMessage }: ImportStepResultProps
         {report.folderName ?? "la carpeta"} dentro del catálogo{" "}
         {report.catalogName ?? "el catálogo"}.
       </p>
+      {report.embeddedImagesDetected > 0 ? (
+        <p className={styles.resultText}>
+          Imágenes embebidas detectadas: {report.embeddedImagesDetected}. Asociadas
+          automáticamente: {report.embeddedImagesAssociated ?? report.imagesAssociated}.
+          {report.embeddedImagesPendingReview > 0
+            ? ` Pendientes de revisión: ${report.embeddedImagesPendingReview}.`
+            : ""}
+          {report.embeddedImagesRejected > 0
+            ? ` Rechazadas por formato: ${report.embeddedImagesRejected}.`
+            : ""}
+        </p>
+      ) : null}
     </div>
   );
 }
