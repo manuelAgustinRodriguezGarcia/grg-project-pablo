@@ -1,19 +1,23 @@
 import ExcelJS from "exceljs";
 import type { ProductImageStatus } from "@/generated/prisma/client";
+import {
+  buildEmbeddedImageSummary,
+  listEmbeddedImageAnchors,
+  sortEmbeddedImageAnchors,
+  type EmbeddedImageAnchor,
+} from "@/server/importers/excel-image.detector";
 import type { DetectedHeader, ParsedSheet } from "@/server/importers/types";
+import {
+  resolveImageColumnInternalKey,
+  type ColumnLabelRef,
+} from "@/server/services/product-image-column-map";
 import { buildProductImageStoragePaths } from "@/server/image-processors";
 import { generateThumbnail, validateImageBuffer } from "@/server/image-processors";
 import { productImageRepository } from "@/server/repositories/product-image.repository";
 import { uploadFile } from "@/server/storage";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
 
-export type EmbeddedImageRef = {
-  imageId: number;
-  sheetName: string;
-  row: number;
-  col: number;
-  columnHeader: string | null;
-};
+export type EmbeddedImageRef = EmbeddedImageAnchor;
 
 export type ProcessEmbeddedImagesInput = {
   workbook: ExcelJS.Workbook;
@@ -21,6 +25,7 @@ export type ProcessEmbeddedImagesInput = {
   folderId: string;
   importJobId: string;
   rowToProductId: Map<number, string>;
+  folderColumns?: ColumnLabelRef[];
 };
 
 export type ProcessedImageRecord = {
@@ -39,6 +44,9 @@ export type ProcessEmbeddedImagesResult = {
     pendingReview: number;
     rejected: number;
     ambiguous: number;
+    rowsWithEmbeddedImages: number;
+    productsWithMultipleEmbeddedImages: number;
+    productsWithEmbeddedImages: number;
   };
 };
 
@@ -48,57 +56,6 @@ type WorkbookMediaItem = {
   extension: string;
 };
 
-function resolveColumnHeader(
-  headers: DetectedHeader[],
-  colIndex: number,
-): string | null {
-  const header = headers.find((item) => item.columnIndex === colIndex);
-  return header?.originalName ?? null;
-}
-
-export function listEmbeddedImageRefs(
-  workbook: ExcelJS.Workbook,
-  sheet: ParsedSheet,
-): EmbeddedImageRef[] {
-  const worksheet = workbook.getWorksheet(sheet.sheetName);
-  if (!worksheet?.getImages) {
-    return [];
-  }
-
-  const refs: EmbeddedImageRef[] = [];
-
-  for (const image of worksheet.getImages()) {
-    const row =
-      typeof image.range?.tl?.nativeRow === "number"
-        ? image.range.tl.nativeRow + 1
-        : typeof image.range?.tl?.row === "number"
-          ? image.range.tl.row
-          : 0;
-
-    const col =
-      typeof image.range?.tl?.nativeCol === "number"
-        ? image.range.tl.nativeCol
-        : typeof image.range?.tl?.col === "number"
-          ? image.range.tl.col
-          : 0;
-
-    const imageId = Number(image.imageId);
-    if (Number.isNaN(imageId)) {
-      continue;
-    }
-
-    refs.push({
-      imageId,
-      sheetName: sheet.sheetName,
-      row,
-      col,
-      columnHeader: resolveColumnHeader(sheet.headers, col),
-    });
-  }
-
-  return refs;
-}
-
 function getWorkbookMedia(workbook: ExcelJS.Workbook): WorkbookMediaItem[] {
   const model = (workbook as unknown as { model?: { media?: WorkbookMediaItem[] } })
     .model;
@@ -106,27 +63,49 @@ function getWorkbookMedia(workbook: ExcelJS.Workbook): WorkbookMediaItem[] {
   return model?.media ?? [];
 }
 
-function getEmbeddedImageBuffer(
+export function getEmbeddedImageBuffer(
   workbook: ExcelJS.Workbook,
   imageId: number,
 ): Buffer | null {
   const media = getWorkbookMedia(workbook);
-  const item = media.find((entry) => entry.index === imageId);
-  return item?.buffer ?? null;
+  const byIndex = media.find((entry) => entry.index === imageId);
+  if (byIndex?.buffer) {
+    return byIndex.buffer;
+  }
+
+  const byOffset = media[imageId];
+  return byOffset?.buffer ?? null;
 }
 
-function extensionToFilename(extension: string): string {
+function extensionToFilename(
+  extension: string,
+  anchor: EmbeddedImageAnchor,
+): string {
   const normalized = extension.replace(/^\./, "").toLowerCase();
   const mapped =
     normalized === "jpeg" || normalized === "jpg"
-      ? ".jpg"
+      ? "jpg"
       : normalized === "png"
-        ? ".png"
+        ? "png"
         : normalized === "webp"
-          ? ".webp"
-          : `.${normalized}`;
+          ? "webp"
+          : normalized || "png";
 
-  return `embedded${mapped}`;
+  return `embedded-r${anchor.row}-c${anchor.col}-i${anchor.sourceIndex}.${mapped}`;
+}
+
+export function listEmbeddedImageRefs(
+  workbook: ExcelJS.Workbook,
+  sheet: ParsedSheet,
+): EmbeddedImageRef[] {
+  const worksheet = workbook.getWorksheet(sheet.sheetName);
+  if (!worksheet) {
+    return [];
+  }
+
+  return sortEmbeddedImageAnchors(
+    listEmbeddedImageAnchors(worksheet, sheet.headers as DetectedHeader[]),
+  );
 }
 
 export class ImageExtractionService {
@@ -134,6 +113,7 @@ export class ImageExtractionService {
     input: ProcessEmbeddedImagesInput,
   ): Promise<ProcessEmbeddedImagesResult> {
     const refs = listEmbeddedImageRefs(input.workbook, input.sheet);
+    const summary = buildEmbeddedImageSummary(refs);
     const records: ProcessedImageRecord[] = [];
     const warnings: string[] = [];
     const stats = {
@@ -142,11 +122,67 @@ export class ImageExtractionService {
       pendingReview: 0,
       rejected: 0,
       ambiguous: 0,
+      rowsWithEmbeddedImages: summary.rowsWithEmbeddedImages,
+      productsWithMultipleEmbeddedImages: summary.productsWithMultipleEmbeddedImages,
+      productsWithEmbeddedImages: 0,
     };
 
-    const productImageCounts = new Map<string, number>();
+    const existingEmbedded = await productImageRepository.findEmbeddedByImportJob(
+      input.importJobId,
+    );
+    const processedOriginalNames = new Set(
+      existingEmbedded.map((image) => image.originalName),
+    );
+
+    const productSortOrder = new Map<string, number>();
+    const productsWithEmbeddedImages = new Set<string>();
+    const productsWithPrimary = new Set<string>();
+
+    for (const image of existingEmbedded) {
+      if (!image.productId) {
+        continue;
+      }
+
+      productsWithEmbeddedImages.add(image.productId);
+      const nextSortOrder = Math.max(
+        productSortOrder.get(image.productId) ?? 0,
+        image.sortOrder + 1,
+      );
+      productSortOrder.set(image.productId, nextSortOrder);
+
+      if (image.isPrimary) {
+        productsWithPrimary.add(image.productId);
+      }
+    }
+
+    const associatedProductIds = Array.from(
+      new Set(
+        refs
+          .map((ref) => input.rowToProductId.get(ref.row))
+          .filter((productId): productId is string => Boolean(productId)),
+      ),
+    );
+    const existingPrimaryImages = await productImageRepository.findPrimaryByProductIds(
+      associatedProductIds.filter((productId) => !productsWithPrimary.has(productId)),
+    );
+
+    for (const image of existingPrimaryImages) {
+      if (image.productId) {
+        productsWithPrimary.add(image.productId);
+      }
+    }
 
     for (const ref of refs) {
+      const workbookMedia = getWorkbookMedia(input.workbook);
+      const media =
+        workbookMedia.find((entry) => entry.index === ref.imageId) ??
+        workbookMedia[ref.imageId];
+      const originalName = extensionToFilename(media?.extension ?? ".png", ref);
+
+      if (processedOriginalNames.has(originalName)) {
+        continue;
+      }
+
       stats.extracted += 1;
 
       const buffer = getEmbeddedImageBuffer(input.workbook, ref.imageId);
@@ -154,7 +190,7 @@ export class ImageExtractionService {
         stats.rejected += 1;
         const created = await productImageRepository.create({
           importJobId: input.importJobId,
-          originalName: `embedded-row-${ref.row}`,
+          originalName: extensionToFilename(".png", ref),
           mimeType: "application/octet-stream",
           status: "FORMAT_REJECTED",
           source: "EMBEDDED",
@@ -171,15 +207,11 @@ export class ImageExtractionService {
           warning: created.errorMessage ?? undefined,
         });
         warnings.push(
-          `Fila ${ref.row}: no se pudo extraer la imagen embebida.`,
+          `Fila ${ref.row}: no se pudo extraer la imagen embebida (${ref.placementKey}).`,
         );
         continue;
       }
 
-      const media = getWorkbookMedia(input.workbook).find(
-        (entry) => entry.index === ref.imageId,
-      );
-      const originalName = extensionToFilename(media?.extension ?? ".png");
       const validation = await validateImageBuffer(buffer);
 
       if (!validation.valid) {
@@ -213,14 +245,25 @@ export class ImageExtractionService {
       if (productId) {
         status = "ASSOCIATED_AUTO";
         stats.associated += 1;
+        productsWithEmbeddedImages.add(productId);
       } else {
         stats.pendingReview += 1;
       }
 
       let storagePath: string | null = null;
       let thumbnailPath: string | null = null;
+      let sortOrder = 0;
+      let isPrimary = false;
 
       if (productId) {
+        const nextSortOrder = productSortOrder.get(productId) ?? 0;
+        sortOrder = nextSortOrder;
+        productSortOrder.set(productId, nextSortOrder + 1);
+        isPrimary = !productsWithPrimary.has(productId);
+        if (isPrimary) {
+          productsWithPrimary.add(productId);
+        }
+
         const imageId = crypto.randomUUID();
         const paths = buildProductImageStoragePaths(
           input.folderId,
@@ -247,9 +290,6 @@ export class ImageExtractionService {
 
         storagePath = paths.storagePath;
         thumbnailPath = paths.thumbnailPath;
-
-        const count = productImageCounts.get(productId) ?? 0;
-        productImageCounts.set(productId, count + 1);
       } else {
         const stagingId = crypto.randomUUID();
         const stagingPath = `imports/${input.importJobId}/external/${stagingId}-${originalName.replace(/[/\\]/g, "_")}`;
@@ -273,9 +313,15 @@ export class ImageExtractionService {
         originalName,
         mimeType: validation.mimeType,
         sizeBytes: buffer.byteLength,
-        sortOrder: productId ? (productImageCounts.get(productId) ?? 1) - 1 : 0,
-        isPrimary: productId ? (productImageCounts.get(productId) ?? 0) === 1 : false,
-        label: ref.columnHeader,
+        sortOrder,
+        isPrimary,
+        label:
+          input.folderColumns && ref.columnHeader
+            ? resolveImageColumnInternalKey(
+                { label: null, sourceColumn: ref.columnHeader },
+                input.folderColumns,
+              ) ?? ref.columnHeader
+            : ref.columnHeader,
         sourceSheet: ref.sheetName,
         sourceRow: ref.row,
         sourceColumn: ref.columnHeader,
@@ -285,6 +331,8 @@ export class ImageExtractionService {
 
       records.push({ id: created.id, status: created.status, productId });
     }
+
+    stats.productsWithEmbeddedImages = productsWithEmbeddedImages.size;
 
     return { records, warnings, stats };
   }

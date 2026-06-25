@@ -944,6 +944,42 @@
   font-size: 0.85rem;
 }
 
+.tableCellWithMedia {
+  min-width: 5.5rem;
+  vertical-align: top;
+}
+
+.tableCellImages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.tableCellThumbButton {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.tableCellThumb {
+  display: block;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 6px;
+  border: 1px solid rgba($navy, 0.1);
+  object-fit: cover;
+  background: rgba($navy, 0.04);
+}
+
+.tableCellText {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .tableHeaderLabel {
   display: flex;
   flex-direction: column;

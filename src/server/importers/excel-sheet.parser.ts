@@ -1,7 +1,11 @@
 import type { Row, Worksheet } from "exceljs";
 import { excelStructureService } from "@/server/services/excel-structure.service";
 import { extractCellValue, toParsedFormula } from "./excel-cell.extractor";
-import { detectSheetImages } from "./excel-image.detector";
+import {
+  buildEmbeddedImageSummary,
+  buildSheetImageStats,
+  listEmbeddedImageAnchors,
+} from "./excel-image.detector";
 import { buildDetectedHeaders } from "./column-mapper";
 import type { ParsedSheet, ParsedSheetRow } from "./types";
 
@@ -162,7 +166,9 @@ function parseDataRows(
 
 export function parseWorksheet(worksheet: Worksheet): ParsedSheet {
   const headerRow = detectHeaderRow(worksheet);
-  const imageStats = detectSheetImages(worksheet);
+  const imageAnchors = listEmbeddedImageAnchors(worksheet);
+  const imageStats = buildSheetImageStats(imageAnchors);
+  const embeddedImageSummary = buildEmbeddedImageSummary(imageAnchors);
 
   if (!headerRow) {
     const classification = excelStructureService.classifySheet({
@@ -182,6 +188,7 @@ export function parseWorksheet(worksheet: Worksheet): ParsedSheet {
       columnCount: 0,
       imageCount: imageStats.totalCount,
       imagesByRow: imageStats.byRow,
+      embeddedImageSummary,
     };
   }
 
@@ -206,5 +213,6 @@ export function parseWorksheet(worksheet: Worksheet): ParsedSheet {
     columnCount: headers.length,
     imageCount: imageStats.totalCount,
     imagesByRow: imageStats.byRow,
+    embeddedImageSummary,
   };
 }

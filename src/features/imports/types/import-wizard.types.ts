@@ -28,8 +28,18 @@ export type ImportReportData = {
   formulasDetected: number;
   formulasWithoutCachedValue: number;
   imagesDetected: number;
+  imagesExtracted?: number;
   imagesAssociated: number;
   imagesPendingReview: number;
+  imagesRejected?: number;
+  imagesAmbiguous?: number;
+  embeddedImagesDetected: number;
+  embeddedImagesAssociated: number;
+  embeddedImagesPendingReview: number;
+  embeddedImagesRejected: number;
+  rowsWithEmbeddedImages: number;
+  productsWithEmbeddedImages: number;
+  productsWithMultipleEmbeddedImages: number;
   columnsDetected: number;
   columnsCreated: number;
   errors: string[];

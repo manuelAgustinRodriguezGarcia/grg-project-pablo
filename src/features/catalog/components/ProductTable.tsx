@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, File, ICON_STROKE, TableProperties } from "@/shared/icons";
 import type {
   ProductTablePrimaryImage,
+  ProductTableItem,
   ProductTableResponse,
 } from "@/features/catalog/types/product-table.types";
 import { ProductImagePreviewModal } from "./ProductImagePreviewModal";
@@ -91,12 +92,27 @@ function getProductImagePreviewUrl(
 function buildProductImageAlt(
   primaryCode: string | null,
   description: string | null,
+  columnName?: string,
 ): string {
-  if (primaryCode && description) {
-    return `${primaryCode} — ${description}`;
-  }
+  const base =
+    primaryCode && description
+      ? `${primaryCode} — ${description}`
+      : (primaryCode ?? description ?? "Imagen del producto");
 
-  return primaryCode ?? description ?? "Imagen del producto";
+  return columnName ? `${base} (${columnName})` : base;
+}
+
+function hasColumnImages(
+  imagesByColumnKey: ProductTableItem["imagesByColumnKey"],
+): boolean {
+  return Object.values(imagesByColumnKey).some((images) => images.length > 0);
+}
+
+function shouldShowGlobalImageColumn(products: ProductTableItem[]): boolean {
+  return products.some(
+    (product) =>
+      product.primaryImage !== null && !hasColumnImages(product.imagesByColumnKey),
+  );
 }
 
 export function ProductTable({
@@ -146,7 +162,7 @@ export function ProductTable({
   }
 
   const sortedColumns = [...data.columns].sort((left, right) => left.order - right.order);
-  const showImageColumn = data.products.some((product) => product.primaryImage !== null);
+  const showImageColumn = shouldShowGlobalImageColumn(data.products);
   const { from, to } = getPaginationRange(data.pagination);
   const { pagination } = data;
 
@@ -242,8 +258,64 @@ export function ProductTable({
                       value = product.dynamicData[column.internalKey];
                     }
 
+                    const columnImages =
+                      product.imagesByColumnKey[column.internalKey] ?? [];
+                    const textValue = formatCellValue(value);
+                    const previewImages = columnImages
+                      .map((image) => ({
+                        image,
+                        url: getProductImagePreviewUrl(image),
+                      }))
+                      .filter(
+                        (entry): entry is { image: ProductTablePrimaryImage; url: string } =>
+                          Boolean(entry.url),
+                      );
+
                     return (
-                      <td key={`${product.id}-${column.id}`}>{formatCellValue(value)}</td>
+                      <td
+                        key={`${product.id}-${column.id}`}
+                        className={
+                          previewImages.length > 0 ? styles.tableCellWithMedia : undefined
+                        }
+                      >
+                        {previewImages.length > 0 ? (
+                          <div className={styles.tableCellImages}>
+                            {previewImages.map(({ image, url }) => (
+                              <button
+                                key={image.id}
+                                type="button"
+                                className={styles.tableCellThumbButton}
+                                onClick={() =>
+                                  setPreviewImage({
+                                    url,
+                                    alt: buildProductImageAlt(
+                                      product.primaryCode,
+                                      product.description,
+                                      column.displayName,
+                                    ),
+                                  })
+                                }
+                                aria-label={`Ver imagen de ${buildProductImageAlt(
+                                  product.primaryCode,
+                                  product.description,
+                                  column.displayName,
+                                )}`}
+                              >
+                                <img
+                                  src={image.thumbnailUrl ?? url}
+                                  alt=""
+                                  className={styles.tableCellThumb}
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                        {textValue !== "—" || previewImages.length === 0 ? (
+                          <span className={styles.tableCellText}>{textValue}</span>
+                        ) : null}
+                      </td>
                     );
                   })}
                 </tr>

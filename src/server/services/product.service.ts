@@ -49,6 +49,14 @@ export type ProductTableItem = {
     thumbnailUrl: string | null;
     fullUrl: string | null;
   } | null;
+  imagesByColumnKey: Record<
+    string,
+    Array<{
+      id: string;
+      thumbnailUrl: string | null;
+      fullUrl: string | null;
+    }>
+  >;
   createdAt: string;
   updatedAt: string;
 };
@@ -107,6 +115,7 @@ function toProductTableItem(
   visibleColumnKeys: Iterable<string>,
   role: "ADMIN" | "CONSULTA",
   primaryImage: ProductTableItem["primaryImage"],
+  imagesByColumnKey: ProductTableItem["imagesByColumnKey"],
 ): ProductTableItem {
   const dynamicData = visibilityService.stripHiddenDynamicData(
     parseDynamicData(product.dynamicData),
@@ -120,6 +129,7 @@ function toProductTableItem(
     description: product.description,
     dynamicData,
     primaryImage,
+    imagesByColumnKey,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   };
@@ -235,6 +245,14 @@ export class ProductService {
     const productIds = paginated.items.map((product) => product.id);
     const primaryImages =
       await productImageService.resolvePrimaryImagesForProducts(productIds);
+    const columnImages = await productImageService.resolveColumnImagesForProducts(
+      productIds,
+      columnItems.map((column) => ({
+        internalKey: column.internalKey,
+        originalName: column.originalName,
+        displayName: column.displayName,
+      })),
+    );
 
     return {
       folder: {
@@ -249,6 +267,7 @@ export class ProductService {
           visibleColumnKeys,
           role,
           primaryImages.get(product.id) ?? null,
+          columnImages.get(product.id) ?? {},
         ),
       ),
       pagination: {
@@ -280,6 +299,14 @@ export class ProductService {
     const primaryImages = await productImageService.resolvePrimaryImagesForProducts([
       product.id,
     ]);
+    const columnImages = await productImageService.resolveColumnImagesForProducts(
+      [product.id],
+      columns.map((column) => ({
+        internalKey: column.internalKey,
+        originalName: column.originalName,
+        displayName: column.displayName,
+      })),
+    );
     const equivalences = await equivalenceService.listByProduct(product.id);
 
     const item = toProductTableItem(
@@ -287,6 +314,7 @@ export class ProductService {
       columns.map((column) => column.internalKey),
       profile.role,
       primaryImages.get(product.id) ?? null,
+      columnImages.get(product.id) ?? {},
     );
 
     return {
