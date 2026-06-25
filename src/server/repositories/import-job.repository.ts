@@ -12,11 +12,14 @@ import { prisma } from "@/server/database/prisma";
 export type CreateImportJobData = {
   uploadedFileId: string;
   status?: ImportJobStatus;
+  destinationType?: "CATALOG_FOLDER" | "PRICE_LIST";
 };
 
 export type UpdateImportJobData = {
+  destinationType?: "CATALOG_FOLDER" | "PRICE_LIST";
   catalogId?: string | null;
   folderId?: string | null;
+  priceListId?: string | null;
   targetSheetName?: string | null;
   status?: ImportJobStatus;
   actionType?: ImportActionType | null;
@@ -50,9 +53,16 @@ export type ImportJobWithRelations = ImportJob & {
   uploadedFile: { id: string; originalName: string; storagePath: string; mimeType: string; sizeBytes: number };
   catalog: { id: string; name: string } | null;
   folder: { id: string; name: string; catalogId: string } | null;
+  priceList: { id: string; name: string } | null;
   sheets: ImportSheet[];
   preview: ImportPreview | null;
 };
+
+const TERMINAL_IMPORT_JOB_STATUSES: ImportJobStatus[] = [
+  "PUBLISHED",
+  "FAILED",
+  "CANCELLED",
+];
 
 export class ImportJobRepository {
   async create(data: CreateImportJobData): Promise<ImportJob> {
@@ -66,6 +76,37 @@ export class ImportJobRepository {
 
   async findById(id: string): Promise<ImportJob | null> {
     return prisma.importJob.findUnique({ where: { id } });
+  }
+
+  async findActiveByUploadedFileId(uploadedFileId: string): Promise<ImportJob | null> {
+    return prisma.importJob.findFirst({
+      where: {
+        uploadedFileId,
+        status: { notIn: TERMINAL_IMPORT_JOB_STATUSES },
+      },
+    });
+  }
+
+  async findByUploadedFileId(uploadedFileId: string) {
+    return prisma.importJob.findMany({
+      where: { uploadedFileId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        catalog: { select: { id: true, name: true } },
+        folder: { select: { id: true, name: true, catalogId: true } },
+        sheets: { select: { id: true, sheetName: true } },
+      },
+    });
+  }
+
+  async hasPublishedOrPendingReviewJob(uploadedFileId: string): Promise<boolean> {
+    const count = await prisma.importJob.count({
+      where: {
+        uploadedFileId,
+        status: { in: ["PUBLISHED", "PENDING_REVIEW"] },
+      },
+    });
+    return count > 0;
   }
 
   async findByIdWithRelations(id: string): Promise<ImportJobWithRelations | null> {
@@ -83,6 +124,7 @@ export class ImportJobRepository {
         },
         catalog: { select: { id: true, name: true } },
         folder: { select: { id: true, name: true, catalogId: true } },
+        priceList: { select: { id: true, name: true } },
         sheets: { orderBy: { sheetName: "asc" } },
         preview: true,
       },

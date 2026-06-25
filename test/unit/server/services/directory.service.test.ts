@@ -5,6 +5,7 @@ import { catalogRepository } from "@/server/repositories/catalog.repository";
 import { folderRepository } from "@/server/repositories/folder.repository";
 import { createSignedDownloadUrl } from "@/server/storage";
 import { directoryService } from "@/server/services/directory.service";
+import { offlineSyncService } from "@/server/services/offline-sync.service";
 import {
   adminUserFixture,
   consultaUserFixture,
@@ -27,6 +28,11 @@ vi.mock("@/server/repositories/folder.repository", () => ({
     countByCatalogId: vi.fn(),
   },
 }));
+vi.mock("@/server/services/offline-sync.service", () => ({
+  offlineSyncService: {
+    getLastServerVersion: vi.fn(),
+  },
+}));
 vi.mock("@/server/storage", () => ({
   createSignedDownloadUrl: vi.fn(),
 }));
@@ -43,6 +49,7 @@ describe("DirectoryService", () => {
     });
     vi.mocked(catalogRepository.findActiveOrdered).mockResolvedValue([]);
     vi.mocked(folderRepository.countByCatalogId).mockResolvedValue(0);
+    vi.mocked(offlineSyncService.getLastServerVersion).mockResolvedValue(0);
   });
 
   it("exige autenticación", async () => {
@@ -70,6 +77,7 @@ describe("DirectoryService", () => {
       coverImageUrl: "https://example.com/signed-url",
       offlineSync: { status: "unavailable" },
     });
+    expect(offlineSyncService.getLastServerVersion).toHaveBeenCalled();
     expect(folderRepository.countByCatalogId).toHaveBeenCalledWith(catalog.id, {
       visibleToNormalUser: true,
       status: "ACTIVE",

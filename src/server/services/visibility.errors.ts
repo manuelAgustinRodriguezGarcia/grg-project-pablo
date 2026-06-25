@@ -1,7 +1,9 @@
 export type VisibilityErrorCode =
   | "CATALOG_NOT_VISIBLE"
   | "FOLDER_NOT_VISIBLE"
-  | "COLUMN_NOT_VISIBLE";
+  | "COLUMN_NOT_VISIBLE"
+  | "PRICE_LIST_NOT_VISIBLE"
+  | "PRICE_COLUMN_NOT_VISIBLE";
 
 export class VisibilityError extends Error {
   readonly code: VisibilityErrorCode;

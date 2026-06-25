@@ -9,6 +9,7 @@ import { folderRepository } from "@/server/repositories/folder.repository";
 import { createSignedDownloadUrl } from "@/server/storage";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
 import { visibilityService } from "./visibility.service";
+import { offlineSyncService } from "./offline-sync.service";
 
 async function resolveCoverImageUrl(
   coverImagePath: string | null,
@@ -32,6 +33,7 @@ function toDirectoryCatalogItem(
   catalog: Catalog,
   coverImageUrl: string | null,
   sectionCount: number,
+  lastServerVersion: number,
 ): DirectoryCatalogItem {
   return {
     id: catalog.id,
@@ -42,7 +44,8 @@ function toDirectoryCatalogItem(
     updatedAt: catalog.updatedAt.toISOString(),
     order: catalog.order,
     offlineSync: {
-      status: "unavailable",
+      status: lastServerVersion > 0 ? "ready" : "unavailable",
+      lastServerVersion: lastServerVersion > 0 ? lastServerVersion : undefined,
     },
   };
 }
@@ -51,6 +54,7 @@ export class DirectoryService {
   async getDirectory(): Promise<DirectoryResponse> {
     const { profile } = await requireAuth();
     const role = profile.role;
+    const lastServerVersion = await offlineSyncService.getLastServerVersion(profile.id);
 
     const catalogs = await catalogRepository.findActiveOrdered();
     const visibleCatalogs = visibilityService.filterCatalogs(catalogs, role);
@@ -63,7 +67,7 @@ export class DirectoryService {
           visibilityService.folderWhereForRole(role),
         );
 
-        return toDirectoryCatalogItem(catalog, coverImageUrl, sectionCount);
+        return toDirectoryCatalogItem(catalog, coverImageUrl, sectionCount, lastServerVersion);
       }),
     );
 

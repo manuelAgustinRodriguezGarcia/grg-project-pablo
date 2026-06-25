@@ -159,7 +159,7 @@ Este procedimiento provoca:
 
 ### 3. Estado actual del desarrollo
 
-Al **23/06/2026** (rama `backend`). Detalle técnico y contratos en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) y [`ENDPOINTS.md`](./ENDPOINTS.md).
+Al **25/06/2026** (rama `backend`). Detalle técnico y contratos en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md), [`ENDPOINTS.md`](./ENDPOINTS.md) e importador de catálogos en [`METHOD-IMPORT.md`](./METHOD-IMPORT.md).
 
 #### UI
 
@@ -170,24 +170,28 @@ Al **23/06/2026** (rama `backend`). Detalle técnico y contratos en [`BACKEND-IM
 | Panel admin (sidebar, layout)           | ✅ Estructura base                                           |
 | `/admin/catalogos`                      | ⚠️ `CatalogNavigator` con **datos mock** — APIs REST listas |
 | `/admin/precios`                        | ⏳ Nueva sección a implementar                               |
-| `/admin/archivos` (importador)          | ⏳ Placeholder — backend listo                               |
+| `/admin/archivos` (historial Excel)     | ⏳ Placeholder — API backend Fase 8 ✅; cablear UI          |
 | `/admin/users`, recuperación contraseña | ⏳ Sin página                                                |
 
-#### Backend (fases técnicas 1–5 ✅)
+#### Backend (fases técnicas 2–7 ✅ · 8–10 ⏳)
 
 | Capacidad                                                | Estado |
 | -------------------------------------------------------- | ------ |
 | Auth, usuarios, directorio, auditoría                    | ✅      |
 | Catálogos, carpetas, columnas, visibilidad               | ✅      |
-| Productos (lectura paginada + miniatura)                 | ✅      |
-| Importador Excel (asistente 6 pasos, publicación segura) | ✅      |
-| Imágenes (extracción, matching, revisión, galería)       | ✅      |
-| CRUD manual de productos                                 | ⏳      |
-| Búsqueda, filtros, archivos subidos, precios, offline    | ⏳      |
+| Productos (lectura paginada, CRUD manual, equivalencias) | ✅      |
+| Importador Excel **catálogos** (publicación segura)      | ✅      |
+| Imágenes (extracción, matching, revisión, galería API)   | ✅      |
+| Búsqueda y filtros (API)                                 | ✅      |
+| Ayuda contextual columnas (API + Storage)                | ✅      |
+| Archivos subidos (listado, descarga, reproceso)          | ✅ Backend Fase 8 / ⏳ UI |
+| Precios (dominio + importación Excel)                    | ✅ Backend RF-053–059 · ⏳ UI |
+| Offline (sync, manifest)                                   | ✅ Backend Fase 9 · ⏳ UI/PWA |
 
-> Las **fases del roadmap PRD (§48)** no coinciden 1:1 con las fases backend. Ver tabla de mapeo en [`BACKEND-IMPLEMENTATION.md` §1.1](./BACKEND-IMPLEMENTATION.md#11-roadmap-prd--backend).
+> Las **fases del roadmap PRD (§48)** no coinciden 1:1 con las fases backend. Ver tabla de mapeo en [`BACKEND-IMPLEMENTATION.md` §1.1](./BACKEND-IMPLEMENTATION.md#11-roadmap-prd--backend).  
+> Importación soporta **catálogos** (`CATALOG_FOLDER`) y **precios** (`PRICE_LIST`). Destino precios: sin pipeline de imágenes. Detalle: [`METHOD-IMPORT.md`](./METHOD-IMPORT.md).
 
-Este PRD define el criterio funcional acordado con Pablo; el estado de implementación se mantiene sincronizado en los documentos técnicos citados.
+Este PRD define el criterio funcional acordado con Pablo; el estado de implementación backend se mantiene sincronizado en [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md), [`ENDPOINTS.md`](./ENDPOINTS.md) y [`METHOD-IMPORT.md`](./METHOD-IMPORT.md) (import catálogos).
 
 ---
 
@@ -2197,6 +2201,8 @@ Esta configuración aplicará tanto a columnas de Catálogos como a columnas de 
 
 ### 37. Archivos subidos
 
+> **Implementación backend (Fase 8):** `GET/DELETE /api/admin/files/*`, reproceso, informes. Ver [`ENDPOINTS.md`](./ENDPOINTS.md). UI pendiente.
+
 El sistema tendrá una sección denominada **Archivos subidos**.
 
 Por cada archivo se mostrará:
@@ -3239,7 +3245,7 @@ El destino queda actualizado
 
 ### 48. Roadmap funcional
 
-> **Estado de implementación técnica:** [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) · **Contratos API:** [`ENDPOINTS.md`](./ENDPOINTS.md)
+> **Estado de implementación técnica:** [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) · **Contratos API:** [`ENDPOINTS.md`](./ENDPOINTS.md) · **Import catálogos:** [`METHOD-IMPORT.md`](./METHOD-IMPORT.md)
 
 #### Fase 1 — Base visual y acceso
 
@@ -3268,7 +3274,7 @@ El destino queda actualizado
 * Imagen de ayuda opcional por columna.
 * Modal de imagen de ayuda.
 
-**Estado:** ✅ Backend completo (backend Fase 3). UI catálogos aún con mock.
+**Estado:** ✅ Backend completo (backend Fase 3). Integración UI → frontend.
 
 ---
 
@@ -3289,7 +3295,7 @@ El destino queda actualizado
 * Configurar columnas.
 * Configurar ayudas contextuales.
 
-**Estado:** 🔄 Catálogos/carpetas/columnas ✅ backend · productos e imágenes manuales ⏳ (backend Fase 6).
+**Estado:** ✅ Backend completo (backend Fase 6). Integración UI formularios/imágenes manuales → frontend.
 
 ---
 
@@ -3304,7 +3310,7 @@ El destino queda actualizado
 * Limpieza de filtros.
 * Optimización de rendimiento.
 
-**Estado:** ⏳ (backend Fase 7).
+**Estado:** ✅ Backend completo (backend Fase 7). Integración UI buscador/filtros/pills → frontend.
 
 ---
 
@@ -3312,10 +3318,10 @@ El destino queda actualizado
 
 * Subida de Excel.
 * Respaldo.
-* Selección de tipo de destino.
-* Selección de catálogo y carpeta.
-* Selección de lista de precios.
-* Creación rápida mediante `+`.
+* Selección de tipo de destino — ✅ Catálogos · ⏳ Precios.
+* Selección de catálogo y carpeta — ✅.
+* Selección de lista de precios — ⏳.
+* Creación rápida mediante `+` — ✅ catálogo/carpeta · ⏳ lista de precios.
 * Análisis de hojas.
 * Detección de encabezados.
 * Vista previa.
@@ -3325,7 +3331,7 @@ El destino queda actualizado
 * Aplicar lista.
 * Confirmaciones.
 
-**Estado:** ✅ Backend completo (backend Fase 4). UI asistente en `/admin/archivos` ⏳.
+**Estado:** ✅ Backend completo para **importación de catálogos** (backend Fase 4). ⏳ Tipo destino Precios, listas de precios e import Excel de precios (RF-053–059). Detalle: [`METHOD-IMPORT.md`](./METHOD-IMPORT.md). Integración UI asistente → frontend.
 
 ---
 
@@ -3357,7 +3363,7 @@ El destino queda actualizado
 * Configurar columnas de precios.
 * Definir filtros simples para precios en una etapa posterior.
 
-**Estado:** ⏳ Nueva funcionalidad a implementar.
+**Estado:** ⏳ Nueva funcionalidad a implementar (RF-053–059). Sin modelos ni APIs — ver [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) §4.2.
 
 ---
 
@@ -3370,7 +3376,7 @@ El destino queda actualizado
 * Reprocesamiento.
 * Relación con catálogos, carpetas y listas de precios.
 
-**Estado:** ⏳ (backend Fase 8).
+**Estado:** ✅ Backend Fase 8 (RF-043): listado, descarga (URL firmada), informe, reproceso, eliminación. Respaldo en upload ✅. UI `/admin/archivos` pendiente.
 
 ---
 

@@ -2,6 +2,8 @@ import type {
   Catalog,
   CatalogFolder,
   FolderColumn,
+  PriceColumn,
+  PriceList,
   UserRole,
 } from "@/generated/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
@@ -13,6 +15,10 @@ type VisibleEntity = {
 
 type VisibleFolderEntity = VisibleEntity & {
   status?: CatalogFolder["status"];
+};
+
+type VisiblePriceListEntity = VisibleEntity & {
+  status?: PriceList["status"];
 };
 
 export class VisibilityService {
@@ -40,6 +46,25 @@ export class VisibilityService {
   }
 
   columnWhereForRole(role: UserRole): Prisma.FolderColumnWhereInput {
+    if (!this.shouldFilterForRole(role)) {
+      return {};
+    }
+
+    return { visibleToNormalUser: true };
+  }
+
+  priceListWhereForRole(role: UserRole): Prisma.PriceListWhereInput {
+    if (!this.shouldFilterForRole(role)) {
+      return {};
+    }
+
+    return {
+      visibleToNormalUser: true,
+      status: "ACTIVE",
+    };
+  }
+
+  priceColumnWhereForRole(role: UserRole): Prisma.PriceColumnWhereInput {
     if (!this.shouldFilterForRole(role)) {
       return {};
     }
@@ -78,6 +103,29 @@ export class VisibilityService {
     return columns.filter((column) => column.visibleToNormalUser);
   }
 
+  filterPriceLists<T extends VisiblePriceListEntity>(
+    lists: T[],
+    role: UserRole,
+  ): T[] {
+    if (!this.shouldFilterForRole(role)) {
+      return lists;
+    }
+
+    return lists.filter(
+      (list) =>
+        list.visibleToNormalUser &&
+        (list.status === undefined || list.status === "ACTIVE"),
+    );
+  }
+
+  filterPriceColumns<T extends VisibleEntity>(columns: T[], role: UserRole): T[] {
+    if (!this.shouldFilterForRole(role)) {
+      return columns;
+    }
+
+    return columns.filter((column) => column.visibleToNormalUser);
+  }
+
   assertCatalogVisibleForRole(catalog: Catalog, role: UserRole): void {
     if (this.shouldFilterForRole(role) && !catalog.visibleToNormalUser) {
       throw new VisibilityError("Catálogo no encontrado.", "CATALOG_NOT_VISIBLE");
@@ -95,6 +143,26 @@ export class VisibilityService {
   assertColumnVisibleForRole(column: FolderColumn, role: UserRole): void {
     if (this.shouldFilterForRole(role) && !column.visibleToNormalUser) {
       throw new VisibilityError("Columna no encontrada.", "COLUMN_NOT_VISIBLE");
+    }
+  }
+
+  assertPriceListVisibleForRole(priceList: PriceList, role: UserRole): void {
+    if (this.shouldFilterForRole(role)) {
+      if (!priceList.visibleToNormalUser || priceList.status !== "ACTIVE") {
+        throw new VisibilityError(
+          "Lista de precios no encontrada.",
+          "PRICE_LIST_NOT_VISIBLE",
+        );
+      }
+    }
+  }
+
+  assertPriceColumnVisibleForRole(column: PriceColumn, role: UserRole): void {
+    if (this.shouldFilterForRole(role) && !column.visibleToNormalUser) {
+      throw new VisibilityError(
+        "Columna no encontrada.",
+        "PRICE_COLUMN_NOT_VISIBLE",
+      );
     }
   }
 

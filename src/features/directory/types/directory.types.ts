@@ -1,4 +1,9 @@
-export type DirectoryOfflineSyncStatus = "unavailable";
+export type DirectoryOfflineSyncStatus = "unavailable" | "ready" | "synced";
+
+export type DirectoryOfflineSync = {
+  status: DirectoryOfflineSyncStatus;
+  lastServerVersion?: number;
+};
 
 export type DirectoryCatalogItem = {
   id: string;
@@ -8,9 +13,7 @@ export type DirectoryCatalogItem = {
   sectionCount: number;
   updatedAt: string;
   order: number;
-  offlineSync: {
-    status: DirectoryOfflineSyncStatus;
-  };
+  offlineSync: DirectoryOfflineSync;
 };
 
 export type DirectoryResponse = {

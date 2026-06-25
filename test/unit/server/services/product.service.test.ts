@@ -59,6 +59,7 @@ vi.mock("@/server/repositories/product-image.repository", () => ({
 vi.mock("@/server/services/product-image.service", () => ({
   productImageService: {
     resolvePrimaryImagesForProducts: vi.fn(async () => new Map()),
+    resolveColumnImagesForProducts: vi.fn(async () => new Map()),
     duplicateImagesForProduct: vi.fn(async () => undefined),
   },
 }));

@@ -2,7 +2,9 @@
 
 Documento técnico que describe **cómo funciona hoy el importador de Excel** en este proyecto, según el código en `src/server`, `src/features/imports` y las APIs bajo `/api/admin/imports`.
 
-**Alcance:** importación de **catálogos** (productos en carpetas). No cubre listas de precios ni la pantalla `/admin/archivos` (historial de archivos), que aún no está cableada al flujo real.
+**Alcance:** importación de **catálogos** (`CATALOG_FOLDER`, productos en carpetas) y **precios** (`PRICE_LIST`, ítems en listas). Destino precios: **sin imágenes** (RF-056). La pantalla `/admin/archivos` aún no está cableada; el backend de historial/reproceso está en Fase 8 (ver §15).
+
+**Referencias:** requisitos [`PRD.md`](./PRD.md) §16–22 · plan backend [`BACKEND-IMPLEMENTATION.md`](./BACKEND-IMPLEMENTATION.md) §6 · contratos [`ENDPOINTS.md`](./ENDPOINTS.md)
 
 **Última revisión:** basada en el código del repositorio al momento de redactar este documento.
 
@@ -452,7 +454,7 @@ La UI del paso **Resultado** muestra un mensaje resumido; el informe completo es
 | Evaluación de fórmulas | Solo valor guardado por Excel |
 | `.xls`, CSV | No soportados |
 | Ejecución de macros | No |
-| UI historial `/admin/archivos` | Placeholder |
+| UI historial `/admin/archivos` | Placeholder (API backend ✅) |
 | Mapeo manual Excel → columna existente (nombre distinto) | Solo match automático por nombre |
 | Selector de columna descripción en wizard | Removido; solo inferencia backend |
 | Revisión UI de imágenes `AMBIGUOUS` | Parcial (existen en BD, no en lista) |
@@ -461,12 +463,30 @@ La UI del paso **Resultado** muestra un mensaje resumido; el informe completo es
 
 ---
 
-## 15. Archivos clave (referencia rápida)
+## 15. Reproceso desde historial (Fase 8)
+
+Cuando un Excel ya fue respaldado (`UploadedFile` en Storage), el administrador puede **reprocesarlo** sin volver a subir el archivo:
+
+1. `POST /api/admin/files/{fileId}/reprocess` → crea un nuevo `ImportJob` en estado `STORED` apuntando al mismo `storagePath`.
+2. Wizard existente: `analyzeImportAction` → destino → config → preview → `applyImportAction` (`IMPORTAR_LISTA` | `COMBINAR_LISTA` | `REEMPLAZAR_LISTA`).
+3. Publicación segura (RF-044) sin cambios: datos vigentes no se alteran hasta `apply` exitoso.
+
+**Conservación:** cada upload y cada reproceso generan jobs distintos; el Excel en `excel-originals` no se duplica. Jobs anteriores permanecen en historial hasta eliminar el archivo (`DELETE /api/admin/files/{fileId}` con confirmación si hubo publicaciones).
+
+**Bloqueos:** no se permite reprocesar ni eliminar si existe un job no terminal (`ACTIVE_JOB_EXISTS`).
+
+Contratos REST: [`ENDPOINTS.md`](./ENDPOINTS.md) § Archivos subidos.
+
+---
+
+## 16. Archivos clave (referencia rápida)
 
 ### Orquestación
 - `src/server/services/catalog-import.service.ts`
+- `src/server/services/uploaded-file.service.ts`
 - `src/features/imports/components/ImportWizard.tsx`
 - `src/features/imports/actions/import.actions.ts`
+- `src/features/files/actions/uploaded-file.actions.ts`
 
 ### Excel
 - `src/server/importers/excel-workbook.parser.ts`
@@ -511,7 +531,7 @@ La UI del paso **Resultado** muestra un mensaje resumido; el informe completo es
 
 ---
 
-## 16. Resumen: preguntas frecuentes
+## 17. Resumen: preguntas frecuentes
 
 ### ¿Cómo reconoce las imágenes embebidas?
 
@@ -532,6 +552,47 @@ Por **nombre de archivo** (sin extensión), normalizado igual que los códigos d
 ### ¿Hace falta migración de BD al cambiar límites de upload?
 
 No. Cambios en `next.config.ts` o límites de Storage solo requieren **reiniciar el servidor** / redesplegar. Los límites de 50 MB vs 55 MB del proxy son independientes de Prisma.
+
+---
+
+## 18. Importación de precios (`PRICE_LIST`)
+
+Extensión del mismo asistente de importación con `ImportJob.destinationType = PRICE_LIST`.
+
+### Diferencias vs catálogos
+
+| Aspecto | Catálogo (`CATALOG_FOLDER`) | Precios (`PRICE_LIST`) |
+|---------|----------------------------|------------------------|
+| Destino | `catalogId` + `folderId` | `priceListId` |
+| Entidad creada | `Product` | `PriceItem` |
+| Columnas | `FolderColumn` | `PriceColumn` (+ flag `isPrice`) |
+| Imágenes | Embebidas, ZIP, revisión | **No procesadas** (RF-056) |
+| Estado final | `PUBLISHED` o `PENDING_REVIEW` | Siempre `PUBLISHED` |
+| Equivalencias | Sí | No |
+| Servicio apply | `CatalogImportService.apply` | Delega a `PriceImportService.apply` |
+
+### Flujo
+
+```text
+Subir Excel → analyze → setDestination { destinationType: PRICE_LIST, priceListId, sheetName }
+→ config columnas → preview → IMPORTAR_LISTA | COMBINAR_LISTA | REEMPLAZAR_LISTA
+→ apply (transacción ítems) → PUBLISHED + auditoría PRICE_IMPORT_PUBLISHED
+```
+
+### Detección semántica
+
+`detectSemanticFlags` en `column-mapper.ts` añade `isPrice` para encabezados que coinciden con `/precio/i`, `/importe/i`, `/monto/i`, etc.
+
+### Mapper
+
+`price-item-row.mapper.ts` — `mapSheetToPriceItems()` extrae `primaryCode`, `description`, `amount` (Decimal) y `dynamicData`.
+
+### Archivos clave
+
+- `src/server/services/price-import.service.ts`
+- `src/server/services/catalog-import.service.ts` (rama `destinationType`)
+- `src/server/importers/price-item-row.mapper.ts`
+- Contratos: [`ENDPOINTS.md`](./ENDPOINTS.md) § Precios
 
 ---
 
