@@ -8,6 +8,8 @@ import type {
   ProductTableResponse,
 } from "@/features/catalog/types/product-table.types";
 import { ProductImagePreviewModal } from "./ProductImagePreviewModal";
+import { getProductTableColumns } from "@/features/catalog/utils/product-table-columns";
+import { normalizeMultilineText } from "@/shared/text/normalize-multiline-text";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 type ProductTableProps = {
@@ -62,7 +64,7 @@ function formatCellValue(value: unknown): string {
     return JSON.stringify(value);
   }
 
-  return String(value);
+  return normalizeMultilineText(String(value));
 }
 
 function getPaginationRange(pagination: ProductTableResponse["pagination"]): {
@@ -161,7 +163,9 @@ export function ProductTable({
     );
   }
 
-  const sortedColumns = [...data.columns].sort((left, right) => left.order - right.order);
+  const sortedColumns = getProductTableColumns(
+    [...data.columns].sort((left, right) => left.order - right.order),
+  );
   const showImageColumn = shouldShowGlobalImageColumn(data.products);
   const { from, to } = getPaginationRange(data.pagination);
   const { pagination } = data;
@@ -195,7 +199,7 @@ export function ProductTable({
                 const headerLines = formatTableHeaderLines(column.displayName);
 
                 return (
-                  <th key={column.id} scope="col">
+                  <th key={column.id} scope="col" className={styles.tableDataCell}>
                     <span className={styles.tableHeaderLabel}>
                       {headerLines.map((line, lineIndex) => (
                         <span key={`${column.id}-${lineIndex}`} className={styles.tableHeaderLine}>
@@ -275,7 +279,9 @@ export function ProductTable({
                       <td
                         key={`${product.id}-${column.id}`}
                         className={
-                          previewImages.length > 0 ? styles.tableCellWithMedia : undefined
+                          previewImages.length > 0
+                            ? `${styles.tableDataCell} ${styles.tableCellWithMedia}`
+                            : styles.tableDataCell
                         }
                       >
                         {previewImages.length > 0 ? (

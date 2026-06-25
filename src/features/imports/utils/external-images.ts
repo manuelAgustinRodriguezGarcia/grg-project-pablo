@@ -101,6 +101,17 @@ export function hasExternalImages(selection: ExternalImageSelection): boolean {
   return Boolean(selection.zipFile) || selection.imageFiles.length > 0;
 }
 
+export function hasAttachedZip(
+  selection: ExternalImageSelection,
+  stagedSummary?: StagedExternalImagesSummary | null,
+): boolean {
+  if (selection.zipFile) {
+    return true;
+  }
+
+  return stagedSummary?.sources.some((source) => source.kind === "zip") ?? false;
+}
+
 export function countExternalImages(selection: ExternalImageSelection): number {
   return (selection.zipFile ? 1 : 0) + selection.imageFiles.length;
 }

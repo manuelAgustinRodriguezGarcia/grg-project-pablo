@@ -13,6 +13,7 @@
 }
 
 .modal {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -790,6 +791,16 @@
 
 .primaryCodeField {
   margin-bottom: 1.35rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba($blue, 0.32);
+  border-radius: $radius-md;
+  background: rgba($blue, 0.06);
+  gap: 0.35rem;
+
+  .fieldHelpText {
+    margin: 0;
+    font-size: 0.88rem;
+  }
 }
 
 .fieldHelpText {
@@ -802,39 +813,7 @@
 }
 
 .primaryCodeSelectWrap {
-  margin-top: 0.85rem;
-}
-
-.primaryCodeSelectRow {
-  display: flex;
-  align-items: stretch;
-  gap: 0.75rem;
-}
-
-.primaryCodeSelectControl {
-  flex: 1;
-  min-width: 0;
-}
-
-.generateCodesButton {
-  flex-shrink: 0;
-  align-self: stretch;
-  min-height: 2.45rem;
-  padding-inline: 1.1rem;
-  border-radius: $radius-md;
-  white-space: nowrap;
-}
-
-.generateCodesButtonActive {
-  border-color: rgba($blue, 0.45);
-  background: rgba($blue, 0.1);
-  color: $blue;
-
-  &:hover:not(:disabled) {
-    background: rgba($blue, 0.14);
-    border-color: rgba($blue, 0.55);
-    color: $blue;
-  }
+  margin-top: 0.2rem;
 }
 
 .yesNoRadioGroup {
@@ -1215,6 +1194,58 @@
   gap: 0.6rem;
 }
 
+.closeConfirmCard {
+  max-width: 34rem;
+  padding: 1.5rem 1.35rem 1.35rem;
+  text-align: center;
+}
+
+.closeConfirmIcon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+  color: $blue;
+
+  svg {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+}
+
+.closeConfirmTitle {
+  margin: 0 0 0.55rem;
+  font-family: $font-sans;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: $navy;
+}
+
+.closeConfirmText {
+  margin: 0 0 1.35rem;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba($navy, 0.72);
+}
+
+.closeConfirmActions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 0.65rem;
+
+  .primaryButton,
+  .dangerButton {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
+    padding-inline: 0.9rem;
+    font-size: 0.88rem;
+  }
+}
+
 /* ---------- Step: Result ---------- */
 
 .result {
@@ -1417,7 +1448,7 @@
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    color: rgba($navy, 0.62);
+    color: $blue;
     background: rgba($blue, 0.03);
   }
 }

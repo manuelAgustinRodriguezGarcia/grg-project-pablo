@@ -205,6 +205,78 @@ describe("ProductTable", () => {
     expect(screen.getAllByText("—")).toHaveLength(1);
   });
 
+  it("oculta la columna de códigos generados por importación", () => {
+    const data: ProductTableResponse = {
+      ...createTableData([]),
+      columns: [
+        {
+          id: "col-generated",
+          folderId: "folder-1",
+          originalName: "Código",
+          displayName: "Código",
+          internalKey: "codigo_generado",
+          dataType: "TEXT",
+          order: 0,
+          isPrimaryCode: true,
+          isDescription: false,
+          isImageCode: false,
+          isSearchable: true,
+          isFilterable: false,
+          visibleToNormalUser: true,
+          isGloballySearchable: false,
+          isGloballyFilterable: false,
+          globalFieldKey: null,
+          createdAt: new Date("2026-01-01"),
+          updatedAt: new Date("2026-01-01"),
+        },
+        {
+          id: "col-detalle",
+          folderId: "folder-1",
+          originalName: "DETALLE",
+          displayName: "DETALLE",
+          internalKey: "detalle",
+          dataType: "TEXT",
+          order: 1,
+          isPrimaryCode: false,
+          isDescription: false,
+          isImageCode: false,
+          isSearchable: false,
+          isFilterable: false,
+          visibleToNormalUser: true,
+          isGloballySearchable: false,
+          isGloballyFilterable: false,
+          globalFieldKey: null,
+          createdAt: new Date("2026-01-01"),
+          updatedAt: new Date("2026-01-01"),
+        },
+      ],
+      products: [
+        {
+          id: "product-1",
+          primaryCode: "a1b2c3",
+          description: null,
+          dynamicData: { detalle: "Producto A" },
+          primaryImage: null,
+          imagesByColumnKey: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      pagination: {
+        page: 1,
+        pageSize: 25,
+        total: 1,
+        totalPages: 1,
+      },
+    };
+
+    render(<ProductTable data={data} isLoading={false} error={null} onPageChange={vi.fn()} />);
+
+    expect(screen.queryByRole("columnheader", { name: "Código" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "DETALLE" })).toBeInTheDocument();
+    expect(screen.getByText("Producto A")).toBeInTheDocument();
+  });
+
   it("renders images inside their mapped column instead of the global image column", () => {
     const data: ProductTableResponse = {
       ...createTableData([]),

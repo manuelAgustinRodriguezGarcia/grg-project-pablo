@@ -724,8 +724,8 @@
 }
 
 .productTable {
-  width: 100%;
-  min-width: 40rem;
+  width: max-content;
+  min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   font-family: $font-sans;
@@ -738,8 +738,8 @@
     padding: 0.75rem 0.85rem;
     border-bottom: 1px solid rgba($navy, 0.08);
     border-right: 1px solid rgba($navy, 0.08);
-    text-align: left;
-    vertical-align: top;
+    text-align: center;
+    vertical-align: middle;
 
     &:last-child {
       border-right: none;
@@ -944,20 +944,29 @@
   font-size: 0.85rem;
 }
 
+.tableDataCell {
+  width: auto;
+  min-width: max-content;
+  max-width: 32rem;
+}
+
 .tableCellWithMedia {
   min-width: 5.5rem;
-  vertical-align: top;
+  max-width: 32rem;
+  vertical-align: middle;
 }
 
 .tableCellImages {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.35rem;
   margin-bottom: 0.35rem;
 }
 
 .tableCellThumbButton {
   display: block;
+  margin-inline: auto;
   padding: 0;
   border: 0;
   background: transparent;
@@ -976,8 +985,13 @@
 
 .tableCellText {
   display: block;
+  width: max-content;
+  max-width: 32rem;
+  margin-inline: auto;
+  text-align: center;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .tableHeaderLabel {

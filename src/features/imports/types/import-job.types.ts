@@ -62,6 +62,7 @@ export type ImportPreviewSummary = {
   folderIsEmpty: boolean;
   formulasDetected: number;
   formulasWithoutCachedValue: number;
+  repeatedColumns: string[];
 };
 
 export type ImportPreviewRow = MappedProductRow & {

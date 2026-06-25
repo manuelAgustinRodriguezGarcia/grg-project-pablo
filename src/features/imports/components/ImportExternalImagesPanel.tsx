@@ -16,6 +16,8 @@ type ImportExternalImagesPanelProps = {
   selection: ExternalImageSelection;
   disabled: boolean;
   onChange: (selection: ExternalImageSelection) => void;
+  onNativeFilePickerOpen?: () => void;
+  onNativeFilePickerSettled?: () => void;
 };
 
 function pickFiles(
@@ -53,6 +55,8 @@ export function ImportExternalImagesPanel({
   selection,
   disabled,
   onChange,
+  onNativeFilePickerOpen,
+  onNativeFilePickerSettled,
 }: ImportExternalImagesPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectionError, setSelectionError] = useState<string | null>(null);
@@ -68,6 +72,17 @@ export function ImportExternalImagesPanel({
 
     setSelectionError(null);
     onChange(result.selection);
+  }
+
+  function openExternalFilePicker() {
+    onNativeFilePickerOpen?.();
+    inputRef.current?.click();
+  }
+
+  function handleExternalInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    handlePick(event.target.files);
+    event.target.value = "";
+    onNativeFilePickerSettled?.();
   }
 
   function handleDrop(event: React.DragEvent<HTMLButtonElement>) {
@@ -102,7 +117,7 @@ export function ImportExternalImagesPanel({
         <button
           type="button"
           className={`${styles.dropZone} ${styles.dropZoneExternal} ${isDragging ? styles.dropZoneActive : ""}`}
-          onClick={() => inputRef.current?.click()}
+          onClick={openExternalFilePicker}
           onDragOver={(event) => {
             event.preventDefault();
             if (!disabled) {
@@ -131,10 +146,7 @@ export function ImportExternalImagesPanel({
         className={styles.hiddenInput}
         accept={ACCEPT_ATTR}
         multiple
-        onChange={(event) => {
-          handlePick(event.target.files);
-          event.target.value = "";
-        }}
+        onChange={handleExternalInputChange}
         disabled={disabled}
       />
 

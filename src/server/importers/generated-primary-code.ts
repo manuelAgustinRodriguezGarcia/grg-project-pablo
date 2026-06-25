@@ -1,7 +1,9 @@
 import { randomBytes } from "node:crypto";
 
-export const GENERATED_PRIMARY_CODE_COLUMN_KEY = "codigo_generado";
-export const GENERATED_PRIMARY_CODE_DISPLAY_NAME = "Código";
+export {
+  GENERATED_PRIMARY_CODE_COLUMN_KEY,
+  GENERATED_PRIMARY_CODE_DISPLAY_NAME,
+} from "@/shared/import/generated-primary-code.constants";
 
 const GENERATED_CODE_BYTE_LENGTH = 3;
 const MAX_GENERATION_ATTEMPTS = 32;

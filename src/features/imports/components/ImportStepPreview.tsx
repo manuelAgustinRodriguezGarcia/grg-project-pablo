@@ -5,8 +5,6 @@ import type { ImportPreviewResponse } from "@/features/imports/types/import-job.
 import { FileDown, ICON_STROKE, RefreshCcw } from "@/shared/icons";
 import styles from "./ImportWizard.module.scss";
 
-const PREVIEW_ROW_LIMIT = 50;
-
 type ImportStepPreviewProps = {
   preview: ImportPreviewResponse;
   catalogName: string;
@@ -16,18 +14,6 @@ type ImportStepPreviewProps = {
   onSelectAction: (action: ImportActionType) => void;
 };
 
-async function copyPrimaryCode(code: string) {
-  if (!code) {
-    return;
-  }
-
-  try {
-    await navigator.clipboard.writeText(code);
-  } catch {
-    // Clipboard may be unavailable outside a secure context.
-  }
-}
-
 export function ImportStepPreview({
   preview,
   catalogName,
@@ -36,8 +22,8 @@ export function ImportStepPreview({
   selectedAction,
   onSelectAction,
 }: ImportStepPreviewProps) {
-  const { summary, products, warnings } = preview;
-  const rows = products.slice(0, PREVIEW_ROW_LIMIT);
+  const { summary, warnings } = preview;
+  const repeatedColumns = summary.repeatedColumns ?? [];
 
   return (
     <div>
@@ -87,52 +73,26 @@ export function ImportStepPreview({
         </p>
       ) : null}
 
-      <div className={styles.previewTableWrap}>
-        <table className={styles.previewTable}>
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Columna Nueva</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const primaryCode = row.primaryCode ?? "";
-
-              return (
-                <tr
-                  key={`${row.rowNumber}-${primaryCode}`}
-                  className={row.isMatch ? styles.matchRow : undefined}
-                >
-                  <td
-                    className={styles.previewTableCodeCell}
-                    title={primaryCode || undefined}
-                    onClick={() => {
-                      void copyPrimaryCode(primaryCode);
-                    }}
-                  >
-                    {primaryCode || "—"}
-                  </td>
-                  <td className={styles.previewTableNewColumnCell}>
-                    {row.isMatch ? "No" : "Sí"}
-                  </td>
+      {repeatedColumns.length > 0 ? (
+        <>
+          <p className={styles.sectionLabel}>Columnas repetidas</p>
+          <div className={styles.previewTableWrap}>
+            <table className={styles.previewTable}>
+              <thead>
+                <tr>
+                  <th>Columna repetida</th>
                 </tr>
-              );
-            })}
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={2}>No se detectaron productos en la hoja.</td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-
-      {summary.totalProducts > rows.length ? (
-        <p className={styles.sheetNote}>
-          Mostrando los primeros {rows.length} de {summary.totalProducts}{" "}
-          productos.
-        </p>
+              </thead>
+              <tbody>
+                {repeatedColumns.map((columnName) => (
+                  <tr key={columnName}>
+                    <td>{columnName}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : null}
 
       {warnings.length > 0 ? (
