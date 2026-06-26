@@ -25,9 +25,16 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1023px) {
   .shell {
     flex-direction: column;
+  }
+
+  .content {
+    flex: 1;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-bottom: calc(3.35rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

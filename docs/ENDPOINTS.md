@@ -166,7 +166,7 @@ Import desde los paths indicados. Solo `ADMIN` salvo donde se indica.
 |------|--------|
 | `/`, `/login`, `/auth/login` | ✅ |
 | `/admin`, `/admin/catalogos` | Placeholder / mock |
-| `/admin/archivos` | Placeholder (API lista) |
+| `/admin/archivos` | ✅ Listado, detalle, descarga, informe, reproceso, eliminación |
 
 ---
 
