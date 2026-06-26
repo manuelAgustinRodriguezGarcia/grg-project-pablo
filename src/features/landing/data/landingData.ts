@@ -3,7 +3,31 @@ export type Brand = {
   logoSrc?: string;
 };
 
-export const HERO_IMAGE_SRC = "/images/rothamel-hero.webp";
+/** Ruta de logo en /public/marcas. Agregar logoSrc al subir el archivo SVG. */
+export const marcaLogo = (filename: string) => `/marcas/${filename}` as const;
+
+/** Incrementar al reemplazar archivos en public/banner/ con el mismo nombre. */
+export const HERO_BANNER_VERSION = "20260626";
+
+export const LOGO_BLUE_SRC = "/logos/logo-blue.svg?v=1";
+export const LOGO_WHITE_SRC = "/logos/logo-white.svg?v=1";
+export const LOGO_WIDTH = 2172;
+export const LOGO_HEIGHT = 724;
+
+const heroBannerPath = (filename: string) =>
+  `/banner/${filename}?v=${HERO_BANNER_VERSION}`;
+
+export const HERO_BANNER_IMAGES = [
+  heroBannerPath("banner-1.webp"),
+  heroBannerPath("banner-2.webp"),
+  heroBannerPath("banner-3.webp"),
+  heroBannerPath("banner-4.webp"),
+] as const;
+
+export const HERO_BANNER_WIDTH = 750;
+export const HERO_BANNER_HEIGHT = 496.36;
+
+export const HERO_IMAGE_SRC = HERO_BANNER_IMAGES[0];
 
 export const PHONE_DISPLAY = "364 458-0297";
 export const PHONE_TEL = "+543644580297";
@@ -12,19 +36,92 @@ export const WHATSAPP_URL = "https://wa.me/5493644580297";
 
 export const LOGIN_PATH = "/auth/login";
 
-export const BRANDS: Brand[] = [
-  { name: "Scania" },
-  { name: "Ford" },
-  { name: "Mahle" },
-  { name: "Eaton" },
-  { name: "Wabco" },
+export type BrandCarouselRow = {
+  id: string;
+  brands: readonly Brand[];
+};
+
+const CAMIONES_MOTORES_BRANDS: readonly Brand[] = [
+  { name: "Iveco", logoSrc: marcaLogo("IVECO.svg") },
+  { name: "Ford", logoSrc: marcaLogo("FORD.svg") },
+  { name: "Volkswagen", logoSrc: marcaLogo("Volkswagen.svg") },
+  { name: "Mercedes Benz", logoSrc: marcaLogo("MERCEDES.svg") },
+  { name: "Scania", logoSrc: marcaLogo("SCANIA.svg") },
+  { name: "Cummins", logoSrc: marcaLogo("Cummins.svg") },
+];
+
+const TRACTORES_AGRICOLAS_BRANDS: readonly Brand[] = [
+  { name: "Zanello", logoSrc: marcaLogo("zanello.svg") },
+  { name: "Pauny", logoSrc: marcaLogo("pauny.svg") },
+  { name: "Massey Ferguson", logoSrc: marcaLogo("Massey.svg") },
+  { name: "Fiat", logoSrc: marcaLogo("Fiat.svg") },
+  { name: "Deutz", logoSrc: marcaLogo("deutz.svg") },
+];
+
+function interleaveBrands(
+  ...groups: readonly (readonly Brand[])[]
+): Brand[] {
+  const maxLength = Math.max(...groups.map((group) => group.length));
+  const result: Brand[] = [];
+
+  for (let index = 0; index < maxLength; index += 1) {
+    for (const group of groups) {
+      const brand = group[index];
+      if (brand) {
+        result.push(brand);
+      }
+    }
+  }
+
+  return result;
+}
+
+const VEHICULOS_BRANDS = interleaveBrands(
+  CAMIONES_MOTORES_BRANDS,
+  TRACTORES_AGRICOLAS_BRANDS,
+);
+
+const MARCAS_REPUESTOS_BRANDS: readonly Brand[] = [
+  { name: "Indiel" },
+  { name: "Exintrader" },
+  { name: "Baiml", logoSrc: marcaLogo("BAIML.svg") },
+  { name: "Mahle", logoSrc: marcaLogo("MAHLE.svg") },
+  { name: "Bosch", logoSrc: marcaLogo("BOSCH.svg") },
+  { name: "Hasting" },
+  { name: "SKF", logoSrc: marcaLogo("SFK.svg") },
+  { name: "Timken", logoSrc: marcaLogo("TIMKEN.svg") },
+  { name: "RSK Rodamientos", logoSrc: marcaLogo("RSK.svg") },
+  { name: "SAV Retenes", logoSrc: marcaLogo("SAV-RETENES.svg") },
+  { name: "Etma Crucetas", logoSrc: marcaLogo("ETMA.svg") },
+  { name: "THE Crapodinas" },
+  { name: "Dayco", logoSrc: marcaLogo("dayco-3.svg") },
+  { name: "RG Frenos", logoSrc: marcaLogo("RG-FRENOS.svg") },
+  { name: "Tecnofricción" },
+  { name: "Wabco", logoSrc: marcaLogo("WABCO.svg") },
+  { name: "Trucktec" },
+  { name: "Tifec" },
+  { name: "Euroricambi" },
+  { name: "FLRS Embragues" },
+  { name: "Iarmetal" },
   { name: "Sachs" },
-  { name: "Victor Reinz" },
-  { name: "Fleetguard" },
-  { name: "Mercedes-Benz" },
-  { name: "Iveco" },
-  { name: "Volvo" },
-  { name: "Valeo" },
+  { name: "VMG" },
+  { name: "Juntas Pampa" },
+  { name: "Correas ABIX" },
+  { name: "Kobla" },
+  { name: "Establecimiento Metalúrgico San Francisco" },
+  { name: "Wheel Componentes de Acoplados" },
+  { name: "ED-MA Componentes Cardánicos Agrícolas" },
+];
+
+export const BRAND_CAROUSEL_ROWS: readonly BrandCarouselRow[] = [
+  {
+    id: "vehiculos",
+    brands: VEHICULOS_BRANDS,
+  },
+  {
+    id: "repuestos",
+    brands: MARCAS_REPUESTOS_BRANDS,
+  },
 ];
 
 export const MAP_LOCATION = {

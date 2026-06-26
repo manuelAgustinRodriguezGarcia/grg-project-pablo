@@ -16,32 +16,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  min-height: 4.5rem;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-@media (max-width: 900px) {
-  .inner {
-    padding-left: $section-padding-x;
-    padding-right: $section-padding-x;
-  }
+  width: 100%;
+  min-height: 5.75rem;
+  padding-left: $landing-content-inset-x;
+  padding-right: $section-padding-x;
 }
 
 .logoLink {
   display: inline-flex;
   border-radius: $radius-sm;
-  transition: opacity 0.2s ease;
 
   &:focus-visible {
     outline: 2px solid $green;
     outline-offset: 3px;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      opacity: 0.85;
-    }
   }
 }
 
@@ -69,7 +56,47 @@
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       background: $navy-dark;
+
+      .loginIconLock {
+        opacity: 0;
+        transform: scale(0.85);
+      }
+
+      .loginIconLockOpen {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
+  }
+}
+
+.loginIconWrap {
+  position: relative;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.loginIconLock,
+.loginIconLockOpen {
+  position: absolute;
+  inset: 0;
+  width: 1rem;
+  height: 1rem;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.loginIconLockOpen {
+  opacity: 0;
+  transform: scale(0.85);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loginIconLock,
+  .loginIconLockOpen {
+    transition: none;
   }
 }
 
