@@ -20,6 +20,7 @@ export {
   Image,
   Info,
   Lock,
+  LockOpen,
   LogOut,
   Mail,
   Map,

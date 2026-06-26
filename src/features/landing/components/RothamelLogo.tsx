@@ -1,50 +1,41 @@
-import Image from "next/image";
-import { Cog, ICON_STROKE } from "@/shared/icons";
+import {
+  LOGO_BLUE_SRC,
+  LOGO_HEIGHT,
+  LOGO_WHITE_SRC,
+  LOGO_WIDTH,
+} from "../data/landingData";
 import styles from "./RothamelLogo.module.scss";
 
 type RothamelLogoProps = {
   variant?: "header" | "footer";
 };
 
-export function RothamelLogo({ variant = "header" }: RothamelLogoProps) {
-  const logoClass =
-    variant === "footer" ? styles.logoFooter : styles.logoHeader;
+const LOGO_ASPECT_RATIO = LOGO_WIDTH / LOGO_HEIGHT;
 
-  return (
-    <div className={logoClass} aria-label="Rothamel Repuestos">
-      <div className={styles.iconWrap} aria-hidden="true">
-        <Cog className={styles.gearIcon} strokeWidth={ICON_STROKE} aria-hidden />
-      </div>
-      <div className={styles.textWrap}>
-        <span className={styles.brandPrimary}>ROTHAMEL</span>
-        <span className={styles.brandSecondary}>REPUESTOS</span>
-      </div>
-    </div>
-  );
+function getLogoDimensions(variant: "header" | "footer") {
+  const height = variant === "footer" ? 52 : 72;
+
+  return {
+    width: Math.round(height * LOGO_ASPECT_RATIO),
+    height,
+  };
 }
 
-type RothamelLogoImageProps = {
-  src: string;
-  alt?: string;
-  variant?: "header" | "footer";
-};
-
-export function RothamelLogoImage({
-  src,
-  alt = "Rothamel Repuestos",
-  variant = "header",
-}: RothamelLogoImageProps) {
+export function RothamelLogo({ variant = "header" }: RothamelLogoProps) {
+  const src = variant === "footer" ? LOGO_WHITE_SRC : LOGO_BLUE_SRC;
   const logoClass =
     variant === "footer" ? styles.logoImageFooter : styles.logoImageHeader;
+  const { width, height } = getLogoDimensions(variant);
 
   return (
-    <Image
+    // SVG estático en /public: img directo evita problemas de tamaño con next/image.
+    <img
       className={logoClass}
       src={src}
-      alt={alt}
-      width={variant === "footer" ? 160 : 140}
-      height={48}
-      priority={variant === "header"}
+      alt="Rothamel Repuestos"
+      width={width}
+      height={height}
+      decoding="async"
     />
   );
 }

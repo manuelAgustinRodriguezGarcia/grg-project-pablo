@@ -1,34 +1,46 @@
 @use "../styles/variables" as *;
+@use "sass:math";
 
-$hero-image-src: "/images/rothamel-hero.webp";
+$banner-aspect-ratio: math.div(750, 496.36);
+$hero-height: clamp(30rem, 60vh, 38rem);
 
 .hero {
   position: relative;
   overflow: hidden;
-  background: $bg-light;
-  padding: clamp(2.5rem, 5vw, 4rem) $section-padding-x clamp(3rem, 6vw, 5rem);
+  background: #f7f9fc;
+  height: $hero-height;
 }
 
 .inner {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(2rem, 4vw, 3.5rem);
+  position: relative;
+  z-index: 2;
+  display: flex;
   align-items: center;
-  min-height: clamp(22rem, 50vh, 32rem);
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding-left: $landing-content-inset-x;
+  padding-right: calc(
+    calc(#{$hero-height} * #{$banner-aspect-ratio}) + clamp(1rem, 2vw, 1.75rem)
+  );
 }
 
 .content {
-  position: relative;
-  z-index: 2;
-  max-width: 34rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  width: min(56rem, 100%);
+  max-width: 56rem;
+  padding-block: clamp(1rem, 2vw, 1.5rem);
 }
 
 .heading {
   font-family: $font-sans;
-  font-size: clamp(2rem, 4.5vw, 3rem);
+  font-size: clamp(2rem, 3.2vw, 2.75rem);
   font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   color: $navy;
 }
 
@@ -44,6 +56,7 @@ $hero-image-src: "/images/rothamel-hero.webp";
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
+  width: fit-content;
   margin-top: 2rem;
   padding: 0.9rem 1.75rem;
   border-radius: 999px;
@@ -80,85 +93,78 @@ $hero-image-src: "/images/rothamel-hero.webp";
 }
 
 .visual {
-  position: relative;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  width: auto;
   height: 100%;
-  min-height: clamp(16rem, 35vw, 24rem);
+  aspect-ratio: $banner-aspect-ratio;
 }
 
-.imagePanel {
+.bannerCarousel {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: inherit;
-  border-radius: $radius-xl;
-  background-color: $navy;
-  background-image:
-    linear-gradient(
-      135deg,
-      rgba($navy, 0.92) 0%,
-      rgba($navy-dark, 0.85) 45%,
-      rgba($green, 0.35) 100%
-    ),
-    url(#{$hero-image-src});
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  box-shadow: $shadow-soft;
-  clip-path: polygon(8% 0, 100% 0, 100% 100%, 0 100%);
-  overflow: hidden;
 }
 
-.imageOverlay {
+.bannerImage {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    160deg,
-    rgba($navy-dark, 0.15) 0%,
-    rgba($navy, 0.45) 100%
-  );
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  pointer-events: none;
+  user-select: none;
 }
 
-.accentStripSide {
-  position: absolute;
-  bottom: -0.5rem;
-  left: -1rem;
-  width: 5rem;
-  height: 5rem;
-  border-radius: $radius-md;
-  background: $green;
-  opacity: 0.85;
-  z-index: -1;
+.bannerImageActive {
+  opacity: 1;
 }
 
 @media (max-width: 900px) {
+  .hero {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+  }
+
   .inner {
-    grid-template-columns: 1fr;
-    min-height: auto;
+    display: block;
+    order: 2;
+    max-width: none;
+    padding-left: $landing-content-inset-x;
+    padding-right: $section-padding-x;
+  }
+
+  .content {
+    width: 100%;
+    max-width: none;
+    padding-block: clamp(1.75rem, 4vw, 2.5rem);
   }
 
   .visual {
-    order: -1;
-    min-height: 14rem;
-  }
-
-  .imagePanel {
-    clip-path: none;
-    border-radius: $radius-lg;
-  }
-
-  .accentStripSide {
-    display: none;
-  }
-
-  .cta {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    order: 1;
     width: 100%;
-    max-width: 22rem;
+    height: auto;
+    aspect-ratio: $banner-aspect-ratio;
+  }
+
+  .bannerImage {
+    object-fit: cover;
   }
 }
 
-@media (max-width: 480px) {
-  .cta {
-    max-width: none;
-    width: 100%;
+@media (prefers-reduced-motion: reduce) {
+  .bannerImage {
+    transition: none;
   }
 }

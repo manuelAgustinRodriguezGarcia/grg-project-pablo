@@ -1,5 +1,14 @@
 @use "../features/landing/styles/variables" as *;
 
+:global(html.landing-scrollbar-hidden) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 .page {
   display: flex;
   flex-direction: column;
@@ -11,5 +20,5 @@
 
 .main {
   flex: 1;
-  padding-top: 4.5rem;
+  padding-top: 5.75rem;
 }
