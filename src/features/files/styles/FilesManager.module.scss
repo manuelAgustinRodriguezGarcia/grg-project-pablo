@@ -1,0 +1,846 @@
+@use "../../admin/styles/variables" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.85rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  overflow: hidden;
+}
+
+.sectionIntro {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: $navy;
+}
+
+.headerSearchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 40rem;
+  min-width: 12rem;
+  margin-left: auto;
+}
+
+.headerSearchIcon {
+  position: absolute;
+  left: 1rem;
+  width: 1rem;
+  height: 1rem;
+  color: $blue;
+  pointer-events: none;
+}
+
+.headerSearch {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem 0.55rem 2.5rem;
+  border: 1px solid rgba($blue, 0.4);
+  border-radius: 999px;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: $navy;
+
+  &::placeholder {
+    color: rgba($navy, 0.45);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    border-color: rgba($blue, 0.55);
+  }
+}
+
+.inlineError {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: $radius-md;
+  background: rgba(#9b2c2c, 0.08);
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #9b2c2c;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.statusBadgeNeutral {
+  background: rgba($navy, 0.08);
+  color: rgba($navy, 0.78);
+}
+
+.statusBadgeInfo {
+  background: rgba($blue, 0.12);
+  color: $blue;
+}
+
+.statusBadgeWarning {
+  background: rgba(#d97706, 0.14);
+  color: #9a5b00;
+}
+
+.statusBadgeSuccess {
+  background: rgba($green, 0.14);
+  color: #157a3f;
+}
+
+.statusBadgeDanger {
+  background: rgba(#c0392b, 0.12);
+  color: #9b2c2c;
+}
+
+.statusBadgeMuted {
+  background: rgba($navy, 0.06);
+  color: rgba($navy, 0.5);
+}
+
+.fileNameCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 10rem;
+  text-align: left;
+}
+
+.fileNamePrimary {
+  font-weight: 600;
+  color: $navy;
+  word-break: break-word;
+}
+
+.fileNameMeta {
+  font-size: 0.78rem;
+  color: rgba($navy, 0.55);
+}
+
+.destinationCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  min-width: 8rem;
+  text-align: left;
+}
+
+.destinationPrimary {
+  font-weight: 600;
+}
+
+.destinationSecondary {
+  font-size: 0.78rem;
+  color: rgba($navy, 0.58);
+}
+
+.metricCell {
+  font-variant-numeric: tabular-nums;
+}
+
+.actionsCell {
+  vertical-align: middle;
+  text-align: center;
+  white-space: nowrap;
+
+  .iconButton + .iconButton {
+    margin-left: 0.35rem;
+  }
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: $white;
+  color: $navy;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.04);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.cardList {
+  display: none;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem;
+}
+
+.fileCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-lg;
+  background: $white;
+}
+
+.fileCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.fileCardTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: $navy;
+  word-break: break-word;
+}
+
+.fileCardMeta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 0.75rem;
+  margin: 0;
+}
+
+.fileCardMetaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.fileCardMetaLabel {
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.5);
+}
+
+.fileCardMetaValue {
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: rgba($navy, 0.82);
+}
+
+.fileCardImportBlock {
+  padding: 0.75rem;
+  border-radius: $radius-md;
+  background: rgba($blue, 0.04);
+}
+
+.fileCardImportTitle {
+  margin: 0 0 0.35rem;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.55);
+}
+
+.fileCardImportText {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgba($navy, 0.78);
+}
+
+.fileCardActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.cardActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.4rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: 999px;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: $navy;
+  cursor: pointer;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.04);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.emptyCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.35rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: $blue;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: $white;
+  text-decoration: none;
+
+  &:hover {
+    background: color-mix(in srgb, $blue 94%, black);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.desktopTable {
+  display: block;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba($navy, 0.45);
+}
+
+.modalCard {
+  display: flex;
+  flex-direction: column;
+  width: min(48rem, 100%);
+  max-height: calc(100vh - 2.5rem);
+  border-radius: $radius-lg;
+  background: $white;
+  box-shadow: 0 16px 48px rgba($navy, 0.3);
+  overflow: hidden;
+}
+
+.modalCardWide {
+  width: min(56rem, 100%);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.15rem 1.25rem 0.85rem;
+  border-bottom: 1px solid rgba($navy, 0.08);
+}
+
+.modalTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: $navy;
+  word-break: break-word;
+}
+
+.modalSubtitle {
+  margin: 0.25rem 0 0;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgba($navy, 0.58);
+}
+
+.modalCloseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: $white;
+  color: $navy;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.04);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.modalBody {
+  flex: 1;
+  min-height: 0;
+  padding: 1rem 1.25rem;
+  overflow: auto;
+}
+
+.modalFooter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  padding: 0.85rem 1.25rem 1.15rem;
+  border-top: 1px solid rgba($navy, 0.08);
+  background: rgba($bg-content, 0.65);
+}
+
+.modalButton,
+.modalButtonDanger,
+.modalButtonSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.modalButton {
+  border: 1px solid transparent;
+  background: $blue;
+  color: $white;
+}
+
+.modalButtonDanger {
+  border: 1px solid transparent;
+  background: #c0392b;
+  color: $white;
+}
+
+.modalButtonSecondary {
+  border: 1px solid rgba($navy, 0.18);
+  background: $white;
+  color: $navy;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1rem;
+  margin: 0 0 1.15rem;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.detailItemWide {
+  grid-column: 1 / -1;
+}
+
+.detailLabel {
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.5);
+}
+
+.detailValue {
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: rgba($navy, 0.86);
+  word-break: break-word;
+}
+
+.detailValueMuted {
+  font-size: 0.82rem;
+  color: rgba($navy, 0.58);
+}
+
+.sectionBlock {
+  margin-top: 1rem;
+}
+
+.sectionBlockTitle {
+  margin: 0 0 0.65rem;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.55);
+}
+
+.jobHistoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jobHistoryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: rgba($blue, 0.02);
+}
+
+.jobHistoryHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.jobHistoryMeta {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba($navy, 0.68);
+}
+
+.jobHistoryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.textButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: $blue;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.reportSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.reportSectionTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.55);
+}
+
+.reportGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.85rem;
+}
+
+.reportMetric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.reportMetricLabel {
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba($navy, 0.5);
+}
+
+.reportMetricValue {
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba($navy, 0.86);
+  font-variant-numeric: tabular-nums;
+}
+
+.messageList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.messageListItem {
+  padding: 0.55rem 0.7rem;
+  border-radius: $radius-md;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.messageListItemError {
+  background: rgba(#c0392b, 0.08);
+  color: #9b2c2c;
+}
+
+.messageListItemWarning {
+  background: rgba(#d97706, 0.1);
+  color: #9a5b00;
+}
+
+.modalLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 10rem;
+  text-align: center;
+}
+
+.modalLoadingIcon {
+  width: 2rem;
+  height: 2rem;
+  color: rgba($blue, 0.78);
+  animation: filesLoadingPulse 1.4s ease-in-out infinite;
+}
+
+.modalLoadingText {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  color: rgba($navy, 0.7);
+}
+
+@keyframes filesLoadingPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+
+.hideTablet {
+  display: table-cell;
+}
+
+@media (max-width: 1023px) {
+  .hideTablet {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .body {
+    flex: none;
+    overflow: visible;
+    padding: clamp(1.25rem, 4vw, 1.5rem) clamp(1.25rem, 4vw, 1.5rem)
+      clamp(1rem, 3vw, 1.25rem);
+  }
+
+  .sectionIntro {
+    padding-top: 0.35rem;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+    padding-top: clamp(0.5rem, 2vw, 0.75rem);
+  }
+
+  .headerSearchWrap {
+    max-width: none;
+    margin-left: 0;
+  }
+
+  .desktopTable {
+    display: none;
+  }
+
+  .cardList {
+    display: flex;
+  }
+
+  .detailGrid,
+  .reportGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .modalFooter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modalButton,
+  .modalButtonDanger,
+  .modalButtonSecondary {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iconButton,
+  .cardActionButton,
+  .modalCloseButton,
+  .modalButton,
+  .modalButtonDanger,
+  .modalButtonSecondary,
+  .modalLoadingIcon {
+    transition: none;
+    animation: none;
+  }
+}

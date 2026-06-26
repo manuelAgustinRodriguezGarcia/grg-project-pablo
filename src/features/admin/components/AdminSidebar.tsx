@@ -69,68 +69,89 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
   }
 
   return (
-    <div
-      className={styles.sidebarShell}
-      data-collapsed={isCollapsed ? "true" : "false"}
-    >
-      <aside className={styles.sidebar} aria-label="Panel de administración">
-        <div className={styles.top}>
-          <div className={styles.logoWrap}>
-            <AdminLogo isCollapsed={isCollapsed} />
-          </div>
-
-          <nav className={styles.nav} aria-label="Secciones del administrador">
-            <ul className={styles.navList}>
-              {ADMIN_NAV_ITEMS.map((item) => (
-                <li key={item.href}>
-                  <AdminNavItem
-                    href={item.href}
-                    label={item.label}
-                    icon={item.icon}
-                    isActive={isNavItemActive(pathname, item.href)}
-                    isCollapsed={isCollapsed}
-                  />
-                </li>
-              ))}
-            </ul>
-          </nav>
+    <>
+      <nav className={styles.mobileDock} aria-label="Panel de administración">
+        <div className={styles.mobileDockInner}>
+          <ul className={styles.mobileDockList}>
+            {ADMIN_NAV_ITEMS.map((item) => (
+              <li key={item.href}>
+                <AdminNavItem
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  isActive={isNavItemActive(pathname, item.href)}
+                  variant="dock"
+                />
+              </li>
+            ))}
+          </ul>
+          <AdminSignOutButton variant="dock" />
         </div>
+      </nav>
 
-        <div className={styles.userArea}>
-          <div className={styles.userRow}>
-            <RoleIcon
-              className={`${styles.roleIcon} ${isAdmin ? styles.roleIconAdmin : styles.roleIconUser}`}
-              strokeWidth={ICON_STROKE}
-              aria-hidden
-            />
-            <div className={styles.userMeta}>
-              <span
-                className={`${styles.userRole} ${isAdmin ? styles.userRoleAdmin : styles.userRoleUser}`}
-              >
-                {roleLabel}
-              </span>
-              <span className={styles.userEmail} title={userEmail}>
-                {userEmail}
-              </span>
-            </div>
-          </div>
-          <AdminSignOutButton variant="sidebar" isCollapsed={isCollapsed} />
-        </div>
-      </aside>
-
-      <button
-        type="button"
-        className={styles.collapseToggle}
-        onClick={toggleCollapsed}
-        aria-label={isCollapsed ? "Expandir menú lateral" : "Contraer menú lateral"}
-        aria-expanded={!isCollapsed}
+      <div
+        className={styles.sidebarShell}
+        data-collapsed={isCollapsed ? "true" : "false"}
       >
-        {isCollapsed ? (
-          <ChevronRight strokeWidth={ICON_STROKE} aria-hidden />
-        ) : (
-          <ChevronLeft strokeWidth={ICON_STROKE} aria-hidden />
-        )}
-      </button>
-    </div>
+        <aside className={styles.sidebar} aria-label="Panel de administración">
+          <div className={styles.top}>
+            <div className={styles.logoWrap}>
+              <AdminLogo isCollapsed={isCollapsed} />
+            </div>
+
+            <nav className={styles.nav} aria-label="Secciones del administrador">
+              <ul className={styles.navList}>
+                {ADMIN_NAV_ITEMS.map((item) => (
+                  <li key={item.href}>
+                    <AdminNavItem
+                      href={item.href}
+                      label={item.label}
+                      icon={item.icon}
+                      isActive={isNavItemActive(pathname, item.href)}
+                      isCollapsed={isCollapsed}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+
+          <div className={styles.userArea}>
+            <div className={styles.userRow}>
+              <RoleIcon
+                className={`${styles.roleIcon} ${isAdmin ? styles.roleIconAdmin : styles.roleIconUser}`}
+                strokeWidth={ICON_STROKE}
+                aria-hidden
+              />
+              <div className={styles.userMeta}>
+                <span
+                  className={`${styles.userRole} ${isAdmin ? styles.userRoleAdmin : styles.userRoleUser}`}
+                >
+                  {roleLabel}
+                </span>
+                <span className={styles.userEmail} title={userEmail}>
+                  {userEmail}
+                </span>
+              </div>
+            </div>
+            <AdminSignOutButton variant="sidebar" isCollapsed={isCollapsed} />
+          </div>
+        </aside>
+
+        <button
+          type="button"
+          className={styles.collapseToggle}
+          onClick={toggleCollapsed}
+          aria-label={isCollapsed ? "Expandir menú lateral" : "Contraer menú lateral"}
+          aria-expanded={!isCollapsed}
+        >
+          {isCollapsed ? (
+            <ChevronRight strokeWidth={ICON_STROKE} aria-hidden />
+          ) : (
+            <ChevronLeft strokeWidth={ICON_STROKE} aria-hidden />
+          )}
+        </button>
+      </div>
+    </>
   );
 }

@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
-import { AdminPlaceholder } from "@/features/admin/components/AdminPlaceholder";
+import { FilesManager } from "@/features/files/components/FilesManager";
+import { directoryService } from "@/server/services/directory.service";
 
 export const metadata: Metadata = {
   title: "Archivos | Admin Rothamel Repuestos",
 };
 
-export default function AdminArchivosPage() {
-  return <AdminPlaceholder />;
+export default async function AdminArchivosPage() {
+  const directory = await directoryService.getDirectory();
+
+  return <FilesManager catalogs={directory.catalogs} />;
 }

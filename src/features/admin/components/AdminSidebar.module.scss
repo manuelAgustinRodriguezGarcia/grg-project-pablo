@@ -171,6 +171,47 @@
   display: none;
 }
 
+.mobileDock {
+  display: none;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 200;
+  padding: 0.3rem 0.55rem calc(0.3rem + env(safe-area-inset-bottom, 0px));
+  background: rgba($navy, 0.96);
+  border-top: 1px solid $border;
+  box-shadow: 0 -4px 16px rgba($navy, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.mobileDockInner {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  align-items: stretch;
+  width: min(100%, 22rem);
+  margin: 0 auto;
+}
+
+.mobileDockList {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 1023px) {
+  .mobileDock {
+    display: block;
+  }
+
+  .sidebarShell {
+    display: none;
+  }
+}
+
 @media (min-width: 769px) {
   .collapseToggle {
     position: absolute;
@@ -212,27 +253,6 @@
       outline: 2px solid $white;
       outline-offset: 2px;
     }
-  }
-}
-
-@media (max-width: 768px) {
-  .sidebarShell {
-    width: 100%;
-  }
-
-  .sidebar {
-    width: 100%;
-    min-height: auto;
-    border-right: none;
-    border-bottom: 1px solid $border;
-  }
-
-  .top {
-    gap: 1.25rem;
-  }
-
-  .userArea {
-    padding-top: 0.85rem;
   }
 }
 

@@ -77,6 +77,7 @@ type ImportWizardProps = {
   catalogs: DirectoryCatalogItem[];
   onClose: () => void;
   onPublished: () => void;
+  initialJobId?: string;
 };
 
 const STEP_ORDER = [
@@ -139,8 +140,13 @@ type LoadingOverlayState = {
   isComplete: boolean;
 };
 
-export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardProps) {
-  const [step, setStep] = useState<ImportWizardStep>("upload");
+export function ImportWizard({
+  catalogs,
+  onClose,
+  onPublished,
+  initialJobId,
+}: ImportWizardProps) {
+  const [step, setStep] = useState<ImportWizardStep>(initialJobId ? "destination" : "upload");
   const [loadingOverlay, setLoadingOverlay] = useState<LoadingOverlayState | null>(null);
   const [loadingSession, setLoadingSession] = useState(0);
   const [inlineBusy, setInlineBusy] = useState(false);
@@ -151,11 +157,12 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const nativeFilePickerGuard = useNativeFilePickerOutsideClickGuard();
   const loadingExitResolver = useRef<(() => void) | null>(null);
+  const initialJobResumeStarted = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const [stagedImageCount, setStagedImageCount] = useState(0);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(initialJobId ?? null);
   const [file, setFile] = useState<File | null>(null);
   const [externalImages, setExternalImages] = useState<ExternalImageSelection>({
     zipFile: null,
@@ -364,6 +371,85 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [confirmAction, requestCloseConfirm, showCloseConfirm]);
 
+  const prepareJobForDestination = useCallback(
+    async (
+      activeJobId: string,
+      options?: { externalImagesSelection?: ExternalImageSelection },
+    ) => {
+      setJobId(activeJobId);
+      setError(null);
+      setSelectedCatalogId("");
+      setSelectedFolderId("");
+      setSelectedSheetName("");
+
+      updateLoadingOverlay("Analizando el archivo…", 48);
+
+      const analyzeResult = await analyzeImportAction({ jobId: activeJobId });
+      if (!analyzeResult.success) {
+        throw new Error(analyzeResult.error);
+      }
+
+      updateLoadingOverlay("Leyendo hojas del archivo…", 72);
+
+      const sheetsResponse = await fetch(`/api/admin/imports/${activeJobId}/sheets`);
+      if (!sheetsResponse.ok) {
+        const payload = await sheetsResponse.json().catch(() => null);
+        throw new Error(
+          readErrorMessage(payload, "No se pudieron leer las hojas del archivo."),
+        );
+      }
+
+      const sheetsData = (await sheetsResponse.json()) as ImportSheetsResponse;
+      setSheets(sheetsData.sheets);
+      setSelectedSheetName("");
+
+      const uploadedSources = options?.externalImagesSelection
+        ? snapshotExternalImageSources(options.externalImagesSelection)
+        : [];
+      const imageCount = await fetchStagedImageCount(activeJobId);
+      if (uploadedSources.length > 0 || imageCount > 0) {
+        setStagedExternalImagesSummary({
+          sources: uploadedSources,
+          imageCount,
+        });
+      } else {
+        setStagedExternalImagesSummary(null);
+      }
+
+      setExternalImages({ zipFile: null, imageFiles: [] });
+      setStagedImageCount(imageCount);
+
+      updateLoadingOverlay("Finalizando análisis…", 92);
+      await completeLoadingOverlay();
+      setStep("destination");
+    },
+    [completeLoadingOverlay, updateLoadingOverlay],
+  );
+
+  useEffect(() => {
+    if (!initialJobId || initialJobResumeStarted.current) {
+      return;
+    }
+
+    initialJobResumeStarted.current = true;
+    startLoadingOverlay("Preparando reprocesamiento…", 18);
+
+    void prepareJobForDestination(initialJobId).catch((caught) => {
+      clearLoadingImmediate();
+      setStep("upload");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "No se pudo preparar el archivo para reprocesar.",
+      );
+    });
+  }, [
+    clearLoadingImmediate,
+    initialJobId,
+    prepareJobForDestination,
+    startLoadingOverlay,
+  ]);
+
   async function handleUploadContinue() {
     if (!file) {
       return;
@@ -395,48 +481,10 @@ export function ImportWizard({ catalogs, onClose, onPublished }: ImportWizardPro
       const { jobId: newJobId } = (await uploadResponse.json()) as {
         jobId: string;
       };
-      setJobId(newJobId);
 
-      updateLoadingOverlay("Analizando el archivo…", 48);
-
-      const analyzeResult = await analyzeImportAction({ jobId: newJobId });
-      if (!analyzeResult.success) {
-        throw new Error(analyzeResult.error);
-      }
-
-      updateLoadingOverlay("Leyendo hojas del archivo…", 72);
-
-      const sheetsResponse = await fetch(
-        `/api/admin/imports/${newJobId}/sheets`,
-      );
-      if (!sheetsResponse.ok) {
-        const payload = await sheetsResponse.json().catch(() => null);
-        throw new Error(
-          readErrorMessage(payload, "No se pudieron leer las hojas del archivo."),
-        );
-      }
-
-      const sheetsData = (await sheetsResponse.json()) as ImportSheetsResponse;
-      setSheets(sheetsData.sheets);
-      setSelectedSheetName("");
-
-      const uploadedSources = snapshotExternalImageSources(externalImages);
-      const imageCount = await fetchStagedImageCount(newJobId);
-      if (uploadedSources.length > 0 || imageCount > 0) {
-        setStagedExternalImagesSummary({
-          sources: uploadedSources,
-          imageCount,
-        });
-      } else {
-        setStagedExternalImagesSummary(null);
-      }
-
-      setExternalImages({ zipFile: null, imageFiles: [] });
-      setStagedImageCount(imageCount);
-
-      updateLoadingOverlay("Finalizando análisis…", 92);
-      await completeLoadingOverlay();
-      setStep("destination");
+      await prepareJobForDestination(newJobId, {
+        externalImagesSelection: externalImages,
+      });
     } catch (caught) {
       clearLoadingImmediate();
       setError(

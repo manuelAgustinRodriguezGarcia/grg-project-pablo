@@ -9,6 +9,7 @@ type AdminNavItemProps = {
   icon: LucideIcon;
   isActive: boolean;
   isCollapsed?: boolean;
+  variant?: "sidebar" | "dock";
 };
 
 export function AdminNavItem({
@@ -17,13 +18,16 @@ export function AdminNavItem({
   icon: Icon,
   isActive,
   isCollapsed = false,
+  variant = "sidebar",
 }: AdminNavItemProps) {
+  const isDock = variant === "dock";
+
   return (
     <Link
       href={href}
-      className={`${styles.link} ${isActive ? styles.linkActive : ""} ${isCollapsed ? styles.linkCollapsed : ""}`}
+      className={`${styles.link} ${isActive ? styles.linkActive : ""} ${isDock ? styles.linkDock : ""} ${!isDock && isCollapsed ? styles.linkCollapsed : ""}`}
       aria-current={isActive ? "page" : undefined}
-      title={isCollapsed ? label : undefined}
+      title={!isDock && isCollapsed ? label : undefined}
     >
       <Icon className={styles.icon} strokeWidth={ICON_STROKE} aria-hidden />
       <span className={styles.label}>{label}</span>
