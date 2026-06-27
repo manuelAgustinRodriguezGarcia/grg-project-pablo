@@ -9,6 +9,7 @@ export {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  EllipsisVertical,
   Clock,
   Cog,
   Eye,

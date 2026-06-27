@@ -1,7 +1,19 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
-import { ProductTable } from "./ProductTable";
+
+vi.mock("@/features/catalog/actions/column.actions", () => ({
+  updateColumnAction: vi.fn(),
+  setColumnVisibilityAction: vi.fn(),
+}));
+
+vi.mock("@/features/catalog/actions/column-help.actions", () => ({
+  deleteColumnHelpImageAction: vi.fn(),
+}));
+
+vi.mock("@/features/catalog/utils/column-help.client", () => ({
+  uploadColumnHelpImage: vi.fn(),
+}));
 
 vi.mock("@/features/catalog/styles/CatalogNavigator.module.scss", () => ({
   default: new Proxy(
@@ -11,6 +23,8 @@ vi.mock("@/features/catalog/styles/CatalogNavigator.module.scss", () => ({
     },
   ),
 }));
+
+import { ProductTable } from "./ProductTable";
 
 function createTableData(
   products: ProductTableResponse["products"],

@@ -35,9 +35,13 @@
   justify-content: center;
   width: 2.5rem;
   height: 2.5rem;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
   background: rgba($white, 0.1);
   color: $white;
+  cursor: pointer;
+  font: inherit;
   transition: background-color 0.2s ease;
 
   &:focus-visible {
@@ -115,6 +119,54 @@
   object-fit: contain;
   opacity: 0.9;
   transition: opacity 0.35s ease;
+}
+
+.copyToast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  z-index: 1000;
+  padding: 0.85rem 1.35rem;
+  border-radius: 999px;
+  background: $navy;
+  color: $white;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 12px 32px rgba(6, 43, 95, 0.22);
+  pointer-events: none;
+  transform: translate(-50%, calc(100% + 1.5rem));
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.35s ease;
+}
+
+.copyToastVisible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.copyToastHiding {
+  transform: translate(-50%, calc(100% + 1.5rem));
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copyToast {
+    transition: opacity 0.2s ease;
+    transform: translate(-50%, 0);
+
+    &:not(.copyToastVisible) {
+      opacity: 0;
+    }
+  }
+
+  .copyToastHiding {
+    transform: translate(-50%, 0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

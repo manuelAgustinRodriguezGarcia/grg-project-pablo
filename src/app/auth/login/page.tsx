@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { LandingFooter } from "@/features/landing/components/LandingFooter";
 import { LoginFormCard } from "@/features/auth/components/LoginFormCard";
 import { LoginHeader } from "@/features/auth/components/LoginHeader";
 import { LoginImagePanel } from "@/features/auth/components/LoginImagePanel";
+import { LoginScrollbarHide } from "@/features/auth/components/LoginScrollbarHide";
 import { ADMIN_HOME_PATH } from "@/server/auth/config";
 import sharedStyles from "@/features/auth/styles/loginShared.module.scss";
 import styles from "./login.module.scss";
@@ -30,6 +30,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <div className={styles.page}>
+      <LoginScrollbarHide />
       <LoginHeader />
 
       <main className={styles.main}>
@@ -45,8 +46,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
         </div>
       </main>
-
-      <LandingFooter />
     </div>
   );
 }

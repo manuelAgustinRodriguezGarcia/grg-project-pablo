@@ -19,6 +19,7 @@ import type {
 } from "@/features/catalog/types/catalog-navigator.types";
 import type { CatalogNavigationResponse } from "@/features/catalog/types/navigation.types";
 import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
+import type { ColumnListItem } from "@/features/catalog/types/column.types";
 import type { CatalogListItem } from "@/features/catalog/types/catalog.types";
 import type { FolderListItem } from "@/features/catalog/types/folder.types";
 import { sortByName } from "@/features/catalog/utils/sortByName";
@@ -58,6 +59,7 @@ function toNavigationFolderItem(folder: FolderListItem): CatalogNavigationFolder
 
 type CatalogNavigatorProps = {
   catalogs: DirectoryCatalogItem[];
+  isAdmin?: boolean;
 };
 
 function getInitialCatalogId(catalogs: DirectoryCatalogItem[]): string {
@@ -89,7 +91,7 @@ function resolveFolderId(
   return exists ? selectedFolderId : sortByName(folders)[0]?.id ?? "";
 }
 
-export function CatalogNavigator({ catalogs }: CatalogNavigatorProps) {
+export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigatorProps) {
   const router = useRouter();
   const [catalogList, setCatalogList] = useState(catalogs);
   const [prevCatalogs, setPrevCatalogs] = useState(catalogs);
@@ -590,6 +592,21 @@ export function CatalogNavigator({ catalogs }: CatalogNavigatorProps) {
   const createCatalogNameEmpty = createCatalogNameDraft.trim().length === 0;
   const createFolderNameEmpty = createFolderNameDraft.trim().length === 0;
 
+  const handleColumnUpdated = useCallback((updated: ColumnListItem) => {
+    setProductTable((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        columns: current.columns.map((column) =>
+          column.id === updated.id ? updated : column,
+        ),
+      };
+    });
+  }, []);
+
   const importWizard = isImportOpen ? (
     <ImportWizard
       catalogs={sortedCatalogs}
@@ -635,7 +652,9 @@ export function CatalogNavigator({ catalogs }: CatalogNavigatorProps) {
           data={tableData}
           isLoading={isLoadingProducts || isLoadingFolders}
           error={productsError}
+          isAdmin={isAdmin}
           onPageChange={handlePageChange}
+          onColumnUpdated={isAdmin ? handleColumnUpdated : undefined}
         />
       </div>
       </div>

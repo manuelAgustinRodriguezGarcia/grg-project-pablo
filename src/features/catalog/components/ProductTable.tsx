@@ -7,6 +7,9 @@ import type {
   ProductTableItem,
   ProductTableResponse,
 } from "@/features/catalog/types/product-table.types";
+import type { ColumnListItem } from "@/features/catalog/types/column.types";
+import { ColumnEditModal } from "@/features/catalog/components/ColumnEditModal";
+import { ColumnHeaderCell } from "@/features/catalog/components/ColumnHeaderCell";
 import { ProductImagePreviewModal } from "./ProductImagePreviewModal";
 import { getProductTableColumns } from "@/features/catalog/utils/product-table-columns";
 import { normalizeMultilineText } from "@/shared/text/normalize-multiline-text";
@@ -16,7 +19,9 @@ type ProductTableProps = {
   data: ProductTableResponse | null;
   isLoading: boolean;
   error: string | null;
+  isAdmin?: boolean;
   onPageChange: (page: number) => void;
+  onColumnUpdated?: (column: ColumnListItem) => void;
 };
 
 function formatTableHeaderLines(displayName: string): string[] {
@@ -121,12 +126,15 @@ export function ProductTable({
   data,
   isLoading,
   error,
+  isAdmin = false,
   onPageChange,
+  onColumnUpdated,
 }: ProductTableProps) {
   const [previewImage, setPreviewImage] = useState<{
     url: string;
     alt: string;
   } | null>(null);
+  const [editingColumn, setEditingColumn] = useState<ColumnListItem | null>(null);
 
   if (isLoading) {
     return (
@@ -195,21 +203,16 @@ export function ProductTable({
                   </span>
                 </th>
               ) : null}
-              {sortedColumns.map((column) => {
-                const headerLines = formatTableHeaderLines(column.displayName);
-
-                return (
-                  <th key={column.id} scope="col" className={styles.tableDataCell}>
-                    <span className={styles.tableHeaderLabel}>
-                      {headerLines.map((line, lineIndex) => (
-                        <span key={`${column.id}-${lineIndex}`} className={styles.tableHeaderLine}>
-                          {line}
-                        </span>
-                      ))}
-                    </span>
-                  </th>
-                );
-              })}
+              {sortedColumns.map((column) => (
+                <ColumnHeaderCell
+                  key={column.id}
+                  column={column}
+                  headerLines={formatTableHeaderLines(column.displayName)}
+                  isAdmin={isAdmin}
+                  onEdit={() => setEditingColumn(column)}
+                  onColumnUpdated={onColumnUpdated}
+                />
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -369,6 +372,18 @@ export function ProductTable({
           imageUrl={previewImage.url}
           imageAlt={previewImage.alt}
           onClose={() => setPreviewImage(null)}
+        />
+      ) : null}
+
+      {editingColumn && isAdmin ? (
+        <ColumnEditModal
+          key={editingColumn.id}
+          column={editingColumn}
+          onClose={() => setEditingColumn(null)}
+          onSaved={(updated) => {
+            onColumnUpdated?.(updated);
+            setEditingColumn(null);
+          }}
         />
       ) : null}
     </section>

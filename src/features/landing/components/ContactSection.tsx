@@ -1,11 +1,13 @@
 import {
+  EMAIL_DISPLAY,
   MAP_LOCATION,
   PHONE_DISPLAY,
   WHATSAPP_URL,
 } from "../data/landingData";
 import landingStyles from "../styles/landing.module.scss";
-import { Clock, Map, MapPin, ICON_STROKE } from "@/shared/icons";
+import { Clock, Mail, Map, MapPin, ICON_STROKE } from "@/shared/icons";
 import { WhatsAppIcon } from "@/shared/components/WhatsAppIcon";
+import { EmailCopyLink } from "./EmailCopyLink";
 import styles from "./ContactSection.module.scss";
 
 export function ContactSection() {
@@ -32,13 +34,6 @@ export function ContactSection() {
             <article
               className={`${styles.contactCard} ${styles.whatsappCard} ${landingStyles.animateSlideUp}`}
             >
-              <a
-                href={WHATSAPP_URL}
-                className={styles.whatsappCardLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Contáctenos por WhatsApp"
-              />
               <div className={styles.cardContent}>
                 <div
                   className={`${styles.cardIconWrap} ${styles.whatsappIconWrap}`}
@@ -47,27 +42,41 @@ export function ContactSection() {
                   <WhatsAppIcon className={styles.cardIcon} />
                 </div>
 
-                <div className={`${styles.cardText} ${styles.whatsappCardText}`}>
-                  <div className={styles.whatsappInfo}>
-                    <h3 className={styles.cardTitle}>Atención por WhatsApp</h3>
-                    <p className={styles.whatsappPhone}>{PHONE_DISPLAY}</p>
-                  </div>
+                <div className={styles.cardText}>
+                  <h3 className={styles.cardTitle}>Atención por WhatsApp</h3>
                   <a
                     href={WHATSAPP_URL}
-                    className={styles.whatsappButton}
+                    className={styles.whatsappPhone}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label="Contáctenos"
                   >
-                    <WhatsAppIcon className={styles.whatsappButtonIcon} />
-                    <span>Contáctenos</span>
+                    {PHONE_DISPLAY}
                   </a>
                 </div>
               </div>
             </article>
 
             <article
-              className={`${styles.contactCard} ${styles.hoursCard} ${landingStyles.animateSlideUp} ${landingStyles.animateDelay1}`}
+              className={`${styles.contactCard} ${landingStyles.animateSlideUp} ${landingStyles.animateDelay1}`}
+            >
+              <div className={styles.cardContent}>
+                <div className={styles.cardIconWrap} aria-hidden="true">
+                  <Mail
+                    className={styles.cardIcon}
+                    strokeWidth={ICON_STROKE}
+                    aria-hidden
+                  />
+                </div>
+
+                <div className={styles.cardText}>
+                  <h3 className={styles.cardTitle}>Correo Electrónico</h3>
+                  <EmailCopyLink email={EMAIL_DISPLAY} />
+                </div>
+              </div>
+            </article>
+
+            <article
+              className={`${styles.contactCard} ${landingStyles.animateSlideUp} ${landingStyles.animateDelay2}`}
             >
               <div className={styles.cardContent}>
                 <div className={styles.cardIconWrap} aria-hidden="true">
@@ -79,7 +88,7 @@ export function ContactSection() {
                 </div>
 
                 <div className={styles.cardText}>
-                  <h3 className={styles.cardTitle}>Horarios de atención</h3>
+                  <h3 className={styles.cardTitle}>Horarios de Atención</h3>
                   <div className={`${styles.infoBody} ${styles.hoursBody}`}>
                     <div className={styles.hoursBlock}>
                       <p className={styles.hoursDay}>Lunes a Viernes</p>
