@@ -5,7 +5,7 @@ import styles from "./LoginHeader.module.scss";
 export function LoginHeader() {
   return (
     <header className={`${styles.header} ${sharedStyles.animateFadeIn}`}>
-      <div className={`${sharedStyles.container} ${styles.inner}`}>
+      <div className={styles.inner}>
         <RothamelLogo variant="header" />
       </div>
     </header>

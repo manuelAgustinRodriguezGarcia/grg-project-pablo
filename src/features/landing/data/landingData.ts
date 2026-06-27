@@ -11,6 +11,7 @@ export const HERO_BANNER_VERSION = "20260626";
 
 export const LOGO_BLUE_SRC = "/logos/logo-blue.svg?v=1";
 export const LOGO_WHITE_SRC = "/logos/logo-white.svg?v=1";
+export const ALT_LOGO_WHITE_SRC = "/logos/alt-logo-white.svg?v=1";
 export const LOGO_WIDTH = 2172;
 export const LOGO_HEIGHT = 724;
 
@@ -33,6 +34,9 @@ export const PHONE_DISPLAY = "364 458-0297";
 export const PHONE_TEL = "+543644580297";
 export const WHATSAPP_DISPLAY = "+54 9 364 458-0297";
 export const WHATSAPP_URL = "https://wa.me/5493644580297";
+
+export const EMAIL_DISPLAY = "pablorothamel@hotmail.com";
+export const EMAIL_MAILTO = `mailto:${EMAIL_DISPLAY}`;
 
 export const LOGIN_PATH = "/auth/login";
 
@@ -126,7 +130,7 @@ export const BRAND_CAROUSEL_ROWS: readonly BrandCarouselRow[] = [
 
 export const MAP_LOCATION = {
   name: "Rothamel Repuestos",
-  address: "Acceso Este, H3708",
+  address: "Acceso Este",
   city: "Pampa del Infierno, Chaco",
   mapsUrl:
     "https://www.google.com/maps/search/?api=1&query=Rothamel%20Repuestos%20Acceso%20Este%20H3708%20Pampa%20del%20Infierno%20Chaco",

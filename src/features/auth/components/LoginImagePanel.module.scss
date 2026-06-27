@@ -1,42 +1,16 @@
 @use "../styles/variables" as *;
 
-$login-image-src: "/images/rothamel-login.webp";
-
 .panel {
-  position: relative;
-  min-height: 100%;
-}
-
-.imageWrap {
-  position: relative;
-  width: 100%;
+  flex-shrink: 0;
   height: 100%;
-  min-height: clamp(20rem, 70vh, 40rem);
-  background-color: $navy-dark;
-  background-image:
-    linear-gradient(
-      160deg,
-      rgba($navy-dark, 0.75) 0%,
-      rgba($navy, 0.55) 40%,
-      rgba($green, 0.25) 100%
-    ),
-    url(#{$login-image-src});
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
-  overflow: hidden;
+  line-height: 0;
 }
 
-.accentStripSide {
-  position: absolute;
-  bottom: 2rem;
-  right: 12%;
-  width: 4rem;
-  height: 4rem;
-  border-radius: $radius-md;
-  background: $green;
-  opacity: 0.8;
+.image {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
 }
 
 @media (max-width: 900px) {

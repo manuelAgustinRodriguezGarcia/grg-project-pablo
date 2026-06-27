@@ -1,4 +1,5 @@
 @use "../styles/variables" as *;
+@use "../../landing/styles/variables" as landing;
 
 .header {
   flex-shrink: 0;
@@ -9,14 +10,8 @@
 .inner {
   display: flex;
   align-items: center;
+  width: 100%;
   min-height: $header-height;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-@media (max-width: 900px) {
-  .inner {
-    padding-left: $section-padding-x;
-    padding-right: $section-padding-x;
-  }
+  padding-left: landing.$landing-content-inset-x;
+  padding-right: $section-padding-x;
 }

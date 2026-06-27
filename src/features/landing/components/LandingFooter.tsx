@@ -1,9 +1,10 @@
-import Image from "next/image";
 import { RothamelLogo } from "./RothamelLogo";
-import { Camera, Share2, ICON_STROKE } from "@/shared/icons";
+import { LandingFooterSocial } from "./LandingFooterSocial";
 import styles from "./LandingFooter.module.scss";
 
-const GRG_LOGO_SRC = "/logo-grg.png";
+const GRG_LOGO_SRC = "/logo-grg.svg";
+const GRG_LOGO_WIDTH = 998;
+const GRG_LOGO_HEIGHT = 364;
 const GRG_WEBSITE_URL = "https://www.grgsolutions.com.ar/";
 
 export function LandingFooter() {
@@ -14,26 +15,7 @@ export function LandingFooter() {
           <RothamelLogo variant="footer" />
         </div>
 
-        <div className={styles.socialCol}>
-          <a
-            href="https://www.facebook.com/"
-            className={styles.socialLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Facebook de Rothamel Repuestos"
-          >
-            <Share2 className={styles.socialIcon} strokeWidth={ICON_STROKE} aria-hidden />
-          </a>
-          <a
-            href="https://www.instagram.com/"
-            className={styles.socialLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Instagram de Rothamel Repuestos"
-          >
-            <Camera className={styles.socialIcon} strokeWidth={ICON_STROKE} aria-hidden />
-          </a>
-        </div>
+        <LandingFooterSocial />
       </div>
 
       <div className={styles.bottomBar}>
@@ -50,12 +32,13 @@ export function LandingFooter() {
             rel="noopener noreferrer"
             aria-label="GRG Solutions — Desarrollo y diseño web"
           >
-            <Image
+            <img
               src={GRG_LOGO_SRC}
               alt="GRG Solutions"
-              width={75}
-              height={75}
+              width={GRG_LOGO_WIDTH}
+              height={GRG_LOGO_HEIGHT}
               className={styles.grgLogo}
+              decoding="async"
             />
           </a>
         </div>

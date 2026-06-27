@@ -166,3 +166,108 @@
   }
 }
 
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(admin.$navy, 0.55);
+}
+
+.confirmCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 22rem);
+  padding: 1.75rem 1.5rem 1.35rem;
+  border-radius: admin.$radius-lg;
+  background: admin.$white;
+  box-shadow: 0 20px 48px rgba(admin.$navy, 0.28);
+  text-align: center;
+}
+
+.confirmIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+  background: rgba(#c0392b, 0.1);
+  color: #c0392b;
+}
+
+.confirmIcon {
+  width: 1.65rem;
+  height: 1.65rem;
+}
+
+.confirmMessage {
+  margin: 0 0 1.35rem;
+  font-family: $font-sans;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: admin.$navy;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.confirmCancelButton,
+.confirmDangerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid admin.$blue;
+    outline-offset: 2px;
+  }
+}
+
+.confirmCancelButton {
+  border: 1px solid rgba(admin.$navy, 0.16);
+  background: #eef1f6;
+  color: admin.$navy;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: #e4e8ef;
+    }
+  }
+}
+
+.confirmDangerButton {
+  border: 1px solid #c0392b;
+  background: #c0392b;
+  color: admin.$white;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: #a93226;
+      border-color: #a93226;
+    }
+  }
+}
+

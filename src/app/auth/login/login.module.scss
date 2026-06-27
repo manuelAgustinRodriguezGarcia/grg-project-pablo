@@ -1,8 +1,27 @@
 @use "../../../features/auth/styles/variables" as *;
 
+:global(html.login-scrollbar-hidden) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overflow: hidden;
+  height: 100%;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+:global(html.login-scrollbar-hidden body) {
+  overflow: hidden;
+  height: 100%;
+}
+
 .page {
   display: flex;
   flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   background: $bg-page;
   color: $text-body;
   font-family: $font-sans;
@@ -10,41 +29,42 @@
 
 .main {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  flex-shrink: 0;
-  min-height: calc(100vh - $header-height);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .split {
-  display: grid;
-  grid-template-columns: 0.84fr 1fr;
+  display: flex;
   flex: 1;
-  min-height: calc(100vh - $header-height);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .content {
   display: flex;
+  flex: 1;
   flex-direction: column;
   justify-content: center;
-  align-items: flex-end;
-  padding-top: clamp(2rem, 5vw, 4rem);
-  padding-bottom: clamp(2rem, 5vw, 4rem);
-  padding-left: clamp(2rem, 5vw, 4rem);
-  padding-right: max(#{$section-padding-x}, calc((100vw - #{$container-max}) / 2));
+  align-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2rem);
   background: $bg-page;
 }
 
 .formWrap {
   width: 100%;
-  max-width: 26rem;
+  max-width: 24rem;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 @media (max-width: 900px) {
   .split {
-    grid-template-columns: 1fr;
-    min-height: calc(100vh - $header-height);
+    flex-direction: column;
   }
 
   .content {
