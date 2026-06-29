@@ -88,6 +88,10 @@ export function CatalogPageIntro({
                 ? styles.actionCardIconGreen
                 : styles.actionCardIconBlue;
 
+            const isDisabled =
+              (card.id === "import-excel" && !onImportExcelClick) ||
+              (card.id === "add-product" && !onAddProductClick);
+
             return (
               <button
                 key={card.id}
@@ -95,6 +99,7 @@ export function CatalogPageIntro({
                 className={`${styles.actionCard} ${cardClassName}`}
                 aria-label={card.title}
                 data-testid={`catalog-action-${card.id}`}
+                disabled={isDisabled}
                 onClick={() =>
                   handleActionCardClick(card.id, {
                     onImportExcelClick,

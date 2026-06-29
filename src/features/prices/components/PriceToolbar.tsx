@@ -65,7 +65,7 @@ export function PriceToolbar({
 
       <button
         type="button"
-        className={`${styles.toolbarButton} ${styles.toolbarButtonDanger}`}
+        className={`${styles.toolbarButton} ${styles.toolbarButtonDangerHover}`}
         onClick={onClearList}
         disabled={!hasSelectedList}
       >

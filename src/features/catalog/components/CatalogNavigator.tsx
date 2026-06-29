@@ -11,6 +11,7 @@ import { createFolderAction, deleteFolderAction, updateFolderAction } from "@/fe
 import { CatalogFolderSelectors } from "@/features/catalog/components/CatalogFolderSelectors";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import { CatalogPageIntro } from "@/features/catalog/components/CatalogPageChrome";
+import { ProductFormModal } from "@/features/catalog/components/ProductFormModal";
 import { ProductTable } from "@/features/catalog/components/ProductTable";
 import { ImportWizard } from "@/features/imports/components/ImportWizard";
 import type {
@@ -117,7 +118,9 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
   const [page, setPage] = useState(1);
 
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [productActionError, setProductActionError] = useState<string | null>(null);
 
   const [deleteCatalogTarget, setDeleteCatalogTarget] = useState<CatalogTarget | null>(
     null,
@@ -283,6 +286,27 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
   const handleImportExcelClick = useCallback(() => {
     setIsImportOpen(true);
   }, []);
+
+  const handleAddProductClick = useCallback(() => {
+    setProductActionError(null);
+
+    if (!activeCatalogId) {
+      setProductActionError("Seleccioná un catálogo para agregar productos.");
+      return;
+    }
+
+    if (!activeFolderId) {
+      setProductActionError("Seleccioná una carpeta para agregar productos.");
+      return;
+    }
+
+    if (isLoadingProducts || !productTable) {
+      setProductActionError("Esperá a que carguen los datos de la carpeta seleccionada.");
+      return;
+    }
+
+    setIsProductFormOpen(true);
+  }, [activeCatalogId, activeFolderId, isLoadingProducts, productTable]);
 
   const handleImportPublished = useCallback(() => {
     setReloadToken((token) => token + 1);
@@ -622,7 +646,10 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
     <>
       <div className={styles.page}>
         <div className={styles.body}>
-          <CatalogPageIntro onImportExcelClick={handleImportExcelClick}>
+          <CatalogPageIntro
+            onImportExcelClick={handleImportExcelClick}
+            onAddProductClick={isAdmin ? handleAddProductClick : undefined}
+          >
             <CatalogFolderSelectors
               catalogs={sortedCatalogs}
               folders={visibleFolders}
@@ -647,6 +674,9 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
         {folderActionError ? (
           <p className={styles.inlineError}>{folderActionError}</p>
         ) : null}
+        {productActionError ? (
+          <p className={styles.inlineError}>{productActionError}</p>
+        ) : null}
 
         <ProductTable
           data={tableData}
@@ -659,6 +689,19 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
       </div>
       </div>
       {importWizard}
+      {isProductFormOpen && productTable ? (
+        <ProductFormModal
+          folderId={productTable.folder.id}
+          folderName={productTable.folder.name}
+          columns={productTable.columns}
+          onClose={() => setIsProductFormOpen(false)}
+          onSaved={() => {
+            setReloadToken((token) => token + 1);
+            setPage(1);
+            router.refresh();
+          }}
+        />
+      ) : null}
       {deleteCatalogTarget ? (
         <ConfirmDialog
           title="Eliminar catálogo"
