@@ -69,11 +69,13 @@ const sheet: ParsedSheet = {
   ],
   rows: [
     {
-      rowIndex: 2,
-      values: {
+      rowNumber: 2,
+      cells: {
         codigo: "ABC-123",
         precio: "1500.50",
       },
+      originalText: "ABC-123 1500.50",
+      formulas: [],
       warnings: [],
     },
   ],

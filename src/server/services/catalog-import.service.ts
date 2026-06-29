@@ -1163,7 +1163,7 @@ export class CatalogImportService {
       );
     }
 
-    if (!job.folderId || !job.preview) {
+    if (!job.preview) {
       throw new ImportError("La importación no tiene vista previa.", "INVALID_STATE");
     }
 
@@ -1187,6 +1187,10 @@ export class CatalogImportService {
       );
 
       return importJobRepository.findByIdWithRelations(jobId);
+    }
+
+    if (!job.folderId) {
+      throw new ImportError("Carpeta destino no encontrada.", "VALIDATION_ERROR");
     }
 
     const folder = await folderRepository.findByIdWithProductCount(job.folderId);

@@ -101,6 +101,68 @@ function toTableRow(
   };
 }
 
+function mapItemValues(
+  columns: PriceColumn[],
+  values: Record<string, unknown>,
+): {
+  primaryCode: string | null;
+  normalizedCode: string | null;
+  description: string | null;
+  amount: Prisma.Decimal | null;
+  dynamicData: Record<string, unknown>;
+  indexedText: string | null;
+} {
+  const primaryColumn = columns.find((column) => column.isPrimaryCode);
+  const descriptionColumn = columns.find((column) => column.isDescription);
+  const priceColumn = columns.find((column) => column.isPrice);
+
+  const primaryCode = primaryColumn
+    ? String(values[primaryColumn.internalKey] ?? "").trim() || null
+    : null;
+  const description = descriptionColumn
+    ? String(values[descriptionColumn.internalKey] ?? "").trim() || null
+    : null;
+
+  const dynamicData: Record<string, unknown> = {};
+  for (const column of columns) {
+    if (
+      column.isPrimaryCode ||
+      column.isDescription ||
+      column.isPrice ||
+      !column.isAdminEditable
+    ) {
+      continue;
+    }
+    if (values[column.internalKey] !== undefined) {
+      dynamicData[column.internalKey] = values[column.internalKey];
+    }
+  }
+
+  const amountRaw = priceColumn ? values[priceColumn.internalKey] : undefined;
+  const amount =
+    amountRaw !== undefined && amountRaw !== null && amountRaw !== ""
+      ? new Prisma.Decimal(String(amountRaw).replace(",", "."))
+      : null;
+
+  const indexedText = buildIndexedTextForMappedPriceItem(columns, {
+    primaryCode,
+    description,
+    dynamicData,
+    amount: amount?.toString() ?? null,
+  });
+
+  return {
+    primaryCode,
+    normalizedCode: primaryCode
+      ? primaryCode.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
+      : null,
+    description,
+    amount,
+    dynamicData,
+    indexedText,
+  };
+}
+
 export class PriceItemService {
   async listItems(input: ListPriceItemsInput): Promise<PriceItemTableResponse> {
     const { profile } = await requireAuth();
@@ -157,60 +219,46 @@ export class PriceItemService {
     await priceListService.requirePriceListForAdmin(priceListId);
 
     const columns = await priceColumnRepository.findByPriceListIdOrdered(priceListId);
-    const primaryColumn = columns.find((column) => column.isPrimaryCode);
-    const descriptionColumn = columns.find((column) => column.isDescription);
-    const priceColumn = columns.find((column) => column.isPrice);
-
-    const primaryCode = primaryColumn
-      ? String(values[primaryColumn.internalKey] ?? "").trim() || null
-      : null;
-    const description = descriptionColumn
-      ? String(values[descriptionColumn.internalKey] ?? "").trim() || null
-      : null;
-
-    const dynamicData: Record<string, unknown> = {};
-    for (const column of columns) {
-      if (
-        column.isPrimaryCode ||
-        column.isDescription ||
-        column.isPrice ||
-        !column.isAdminEditable
-      ) {
-        continue;
-      }
-      if (values[column.internalKey] !== undefined) {
-        dynamicData[column.internalKey] = values[column.internalKey];
-      }
-    }
-
-    const amountRaw = priceColumn ? values[priceColumn.internalKey] : undefined;
-    const amount =
-      amountRaw !== undefined && amountRaw !== null && amountRaw !== ""
-        ? new Prisma.Decimal(String(amountRaw).replace(",", "."))
-        : null;
-
-    const indexedText = buildIndexedTextForMappedPriceItem(columns, {
-      primaryCode,
-      description,
-      dynamicData,
-      amount: amount?.toString() ?? null,
-    });
+    const mapped = mapItemValues(columns, values);
 
     const item = await priceItemRepository.create({
       priceListId,
-      primaryCode,
-      normalizedCode: primaryCode
-        ? primaryCode.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
-        : null,
-      description,
-      amount,
-      dynamicData,
-      indexedText,
+      ...mapped,
     });
 
     auditService.logOperationSafe({
       userId: admin.id,
       action: AUDIT_ACTIONS.PRICE_ITEM_CREATED,
+      entityType: AUDIT_ENTITY_TYPES.PRICE_ITEM,
+      entityId: item.id,
+    });
+
+    const visibleKeys = new Set(columns.map((column) => column.internalKey));
+    return toTableRow(item, visibleKeys, "ADMIN");
+  }
+
+  async updateItem(
+    itemId: string,
+    values: Record<string, unknown>,
+  ): Promise<PriceItemTableRow> {
+    const { profile: admin } = await requireRole("ADMIN");
+    const existing = await priceItemRepository.findById(itemId);
+    if (!existing) {
+      throw new PriceItemError("Ítem no encontrado.", "PRICE_ITEM_NOT_FOUND");
+    }
+
+    await priceListService.requirePriceListForAdmin(existing.priceListId);
+
+    const columns = await priceColumnRepository.findByPriceListIdOrdered(
+      existing.priceListId,
+    );
+    const mapped = mapItemValues(columns, values);
+
+    const item = await priceItemRepository.update(itemId, mapped);
+
+    auditService.logOperationSafe({
+      userId: admin.id,
+      action: AUDIT_ACTIONS.PRICE_ITEM_UPDATED,
       entityType: AUDIT_ENTITY_TYPES.PRICE_ITEM,
       entityId: item.id,
     });
@@ -226,6 +274,7 @@ export class PriceItemService {
       throw new PriceItemError("Ítem no encontrado.", "PRICE_ITEM_NOT_FOUND");
     }
 
+    await priceListService.requirePriceListForAdmin(item.priceListId);
     await priceItemRepository.delete(id);
 
     auditService.logOperationSafe({

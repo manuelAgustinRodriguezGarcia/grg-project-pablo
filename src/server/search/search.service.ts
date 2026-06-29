@@ -52,6 +52,7 @@ export type BuildFolderProductWhereInput = {
   folderIds?: never;
   query?: string;
   searchableKeys: string[];
+  globallySearchableKeys?: string[];
   filters?: ColumnFilterInput[];
   columns: FolderColumn[];
   globalFieldFilter?: GlobalFieldFilter;

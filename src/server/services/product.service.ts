@@ -26,13 +26,14 @@ import { getProductTableColumns } from "@/features/catalog/utils/product-table-c
 import type { EquivalenceListItem } from "./equivalence.service";
 import { columnHelpService } from "./column-help.service";
 import { columnFilterService } from "@/server/filters/column-filter.service";
-import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
+import type { ColumnFilterInput, ActiveFilterPill } from "@/server/filters/column-filter.types";
 import { buildFolderProductWhere } from "@/server/search/search.service";
 import {
   resolveFilterableKeys,
   resolveSearchableKeys,
 } from "@/server/search/search-config.resolver";
 import { normalizeSearchTerm } from "@/server/search/search-normalizer";
+import type { SearchQueryMeta } from "@/server/search/search.types";
 
 export type ProductTableFolder = {
   id: string;
@@ -74,6 +75,8 @@ export type ProductTableResponse = {
   columns: ColumnListItem[];
   products: ProductTableItem[];
   pagination: ProductTablePagination;
+  search: SearchQueryMeta | null;
+  activeFilters: ActiveFilterPill[];
 };
 
 export type ProductDetail = ProductTableItem & {

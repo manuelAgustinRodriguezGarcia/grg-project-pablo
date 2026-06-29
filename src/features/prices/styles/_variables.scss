@@ -1,0 +1,17 @@
+@use "../../admin/styles/variables" as admin;
+
+$navy: admin.$navy;
+$navy-light: admin.$navy-light;
+$blue: admin.$blue;
+$green: admin.$green;
+$white: admin.$white;
+$bg-content: admin.$bg-content;
+$font-sans: admin.$font-sans;
+$radius-sm: admin.$radius-sm;
+$radius-md: admin.$radius-md;
+$radius-lg: admin.$radius-lg;
+
+$amber: #c47a0f;
+$amber-soft: rgba($amber, 0.08);
+$ledger-line: rgba($navy, 0.06);
+$row-zebra: rgba($navy, 0.02);

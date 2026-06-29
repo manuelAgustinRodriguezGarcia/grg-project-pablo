@@ -14,17 +14,22 @@ export type ImportSheetsResponse = {
   sheets: ImportSheetItem[];
 };
 
-/** Espejo de `ImportReport` (`catalog-import.service`) persistido en `ImportJob.resultados`. */
+/** Espejo de `ImportReport` persistido en `ImportJob.resultados`. */
 export type ImportReportData = {
   fileName: string;
   catalogName: string | null;
   folderName: string | null;
+  priceListName?: string | null;
   sheetImported: string | null;
   sheetsDetected: number;
   productsProcessed: number;
   productsCreated: number;
   productsSkipped: number;
   productsMatched: number;
+  itemsProcessed?: number;
+  itemsCreated?: number;
+  itemsSkipped?: number;
+  itemsMatched?: number;
   formulasDetected: number;
   formulasWithoutCachedValue: number;
   imagesDetected: number;

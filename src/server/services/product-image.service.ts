@@ -870,9 +870,9 @@ export class ProductImageService {
     }
 
     const validation = await validateImageBuffer(input.buffer);
-    if (!validation.valid || !validation.mimeType) {
+    if (!validation.valid) {
       throw new ProductImageError(
-        validation.error ?? "Imagen inválida.",
+        validation.error,
         "VALIDATION_ERROR",
       );
     }
@@ -918,9 +918,9 @@ export class ProductImageService {
     }
 
     const validation = await validateImageBuffer(input.buffer);
-    if (!validation.valid || !validation.mimeType) {
+    if (!validation.valid) {
       throw new ProductImageError(
-        validation.error ?? "Imagen inválida.",
+        validation.error,
         "VALIDATION_ERROR",
       );
     }

@@ -192,9 +192,9 @@ export class ColumnHelpService {
     }
 
     const validation = await validateImageBuffer(input.buffer);
-    if (!validation.valid || !validation.mimeType) {
+    if (!validation.valid) {
       throw new ColumnHelpError(
-        validation.error ?? "Imagen inválida.",
+        validation.error,
         "VALIDATION_ERROR",
       );
     }

@@ -14,8 +14,10 @@ export type ImportJobDetail = {
   id: string;
   status: ImportJobStatus;
   actionType: ImportActionType | null;
+  destinationType: "CATALOG_FOLDER" | "PRICE_LIST" | null;
   catalogId: string | null;
   folderId: string | null;
+  priceListId: string | null;
   targetSheetName: string | null;
   uploadedFile: {
     id: string;
@@ -25,6 +27,7 @@ export type ImportJobDetail = {
   };
   catalog: { id: string; name: string } | null;
   folder: { id: string; name: string; catalogId: string } | null;
+  priceList: { id: string; name: string } | null;
   progress: ImportProgressDto | null;
   errorMessage: string | null;
   summary: ImportPreviewSummary | null;
@@ -51,18 +54,21 @@ export type ImportSheetItem = {
 };
 
 export type ImportPreviewSummary = {
-  totalProducts: number;
+  totalProducts?: number;
+  totalItems?: number;
   matchedCount: number;
-  imageCount: number;
-  embeddedImagesDetected: number;
-  rowsWithEmbeddedImages: number;
-  productsWithMultipleEmbeddedImages: number;
+  imageCount?: number;
+  embeddedImagesDetected?: number;
+  rowsWithEmbeddedImages?: number;
+  productsWithMultipleEmbeddedImages?: number;
   columnCount: number;
-  folderProductCount: number;
-  folderIsEmpty: boolean;
+  folderProductCount?: number;
+  folderIsEmpty?: boolean;
+  priceListItemCount?: number;
+  priceListIsEmpty?: boolean;
   formulasDetected: number;
   formulasWithoutCachedValue: number;
-  repeatedColumns: string[];
+  repeatedColumns?: string[];
 };
 
 export type ImportPreviewRow = MappedProductRow & {
@@ -126,8 +132,10 @@ export function toImportJobDetail(job: ImportJobWithRelations): ImportJobDetail 
     id: job.id,
     status: job.status,
     actionType: job.actionType,
+    destinationType: job.destinationType,
     catalogId: job.catalogId,
     folderId: job.folderId,
+    priceListId: job.priceListId,
     targetSheetName: job.targetSheetName,
     uploadedFile: {
       id: job.uploadedFile.id,
@@ -137,6 +145,7 @@ export function toImportJobDetail(job: ImportJobWithRelations): ImportJobDetail 
     },
     catalog: job.catalog,
     folder: job.folder,
+    priceList: job.priceList,
     progress: (job.progress as ImportProgressDto | null) ?? null,
     errorMessage: job.errorMessage,
     summary: summary ?? null,

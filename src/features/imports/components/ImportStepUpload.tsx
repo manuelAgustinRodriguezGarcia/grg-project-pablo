@@ -13,6 +13,7 @@ type ImportStepUploadProps = {
   file: File | null;
   externalImages: ExternalImageSelection;
   disabled: boolean;
+  hideExternalImages?: boolean;
   onFileSelected: (file: File | null) => void;
   onExternalImagesChange: (selection: ExternalImageSelection) => void;
   onNativeFilePickerOpen?: () => void;
@@ -39,6 +40,7 @@ export function ImportStepUpload({
   file,
   externalImages,
   disabled,
+  hideExternalImages = false,
   onFileSelected,
   onExternalImagesChange,
   onNativeFilePickerOpen,
@@ -144,13 +146,15 @@ export function ImportStepUpload({
         ) : null}
       </div>
 
-      <ImportExternalImagesPanel
-        selection={externalImages}
-        disabled={disabled}
-        onChange={onExternalImagesChange}
-        onNativeFilePickerOpen={onNativeFilePickerOpen}
-        onNativeFilePickerSettled={onNativeFilePickerSettled}
-      />
+      {hideExternalImages ? null : (
+        <ImportExternalImagesPanel
+          selection={externalImages}
+          disabled={disabled}
+          onChange={onExternalImagesChange}
+          onNativeFilePickerOpen={onNativeFilePickerOpen}
+          onNativeFilePickerSettled={onNativeFilePickerSettled}
+        />
+      )}
     </div>
   );
 }

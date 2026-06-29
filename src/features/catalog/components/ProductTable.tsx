@@ -26,7 +26,9 @@ type ProductTableProps = {
 
 function formatTableHeaderLines(displayName: string): string[] {
   const normalized = displayName.replace(/\r\n/g, "\n").trim();
-  const bracketMatch = normalized.match(/^(.+?)\s*(?:\n\s*)?\[\s*([^\]]+?)\s*\]\s*$/s);
+  const bracketMatch = normalized.match(
+    /^([\s\S]+?)\s*(?:\n\s*)?\[\s*([^\]]+?)\s*\]\s*$/,
+  );
 
   if (bracketMatch) {
     return [

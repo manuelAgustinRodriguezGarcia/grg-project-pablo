@@ -12,6 +12,7 @@ import {
   importDestinationSchema,
   importImageReviewQuerySchema,
   importJobIdSchema,
+  setPriceImportDestinationInputSchema,
   updateImportImageSchema,
 } from "@/features/imports/schemas/import.schemas";
 import type {
@@ -58,6 +59,32 @@ export async function analyzeImportAction(
 
   try {
     await catalogImportService.analyzeJob(parsed.data.jobId);
+    const job = await catalogImportService.getJob(parsed.data.jobId);
+    return { success: true, data: toImportJobDetail(job) };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function setPriceImportDestinationAction(
+  input: unknown,
+): Promise<ImportActionResult<ImportJobDetail>> {
+  const parsed = setPriceImportDestinationInputSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
+      code: "VALIDATION_ERROR",
+    };
+  }
+
+  try {
+    await catalogImportService.setDestination(parsed.data.jobId, {
+      destinationType: "PRICE_LIST",
+      priceListId: parsed.data.priceListId,
+      sheetName: parsed.data.sheetName,
+    });
     const job = await catalogImportService.getJob(parsed.data.jobId);
     return { success: true, data: toImportJobDetail(job) };
   } catch (error) {

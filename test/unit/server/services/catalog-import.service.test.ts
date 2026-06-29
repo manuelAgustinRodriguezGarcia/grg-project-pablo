@@ -9,7 +9,7 @@ vi.mock("@/server/auth", () => ({
 
 vi.mock("@/server/storage", () => ({
   uploadFile: vi.fn(),
-  downloadFile: vi.fn(),
+  downloadFile: vi.fn(async () => Buffer.from("")),
   buildStoragePath: vi.fn(() => "imports/test.xlsx"),
 }));
 
@@ -114,13 +114,41 @@ vi.mock("@/server/repositories/product-image.repository", () => ({
   },
 }));
 
+vi.mock("@/server/services/price-import.service", () => ({
+  priceImportService: {
+    apply: vi.fn(),
+    buildPreview: vi.fn(),
+    setDestination: vi.fn(),
+  },
+}));
+
+vi.mock("@/server/importers/excel-workbook.parser", () => ({
+  parseWorkbookFromBuffer: vi.fn(async () => ({
+    sheets: [
+      {
+        sheetName: "Precios",
+        headers: [],
+        rows: [],
+        columnCount: 0,
+        rowCount: 0,
+        embeddedImageSummary: {
+          embeddedImagesDetected: 0,
+          rowsWithEmbeddedImages: 0,
+          productsWithMultipleEmbeddedImages: 0,
+        },
+      },
+    ],
+  })),
+}));
+
 vi.mock("exceljs", () => ({
   default: {
-    Workbook: vi.fn().mockImplementation(() => ({
-      xlsx: {
-        load: vi.fn(),
-      },
-    })),
+    Workbook: class MockWorkbook {
+      worksheets = [];
+      xlsx = {
+        load: vi.fn(async () => undefined),
+      };
+    },
   },
 }));
 
@@ -128,6 +156,7 @@ import { catalogImportService } from "@/server/services/catalog-import.service";
 import { importJobRepository } from "@/server/repositories/import-job.repository";
 import { folderRepository } from "@/server/repositories/folder.repository";
 import { uploadedFileRepository } from "@/server/repositories/uploaded-file.repository";
+import { priceImportService } from "@/server/services/price-import.service";
 import { uploadFile } from "@/server/storage";
 
 describe("CatalogImportService", () => {
@@ -215,6 +244,62 @@ describe("CatalogImportService", () => {
       status: "STORED",
     });
     expect(uploadFile).not.toHaveBeenCalled();
+  });
+
+  it("apply PRICE_LIST delega sin exigir folderId", async () => {
+    const priceJob = {
+      id: "job-price",
+      status: "READY_TO_APPLY",
+      destinationType: "PRICE_LIST",
+      priceListId: "list-1",
+      folderId: null,
+      targetSheetName: "Precios",
+      preview: { recognizedProducts: [] },
+      uploadedFile: {
+        id: "file-1",
+        originalName: "precios.xlsx",
+        storagePath: "imports/precios.xlsx",
+        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        sizeBytes: 100,
+      },
+      catalog: null,
+      folder: null,
+      priceList: { id: "list-1", name: "Lista" },
+      sheets: [
+        {
+          id: "sheet-1",
+          sheetName: "Precios",
+          classification: "IMPORTABLE",
+          rowCount: 1,
+          columnCount: 2,
+          detectedHeaders: [],
+          metadata: null,
+          importJobId: "job-price",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      config: {},
+    } as never;
+
+    let relationCalls = 0;
+    vi.mocked(importJobRepository.findByIdWithRelations).mockImplementation(async () => {
+      relationCalls += 1;
+      if (relationCalls === 1) {
+        return priceJob;
+      }
+      return { ...priceJob, status: "PUBLISHED" };
+    });
+
+    vi.mocked(priceImportService.apply).mockResolvedValue(undefined);
+
+    await catalogImportService.apply("job-price", {
+      actionType: "IMPORTAR_LISTA",
+      confirmed: true,
+    });
+
+    expect(priceImportService.apply).toHaveBeenCalled();
+    expect(folderRepository.findByIdWithProductCount).not.toHaveBeenCalled();
   });
 
   it("completeImageReview pasa de PENDING_REVIEW a PUBLISHED", async () => {

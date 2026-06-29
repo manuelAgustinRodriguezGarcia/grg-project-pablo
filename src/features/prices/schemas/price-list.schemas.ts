@@ -29,6 +29,49 @@ export const createPriceItemSchema = z.object({
   values: z.record(z.string(), z.unknown()),
 });
 
+export const updatePriceItemSchema = createPriceItemSchema;
+
+export const priceColumnDataTypeSchema = z.enum([
+  "TEXT",
+  "NUMBER",
+  "BOOLEAN",
+  "DATE",
+  "DATETIME",
+  "FORMULA",
+  "UNKNOWN",
+]);
+
+export const createPriceColumnSchema = z.object({
+  originalName: z.string().trim().min(1).max(200),
+  displayName: z.string().trim().min(1).max(200),
+  internalKey: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .regex(/^[a-z0-9_]+$/, "Solo minúsculas, números y guiones bajos."),
+  dataType: priceColumnDataTypeSchema.optional(),
+  order: z.number().int().min(0).optional(),
+  visibleToNormalUser: z.boolean().optional(),
+  isSearchable: z.boolean().optional(),
+  isFilterable: z.boolean().optional(),
+  isAdminEditable: z.boolean().optional(),
+  isPrimaryCode: z.boolean().optional(),
+  isDescription: z.boolean().optional(),
+  isPrice: z.boolean().optional(),
+});
+
+export const reorderPriceColumnsSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        order: z.number().int().min(0),
+      }),
+    )
+    .min(1),
+});
+
 export const updatePriceColumnSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1).max(200).optional(),
