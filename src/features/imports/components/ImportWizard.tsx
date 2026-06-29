@@ -77,10 +77,14 @@ import type { PriceListListItem } from "@/features/prices/types/price-list.types
 import { getImportWizardStepHint } from "@/features/imports/data/import-wizard-step-hints";
 import styles from "./ImportWizard.module.scss";
 
+type ImportPublishedContext = {
+  priceListId?: string;
+};
+
 type ImportWizardProps = {
   catalogs: DirectoryCatalogItem[];
   onClose: () => void;
-  onPublished: () => void;
+  onPublished: (context?: ImportPublishedContext) => void;
   initialJobId?: string;
   mode?: "CATALOG_FOLDER" | "PRICE_LIST";
   priceLists?: PriceListListItem[];
@@ -960,7 +964,11 @@ export function ImportWizard({
   }
 
   function handleFinish() {
-    onPublished();
+    onPublished(
+      isPriceMode && selectedPriceListId
+        ? { priceListId: selectedPriceListId }
+        : undefined,
+    );
     onClose();
   }
 

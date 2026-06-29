@@ -10,7 +10,6 @@ import {
   deletePriceListAction,
   updatePriceListAction,
 } from "@/features/prices/actions/price-list.actions";
-import { PriceColumnCreateModal } from "@/features/prices/components/PriceColumnCreateModal";
 import { PriceItemFormModal } from "@/features/prices/components/PriceItemFormModal";
 import { PriceItemTable } from "@/features/prices/components/PriceItemTable";
 import { PriceListFormModal } from "@/features/prices/components/PriceListFormModal";
@@ -95,7 +94,6 @@ export function PriceNavigator({
   const [editingItem, setEditingItem] = useState<PriceItemTableRow | null>(null);
   const [deleteItemTarget, setDeleteItemTarget] = useState<PriceItemTableRow | null>(null);
   const [isItemActionBusy, setIsItemActionBusy] = useState(false);
-  const [isColumnCreateOpen, setIsColumnCreateOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
   useEffect(() => {
@@ -273,12 +271,6 @@ export function PriceNavigator({
     setSuccessMessage("Columna eliminada correctamente.");
   }, []);
 
-  const handleColumnCreated = useCallback((column: PriceColumnListItem) => {
-    setColumnDetails((current) => [...current, column]);
-    setReloadToken((token) => token + 1);
-    setSuccessMessage("Columna creada correctamente.");
-  }, []);
-
   const handleReorderColumn = useCallback(
     async (columnId: string, direction: "left" | "right") => {
       if (!activeListId) {
@@ -363,12 +355,43 @@ export function PriceNavigator({
     }
   }, [activeListId, deleteItemTarget, refreshListsFromServer]);
 
-  const handleImportPublished = useCallback(() => {
-    setReloadToken((token) => token + 1);
-    setSuccessMessage("Importación de precios completada.");
-    void refreshListsFromServer();
-    router.refresh();
-  }, [refreshListsFromServer, router]);
+  const handleImportExcelClick = useCallback(() => {
+    setIsImportOpen(true);
+  }, []);
+
+  const handleAddItemClick = useCallback(() => {
+    setListActionError(null);
+
+    if (!activeListId) {
+      setListActionError("Seleccioná una lista de precios para agregar ítems.");
+      return;
+    }
+
+    setEditingItem(null);
+    setIsItemFormOpen(true);
+  }, [activeListId]);
+
+  const handleImportPublished = useCallback(
+    async (context?: { priceListId?: string }) => {
+      setReloadToken((token) => token + 1);
+      setSuccessMessage("Importación de precios completada.");
+
+      const response = await fetch("/api/admin/price-lists");
+      if (response.ok) {
+        const payload = (await response.json()) as { priceLists: PriceListListItem[] };
+        setPriceLists(payload.priceLists);
+
+        if (context?.priceListId) {
+          setSelectedListId(context.priceListId);
+        } else if (!activeListId && payload.priceLists.length > 0) {
+          setSelectedListId(getInitialListId(payload.priceLists));
+        }
+      }
+
+      router.refresh();
+    },
+    [activeListId, router],
+  );
 
   const handleSubmitListForm = useCallback(
     async (values: PriceListFormValues) => {
@@ -529,43 +552,37 @@ export function PriceNavigator({
             onSearchChange={setSearchInput}
             onSearchClear={() => setSearchInput("")}
             searchDisabled={!activeListId}
-          />
+            onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
+            onAddItemClick={isAdmin ? handleAddItemClick : undefined}
+          >
+            <PriceListSelectorPanel
+              priceLists={sortedLists}
+              selectedListId={activeListId}
+              onSelectList={handleSelectList}
+              onAddList={
+                isAdmin
+                  ? () => {
+                      setListActionError(null);
+                      setEditingList(null);
+                      setListFormMode("create");
+                    }
+                  : undefined
+              }
+              onEditList={isAdmin ? openEditList : undefined}
+              onDeleteList={isAdmin ? openDeleteList : undefined}
+            />
+          </PricePageChrome>
 
           {isAdmin ? (
             <PriceToolbar
               hasSelectedList={Boolean(activeListId)}
-              onImportExcel={() => setIsImportOpen(true)}
-              onAddItem={() => {
-                setEditingItem(null);
-                setIsItemFormOpen(true);
-              }}
-              onAddColumn={() => setIsColumnCreateOpen(true)}
               onClearList={() => {
                 if (activeList) {
                   setClearListTarget(activeList);
                 }
               }}
-              onEditList={() => openEditList()}
-              onDeleteList={() => openDeleteList()}
             />
           ) : null}
-
-          <PriceListSelectorPanel
-            priceLists={sortedLists}
-            selectedListId={activeListId}
-            onSelectList={handleSelectList}
-            onAddList={
-              isAdmin
-                ? () => {
-                    setListActionError(null);
-                    setEditingList(null);
-                    setListFormMode("create");
-                  }
-                : undefined
-            }
-            onEditList={isAdmin ? openEditList : undefined}
-            onDeleteList={isAdmin ? openDeleteList : undefined}
-          />
 
           {loadError ? <p className={styles.inlineError}>{loadError}</p> : null}
           {listActionError ? <p className={styles.inlineError}>{listActionError}</p> : null}
@@ -591,6 +608,7 @@ export function PriceNavigator({
             onCreateList={() => {
               setListFormMode("create");
             }}
+            onImportExcel={isAdmin ? handleImportExcelClick : undefined}
             onColumnUpdated={handleColumnUpdated}
             onColumnDeleted={isAdmin ? handleColumnDeleted : undefined}
             onReorderColumn={isAdmin ? handleReorderColumn : undefined}
@@ -642,14 +660,6 @@ export function PriceNavigator({
             );
             void refreshListsFromServer();
           }}
-        />
-      ) : null}
-
-      {isColumnCreateOpen && activeListId ? (
-        <PriceColumnCreateModal
-          priceListId={activeListId}
-          onClose={() => setIsColumnCreateOpen(false)}
-          onCreated={handleColumnCreated}
         />
       ) : null}
 

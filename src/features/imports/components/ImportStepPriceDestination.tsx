@@ -88,7 +88,9 @@ export function ImportStepPriceDestination({
           <button
             type="button"
             className={styles.addButton}
-            onClick={() => setListDraft((value) => (value === null ? "" : null))}
+            onClick={() =>
+              setListDraft((value) => (value === null ? selectedSheetName : null))
+            }
             disabled={isBusy}
           >
             <Plus strokeWidth={ICON_STROKE} aria-hidden />
