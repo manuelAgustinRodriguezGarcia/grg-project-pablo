@@ -205,9 +205,10 @@
 
 .selectionPanel {
   display: flex;
-  flex-shrink: 0;
+  flex: 1;
   flex-direction: column;
   gap: 0.75rem;
+  min-width: 0;
   padding: 1rem;
   border-radius: $radius-md;
   border: 1px solid rgba($navy, 0.08);
@@ -654,11 +655,20 @@
   }
 }
 
+.emptyStateActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 0.5rem;
+}
+
 .emptyStateCta {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  margin-top: 0.5rem;
+  margin-top: 0;
   min-height: 2.35rem;
   padding: 0.45rem 1rem;
   border: 1px solid rgba($blue, 0.35);
@@ -672,6 +682,16 @@
 
   &:hover {
     background: rgba($blue, 0.12);
+  }
+}
+
+.emptyStateCtaGreen {
+  border-color: rgba($green, 0.35);
+  background: rgba($green, 0.06);
+  color: $green;
+
+  &:hover {
+    background: rgba($green, 0.12);
   }
 }
 

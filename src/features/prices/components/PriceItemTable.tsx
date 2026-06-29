@@ -22,6 +22,7 @@ type PriceItemTableProps = {
   onPageChange: (page: number) => void;
   onAddItem: () => void;
   onCreateList: () => void;
+  onImportExcel?: () => void;
   onColumnUpdated: (column: PriceColumnListItem) => void;
   onColumnDeleted?: (columnId: string) => void;
   onReorderColumn?: (columnId: string, direction: "left" | "right") => void;
@@ -74,6 +75,7 @@ export function PriceItemTable({
   onPageChange,
   onAddItem,
   onCreateList,
+  onImportExcel,
   onColumnUpdated,
   onColumnDeleted,
   onReorderColumn,
@@ -95,12 +97,24 @@ export function PriceItemTable({
           <Receipt className={styles.tableStateIcon} strokeWidth={ICON_STROKE} aria-hidden />
           <h2 className={styles.tableStateTitle}>No hay listas de precios</h2>
           <p className={styles.tableStateText}>
-            Creá la primera lista para comenzar a cargar ítems y consultar precios.
+            Importá un Excel para crear la lista automáticamente o creá una lista vacía
+            manualmente.
           </p>
           {isAdmin ? (
-            <button type="button" className={styles.emptyStateCta} onClick={onCreateList}>
-              Crear primera lista
-            </button>
+            <div className={styles.emptyStateActions}>
+              {onImportExcel ? (
+                <button
+                  type="button"
+                  className={`${styles.emptyStateCta} ${styles.emptyStateCtaGreen}`}
+                  onClick={onImportExcel}
+                >
+                  Importar Excel
+                </button>
+              ) : null}
+              <button type="button" className={styles.emptyStateCta} onClick={onCreateList}>
+                Crear lista vacía
+              </button>
+            </div>
           ) : null}
         </div>
       </section>
@@ -166,7 +180,7 @@ export function PriceItemTable({
             <p className={styles.tableStateText}>
               {searchQuery.trim()
                 ? "Probá con otro término o limpiá la búsqueda."
-                : "Agregá ítems manualmente o importá un Excel cuando esté disponible."}
+                : "Agregá ítems manualmente o importá un Excel."}
             </p>
             {isAdmin && !searchQuery.trim() ? (
               <button type="button" className={styles.emptyStateCta} onClick={onAddItem}>
