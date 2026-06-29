@@ -111,6 +111,11 @@
     outline: 2px solid $blue;
     outline-offset: 2px;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .actionCardBlue {
@@ -1160,6 +1165,14 @@
   font-weight: 700;
   line-height: 1.35;
   color: $navy;
+}
+
+.columnEditSubtitle {
+  margin: 0.25rem 0 0;
+  font-family: $font-sans;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: rgba($navy, 0.65);
 }
 
 .columnEditClose {
