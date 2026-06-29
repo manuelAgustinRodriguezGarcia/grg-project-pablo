@@ -31,20 +31,16 @@ flowchart TD
 
 ### Punto de entrada en la UI
 
-- Pantalla: `/admin/catalogos`
-- Componente: `ImportWizard` (modal)
-- Se abre desde el botón **Importar Excel** en `CatalogNavigator`
-- Requiere rol **ADMIN**
+- **Catálogos:** pantalla `/admin/catalogos` → `ImportWizard` (modal) desde `CatalogNavigator`
+- **Precios:** pantalla `/admin/precios` → `ImportWizard` con `mode="PRICE_LIST"` desde `PriceNavigator` (sin imágenes externas ni revisión de imágenes)
 
----
-
-## 2. Pasos del asistente (frontend)
+El importador convierte **una hoja de un archivo Excel** en **productos** dentro de **una carpeta** de un **catálogo**, o en **ítems** dentro de una **lista de precios**. Opcionalmente procesa **imágenes embebidas** en el Excel y **imágenes externas** (ZIP o archivos sueltos) asociadas por nombre de archivo — solo en destino catálogo.
 
 | Paso interno | Etiqueta en UI | Componente | Qué hace el usuario |
 |--------------|---------------|------------|---------------------|
 | `upload` | Archivo | `ImportStepUpload`, `ImportExternalImagesPanel` | Sube `.xlsx` o `.xlsm`. Opcional: ZIP o imágenes sueltas para vincular después. |
-| `destination` | Destino | `ImportStepDestination` | Elige catálogo, carpeta y **hoja importable**. Puede crear catálogo/carpeta inline. |
-| `columns` | Columnas | `ImportStepColumns` | Define código principal (o **Generar Códigos**), y por cada columna del Excel si se crea columna en la carpeta (Sí/No). |
+| `destination` | Destino | `ImportStepDestination` / `ImportStepPriceDestination` | Catálogo: elige catálogo, carpeta y hoja. Precios: elige lista y hoja (puede crear lista inline). |
+| `columns` | Columnas | `ImportStepColumns` | Por cada columna del Excel si se crea columna en la carpeta/lista (Sí/No). Catálogo con ZIP: código para vincular imágenes. |
 | `preview` | Vista previa | `ImportStepPreview` | Revisa resumen y elige estrategia: importar / combinar / reemplazar. |
 | `imageReview` | (mismo indicador que vista previa) | `ImportStepImageReview` | Solo si quedan imágenes `PENDING_REVIEW` tras aplicar. |
 | `result` | Resultado | `ImportStepResult` | Mensaje final de éxito o error. |
@@ -58,7 +54,8 @@ Cada paso muestra un **hint contextual** en el header del modal (`import-wizard-
 | Subir Excel | `POST /api/admin/imports/upload` |
 | Analizar | `analyzeImportAction({ jobId })` |
 | Listar hojas | `GET /api/admin/imports/{jobId}/sheets` |
-| Destino | `setImportDestinationAction` |
+| Destino catálogo | `setImportDestinationAction` |
+| Destino precios | `setPriceImportDestinationAction` |
 | Imágenes externas (si no se subieron al inicio) | `POST /api/admin/imports/{jobId}/images` |
 | Columnas de carpeta | `GET /api/admin/folders/{folderId}/products?page=1&pageSize=1` |
 | Config + preview | `setImportConfigAction` → `GET /api/admin/imports/{jobId}/preview` |
@@ -571,7 +568,9 @@ Extensión del mismo asistente de importación con `ImportJob.destinationType = 
 | Equivalencias | Sí | No |
 | Servicio apply | `CatalogImportService.apply` | Delega a `PriceImportService.apply` |
 
-### Flujo
+### Flujo UI cableado
+
+Entrada: `/admin/precios` → botón **Importar Excel** → `ImportWizard` (`mode="PRICE_LIST"`, lista preseleccionada). Pasos: upload → destino (lista + hoja) → columnas → vista previa → resultado. Sin paso de imágenes.
 
 ```text
 Subir Excel → analyze → setDestination { destinationType: PRICE_LIST, priceListId, sheetName }

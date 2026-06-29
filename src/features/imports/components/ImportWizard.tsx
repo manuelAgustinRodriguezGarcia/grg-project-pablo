@@ -24,6 +24,7 @@ import {
   cancelImportAction,
   setImportConfigAction,
   setImportDestinationAction,
+  setPriceImportDestinationAction,
 } from "@/features/imports/actions/import.actions";
 import type {
   ImportPreviewResponse,
@@ -61,6 +62,7 @@ import {
   createInitialColumnMappingState,
 } from "./ImportStepColumns";
 import { ImportStepDestination } from "./ImportStepDestination";
+import { ImportStepPriceDestination } from "./ImportStepPriceDestination";
 import {
   ImportStepImageReview,
   type ImageReviewFooterState,
@@ -70,6 +72,8 @@ import { ImportStepResult } from "./ImportStepResult";
 import { ImportStepUpload } from "./ImportStepUpload";
 import { ImportWizardLoading } from "./ImportWizardLoading";
 import { ImportWizardStepContextHint } from "./ImportWizardStepContextHint";
+import { createPriceListAction } from "@/features/prices/actions/price-list.actions";
+import type { PriceListListItem } from "@/features/prices/types/price-list.types";
 import { getImportWizardStepHint } from "@/features/imports/data/import-wizard-step-hints";
 import styles from "./ImportWizard.module.scss";
 
@@ -78,6 +82,9 @@ type ImportWizardProps = {
   onClose: () => void;
   onPublished: () => void;
   initialJobId?: string;
+  mode?: "CATALOG_FOLDER" | "PRICE_LIST";
+  priceLists?: PriceListListItem[];
+  initialPriceListId?: string;
 };
 
 const STEP_ORDER = [
@@ -145,7 +152,11 @@ export function ImportWizard({
   onClose,
   onPublished,
   initialJobId,
+  mode = "CATALOG_FOLDER",
+  priceLists = [],
+  initialPriceListId = "",
 }: ImportWizardProps) {
+  const isPriceMode = mode === "PRICE_LIST";
   const [step, setStep] = useState<ImportWizardStep>(initialJobId ? "destination" : "upload");
   const [loadingOverlay, setLoadingOverlay] = useState<LoadingOverlayState | null>(null);
   const [loadingSession, setLoadingSession] = useState(0);
@@ -185,6 +196,8 @@ export function ImportWizard({
   const [selectedCatalogId, setSelectedCatalogId] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [selectedSheetName, setSelectedSheetName] = useState("");
+  const [priceListList, setPriceListList] = useState<PriceListListItem[]>(priceLists);
+  const [selectedPriceListId, setSelectedPriceListId] = useState(initialPriceListId);
 
   const [folderColumns, setFolderColumns] = useState<FolderColumn[]>([]);
   const [mappingRows, setMappingRows] = useState<ColumnMappingRow[]>([]);
@@ -242,6 +255,17 @@ export function ImportWizard({
     return data.columns;
   }, []);
 
+  const loadPriceListColumns = useCallback(async (priceListId: string) => {
+    const response = await fetch(`/api/admin/price-lists/${priceListId}/columns`);
+    if (!response.ok) {
+      throw new Error("No se pudieron cargar las columnas de la lista.");
+    }
+
+    const data = (await response.json()) as { columns: FolderColumn[] };
+    setFolderColumns(data.columns);
+    return data.columns;
+  }, []);
+
   const loadImportReport = useCallback(async (activeJobId: string) => {
     const reportResponse = await fetch(`/api/admin/imports/${activeJobId}/report`);
     if (reportResponse.ok) {
@@ -257,6 +281,7 @@ export function ImportWizard({
 
   const selectedCatalog = catalogList.find((item) => item.id === selectedCatalogId);
   const selectedFolder = folders.find((item) => item.id === selectedFolderId);
+  const selectedPriceList = priceListList.find((item) => item.id === selectedPriceListId);
 
   useEffect(() => {
     if (!jobId || step === "upload") {
@@ -381,6 +406,9 @@ export function ImportWizard({
       setSelectedCatalogId("");
       setSelectedFolderId("");
       setSelectedSheetName("");
+      if (isPriceMode) {
+        setSelectedPriceListId(initialPriceListId);
+      }
 
       updateLoadingOverlay("Analizando el archivo…", 48);
 
@@ -459,12 +487,17 @@ export function ImportWizard({
     setSelectedCatalogId("");
     setSelectedFolderId("");
     setSelectedSheetName("");
+    if (isPriceMode) {
+      setSelectedPriceListId(initialPriceListId);
+    }
     startLoadingOverlay("Subiendo archivo…", 12);
 
     try {
       const formData = new FormData();
       formData.append("file", file);
-      appendExternalImagesToFormData(formData, externalImages);
+      if (!isPriceMode) {
+        appendExternalImagesToFormData(formData, externalImages);
+      }
 
       updateLoadingOverlay("Subiendo archivo…", 28);
 
@@ -661,8 +694,76 @@ export function ImportWizard({
     editCatalogTarget !== null &&
     editCatalogNameDraft.trim() === editCatalogTarget.name.trim();
 
+  async function handleCreatePriceList(name: string): Promise<boolean> {
+    setInlineBusy(true);
+    setError(null);
+    try {
+      const result = await createPriceListAction({ name });
+      if (!result.success) {
+        setError(result.error);
+        return false;
+      }
+
+      const created = result.data;
+      setPriceListList((current) => [...current, created]);
+      setSelectedPriceListId(created.id);
+      return true;
+    } finally {
+      setInlineBusy(false);
+    }
+  }
+
   async function handleDestinationContinue() {
-    if (!jobId || !selectedCatalogId || !selectedFolderId || !selectedSheetName) {
+    if (!jobId || !selectedSheetName) {
+      return;
+    }
+
+    if (isPriceMode) {
+      if (!selectedPriceListId) {
+        return;
+      }
+
+      setError(null);
+      startLoadingOverlay("Configurando destino…", 15);
+
+      try {
+        updateLoadingOverlay("Configurando destino…", 32);
+
+        const destinationResult = await setPriceImportDestinationAction({
+          jobId,
+          destinationType: "PRICE_LIST",
+          priceListId: selectedPriceListId,
+          sheetName: selectedSheetName,
+        });
+        if (!destinationResult.success) {
+          throw new Error(destinationResult.error);
+        }
+
+        updateLoadingOverlay("Preparando columnas…", 68);
+
+        const columns = await loadPriceListColumns(selectedPriceListId);
+        const sheet = sheets.find((item) => item.sheetName === selectedSheetName);
+        const headers = parseDetectedHeaders(sheet);
+        const initialMapping = createInitialColumnMappingState(headers, columns);
+        setMappingRows(initialMapping.mappingRows);
+        setPrimaryCodeHeaderKey(initialMapping.primaryCodeHeaderKey);
+        setDescriptionHeaderKey(initialMapping.descriptionHeaderKey);
+
+        updateLoadingOverlay("Destino configurado…", 93);
+        await completeLoadingOverlay();
+        setStep("columns");
+      } catch (caught) {
+        clearLoadingImmediate();
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "No se pudo configurar el destino.",
+        );
+      }
+      return;
+    }
+
+    if (!selectedCatalogId || !selectedFolderId) {
       return;
     }
 
@@ -721,10 +822,11 @@ export function ImportWizard({
       updateLoadingOverlay("Generando la vista previa…", 45);
 
       const columnMapping = buildImportColumnMapping(mappingRows);
-      const shouldUseGeneratedPrimaryCodes = !zipAttached;
-      const primaryCodeColumnKey = zipAttached
+      const primaryCodeColumnKey = isPriceMode
         ? resolveFolderColumnKey(primaryCodeHeaderKey, mappingRows) ?? undefined
-        : undefined;
+        : zipAttached
+          ? resolveFolderColumnKey(primaryCodeHeaderKey, mappingRows) ?? undefined
+          : undefined;
       const descriptionColumnKey = descriptionHeaderKey
         ? resolveFolderColumnKey(descriptionHeaderKey, mappingRows) ?? undefined
         : undefined;
@@ -734,7 +836,8 @@ export function ImportWizard({
         columnMapping,
         primaryCodeColumnKey,
         descriptionColumnKey,
-        useGeneratedPrimaryCodes: shouldUseGeneratedPrimaryCodes,
+        useGeneratedPrimaryCodes: isPriceMode ? false : !zipAttached,
+        skipImageZipValidation: isPriceMode,
       });
       if (!configResult.success) {
         throw new Error(configResult.error);
@@ -754,9 +857,10 @@ export function ImportWizard({
 
       const previewData = (await previewResponse.json()) as ImportPreviewResponse;
       setPreview(previewData);
-      setSelectedAction(
-        previewData.summary.folderIsEmpty ? "IMPORTAR_LISTA" : null,
-      );
+      const destinationEmpty = isPriceMode
+        ? previewData.summary.priceListIsEmpty
+        : previewData.summary.folderIsEmpty;
+      setSelectedAction(destinationEmpty ? "IMPORTAR_LISTA" : null);
 
       updateLoadingOverlay("Vista previa lista…", 93);
       await completeLoadingOverlay();
@@ -789,10 +893,16 @@ export function ImportWizard({
 
     setConfirmAction(null);
     setError(null);
-    startLoadingOverlay("Importando productos…", 18);
+    startLoadingOverlay(
+      isPriceMode ? "Importando ítems…" : "Importando productos…",
+      18,
+    );
 
     try {
-      updateLoadingOverlay("Importando productos…", 45);
+      updateLoadingOverlay(
+        isPriceMode ? "Importando ítems…" : "Importando productos…",
+        45,
+      );
 
       const applyResult = await applyImportAction({
         jobId,
@@ -856,9 +966,9 @@ export function ImportWizard({
 
   const currentStepIndex = getStepIndicatorIndex(step);
   const stepContextHint = getImportWizardStepHint(step);
-  const canContinueDestination = Boolean(
-    selectedCatalogId && selectedFolderId && selectedSheetName,
-  );
+  const canContinueDestination = isPriceMode
+    ? Boolean(selectedPriceListId && selectedSheetName)
+    : Boolean(selectedCatalogId && selectedFolderId && selectedSheetName);
 
   if (typeof document === "undefined") {
     return null;
@@ -939,6 +1049,7 @@ export function ImportWizard({
                 <ImportStepUpload
                   file={file}
                   externalImages={externalImages}
+                  hideExternalImages={isPriceMode}
                   disabled={isBusy}
                   onFileSelected={(next) => {
                     setFile(next);
@@ -955,7 +1066,22 @@ export function ImportWizard({
                 />
               ) : null}
 
-              {step === "destination" ? (
+              {step === "destination" && isPriceMode ? (
+                <ImportStepPriceDestination
+                  fileName={file?.name ?? ""}
+                  priceLists={priceListList}
+                  importableSheets={importableSheets}
+                  excludedSheetCount={excludedSheetCount}
+                  selectedPriceListId={selectedPriceListId}
+                  selectedSheetName={selectedSheetName}
+                  isBusy={isBusy}
+                  onSelectPriceList={setSelectedPriceListId}
+                  onSelectSheet={setSelectedSheetName}
+                  onCreatePriceList={handleCreatePriceList}
+                />
+              ) : null}
+
+              {step === "destination" && !isPriceMode ? (
                 <ImportStepDestination
                   fileName={file?.name ?? ""}
                   stagedExternalImages={stagedExternalImagesSummary}
@@ -984,7 +1110,7 @@ export function ImportWizard({
                   folderColumns={folderColumns}
                   mappingRows={mappingRows}
                   primaryCodeHeaderKey={primaryCodeHeaderKey}
-                  showPrimaryCodeSelection={zipAttached}
+                  showPrimaryCodeSelection={!isPriceMode && zipAttached}
                   disabled={isBusy}
                   onMappingRowsChange={setMappingRows}
                   onPrimaryCodeHeaderKeyChange={setPrimaryCodeHeaderKey}
@@ -994,8 +1120,10 @@ export function ImportWizard({
               {step === "preview" && preview ? (
                 <ImportStepPreview
                   preview={preview}
+                  mode={mode}
                   catalogName={selectedCatalog?.name ?? ""}
                   folderName={selectedFolder?.name ?? ""}
+                  priceListName={selectedPriceList?.name ?? ""}
                   sheetName={selectedSheetName}
                   selectedAction={selectedAction}
                   onSelectAction={setSelectedAction}
@@ -1014,7 +1142,11 @@ export function ImportWizard({
               ) : null}
 
               {step === "result" ? (
-                <ImportStepResult report={report} errorMessage={reportError} />
+                <ImportStepResult
+                  report={report}
+                  errorMessage={reportError}
+                  mode={mode}
+                />
               ) : null}
             </>
           )}

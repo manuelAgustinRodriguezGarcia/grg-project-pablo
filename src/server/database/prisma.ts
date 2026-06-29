@@ -17,8 +17,28 @@ function createPrismaClient(): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+function isPrismaClientCurrent(client: PrismaClient): boolean {
+  return typeof client.offlineSyncManifest?.aggregate === "function";
 }
+
+function resolvePrismaClient(): PrismaClient {
+  const cached = globalForPrisma.prisma;
+
+  if (cached && isPrismaClientCurrent(cached)) {
+    return cached;
+  }
+
+  if (cached) {
+    void cached.$disconnect().catch(() => undefined);
+  }
+
+  const client = createPrismaClient();
+
+  if (process.env.NODE_ENV !== "production") {
+    globalForPrisma.prisma = client;
+  }
+
+  return client;
+}
+
+export const prisma = resolvePrismaClient();

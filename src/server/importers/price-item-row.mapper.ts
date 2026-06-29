@@ -110,8 +110,6 @@ function mapRowToPriceItem(
   primaryKey: string | undefined,
   descriptionKey: string | undefined,
   priceKey: string | undefined,
-  config: ImportJobConfig,
-  rowIndex: number,
 ): MappedPriceItemRow {
   const dynamicData: Record<string, unknown> = {};
   const textParts: string[] = [];
@@ -119,7 +117,7 @@ function mapRowToPriceItem(
   let description: string | null = null;
   let amount: Prisma.Decimal | null = null;
 
-  for (const [headerKey, value] of Object.entries(row.values)) {
+  for (const [headerKey, value] of Object.entries(row.cells)) {
     const columnKey = keyMap.get(headerKey) ?? headerKey;
     const stringValue = value === null || value === undefined ? "" : String(value).trim();
 
@@ -135,17 +133,14 @@ function mapRowToPriceItem(
     }
   }
 
-  if (config.useGeneratedPrimaryCodes && !primaryCode) {
-    primaryCode = generateImportPrimaryCode(rowIndex);
-  }
-
   return {
-    rowIndex: row.rowIndex,
+    rowNumber: row.rowNumber,
     primaryCode,
     normalizedCode: primaryCode ? normalizeCodeForMatch(primaryCode) : null,
     description,
     dynamicData,
-    originalText: textParts.length > 0 ? textParts.join(" | ") : null,
+    originalText: textParts.length > 0 ? textParts.join(" | ") : row.originalText,
+    formulas: row.formulas,
     warnings: row.warnings,
     amount: amount?.toString() ?? null,
   };
@@ -160,8 +155,21 @@ export function mapSheetToPriceItems(
   const primaryKey = findPrimaryCodeColumnKey(sheet, columns, config);
   const descriptionKey = findDescriptionColumnKey(columns, config);
   const priceKey = findPriceColumnKey(columns);
+  const usedGeneratedCodes = new Set<string>();
 
-  return sheet.rows.map((row, index) =>
-    mapRowToPriceItem(row, keyMap, primaryKey, descriptionKey, priceKey, config, index),
-  );
+  return sheet.rows.map((row) => {
+    const mapped = mapRowToPriceItem(row, keyMap, primaryKey, descriptionKey, priceKey);
+
+    if (!config.useGeneratedPrimaryCodes || mapped.primaryCode) {
+      return mapped;
+    }
+
+    const primaryCode = generateImportPrimaryCode(usedGeneratedCodes);
+
+    return {
+      ...mapped,
+      primaryCode,
+      normalizedCode: normalizeCodeForMatch(primaryCode),
+    };
+  });
 }

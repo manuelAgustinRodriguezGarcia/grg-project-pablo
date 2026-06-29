@@ -1,0 +1,728 @@
+@use "./variables" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  overflow: hidden;
+}
+
+.sectionIntro {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: $navy;
+}
+
+.headerSearchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 40rem;
+  min-width: 12rem;
+  margin-left: auto;
+}
+
+.headerSearchIcon {
+  position: absolute;
+  left: 1rem;
+  width: 1rem;
+  height: 1rem;
+  color: $blue;
+  pointer-events: none;
+}
+
+.headerSearch {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.55rem 2.25rem 0.55rem 2.5rem;
+  border: 1px solid rgba($blue, 0.4);
+  border-radius: 999px;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: $navy;
+
+  &::placeholder {
+    color: rgba($navy, 0.45);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    border-color: rgba($blue, 0.55);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.headerSearchClear {
+  position: absolute;
+  right: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba($navy, 0.5);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($navy, 0.06);
+    color: $navy;
+  }
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.toolbarButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: 999px;
+  background: $white;
+  color: $navy;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.04);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.toolbarButtonPrimary {
+  border-color: rgba($blue, 0.35);
+  background: rgba($blue, 0.06);
+  color: $blue;
+}
+
+.toolbarButtonGreen {
+  border-color: rgba($green, 0.35);
+  background: rgba($green, 0.06);
+  color: $green;
+}
+
+.toolbarButtonDanger {
+  border-color: rgba(#c0392b, 0.25);
+  color: #9b2c2c;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(#c0392b, 0.4);
+    background: rgba(#c0392b, 0.05);
+  }
+}
+
+.toolbarButtonDisabledHint {
+  position: relative;
+}
+
+.selectionPanel {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: $radius-md;
+  border: 1px solid rgba($navy, 0.08);
+  background: $white;
+  box-shadow: 0 4px 24px rgba($navy, 0.06);
+}
+
+.metaChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.metaChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.65rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.metaChipVisible {
+  background: rgba($green, 0.12);
+  color: $green;
+}
+
+.metaChipHidden {
+  background: rgba($navy, 0.08);
+  color: rgba($navy, 0.62);
+}
+
+.metaChipActive {
+  background: rgba($blue, 0.1);
+  color: $blue;
+}
+
+.metaChipInactive {
+  background: rgba($navy, 0.06);
+  color: rgba($navy, 0.55);
+}
+
+.metaChipAmber {
+  background: $amber-soft;
+  color: $amber;
+}
+
+.listDescription {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgba($navy, 0.62);
+}
+
+.inlineError {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.75rem 0.95rem;
+  border-radius: $radius-md;
+  border: 1px solid rgba(#c0392b, 0.18);
+  background: rgba(#c0392b, 0.06);
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #9b2c2c;
+}
+
+.successBanner {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.75rem 0.95rem;
+  border-radius: $radius-md;
+  border: 1px solid rgba($green, 0.22);
+  background: rgba($green, 0.08);
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: darken($green, 8%);
+  animation: bannerFadeIn 0.25s ease-out;
+}
+
+@keyframes bannerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tablePanel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: $radius-md;
+  border: 1px solid rgba($navy, 0.08);
+  border-top: 3px solid $amber;
+  background: $white;
+  box-shadow: 0 4px 24px rgba($navy, 0.06);
+  overflow: hidden;
+}
+
+.tableWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba($amber, 0.35) transparent;
+}
+
+.priceTable {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: $navy;
+
+  th,
+  td {
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid $ledger-line;
+    border-right: 1px solid $ledger-line;
+    text-align: left;
+    vertical-align: middle;
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: $navy-light;
+    background: $white;
+    box-shadow: inset 0 -1px 0 $ledger-line;
+    white-space: nowrap;
+  }
+
+  tbody tr:nth-child(even) {
+    background: $row-zebra;
+  }
+
+  tbody tr {
+    transition: background-color 0.12s ease;
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        background: rgba($blue, 0.04);
+      }
+    }
+  }
+}
+
+.priceHeaderPrice {
+  color: $amber;
+}
+
+.stickyCodeColumn {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: inherit;
+  box-shadow: 2px 0 6px rgba($navy, 0.04);
+}
+
+.priceTable thead .stickyCodeColumn {
+  z-index: 3;
+  background: $white;
+}
+
+.cellCode {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cellPrice {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: darken($amber, 6%);
+}
+
+.cellText {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tableHeaderInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.tableHeaderLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.tableHeaderLine {
+  display: block;
+  line-height: 1.25;
+}
+
+.tableHeaderMenuWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tableHeaderMenuTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  border: none;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: rgba($navy, 0.55);
+  cursor: pointer;
+
+  @media (hover: none) {
+    opacity: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    opacity: 0;
+  }
+
+  tr:hover &,
+  th:hover &,
+  th:focus-within & {
+    opacity: 1;
+  }
+
+  &:hover {
+    background: rgba($navy, 0.06);
+    color: $navy;
+  }
+}
+
+.tableHeaderMenu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 5;
+  min-width: 9rem;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  background: $white;
+  box-shadow: 0 8px 24px rgba($navy, 0.12);
+}
+
+.tableHeaderMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  border-radius: $radius-sm;
+  background: transparent;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  color: $navy;
+  text-align: left;
+  cursor: pointer;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: rgba($blue, 0.06);
+  }
+}
+
+.tableStatePanel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 12rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+.tableStateIcon {
+  width: 3.5rem;
+  height: 3.5rem;
+  color: $amber;
+  opacity: 0.85;
+}
+
+.tableStateTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: rgba($navy, 0.78);
+}
+
+.tableStateText {
+  margin: 0;
+  max-width: 28rem;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba($navy, 0.58);
+}
+
+.skeletonTable {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.skeletonRow {
+  height: 2.25rem;
+  border-radius: $radius-sm;
+  background: linear-gradient(
+    90deg,
+    rgba($navy, 0.04) 0%,
+    rgba($navy, 0.08) 50%,
+    rgba($navy, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.tableFooter {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 1rem;
+  border-top: 1px solid $ledger-line;
+  background: $white;
+}
+
+.tableSummary {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: rgba($navy, 0.62);
+}
+
+.tablePagination {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.paginationButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: $white;
+  color: $navy;
+  cursor: pointer;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.04);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.paginationLabel {
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba($navy, 0.72);
+  white-space: nowrap;
+}
+
+.tbodyFade {
+  animation: tbodyFadeIn 0.15s ease-out;
+}
+
+@keyframes tbodyFadeIn {
+  from {
+    opacity: 0.55;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.emptyStateCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  min-height: 2.35rem;
+  padding: 0.45rem 1rem;
+  border: 1px solid rgba($blue, 0.35);
+  border-radius: 999px;
+  background: rgba($blue, 0.06);
+  color: $blue;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($blue, 0.12);
+  }
+}
+
+.actionsColumn {
+  width: 5.5rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.rowActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: 0.35rem;
+  background: rgba($white, 0.9);
+  color: $navy;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($amber, 0.12);
+    border-color: rgba($amber, 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .successBanner,
+  .tbodyFade,
+  .skeletonRow {
+    animation: none;
+  }
+
+  .priceTable tbody tr {
+    transition: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .headerSearchWrap {
+    flex-basis: 100%;
+    max-width: none;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .body {
+    overflow: auto;
+  }
+
+  .metaChipUpdated {
+    display: none;
+  }
+}

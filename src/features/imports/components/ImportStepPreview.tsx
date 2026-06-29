@@ -7,8 +7,10 @@ import styles from "./ImportWizard.module.scss";
 
 type ImportStepPreviewProps = {
   preview: ImportPreviewResponse;
+  mode?: "CATALOG_FOLDER" | "PRICE_LIST";
   catalogName: string;
   folderName: string;
+  priceListName: string;
   sheetName: string;
   selectedAction: ImportActionType | null;
   onSelectAction: (action: ImportActionType) => void;
@@ -16,46 +18,75 @@ type ImportStepPreviewProps = {
 
 export function ImportStepPreview({
   preview,
+  mode = "CATALOG_FOLDER",
   catalogName,
   folderName,
+  priceListName,
   sheetName,
   selectedAction,
   onSelectAction,
 }: ImportStepPreviewProps) {
   const { summary, warnings } = preview;
   const repeatedColumns = summary.repeatedColumns ?? [];
+  const isPriceMode = mode === "PRICE_LIST";
+  const totalRows = isPriceMode
+    ? (summary.totalItems ?? 0)
+    : (summary.totalProducts ?? 0);
+  const destinationIsEmpty = isPriceMode
+    ? summary.priceListIsEmpty
+    : summary.folderIsEmpty;
+  const existingCount = isPriceMode
+    ? (summary.priceListItemCount ?? 0)
+    : (summary.folderProductCount ?? 0);
 
   return (
     <div>
       <p className={styles.destinationInfo}>
         Importando hoja{" "}
         <strong className={styles.destinationInfoBold}>{sheetName}</strong> en
-        catálogo{" "}
-        <strong className={styles.destinationInfoBold}>{catalogName}</strong>,
-        carpeta:{" "}
-        <strong className={styles.destinationInfoBold}>{folderName}</strong>
+        {isPriceMode ? (
+          <>
+            {" "}
+            lista de precios{" "}
+            <strong className={styles.destinationInfoBold}>{priceListName}</strong>
+          </>
+        ) : (
+          <>
+            {" "}
+            catálogo{" "}
+            <strong className={styles.destinationInfoBold}>{catalogName}</strong>,
+            carpeta:{" "}
+            <strong className={styles.destinationInfoBold}>{folderName}</strong>
+          </>
+        )}
       </p>
 
       <div className={styles.summaryGrid}>
         <div className={styles.summaryCard}>
-          <div className={styles.summaryValue}>{summary.totalProducts}</div>
-          <div className={styles.summaryLabel}>Productos detectados</div>
+          <div className={styles.summaryValue}>{totalRows}</div>
+          <div className={styles.summaryLabel}>
+            {isPriceMode ? "Ítems detectados" : "Productos detectados"}
+          </div>
         </div>
         <div className={styles.summaryCard}>
           <div className={`${styles.summaryValue} ${styles.summaryValueMatch}`}>
             {summary.matchedCount}
           </div>
-          <div className={styles.summaryLabel}>Ya existen en la carpeta</div>
+          <div className={styles.summaryLabel}>
+            {isPriceMode ? "Ya existen en la lista" : "Ya existen en la carpeta"}
+          </div>
         </div>
         <div className={styles.summaryCard}>
           <div className={styles.summaryValue}>{summary.columnCount}</div>
           <div className={styles.summaryLabel}>Columnas</div>
         </div>
-        <div className={styles.summaryCard}>
-          <div className={styles.summaryValue}>{summary.embeddedImagesDetected}</div>
-          <div className={styles.summaryLabel}>Imágenes embebidas</div>
-        </div>
-        {summary.productsWithMultipleEmbeddedImages > 0 ? (
+        {!isPriceMode ? (
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryValue}>{summary.embeddedImagesDetected ?? 0}</div>
+            <div className={styles.summaryLabel}>Imágenes embebidas</div>
+          </div>
+        ) : null}
+        {!isPriceMode && (summary.productsWithMultipleEmbeddedImages ?? 0) > 0 ? (
           <div className={styles.summaryCard}>
             <div className={styles.summaryValue}>
               {summary.productsWithMultipleEmbeddedImages}
@@ -65,7 +96,8 @@ export function ImportStepPreview({
         ) : null}
       </div>
 
-      {summary.embeddedImagesDetected > summary.totalProducts ? (
+      {!isPriceMode &&
+      (summary.embeddedImagesDetected ?? 0) > (summary.totalProducts ?? 0) ? (
         <p className={styles.sheetNote}>
           Se detectaron {summary.embeddedImagesDetected} imágenes embebidas en{" "}
           {summary.rowsWithEmbeddedImages} filas del Excel ({summary.totalProducts}{" "}
@@ -105,7 +137,7 @@ export function ImportStepPreview({
 
       <p className={styles.sectionLabel}>¿Qué desea hacer?</p>
 
-      {summary.folderIsEmpty ? (
+      {destinationIsEmpty ? (
         <div className={styles.actionChoices}>
           <button
             type="button"
@@ -118,8 +150,9 @@ export function ImportStepPreview({
             <span className={styles.actionChoiceContent}>
               <span className={styles.actionChoiceTitle}>Importar lista</span>
               <span className={styles.actionChoiceText}>
-                La carpeta está vacía. Se agregarán los {summary.totalProducts}{" "}
-                productos detectados.
+                {isPriceMode
+                  ? `La lista está vacía. Se agregarán los ${totalRows} ítems detectados.`
+                  : `La carpeta está vacía. Se agregarán los ${totalRows} productos detectados.`}
               </span>
             </span>
           </button>
@@ -134,8 +167,9 @@ export function ImportStepPreview({
             <span className={styles.actionChoiceContent}>
               <span className={styles.actionChoiceTitle}>Combinar</span>
               <span className={styles.actionChoiceText}>
-                Mantiene los {summary.folderProductCount} productos actuales y
-                agrega solo los nuevos.
+                {isPriceMode
+                  ? `Mantiene los ${existingCount} ítems actuales y agrega solo los nuevos.`
+                  : `Mantiene los ${existingCount} productos actuales y agrega solo los nuevos.`}
               </span>
             </span>
           </button>
@@ -150,8 +184,9 @@ export function ImportStepPreview({
             <span className={styles.actionChoiceContent}>
               <span className={styles.actionChoiceTitle}>Reemplazar</span>
               <span className={styles.actionChoiceText}>
-                Borra los {summary.folderProductCount} productos actuales y los
-                sustituye por la nueva lista.
+                {isPriceMode
+                  ? `Borra los ${existingCount} ítems actuales y los sustituye por la nueva lista.`
+                  : `Borra los ${existingCount} productos actuales y los sustituye por la nueva lista.`}
               </span>
             </span>
           </button>

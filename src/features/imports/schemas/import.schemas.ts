@@ -23,8 +23,13 @@ export const importConfigSchema = z
     primaryCodeColumnKey: z.string().min(1).optional(),
     descriptionColumnKey: z.string().min(1).optional(),
     useGeneratedPrimaryCodes: z.boolean().optional(),
+    skipImageZipValidation: z.boolean().optional(),
   })
   .superRefine((data, context) => {
+    if (data.skipImageZipValidation) {
+      return;
+    }
+
     if (!data.useGeneratedPrimaryCodes && !data.primaryCodeColumnKey) {
       context.addIssue({
         code: "custom",
@@ -34,6 +39,13 @@ export const importConfigSchema = z
       });
     }
   });
+
+export const setPriceImportDestinationInputSchema = z.object({
+  jobId: z.string().min(1),
+  destinationType: z.literal("PRICE_LIST"),
+  priceListId: z.string().min(1),
+  sheetName: z.string().min(1),
+});
 
 export const importApplySchema = z.object({
   jobId: z.string().min(1),

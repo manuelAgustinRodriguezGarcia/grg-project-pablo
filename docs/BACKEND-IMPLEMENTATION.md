@@ -27,7 +27,7 @@
 | **Modelos** | `User`, `Catalog`, `CatalogFolder`, `FolderColumn`, `Product`, `EquivalentCode`, `ProductImage`, `UploadedFile`, `ImportJob` (+ sheets/preview), `GlobalField`, `PriceList`/`PriceColumn`/`PriceItem`, `OfflineSyncManifest`, `AuditLog` |
 | **Servicios** | Auth, Users, Catalog, Folder, Column, Product, Equivalence, Visibility, Navigation, Directory, ExcelStructure, Audit, CatalogImport, Image*, Search, ColumnFilter, GlobalField, UploadedFile, Price*, OfflineSync |
 | **Pendiente backend** | Fase 10 (pruebas, despliegue, RF-004 dominio) |
-| **Pendiente UI** | Integración frontend (`/admin/precios`, PWA offline, formularios, buscador, importador, etc.) |
+| **Pendiente UI** | PWA offline, buscador global |
 
 **Glosario:** Carpeta = `CatalogFolder` · Producto = `Product` · Usuario normal = `CONSULTA` · Admin = `ADMIN`
 
@@ -103,7 +103,7 @@ Resumen compacto. Contratos API: [`ENDPOINTS.md`](./ENDPOINTS.md).
 | RF-042–044 | Columnas, archivos, publicación segura | ✅ |
 | RF-045–047 | Offline | ✅ backend · ⏳ PWA |
 | RF-048–052 | Nombres columnas, ayuda contextual | ✅ backend · ⏳ UI |
-| RF-053–059 | Precios | ✅ backend · ⏳ UI |
+| RF-053–059 | Precios | ✅ backend · ✅ UI admin (`/admin/precios`: import Excel, CRUD ítems/columnas) |
 
 **No MVP (PRD §49):** macros, edición Excel web, OCR/IA, multiempresa, facturación/stock, NestJS.
 
@@ -132,6 +132,60 @@ Pablo deja el pendrive; directorio automático; hojas → carpetas; búsqueda si
 ### 6.4 Supuestos (PRD §52)
 
 Pablo confirma columnas visibles/buscables/filtrables; imágenes externas con nombres originales; asociaciones pueden requerir revisión manual; fórmulas sin garantía de valor calculado; offline requiere sync previa.
+
+---
+
+## 7. UI Precios (admin) ✅
+
+**Ruta:** `/admin/precios` · **Orquestador:** `src/features/prices/components/PriceNavigator.tsx`
+
+### 7.1 Componentes entregados
+
+| Componente | Rol |
+|------------|-----|
+| `PricePageChrome` | Título + búsqueda funcional en lista activa (`q`, debounce 300ms) |
+| `PriceToolbar` | Importar Excel, agregar ítem/columna, vaciar lista, editar/eliminar lista |
+| `PriceListSelectorPanel` | Selector de lista (`CustomDropdown`) + chips de estado |
+| `PriceItemTable` | Tabla dinámica paginada, edición de columnas (admin) |
+| `PriceListFormModal` | Crear/editar lista (nombre, descripción, estado, visibilidad) |
+| `PriceItemFormModal` | Crear/editar ítem (`POST` / `PATCH …/items/{itemId}`) |
+| `PriceColumnEditModal` | Editar/eliminar columna (`PATCH` / `DELETE …/columns/{columnId}`) |
+| `PriceColumnCreateModal` | Crear columna manual (`POST …/columns`) |
+
+**Estilos:** `src/features/prices/styles/` — estética “libro mayor industrial” (acento ámbar, tabla densa).
+
+### 7.2 Mapeo endpoint / action → pantalla
+
+| Operación | Canal | Consumidor UI |
+|-----------|-------|---------------|
+| Listar listas (SSR) | `listPriceListsAction` | `page.tsx` → `PriceNavigator` |
+| Crear / editar / eliminar lista | `create/update/deletePriceListAction` | `PriceListFormModal`, `ConfirmDialog` |
+| Vaciar ítems | `clearPriceListAction` | `ConfirmDialog` desde toolbar |
+| Tabla ítems paginada + búsqueda | `GET …/items?page&pageSize&q` | `PriceItemTable` |
+| Crear ítem | `POST …/items` | `PriceItemFormModal` |
+| Editar ítem | `PATCH …/items/{itemId}` | `PriceItemFormModal` (modo edición) |
+| Eliminar ítem | `DELETE …/items/{itemId}` | `ConfirmDialog` desde `PriceItemTable` |
+| Listar columnas (admin) | `GET …/columns` | `PriceNavigator` (config formularios) |
+| Crear columna | `POST …/columns` | `PriceColumnCreateModal` |
+| Editar columna | `PATCH …/columns` | `PriceColumnEditModal` |
+| Eliminar columna | `DELETE …/columns/{columnId}` | `PriceColumnEditModal` |
+| Reordenar columnas | `POST …/columns/reorder` | Menú cabecera en `PriceColumnHeaderCell` |
+
+**Importación Excel:** botón en toolbar → `ImportWizard` con `mode="PRICE_LIST"` → `setPriceImportDestinationAction` (sin paso imágenes).
+
+**Visibilidad:** rol `CONSULTA` ve listas/columnas filtradas por `visibilityService`; sin acciones de escritura.
+
+### 7.3 Importación Excel → `PRICE_LIST` ✅
+
+Cableado en backend y UI. Flujo: subir Excel → elegir lista + hoja → columnas → vista previa → aplicar (`IMPORTAR_LISTA` | `COMBINAR_LISTA` | `REEMPLAZAR_LISTA`).
+
+| Pieza | Ubicación |
+|-------|-----------|
+| Apply sin `folderId` | `catalog-import.service.ts` — rama `PRICE_LIST` antes del guard de carpeta |
+| Destino precios | `setPriceImportDestinationAction` + `setPriceImportDestinationInputSchema` |
+| Servicio apply | `price-import.service.ts` |
+| UI wizard | `ImportWizard` (`mode`, `priceLists`, `initialPriceListId`), `ImportStepPriceDestination` |
+| Entrada admin | `/admin/precios` → `PriceNavigator` |
 
 ---
 

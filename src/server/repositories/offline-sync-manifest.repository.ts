@@ -61,11 +61,8 @@ export class OfflineSyncManifestRepository {
   }
 
   async getMaxVersionForUser(userId: string): Promise<number> {
-    const result = await prisma.offlineSyncManifest.aggregate({
-      where: { userId },
-      _max: { version: true },
-    });
-    return result._max.version ?? 0;
+    const latest = await this.findLatestByUser(userId);
+    return latest?.version ?? 0;
   }
 }
 

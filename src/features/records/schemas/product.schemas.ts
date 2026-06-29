@@ -5,6 +5,8 @@ export const productPaginationQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 
+export type ProductPaginationQuery = z.infer<typeof productPaginationQuerySchema>;
+
 export const productValuesSchema = z.record(z.string(), z.unknown());
 
 export const createProductBodySchema = z.object({

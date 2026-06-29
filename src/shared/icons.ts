@@ -1,6 +1,7 @@
 export {
   AlertTriangle,
   Archive,
+  Banknote,
   ArrowLeft,
   ArrowRight,
   Camera,
@@ -9,6 +10,7 @@ export {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   EllipsisVertical,
   Clock,
   Cog,
@@ -31,6 +33,7 @@ export {
   Phone,
   Plus,
   Pointer,
+  Receipt,
   RefreshCcw,
   Route,
   Search,

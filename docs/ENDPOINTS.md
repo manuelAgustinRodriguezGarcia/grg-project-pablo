@@ -114,9 +114,13 @@ Actions: `src/features/files/actions/uploaded-file.actions.ts`
 | `GET/PATCH/DELETE` | `/api/admin/price-lists/{priceListId}` | CRUD lista |
 | `POST` | `/api/admin/price-lists/{priceListId}/clear` | `{ deletedCount }` |
 | `GET/POST` | `/api/admin/price-lists/{priceListId}/items` | Tabla paginada + crear ítem |
-| `GET/PATCH` | `/api/admin/price-lists/{priceListId}/columns` | Config columnas |
+| `PATCH/DELETE` | `/api/admin/price-lists/{priceListId}/items/{itemId}` | Editar / eliminar ítem |
+| `GET/POST` | `/api/admin/price-lists/{priceListId}/columns` | Listar + crear columna |
+| `PATCH` | `/api/admin/price-lists/{priceListId}/columns` | Editar columna (body con `id`) |
+| `DELETE` | `/api/admin/price-lists/{priceListId}/columns/{columnId}` | Eliminar columna |
+| `POST` | `/api/admin/price-lists/{priceListId}/columns/reorder` | `{ items: [{ id, order }] }` |
 
-Import destino precios: `destinationType: "PRICE_LIST"` en `setImportDestinationAction`. Actions: `src/features/prices/actions/price-list.actions.ts`
+Import destino precios: `setPriceImportDestinationAction` en `import.actions.ts` (schema `setPriceImportDestinationInputSchema`). UI: `/admin/precios` → `ImportWizard` con `mode="PRICE_LIST"`. Actions listas: `src/features/prices/actions/price-list.actions.ts`
 
 ### Offline sync (RF-045–047)
 
@@ -226,19 +230,25 @@ Gestión de usuarios (solo `ADMIN`).
 
 ---
 
-### `/admin/precios` ❌ (RF-053–059)
+### `/admin/precios` ✅ (RF-053–059, parcial)
 
-Sección de listas de precios independientes de catálogos. Backend completo; falta UI.
+UI admin de listas de precios en `src/features/prices/components/PriceNavigator.tsx`.
 
-**Funcionalidades esperadas:**
+**Implementado:**
 
-1. **Listado** — `GET /api/admin/price-lists` o `listPriceListsAction`
-2. **CRUD lista** — crear, editar nombre/descripción/visibilidad, eliminar
-3. **Config columnas** — `GET/PATCH …/columns` (displayName, visibilidad, flags semánticos, ayuda)
-4. **Tabla ítems** — `GET …/items?page&pageSize&q` paginada
-5. **CRUD ítem manual** — `POST …/items` con `{ values: { codigo, precio, … } }`
-6. **Vaciar lista** — `POST …/clear` con confirmación
-7. **Import Excel** — wizard existente con destino:
+1. **Listado** — SSR con `listPriceListsAction` + refresh vía API
+2. **CRUD lista** — `create/update/deletePriceListAction` + modal de formulario
+3. **Config columnas** — `GET/PATCH …/columns` (modal edición; sin imagen de ayuda)
+4. **Tabla ítems** — `GET …/items?page&pageSize&q` paginada con búsqueda debounced
+5. **Crear ítem manual** — `POST …/items` con `{ values: { … } }`
+6. **Editar / eliminar ítem** — `PATCH/DELETE …/items/{itemId}`
+7. **CRUD columnas** — crear (`POST`), editar (`PATCH`), eliminar (`DELETE`), reordenar (`POST …/reorder`)
+8. **Import Excel** — `ImportWizard` con `mode="PRICE_LIST"` desde toolbar
+9. **Vaciar lista** — `clearPriceListAction` + confirmación
+
+**Visibilidad:** `CONSULTA` solo ve listas/columnas con `visibleToNormalUser = true`.
+
+**Contrato import precios:**
 
 ```json
 {
@@ -248,9 +258,7 @@ Sección de listas de precios independientes de catálogos. Backend completo; fa
 }
 ```
 
-Flujo: upload → analyze → destination → config → preview → apply (`IMPORTAR_LISTA` | `COMBINAR_LISTA` | `REEMPLAZAR_LISTA`) → `PUBLISHED` (sin imágenes).
-
-**Visibilidad:** `CONSULTA` solo ve listas/columnas con `visibleToNormalUser = true`.
+Flujo esperado: upload → analyze → destination → config → preview → apply (`IMPORTAR_LISTA` | `COMBINAR_LISTA` | `REEMPLAZAR_LISTA`) → `PUBLISHED` (sin imágenes).
 
 ---
 
@@ -268,6 +276,7 @@ Cablear mocks y placeholders a APIs ya documentadas en § REST implementados.
 | Ayuda columnas | ícono Info, popover, modal | `columns/{id}/help`, `hasContextualHelp` |
 | Archivos subidos | `/admin/archivos` | files REST + actions |
 | Admin catálogos/carpetas/columnas | formularios CRUD | catalog/folder/column actions |
+| Admin precios | `/admin/precios` (`PriceNavigator`) | price-list actions + price-lists REST |
 
 ---
 
@@ -324,6 +333,6 @@ GET /api/admin/sync/price-lists/{priceListId}?cursor=&chunkSize=500
 | Importador | `src/features/imports/`, `catalog-import.service.ts`, `src/server/importers/` |
 | Archivos | `src/features/files/`, `uploaded-file.service.ts` |
 | Imágenes | `src/server/image-processors/`, `product-image.service.ts` |
-| Precios | `src/features/prices/`, `price-*.service.ts` |
+| Precios | `src/features/prices/`, `price-*.service.ts`, `/admin/precios` |
 | Offline | `src/features/offline/`, `offline-sync.service.ts` |
 | Directorio | `directory.types.ts`, `directory/route.ts` |

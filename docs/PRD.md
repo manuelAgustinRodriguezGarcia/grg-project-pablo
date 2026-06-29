@@ -185,7 +185,7 @@ Al **25/06/2026** (rama `backend`). Detalle técnico y contratos en [`BACKEND-IM
 | Búsqueda y filtros (API)                                 | ✅      |
 | Ayuda contextual columnas (API + Storage)                | ✅      |
 | Archivos subidos (listado, descarga, reproceso)          | ✅ Backend Fase 8 / ⏳ UI |
-| Precios (dominio + importación Excel)                    | ✅ Backend RF-053–059 · ⏳ UI |
+| Precios (dominio + importación Excel)                    | ✅ Backend RF-053–059 · ✅ UI admin `/admin/precios` |
 | Offline (sync, manifest)                                   | ✅ Backend Fase 9 · ⏳ UI/PWA |
 
 > Las **fases del roadmap PRD (§48)** no coinciden 1:1 con las fases backend. Ver tabla de mapeo en [`BACKEND-IMPLEMENTATION.md` §1.1](./BACKEND-IMPLEMENTATION.md#11-roadmap-prd--backend).  
