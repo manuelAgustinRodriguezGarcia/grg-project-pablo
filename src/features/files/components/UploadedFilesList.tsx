@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import Link from "next/link";
 import {
   Archive,
@@ -8,7 +9,6 @@ import {
   Eye,
   FileDown,
   ICON_STROKE,
-  TableProperties,
 } from "@/shared/icons";
 import { ImportJobStatusBadge } from "@/features/files/components/ImportJobStatusBadge";
 import type { UploadedFileListResponse } from "@/features/files/types/uploaded-file.types";
@@ -60,17 +60,12 @@ export function UploadedFilesList({
   if (isLoading) {
     return (
       <section
-        className={`${catalogStyles.tablePanel} ${catalogStyles.tablePanelLoading}`}
+        className={catalogStyles.tablePanel}
         aria-label="Listado de archivos"
         aria-busy="true"
       >
-        <div className={catalogStyles.tableLoading} role="status" aria-live="polite">
-          <TableProperties
-            className={catalogStyles.tableLoadingIcon}
-            strokeWidth={ICON_STROKE}
-            aria-hidden
-          />
-          <p className={catalogStyles.tableLoadingText}>Cargando archivos</p>
+        <div className={catalogStyles.tableWrap}>
+          <AdminTableSkeleton variant="files" label="Cargando archivos" />
         </div>
       </section>
     );

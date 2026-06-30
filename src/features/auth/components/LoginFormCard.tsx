@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { ADMIN_HOME_PATH } from "@/server/auth/config";
 import { loginFormAction } from "@/features/auth/actions/login-form.action";
+import {
+  clearRememberedEmail,
+  readRememberedEmail,
+  writeRememberedEmail,
+} from "@/features/auth/lib/login-credentials.storage";
 import type { AuthActionResult } from "@/server/auth/types";
 import sharedStyles from "../styles/loginShared.module.scss";
 import { Eye, EyeOff, Home, Info, Lock, Mail, ICON_STROKE } from "@/shared/icons";
@@ -15,15 +20,34 @@ type LoginFormCardProps = {
 
 export function LoginFormCard({ redirectTo = ADMIN_HOME_PATH }: LoginFormCardProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [rememberEmail, setRememberEmail] = useState(false);
   const [state, formAction, isPending] = useActionState<
     AuthActionResult | null,
     FormData
   >(loginFormAction, null);
 
+  useEffect(() => {
+    const rememberedEmail = readRememberedEmail();
+    if (rememberedEmail) {
+      setEmail(rememberedEmail);
+      setRememberEmail(true);
+    }
+  }, []);
+
+  function handleSubmit() {
+    if (rememberEmail) {
+      writeRememberedEmail(email);
+    } else {
+      clearRememberedEmail();
+    }
+  }
+
   return (
     <div className={styles.wrapper}>
       <form
         action={formAction}
+        onSubmit={handleSubmit}
         className={`${styles.card} ${sharedStyles.animateSlideUp} ${sharedStyles.animateDelay1}`}
         aria-labelledby="login-heading"
         noValidate
@@ -50,6 +74,8 @@ export function LoginFormCard({ redirectTo = ADMIN_HOME_PATH }: LoginFormCardPro
             className={styles.input}
             type="email"
             name="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             placeholder="ejemplo@empresa.com"
             autoComplete="email"
             required
@@ -90,6 +116,20 @@ export function LoginFormCard({ redirectTo = ADMIN_HOME_PATH }: LoginFormCardPro
             )}
           </button>
         </div>
+      </div>
+
+      <div className={styles.rememberRow}>
+        <input
+          id="login-remember-email"
+          className={styles.rememberCheckbox}
+          type="checkbox"
+          checked={rememberEmail}
+          onChange={(event) => setRememberEmail(event.target.checked)}
+          disabled={isPending}
+        />
+        <label className={styles.rememberLabel} htmlFor="login-remember-email">
+          Recordar mi correo
+        </label>
       </div>
 
       <button

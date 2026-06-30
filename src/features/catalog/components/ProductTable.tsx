@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, File, ICON_STROKE, TableProperties } from "@/shared/icons";
+import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
+import { ChevronLeft, ChevronRight, File, ICON_STROKE } from "@/shared/icons";
 import type {
   ProductTablePrimaryImage,
   ProductTableItem,
   ProductTableResponse,
 } from "@/features/catalog/types/product-table.types";
-import type { ColumnListItem } from "@/features/catalog/types/column.types";
-import { ColumnEditModal } from "@/features/catalog/components/ColumnEditModal";
 import { ColumnHeaderCell } from "@/features/catalog/components/ColumnHeaderCell";
 import { ProductImagePreviewModal } from "./ProductImagePreviewModal";
 import { getProductTableColumns } from "@/features/catalog/utils/product-table-columns";
@@ -19,9 +18,7 @@ type ProductTableProps = {
   data: ProductTableResponse | null;
   isLoading: boolean;
   error: string | null;
-  isAdmin?: boolean;
   onPageChange: (page: number) => void;
-  onColumnUpdated?: (column: ColumnListItem) => void;
 };
 
 function formatTableHeaderLines(displayName: string): string[] {
@@ -128,30 +125,22 @@ export function ProductTable({
   data,
   isLoading,
   error,
-  isAdmin = false,
   onPageChange,
-  onColumnUpdated,
 }: ProductTableProps) {
   const [previewImage, setPreviewImage] = useState<{
     url: string;
     alt: string;
   } | null>(null);
-  const [editingColumn, setEditingColumn] = useState<ColumnListItem | null>(null);
 
   if (isLoading) {
     return (
       <section
-        className={`${styles.tablePanel} ${styles.tablePanelLoading}`}
+        className={styles.tablePanel}
         aria-label="Tabla de productos"
         aria-busy="true"
       >
-        <div className={styles.tableLoading} role="status" aria-live="polite">
-          <TableProperties
-            className={styles.tableLoadingIcon}
-            strokeWidth={ICON_STROKE}
-            aria-hidden
-          />
-          <p className={styles.tableLoadingText}>Cargando productos</p>
+        <div className={styles.tableWrap}>
+          <AdminTableSkeleton variant="catalog" label="Cargando productos" />
         </div>
       </section>
     );
@@ -210,9 +199,6 @@ export function ProductTable({
                   key={column.id}
                   column={column}
                   headerLines={formatTableHeaderLines(column.displayName)}
-                  isAdmin={isAdmin}
-                  onEdit={() => setEditingColumn(column)}
-                  onColumnUpdated={onColumnUpdated}
                 />
               ))}
             </tr>
@@ -374,18 +360,6 @@ export function ProductTable({
           imageUrl={previewImage.url}
           imageAlt={previewImage.alt}
           onClose={() => setPreviewImage(null)}
-        />
-      ) : null}
-
-      {editingColumn && isAdmin ? (
-        <ColumnEditModal
-          key={editingColumn.id}
-          column={editingColumn}
-          onClose={() => setEditingColumn(null)}
-          onSaved={(updated) => {
-            onColumnUpdated?.(updated);
-            setEditingColumn(null);
-          }}
         />
       ) : null}
     </section>
