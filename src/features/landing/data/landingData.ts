@@ -87,7 +87,7 @@ const VEHICULOS_BRANDS = interleaveBrands(
 
 const MARCAS_REPUESTOS_BRANDS: readonly Brand[] = [
   { name: "Indiel" },
-  { name: "Exintrader" },
+  { name: "Exintrader", logoSrc: marcaLogo("exintrader.png") },
   { name: "Baiml", logoSrc: marcaLogo("BAIML.svg") },
   { name: "Mahle", logoSrc: marcaLogo("MAHLE.svg") },
   { name: "Bosch", logoSrc: marcaLogo("BOSCH.svg") },
@@ -100,9 +100,9 @@ const MARCAS_REPUESTOS_BRANDS: readonly Brand[] = [
   { name: "THE Crapodinas" },
   { name: "Dayco", logoSrc: marcaLogo("dayco-3.svg") },
   { name: "RG Frenos", logoSrc: marcaLogo("RG-FRENOS.svg") },
-  { name: "Tecnofricción" },
+  { name: "Tecnofricción", logoSrc: marcaLogo("tecno-friccion.png") },
   { name: "Wabco", logoSrc: marcaLogo("WABCO.svg") },
-  { name: "Trucktec" },
+  { name: "Trucktec", logoSrc: marcaLogo("trucktec.png") },
   { name: "Tifec" },
   { name: "Euroricambi" },
   { name: "FLRS Embragues" },
@@ -113,7 +113,7 @@ const MARCAS_REPUESTOS_BRANDS: readonly Brand[] = [
   { name: "Correas ABIX" },
   { name: "Kobla" },
   { name: "Establecimiento Metalúrgico San Francisco" },
-  { name: "Wheel Componentes de Acoplados" },
+  { name: "Wheel Componentes de Acoplados", logoSrc: marcaLogo("wheel-logo.png") },
   { name: "ED-MA Componentes Cardánicos Agrícolas" },
 ];
 
