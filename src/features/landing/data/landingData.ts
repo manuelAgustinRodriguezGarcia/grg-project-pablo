@@ -3,7 +3,7 @@ export type Brand = {
   logoSrc?: string;
 };
 
-/** Ruta de logo en /public/marcas. Agregar logoSrc al subir el archivo SVG. */
+/** Ruta de logo en /public/marcas (SVG, PNG, JPG, WebP, etc.). */
 export const marcaLogo = (filename: string) => `/marcas/${filename}` as const;
 
 /** Incrementar al reemplazar archivos en public/banner/ con el mismo nombre. */
@@ -86,35 +86,41 @@ const VEHICULOS_BRANDS = interleaveBrands(
 );
 
 const MARCAS_REPUESTOS_BRANDS: readonly Brand[] = [
-  { name: "Indiel" },
-  { name: "Exintrader" },
+  { name: "Indiel", logoSrc: marcaLogo("indiel.jpg") },
+  { name: "Exintrader", logoSrc: marcaLogo("exintrader.png") },
   { name: "Baiml", logoSrc: marcaLogo("BAIML.svg") },
   { name: "Mahle", logoSrc: marcaLogo("MAHLE.svg") },
   { name: "Bosch", logoSrc: marcaLogo("BOSCH.svg") },
-  { name: "Hasting" },
+  { name: "Hasting", logoSrc: marcaLogo("hasting.png") },
   { name: "SKF", logoSrc: marcaLogo("SFK.svg") },
   { name: "Timken", logoSrc: marcaLogo("TIMKEN.svg") },
   { name: "RSK Rodamientos", logoSrc: marcaLogo("RSK.svg") },
   { name: "SAV Retenes", logoSrc: marcaLogo("SAV-RETENES.svg") },
   { name: "Etma Crucetas", logoSrc: marcaLogo("ETMA.svg") },
-  { name: "THE Crapodinas" },
+  { name: "THE Crapodinas", logoSrc: marcaLogo("THE-crapodinas.jpg") },
   { name: "Dayco", logoSrc: marcaLogo("dayco-3.svg") },
   { name: "RG Frenos", logoSrc: marcaLogo("RG-FRENOS.svg") },
-  { name: "Tecnofricción" },
+  { name: "Tecnofricción", logoSrc: marcaLogo("tecnofriccion.png") },
   { name: "Wabco", logoSrc: marcaLogo("WABCO.svg") },
-  { name: "Trucktec" },
-  { name: "Tifec" },
-  { name: "Euroricambi" },
-  { name: "FLRS Embragues" },
-  { name: "Iarmetal" },
-  { name: "Sachs" },
-  { name: "VMG" },
-  { name: "Juntas Pampa" },
-  { name: "Correas ABIX" },
-  { name: "Kobla" },
-  { name: "Establecimiento Metalúrgico San Francisco" },
-  { name: "Wheel Componentes de Acoplados" },
-  { name: "ED-MA Componentes Cardánicos Agrícolas" },
+  { name: "Trucktec", logoSrc: marcaLogo("TRUCKTEC.svg") },
+  { name: "Tifec", logoSrc: marcaLogo("TIFEC.png") },
+  { name: "Euroricambi", logoSrc: marcaLogo("EURORICAMBI.webp") },
+  { name: "FLRS Embragues", logoSrc: marcaLogo("FLRS-EMBRAGUES.jpg") },
+  { name: "Iarmetal", logoSrc: marcaLogo("IAR-METAL.jpeg") },
+  { name: "Sachs", logoSrc: marcaLogo("sachs.jpg") },
+  { name: "VMG", logoSrc: marcaLogo("VMG.png") },
+  { name: "Juntas Pampa", logoSrc: marcaLogo("JUNTAS-PAMPA.png") },
+  { name: "Correas ABIX", logoSrc: marcaLogo("ABIX.jpeg") },
+  { name: "Kobla", logoSrc: marcaLogo("KOBLA.png") },
+  {
+    name: "Establecimiento Metalúrgico San Francisco",
+    logoSrc: marcaLogo("METALURGICO-SAN-FRANCISCO.png"),
+  },
+  { name: "Wheel Componentes de Acoplados", logoSrc: marcaLogo("wheel.png") },
+  {
+    name: "ED-MA Componentes Cardánicos Agrícolas",
+    logoSrc: marcaLogo("ED-MA.png"),
+  },
 ];
 
 export const BRAND_CAROUSEL_ROWS: readonly BrandCarouselRow[] = [
