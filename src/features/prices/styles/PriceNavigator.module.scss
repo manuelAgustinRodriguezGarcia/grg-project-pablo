@@ -415,17 +415,10 @@
   word-break: break-word;
 }
 
-.tableHeaderInner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
 .tableHeaderLabel {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 0.1rem;
   min-width: 0;
 }
@@ -433,84 +426,6 @@
 .tableHeaderLine {
   display: block;
   line-height: 1.25;
-}
-
-.tableHeaderMenuWrap {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.tableHeaderMenuTrigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.65rem;
-  height: 1.65rem;
-  border: none;
-  border-radius: $radius-sm;
-  background: transparent;
-  color: rgba($navy, 0.55);
-  cursor: pointer;
-
-  @media (hover: none) {
-    opacity: 1;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    opacity: 0;
-  }
-
-  tr:hover &,
-  th:hover &,
-  th:focus-within & {
-    opacity: 1;
-  }
-
-  &:hover {
-    background: rgba($navy, 0.06);
-    color: $navy;
-  }
-}
-
-.tableHeaderMenu {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  right: 0;
-  z-index: 5;
-  min-width: 9rem;
-  margin: 0;
-  padding: 0.35rem;
-  list-style: none;
-  border: 1px solid rgba($navy, 0.1);
-  border-radius: $radius-md;
-  background: $white;
-  box-shadow: 0 8px 24px rgba($navy, 0.12);
-}
-
-.tableHeaderMenuItem {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  width: 100%;
-  padding: 0.5rem 0.65rem;
-  border: none;
-  border-radius: $radius-sm;
-  background: transparent;
-  font-family: $font-sans;
-  font-size: 0.84rem;
-  color: $navy;
-  text-align: left;
-  cursor: pointer;
-
-  svg {
-    width: 0.95rem;
-    height: 0.95rem;
-    flex-shrink: 0;
-  }
-
-  &:hover {
-    background: rgba($blue, 0.06);
-  }
 }
 
 .tableStatePanel {
@@ -547,36 +462,6 @@
   font-size: 0.9rem;
   line-height: 1.5;
   color: rgba($navy, 0.58);
-}
-
-.skeletonTable {
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.skeletonRow {
-  height: 2.25rem;
-  border-radius: $radius-sm;
-  background: linear-gradient(
-    90deg,
-    rgba($navy, 0.04) 0%,
-    rgba($navy, 0.08) 50%,
-    rgba($navy, 0.04) 100%
-  );
-  background-size: 200% 100%;
-  animation: skeletonShimmer 1.4s ease-in-out infinite;
-}
-
-@keyframes skeletonShimmer {
-  0% {
-    background-position: 100% 0;
-  }
-
-  100% {
-    background-position: -100% 0;
-  }
 }
 
 .tableFooter {
@@ -736,8 +621,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .successBanner,
-  .tbodyFade,
-  .skeletonRow {
+  .tbodyFade {
     animation: none;
   }
 

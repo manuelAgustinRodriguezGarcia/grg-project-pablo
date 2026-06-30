@@ -2,19 +2,6 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
 
-vi.mock("@/features/catalog/actions/column.actions", () => ({
-  updateColumnAction: vi.fn(),
-  setColumnVisibilityAction: vi.fn(),
-}));
-
-vi.mock("@/features/catalog/actions/column-help.actions", () => ({
-  deleteColumnHelpImageAction: vi.fn(),
-}));
-
-vi.mock("@/features/catalog/utils/column-help.client", () => ({
-  uploadColumnHelpImage: vi.fn(),
-}));
-
 vi.mock("@/features/catalog/styles/CatalogNavigator.module.scss", () => ({
   default: new Proxy(
     {},
@@ -70,13 +57,12 @@ describe("ProductTable", () => {
     cleanup();
   });
 
-  it("muestra el estado de carga a pantalla completa", () => {
+  it("muestra shimmer de carga con estado accesible", () => {
     render(
       <ProductTable data={null} isLoading error={null} onPageChange={vi.fn()} />,
     );
 
-    expect(screen.getByText("Cargando productos")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveAccessibleName("Cargando productos");
     expect(screen.getByLabelText("Tabla de productos")).toHaveAttribute("aria-busy", "true");
   });
 

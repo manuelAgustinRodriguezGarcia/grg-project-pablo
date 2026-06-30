@@ -226,98 +226,6 @@ export function PriceNavigator({
     setPage(nextPage);
   }, []);
 
-  const handleColumnUpdated = useCallback((updated: PriceColumnListItem) => {
-    setItemTable((current) => {
-      if (!current) {
-        return current;
-      }
-
-      return {
-        ...current,
-        columns: current.columns.map((column) =>
-          column.id === updated.id
-            ? {
-                ...column,
-                displayName: updated.displayName,
-                visibleToNormalUser: updated.visibleToNormalUser,
-                isPrimaryCode: updated.isPrimaryCode,
-                isDescription: updated.isDescription,
-                isPrice: updated.isPrice,
-                hasContextualHelp: Boolean(updated.helpText),
-              }
-            : column,
-        ),
-      };
-    });
-
-    setColumnDetails((current) =>
-      current.map((column) => (column.id === updated.id ? updated : column)),
-    );
-  }, []);
-
-  const handleColumnDeleted = useCallback((columnId: string) => {
-    setColumnDetails((current) => current.filter((column) => column.id !== columnId));
-    setItemTable((current) => {
-      if (!current) {
-        return current;
-      }
-
-      return {
-        ...current,
-        columns: current.columns.filter((column) => column.id !== columnId),
-      };
-    });
-    setReloadToken((token) => token + 1);
-    setSuccessMessage("Columna eliminada correctamente.");
-  }, []);
-
-  const handleReorderColumn = useCallback(
-    async (columnId: string, direction: "left" | "right") => {
-      if (!activeListId) {
-        return;
-      }
-
-      const sorted = [...columnDetails].sort((left, right) => left.order - right.order);
-      const index = sorted.findIndex((column) => column.id === columnId);
-      if (index < 0) {
-        return;
-      }
-
-      const swapIndex = direction === "left" ? index - 1 : index + 1;
-      if (swapIndex < 0 || swapIndex >= sorted.length) {
-        return;
-      }
-
-      const reordered = [...sorted];
-      const current = reordered[index]!;
-      const swap = reordered[swapIndex]!;
-      reordered[index] = { ...swap, order: current.order };
-      reordered[swapIndex] = { ...current, order: swap.order };
-
-      const response = await fetch(
-        `/api/admin/price-lists/${activeListId}/columns/reorder`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            items: reordered.map((column, order) => ({ id: column.id, order })),
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        setItemsError(payload?.error ?? "No se pudo reordenar la columna.");
-        return;
-      }
-
-      const payload = (await response.json()) as { columns: PriceColumnListItem[] };
-      setColumnDetails(payload.columns);
-      setReloadToken((token) => token + 1);
-    },
-    [activeListId, columnDetails],
-  );
-
   const refreshListsFromServer = useCallback(async () => {
     const response = await fetch("/api/admin/price-lists");
     if (!response.ok) {
@@ -609,9 +517,6 @@ export function PriceNavigator({
               setListFormMode("create");
             }}
             onImportExcel={isAdmin ? handleImportExcelClick : undefined}
-            onColumnUpdated={handleColumnUpdated}
-            onColumnDeleted={isAdmin ? handleColumnDeleted : undefined}
-            onReorderColumn={isAdmin ? handleReorderColumn : undefined}
             onEditItem={
               isAdmin
                 ? (item) => {

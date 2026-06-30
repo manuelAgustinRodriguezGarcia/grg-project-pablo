@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ChevronLeft, ChevronRight, Pencil, Receipt, Trash2, ICON_STROKE } from "@/shared/icons";
 import { PriceCellValue } from "@/features/prices/components/PriceCellValue";
 import { PriceColumnHeaderCell } from "@/features/prices/components/PriceColumnHeaderCell";
-import { PriceColumnEditModal } from "@/features/prices/components/PriceColumnEditModal";
 import type { PriceItemTableColumn } from "@/features/prices/types/price-item-table.types";
 import type { PriceItemTableResponse } from "@/features/prices/types/price-item-table.types";
 import type { PriceItemTableRow } from "@/features/prices/types/price-item-table.types";
@@ -23,9 +22,6 @@ type PriceItemTableProps = {
   onAddItem: () => void;
   onCreateList: () => void;
   onImportExcel?: () => void;
-  onColumnUpdated: (column: PriceColumnListItem) => void;
-  onColumnDeleted?: (columnId: string) => void;
-  onReorderColumn?: (columnId: string, direction: "left" | "right") => void;
   onEditItem?: (item: PriceItemTableRow) => void;
   onDeleteItem?: (item: PriceItemTableRow) => void;
   columnDetails: PriceColumnListItem[];
@@ -76,20 +72,10 @@ export function PriceItemTable({
   onAddItem,
   onCreateList,
   onImportExcel,
-  onColumnUpdated,
-  onColumnDeleted,
-  onReorderColumn,
   onEditItem,
   onDeleteItem,
   columnDetails,
 }: PriceItemTableProps) {
-  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
-
-  const editingColumnDetail =
-    editingColumnId !== null
-      ? (columnDetails.find((column) => column.id === editingColumnId) ?? null)
-      : null;
-
   if (!hasAnyLists) {
     return (
       <section className={styles.tablePanel} aria-label="Ítems de precios">
@@ -133,12 +119,8 @@ export function PriceItemTable({
 
   if (isLoading && !data) {
     return (
-      <section className={styles.tablePanel} aria-label="Ítems de precios">
-        <div className={styles.skeletonTable}>
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className={styles.skeletonRow} />
-          ))}
-        </div>
+      <section className={styles.tablePanel} aria-label="Ítems de precios" aria-busy="true">
+        <AdminTableSkeleton variant="prices" label="Cargando ítems de precios" />
       </section>
     );
   }
@@ -192,25 +174,11 @@ export function PriceItemTable({
           <table className={styles.priceTable}>
             <thead>
               <tr>
-                {sortedColumns.map((column, columnIndex) => (
+                {sortedColumns.map((column) => (
                   <PriceColumnHeaderCell
                     key={column.id}
                     column={column}
-                    isAdmin={isAdmin}
                     isSticky={primaryColumn?.id === column.id}
-                    canMoveLeft={columnIndex > 0}
-                    canMoveRight={columnIndex < sortedColumns.length - 1}
-                    onEdit={() => setEditingColumnId(column.id)}
-                    onMoveLeft={
-                      onReorderColumn
-                        ? () => onReorderColumn(column.id, "left")
-                        : undefined
-                    }
-                    onMoveRight={
-                      onReorderColumn
-                        ? () => onReorderColumn(column.id, "right")
-                        : undefined
-                    }
                   />
                 ))}
                 {isAdmin && (onEditItem || onDeleteItem) ? (
@@ -303,27 +271,6 @@ export function PriceItemTable({
             </button>
           </div>
         </footer>
-      ) : null}
-
-      {editingColumnDetail && isAdmin ? (
-        <PriceColumnEditModal
-          key={editingColumnDetail.id}
-          priceListId={editingColumnDetail.priceListId}
-          column={editingColumnDetail}
-          onClose={() => setEditingColumnId(null)}
-          onSaved={(updated) => {
-            onColumnUpdated(updated);
-            setEditingColumnId(null);
-          }}
-          onDeleted={
-            onColumnDeleted
-              ? () => {
-                  onColumnDeleted(editingColumnDetail.id);
-                  setEditingColumnId(null);
-                }
-              : undefined
-          }
-        />
       ) : null}
     </section>
   );

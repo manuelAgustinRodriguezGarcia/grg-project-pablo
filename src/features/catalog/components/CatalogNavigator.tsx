@@ -20,7 +20,6 @@ import type {
 } from "@/features/catalog/types/catalog-navigator.types";
 import type { CatalogNavigationResponse } from "@/features/catalog/types/navigation.types";
 import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
-import type { ColumnListItem } from "@/features/catalog/types/column.types";
 import type { CatalogListItem } from "@/features/catalog/types/catalog.types";
 import type { FolderListItem } from "@/features/catalog/types/folder.types";
 import { sortByName } from "@/features/catalog/utils/sortByName";
@@ -616,21 +615,6 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
   const createCatalogNameEmpty = createCatalogNameDraft.trim().length === 0;
   const createFolderNameEmpty = createFolderNameDraft.trim().length === 0;
 
-  const handleColumnUpdated = useCallback((updated: ColumnListItem) => {
-    setProductTable((current) => {
-      if (!current) {
-        return current;
-      }
-
-      return {
-        ...current,
-        columns: current.columns.map((column) =>
-          column.id === updated.id ? updated : column,
-        ),
-      };
-    });
-  }, []);
-
   const importWizard = isImportOpen ? (
     <ImportWizard
       catalogs={sortedCatalogs}
@@ -682,9 +666,7 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
           data={tableData}
           isLoading={isLoadingProducts || isLoadingFolders}
           error={productsError}
-          isAdmin={isAdmin}
           onPageChange={handlePageChange}
-          onColumnUpdated={isAdmin ? handleColumnUpdated : undefined}
         />
       </div>
       </div>
