@@ -47,10 +47,15 @@ export class ExcelStructureService {
     }
 
     if (matchesAnyPattern(sheetName, IGNORED_SHEET_PATTERNS)) {
-      return {
-        classification: "IGNORED",
-        reason: "El nombre coincide con una hoja temporal o genérica.",
-      };
+      const hasValidTable =
+        input.hasTabularHeaders === true && (input.rowCount ?? 0) > 0;
+
+      if (!hasValidTable) {
+        return {
+          classification: "IGNORED",
+          reason: "El nombre coincide con una hoja temporal o genérica.",
+        };
+      }
     }
 
     if (input.rowCount === 0) {

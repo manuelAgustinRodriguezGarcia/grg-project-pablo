@@ -1,4 +1,12 @@
 import type { ImportSheetItem } from "@/features/imports/types/import-job.types";
+import {
+  detectColumnSemanticKind,
+  semanticKindLabel,
+  type ColumnSemanticKind,
+} from "@/shared/import/header-semantics";
+
+export type { ColumnSemanticKind };
+export { detectColumnSemanticKind, semanticKindLabel };
 
 export type ImportDetectedHeader = {
   originalName: string;
@@ -6,41 +14,6 @@ export type ImportDetectedHeader = {
   columnIndex: number;
   inferredDataType?: string;
 };
-
-const CODE_HEADER_PATTERNS = [/c[oó]digo/i, /^cod\./i, /referencia/i, /^ref\.?$/i];
-const DESCRIPTION_HEADER_PATTERNS = [/descripci[oó]n/i, /^desc\.?$/i, /detalle/i];
-const IMAGE_HEADER_PATTERNS = [/imagen/i, /image/i, /foto/i, /photo/i];
-
-export type ColumnSemanticKind = "primaryCode" | "description" | "imageCode" | null;
-
-export function detectColumnSemanticKind(headerName: string): ColumnSemanticKind {
-  if (IMAGE_HEADER_PATTERNS.some((pattern) => pattern.test(headerName))) {
-    return "imageCode";
-  }
-
-  if (CODE_HEADER_PATTERNS.some((pattern) => pattern.test(headerName))) {
-    return "primaryCode";
-  }
-
-  if (DESCRIPTION_HEADER_PATTERNS.some((pattern) => pattern.test(headerName))) {
-    return "description";
-  }
-
-  return null;
-}
-
-export function semanticKindLabel(kind: ColumnSemanticKind): string | null {
-  switch (kind) {
-    case "primaryCode":
-      return "Código";
-    case "description":
-      return "Descripción";
-    case "imageCode":
-      return "Código imagen";
-    default:
-      return null;
-  }
-}
 
 export function parseDetectedHeaders(sheet: ImportSheetItem | undefined): ImportDetectedHeader[] {
   if (!sheet || !Array.isArray(sheet.detectedHeaders)) {

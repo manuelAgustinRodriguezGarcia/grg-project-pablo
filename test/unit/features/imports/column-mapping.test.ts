@@ -12,6 +12,7 @@ describe("column-mapping utils", () => {
     expect(detectColumnSemanticKind("Código")).toBe("primaryCode");
     expect(detectColumnSemanticKind("Descripción")).toBe("description");
     expect(detectColumnSemanticKind("Código imagen")).toBe("imageCode");
+    expect(detectColumnSemanticKind("CÓDIGO IMÁGEN")).toBe("imageCode");
   });
 
   it("preselects folder columns by original name", () => {

@@ -1,10 +1,6 @@
 import type { ColumnDataType, FolderColumn } from "@/generated/prisma/client";
+import { detectSemanticFlags } from "@/shared/import/header-semantics";
 import type { DetectedHeader } from "./types";
-
-const IMAGE_HEADER_PATTERNS = [/imagen/i, /image/i, /foto/i, /photo/i];
-const CODE_HEADER_PATTERNS = [/c[oó]digo/i, /^cod\./i, /referencia/i, /^ref\.?$/i];
-const DESCRIPTION_HEADER_PATTERNS = [/descripci[oó]n/i, /^desc\.?$/i, /detalle/i];
-const PRICE_HEADER_PATTERNS = [/precio/i, /importe/i, /monto/i, /costo/i, /valor/i];
 
 function slugifyHeader(name: string): string {
   const normalized = name
@@ -34,7 +30,7 @@ function ensureUniqueKey(base: string, used: Set<string>): string {
 }
 
 function inferDataTypeFromHeader(headerName: string): ColumnDataType {
-  if (IMAGE_HEADER_PATTERNS.some((pattern) => pattern.test(headerName))) {
+  if (detectSemanticFlags(headerName).isImageCode) {
     return "IMAGE";
   }
 
@@ -45,21 +41,7 @@ export function headerToInternalKey(headerName: string, usedKeys: Set<string>): 
   return ensureUniqueKey(slugifyHeader(headerName), usedKeys);
 }
 
-export function detectSemanticFlags(headerName: string): {
-  isPrimaryCode: boolean;
-  isDescription: boolean;
-  isImageCode: boolean;
-  isPrice: boolean;
-} {
-  return {
-    isPrimaryCode: CODE_HEADER_PATTERNS.some((pattern) => pattern.test(headerName)),
-    isDescription: DESCRIPTION_HEADER_PATTERNS.some((pattern) =>
-      pattern.test(headerName),
-    ),
-    isImageCode: IMAGE_HEADER_PATTERNS.some((pattern) => pattern.test(headerName)),
-    isPrice: PRICE_HEADER_PATTERNS.some((pattern) => pattern.test(headerName)),
-  };
-}
+export { detectSemanticFlags, isImageCodeHeader } from "@/shared/import/header-semantics";
 
 export function buildDetectedHeaders(
   entries: Array<{ originalName: string; columnIndex: number }>,

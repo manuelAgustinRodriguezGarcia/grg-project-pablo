@@ -11,6 +11,7 @@ import {
   buildExistingCodeIndex,
   detectSemanticFlags,
   findMatchingProductId,
+  isImageCodeHeader,
   mapSheetToProducts,
   parseWorkbookFromBuffer,
   toExcelJsBuffer,
@@ -617,7 +618,9 @@ export class CatalogImportService {
         );
 
         const imageCodeColumnKeys = input.columns
-          .filter((column) => column.isImageCode)
+          .filter(
+            (column) => column.isImageCode || isImageCodeHeader(column.originalName),
+          )
           .map((column) => column.internalKey);
 
         const external = await productImageService.processExternalImages({

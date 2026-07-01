@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   associateImportImageAction,
   completeImageReviewAction,
@@ -84,6 +84,14 @@ export function ImportStepImageReview({
   const [imagePage, setImagePage] = useState(1);
   const [totalImages, setTotalImages] = useState(0);
   const [isLoadingMoreImages, setIsLoadingMoreImages] = useState(false);
+  const onCompletedRef = useRef(onCompleted);
+  const onErrorRef = useRef(onError);
+  const handleCompleteReviewRef = useRef<() => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    onCompletedRef.current = onCompleted;
+    onErrorRef.current = onError;
+  }, [onCompleted, onError]);
 
   const loadReviewData = useCallback(async () => {
     setIsLoading(true);
@@ -293,9 +301,9 @@ export function ImportStepImageReview({
       if (!result.success) {
         throw new Error(result.error);
       }
-      onCompleted();
+      onCompletedRef.current();
     } catch (caught) {
-      onError(
+      onErrorRef.current(
         caught instanceof Error
           ? caught.message
           : "No se pudo finalizar la revisión de imágenes.",
@@ -303,14 +311,9 @@ export function ImportStepImageReview({
     } finally {
       setIsSubmitting(false);
     }
-  }, [
-    fetchAllPendingItems,
-    jobId,
-    linkByImage,
-    onCompleted,
-    onError,
-    selectedProductByImage,
-  ]);
+  }, [fetchAllPendingItems, jobId, linkByImage, selectedProductByImage]);
+
+  handleCompleteReviewRef.current = handleCompleteReview;
 
   useEffect(() => {
     if (!onFooterStateChange) {
@@ -326,18 +329,11 @@ export function ImportStepImageReview({
       finishLabel:
         items.length === 0 ? "Continuar al resultado" : "Finalizar Revisión",
       onFinish: () => {
-        void handleCompleteReview();
+        void handleCompleteReviewRef.current();
       },
       disabled: disabled || isSubmitting,
     });
-  }, [
-    disabled,
-    handleCompleteReview,
-    isLoading,
-    isSubmitting,
-    items.length,
-    onFooterStateChange,
-  ]);
+  }, [disabled, isLoading, isSubmitting, items.length, onFooterStateChange]);
 
   useEffect(() => {
     return () => {
