@@ -1,4 +1,4 @@
-export { buildDetectedHeaders, detectSemanticFlags, headerToInternalKey, mapHeadersToFolderColumns } from "./column-mapper";
+export { buildDetectedHeaders, detectSemanticFlags, headerToInternalKey, isImageCodeHeader, mapHeadersToFolderColumns } from "./column-mapper";
 export { extractCellValue, toParsedFormula } from "./excel-cell.extractor";
 export type { ExtractedCellValue } from "./excel-cell.extractor";
 export { detectSheetImages, buildEmbeddedImageSummary, listEmbeddedImageAnchors } from "./excel-image.detector";

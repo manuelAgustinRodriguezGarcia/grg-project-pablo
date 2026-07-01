@@ -95,4 +95,20 @@ describe("excel-sheet.parser", () => {
     ]);
     expect(sheet?.headers.some((header) => header.columnIndex === 0)).toBe(false);
   });
+
+  it("importa hojas con nombre genérico cuando tienen datos tabulares", async () => {
+    const buffer = await createWorkbookBuffer((workbook) => {
+      const sheet = workbook.addWorksheet("Hoja1");
+      sheet.addRow(["Código", "Descripción", "Marca"]);
+      sheet.addRow(["35212514", "Alternador Indiel", "INDIEL"]);
+      sheet.addRow(["35213785", "Alternador Indiel 2", "INDIEL"]);
+    });
+
+    const workbook = await parseWorkbookFromBuffer(buffer);
+    const sheet = workbook.sheets[0];
+
+    expect(sheet?.classification).toBe("IMPORTABLE");
+    expect(sheet?.rowCount).toBe(2);
+    expect(sheet?.headers).toHaveLength(3);
+  });
 });

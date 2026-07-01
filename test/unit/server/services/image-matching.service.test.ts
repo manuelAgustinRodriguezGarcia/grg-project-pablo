@@ -97,6 +97,28 @@ describe("image-matching.service", () => {
     expect(outcome).toEqual({ status: "ASSOCIATED_AUTO", productId: "prod-img" });
   });
 
+  it("asocia por código imagen aunque el primaryCode sea distinto", () => {
+    const index = buildProductMatchIndex(
+      [
+        {
+          id: "prod-alt",
+          primaryCode: "35212514-INDIEL",
+          normalizedCode: "35212514INDIEL",
+          dynamicData: { codigo_imagen: "ALTERNADOR-35212514INDIEL" },
+        },
+      ],
+      ["codigo_imagen"],
+    );
+
+    const outcome = matchExternalImage(
+      { originalName: "ALTERNADOR-35212514INDIEL.jpg" },
+      index,
+      new Map<string, number>(),
+    );
+
+    expect(outcome).toEqual({ status: "ASSOCIATED_AUTO", productId: "prod-alt" });
+  });
+
   it("omite primaryCode del índice cuando includePrimaryCode es false", () => {
     const index = buildProductMatchIndex(
       [
