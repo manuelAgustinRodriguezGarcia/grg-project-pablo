@@ -22,14 +22,13 @@ import {
   productToFieldValues,
 } from "./product-field.builder";
 import { equivalenceService } from "./equivalence.service";
-import { getProductTableColumns } from "@/features/catalog/utils/product-table-columns";
+import { getProductTableColumns, getAdminFilterableColumnKeys } from "@/features/catalog/utils/product-table-columns";
 import type { EquivalenceListItem } from "./equivalence.service";
 import { columnHelpService } from "./column-help.service";
 import { columnFilterService } from "@/server/filters/column-filter.service";
 import type { ColumnFilterInput, ActiveFilterPill } from "@/server/filters/column-filter.types";
 import { buildFolderProductWhere } from "@/server/search/search.service";
 import {
-  resolveFilterableKeys,
   resolveSearchableKeys,
 } from "@/server/search/search-config.resolver";
 import { normalizeSearchTerm } from "@/server/search/search-normalizer";
@@ -223,26 +222,45 @@ export class ProductService {
       );
 
       const parsedFilters = columnFilterService.parseFilters(input.filters);
-      const filterableKeys = resolveFilterableKeys(folder, columns);
+      const filterableKeys = getAdminFilterableColumnKeys(columns);
       columnFilterService.validateFiltersForColumns(
         parsedFilters,
         columns,
         filterableKeys,
+        { requireFilterableColumn: false },
       );
 
       const searchableKeys = resolveSearchableKeys(folder, columns);
       const query = input.query?.trim() ?? "";
       const hasSearchOrFilters = query.length > 0 || parsedFilters.length > 0;
+      const { prismaFilters, jsonTextFilters } = columnFilterService.partitionFilters(
+        parsedFilters,
+        columns,
+      );
 
-      const where = hasSearchOrFilters
+      let where = hasSearchOrFilters
         ? buildFolderProductWhere({
             folderId: folder.id,
             query: query || undefined,
             searchableKeys,
-            filters: parsedFilters,
+            filters: prismaFilters,
             columns,
           })
         : { folderId: folder.id };
+
+      if (jsonTextFilters.length > 0) {
+        const matchingIds = await productRepository.findIdsMatchingJsonTextFilters(
+          folder.id,
+          jsonTextFilters,
+        );
+
+        where = {
+          AND: [
+            where,
+            matchingIds.length > 0 ? { id: { in: matchingIds } } : { id: { in: [] } },
+          ],
+        };
+      }
 
       const paginated = await productRepository.findPaginatedBasic(where, {
         page,

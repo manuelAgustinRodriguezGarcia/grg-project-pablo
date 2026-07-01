@@ -6,6 +6,8 @@ export type ColumnFilterInput = {
   value: string;
 };
 
+export type JsonTextColumnFilter = ColumnFilterInput;
+
 export type ActiveFilterPill = {
   id: string;
   columnInternalKey: string;

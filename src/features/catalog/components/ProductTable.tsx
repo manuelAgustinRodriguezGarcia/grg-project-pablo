@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ChevronLeft, ChevronRight, File, ICON_STROKE } from "@/shared/icons";
 import type {
@@ -8,10 +8,13 @@ import type {
   ProductTableItem,
   ProductTableResponse,
 } from "@/features/catalog/types/product-table.types";
+import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPills";
 import { ColumnHeaderCell } from "@/features/catalog/components/ColumnHeaderCell";
 import { ProductImagePreviewModal } from "./ProductImagePreviewModal";
 import { getProductTableColumns } from "@/features/catalog/utils/product-table-columns";
+import { toActiveFilterPillsFromState } from "@/features/catalog/utils/column-filter-state";
 import { normalizeMultilineText } from "@/shared/text/normalize-multiline-text";
+import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 type ProductTableProps = {
@@ -19,6 +22,13 @@ type ProductTableProps = {
   isLoading: boolean;
   error: string | null;
   onPageChange: (page: number) => void;
+  enableColumnFilters?: boolean;
+  columnFilters?: ColumnFilterInput[];
+  onColumnFilterChange?: (
+    columnInternalKey: string,
+    filter: ColumnFilterInput | null,
+  ) => void;
+  onClearColumnFilters?: () => void;
 };
 
 function formatTableHeaderLines(displayName: string): string[] {
@@ -126,13 +136,40 @@ export function ProductTable({
   isLoading,
   error,
   onPageChange,
+  enableColumnFilters = false,
+  columnFilters = [],
+  onColumnFilterChange,
+  onClearColumnFilters,
 }: ProductTableProps) {
+  const tableWrapRef = useRef<HTMLDivElement>(null);
   const [previewImage, setPreviewImage] = useState<{
     url: string;
     alt: string;
     productId: string;
     imageId: string;
   } | null>(null);
+
+  useEffect(() => {
+    const tableWrap = tableWrapRef.current;
+    if (!tableWrap) {
+      return;
+    }
+
+    const headerSolidScrollDistance = 56;
+
+    const syncHeaderSolidState = () => {
+      const progress = Math.min(1, tableWrap.scrollTop / headerSolidScrollDistance);
+      tableWrap.style.setProperty("--header-scroll-progress", progress.toFixed(3));
+    };
+
+    syncHeaderSolidState();
+    tableWrap.addEventListener("scroll", syncHeaderSolidState, { passive: true });
+
+    return () => {
+      tableWrap.removeEventListener("scroll", syncHeaderSolidState);
+      tableWrap.style.removeProperty("--header-scroll-progress");
+    };
+  }, [data?.products.length, data?.pagination.page]);
 
   const sortedColumns = useMemo(
     () =>
@@ -147,6 +184,23 @@ export function ProductTable({
     () => (data ? shouldShowGlobalImageColumn(data.products) : false),
     [data],
   );
+
+  const activeFilterPills = useMemo(
+    () =>
+      enableColumnFilters && data
+        ? toActiveFilterPillsFromState(columnFilters, data.columns)
+        : [],
+    [columnFilters, data, enableColumnFilters],
+  );
+
+  const handleRemoveFilter = useCallback(
+    (columnInternalKey: string) => {
+      onColumnFilterChange?.(columnInternalKey, null);
+    },
+    [onColumnFilterChange],
+  );
+
+  const activeFilterCount = activeFilterPills.length;
 
   if (isLoading && !data) {
     return (
@@ -187,7 +241,15 @@ export function ProductTable({
       aria-label="Tabla de productos"
       aria-busy={isLoading || undefined}
     >
+      {enableColumnFilters && activeFilterPills.length > 0 ? (
+        <ActiveFilterPills
+          filters={activeFilterPills}
+          onRemove={handleRemoveFilter}
+          onClearAll={onClearColumnFilters}
+        />
+      ) : null}
       <div
+        ref={tableWrapRef}
         className={`${styles.tableWrap} ${data.products.length === 0 ? styles.tableWrapEmpty : ""}`}
       >
         {data.products.length === 0 ? (
@@ -215,6 +277,15 @@ export function ProductTable({
                   key={column.id}
                   column={column}
                   headerLines={formatTableHeaderLines(column.displayName)}
+                  enableColumnFilters={enableColumnFilters}
+                  activeFilter={columnFilters.find(
+                    (filter) => filter.columnInternalKey === column.internalKey,
+                  )}
+                  onFilterChange={
+                    enableColumnFilters
+                      ? (filter) => onColumnFilterChange?.(column.internalKey, filter)
+                      : undefined
+                  }
                 />
               ))}
             </tr>
@@ -347,6 +418,9 @@ export function ProductTable({
       <footer className={styles.tableFooter}>
         <p className={styles.tableSummary}>
           Mostrando {from} a {to} de {pagination.total} productos
+          {enableColumnFilters && activeFilterCount > 0
+            ? ` · ${activeFilterCount} filtros activos`
+            : ""}
         </p>
 
         <div className={styles.tablePagination}>

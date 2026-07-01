@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createCatalogAction,
@@ -26,6 +26,8 @@ import type {
 } from "@/features/catalog/types/global-search.types";
 import type { CatalogNavigationResponse } from "@/features/catalog/types/navigation.types";
 import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
+import { serializeColumnFilters, upsertColumnFilter } from "@/features/catalog/utils/column-filter-state";
+import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
 import type { CatalogListItem } from "@/features/catalog/types/catalog.types";
 import type { FolderListItem } from "@/features/catalog/types/folder.types";
 import { sortByName } from "@/features/catalog/utils/sortByName";
@@ -68,6 +70,7 @@ function toNavigationFolderItem(folder: FolderListItem): CatalogNavigationFolder
 type CatalogNavigatorProps = {
   catalogs: DirectoryCatalogItem[];
   isAdmin?: boolean;
+  enableColumnFilters?: boolean;
 };
 
 function getInitialCatalogId(catalogs: DirectoryCatalogItem[]): string {
@@ -99,7 +102,11 @@ function resolveFolderId(
   return exists ? selectedFolderId : sortByName(folders)[0]?.id ?? "";
 }
 
-export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigatorProps) {
+export function CatalogNavigator({
+  catalogs,
+  isAdmin = false,
+  enableColumnFilters = false,
+}: CatalogNavigatorProps) {
   const router = useRouter();
   const [catalogList, setCatalogList] = useState(catalogs);
   const [prevCatalogs, setPrevCatalogs] = useState(catalogs);
@@ -116,6 +123,7 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
   );
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [page, setPage] = useState(1);
+  const [columnFilters, setColumnFilters] = useState<ColumnFilterInput[]>([]);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [searchPage, setSearchPage] = useState(1);
   const [searchResetKey, setSearchResetKey] = useState(0);
@@ -190,14 +198,28 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
     [folders, selectedFolderId],
   );
 
+  useEffect(() => {
+    setColumnFilters([]);
+    setPage(1);
+  }, [activeFolderId]);
+
+  const serializedColumnFilters = useMemo(
+    () => serializeColumnFilters(columnFilters),
+    [columnFilters],
+  );
+
   const productsQuery = useQuery({
-    queryKey: ["admin", "products", activeFolderId, page, reloadToken],
+    queryKey: ["admin", "products", activeFolderId, page, serializedColumnFilters, reloadToken],
     queryFn: async (): Promise<ProductTableResponse> => {
       const params = new URLSearchParams({
         page: String(page),
         pageSize: String(PAGE_SIZE),
         includeFullUrls: "false",
       });
+
+      if (enableColumnFilters && columnFilters.length > 0) {
+        params.set("filters", JSON.stringify(columnFilters));
+      }
 
       const response = await fetch(
         `/api/admin/folders/${activeFolderId}/products?${params.toString()}`,
@@ -274,6 +296,21 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
 
   const handlePageChange = useCallback((nextPage: number) => {
     setPage(nextPage);
+  }, []);
+
+  const handleColumnFilterChange = useCallback(
+    (columnInternalKey: string, filter: ColumnFilterInput | null) => {
+      setColumnFilters((current) =>
+        upsertColumnFilter(current, columnInternalKey, filter),
+      );
+      setPage(1);
+    },
+    [],
+  );
+
+  const handleClearColumnFilters = useCallback(() => {
+    setColumnFilters([]);
+    setPage(1);
   }, []);
 
   const handleImportExcelClick = useCallback(() => {
@@ -670,6 +707,10 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
             isLoading={isLoadingProducts || isLoadingFolders}
             error={productsError}
             onPageChange={handlePageChange}
+            enableColumnFilters={enableColumnFilters}
+            columnFilters={columnFilters}
+            onColumnFilterChange={handleColumnFilterChange}
+            onClearColumnFilters={handleClearColumnFilters}
           />
         )}
       </div>

@@ -19,6 +19,26 @@ import {
 } from "./signed-url-cache";
 import { normalizeStoragePath, validateUpload } from "./validate";
 
+function formatStorageUploadError(message: string): string {
+  if (message === "Bad Request") {
+    return "No se pudo guardar el archivo en Storage. Ejecute pnpm storage:setup y verifique que el Excel sea .xlsx o .xlsm.";
+  }
+
+  if (message.includes("mime type") && message.includes("not supported")) {
+    return "El tipo de archivo no está permitido por la configuración del bucket de Storage.";
+  }
+
+  if (message.includes("maximum allowed size")) {
+    return "El archivo supera el tamaño máximo permitido en Storage.";
+  }
+
+  if (message.includes("already exists")) {
+    return "El archivo ya existe en Storage. Intente de nuevo.";
+  }
+
+  return message;
+}
+
 export async function uploadFile(
   input: UploadFileInput,
 ): Promise<UploadFileResult> {
@@ -45,7 +65,9 @@ export async function uploadFile(
   });
 
   if (error) {
-    throw new StorageError(`Error al subir archivo: ${error.message}`);
+    throw new StorageError(
+      `Error al subir archivo: ${formatStorageUploadError(error.message)}`,
+    );
   }
 
   const result = {
@@ -168,6 +190,21 @@ export async function ensureStorageBuckets(): Promise<void> {
     );
 
     if (existing && !getError) {
+      const { error: updateError } = await client.storage.updateBucket(
+        config.name,
+        {
+          public: config.public,
+          allowedMimeTypes: [...config.allowedMimeTypes],
+          fileSizeLimit: config.maxSizeBytes,
+        },
+      );
+
+      if (updateError) {
+        throw new StorageError(
+          `No se pudo actualizar el bucket "${config.name}": ${updateError.message}`,
+        );
+      }
+
       continue;
     }
 
@@ -175,6 +212,8 @@ export async function ensureStorageBuckets(): Promise<void> {
       config.name,
       {
         public: config.public,
+        allowedMimeTypes: [...config.allowedMimeTypes],
+        fileSizeLimit: config.maxSizeBytes,
       },
     );
 

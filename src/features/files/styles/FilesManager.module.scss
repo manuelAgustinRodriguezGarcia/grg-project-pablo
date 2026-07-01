@@ -1,11 +1,21 @@
 @use "../../admin/styles/variables" as *;
 
+$files-accent: #c9920a;
+$files-surface: rgba($files-accent, 0.02);
+$files-heading-bg: rgba($files-accent, 0.045);
+$files-panel-bg: rgba($white, 0.94);
+$files-shadow:
+  0 2px 8px rgba($files-accent, 0.035),
+  0 12px 36px rgba($files-accent, 0.07),
+  0 24px 56px rgba($files-accent, 0.035);
+
 .page {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
   gap: 0;
+  padding: clamp(0.75rem, 2vw, 1.25rem);
   overflow: hidden;
 }
 
@@ -17,6 +27,15 @@
   gap: 0.85rem;
   padding: clamp(1.25rem, 3vw, 2rem);
   overflow: hidden;
+  border: 1px solid rgba($files-accent, 0.06);
+  border-radius: $radius-lg;
+  background: linear-gradient(
+    165deg,
+    rgba($files-accent, 0.03) 0%,
+    $files-surface 42%,
+    rgba($files-accent, 0.018) 100%
+  );
+  box-shadow: $files-shadow;
 }
 
 .sectionIntro {
@@ -359,6 +378,216 @@
     opacity: 0.45;
     cursor: not-allowed;
   }
+}
+
+.tablePanel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: $radius-lg;
+  border: 1px solid rgba($files-accent, 0.08);
+  background: $files-panel-bg;
+  box-shadow: 0 2px 14px rgba($files-accent, 0.035);
+  overflow: hidden;
+}
+
+.tableWrapEmpty {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableEmpty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.15rem;
+  width: 100%;
+  min-height: 100%;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  background: linear-gradient(180deg, rgba($files-accent, 0.03) 0%, $white 42%);
+}
+
+.tableEmptyIcon {
+  width: 4rem;
+  height: 4rem;
+  color: rgba($files-accent, 0.78);
+  opacity: 0.72;
+}
+
+.tableEmptyText {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(1.25rem, 2.2vw, 1.5rem);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: rgba($navy, 0.78);
+}
+
+.tableWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba($files-accent, 0.35) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba($files-accent, 0.28);
+
+    &:hover {
+      background: rgba($files-accent, 0.42);
+    }
+  }
+}
+
+.filesTable {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: $navy;
+
+  th,
+  td {
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid rgba($navy, 0.08);
+    border-right: 1px solid rgba($navy, 0.08);
+    text-align: center;
+    vertical-align: middle;
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: $navy-light;
+    background: linear-gradient(
+      180deg,
+      rgba($files-accent, 0.06) 0%,
+      $files-heading-bg 100%
+    );
+    box-shadow: inset 0 -1px 0 rgba($files-accent, 0.06);
+    white-space: nowrap;
+  }
+
+  tbody tr:hover {
+    background: rgba($files-accent, 0.03);
+  }
+}
+
+.tableState,
+.tableStateError {
+  margin: 0;
+  padding: 2rem 0.75rem;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.tableState {
+  color: rgba($navy, 0.55);
+}
+
+.tableStateError {
+  color: #9b2c2c;
+}
+
+.tableFooter {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  padding: 0.75rem 1rem 1rem;
+  border-top: 1px solid rgba($files-accent, 0.06);
+  background: rgba($files-accent, 0.015);
+}
+
+.tableSummary {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: rgba($navy, 0.62);
+}
+
+.tablePagination {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.paginationButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: $white;
+  color: $navy;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($files-accent, 0.35);
+    background: rgba($files-accent, 0.04);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $files-accent;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.paginationLabel {
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba($navy, 0.72);
+  white-space: nowrap;
 }
 
 .emptyCta {
@@ -781,6 +1010,7 @@
 @media (max-width: 768px) {
   .page {
     min-height: 100%;
+    padding: 0.65rem;
     overflow: visible;
   }
 

@@ -35,7 +35,7 @@ export const PHONE_TEL = "+543644580297";
 export const WHATSAPP_DISPLAY = "+54 9 364 458-0297";
 export const WHATSAPP_URL = "https://wa.me/5493644580297";
 
-export const EMAIL_DISPLAY = "pablorothamel@hotmail.com";
+export const EMAIL_DISPLAY = "rothamelsh@hotmail.com";
 export const EMAIL_MAILTO = `mailto:${EMAIL_DISPLAY}`;
 
 export const LOGIN_PATH = "/auth/login";
@@ -58,7 +58,6 @@ const TRACTORES_AGRICOLAS_BRANDS: readonly Brand[] = [
   { name: "Zanello", logoSrc: marcaLogo("zanello.svg") },
   { name: "Pauny", logoSrc: marcaLogo("pauny.svg") },
   { name: "Massey Ferguson", logoSrc: marcaLogo("Massey.svg") },
-  { name: "Fiat", logoSrc: marcaLogo("Fiat.svg") },
   { name: "Deutz", logoSrc: marcaLogo("deutz.svg") },
 ];
 

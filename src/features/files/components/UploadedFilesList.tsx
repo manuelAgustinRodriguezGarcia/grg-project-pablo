@@ -20,7 +20,6 @@ import {
   formatDestinationTypeLabel,
   formatImportMetrics,
 } from "@/features/files/utils/format-destination-summary";
-import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 import styles from "@/features/files/styles/FilesManager.module.scss";
 
 type UploadedFilesListProps = {
@@ -63,11 +62,11 @@ export function UploadedFilesList({
   if (isLoading) {
     return (
       <section
-        className={catalogStyles.tablePanel}
+        className={styles.tablePanel}
         aria-label="Listado de archivos"
         aria-busy="true"
       >
-        <div className={catalogStyles.tableWrap}>
+        <div className={styles.tableWrap}>
           <AdminTableSkeleton variant="files" label="Cargando archivos" />
         </div>
       </section>
@@ -76,16 +75,16 @@ export function UploadedFilesList({
 
   if (error) {
     return (
-      <section className={catalogStyles.tablePanel} aria-label="Listado de archivos">
-        <p className={catalogStyles.tableStateError}>{error}</p>
+      <section className={styles.tablePanel} aria-label="Listado de archivos">
+        <p className={styles.tableStateError}>{error}</p>
       </section>
     );
   }
 
   if (!data) {
     return (
-      <section className={catalogStyles.tablePanel} aria-label="Listado de archivos">
-        <p className={catalogStyles.tableState}>No hay datos de archivos disponibles.</p>
+      <section className={styles.tablePanel} aria-label="Listado de archivos">
+        <p className={styles.tableState}>No hay datos de archivos disponibles.</p>
       </section>
     );
   }
@@ -94,18 +93,18 @@ export function UploadedFilesList({
   const { pagination } = data;
 
   return (
-    <section className={catalogStyles.tablePanel} aria-label="Listado de archivos">
+    <section className={styles.tablePanel} aria-label="Listado de archivos">
       <div
-        className={`${catalogStyles.tableWrap} ${data.items.length === 0 ? catalogStyles.tableWrapEmpty : ""}`}
+        className={`${styles.tableWrap} ${data.items.length === 0 ? styles.tableWrapEmpty : ""}`}
       >
         {data.items.length === 0 ? (
-          <div className={catalogStyles.tableEmpty} role="status">
+          <div className={styles.tableEmpty} role="status">
             <Archive
-              className={catalogStyles.tableEmptyIcon}
+              className={styles.tableEmptyIcon}
               strokeWidth={ICON_STROKE}
               aria-hidden
             />
-            <p className={catalogStyles.tableEmptyText}>No hay archivos subidos.</p>
+            <p className={styles.tableEmptyText}>No hay archivos subidos.</p>
             <Link href="/admin/catalogos" className={styles.emptyCta}>
               Importar desde Catálogos
             </Link>
@@ -113,7 +112,7 @@ export function UploadedFilesList({
         ) : (
           isDesktopLayout ? (
             <div className={styles.desktopTable}>
-              <table className={catalogStyles.productTable}>
+              <table className={styles.filesTable}>
                 <thead>
                   <tr>
                     <th scope="col">Archivo</th>
@@ -273,15 +272,15 @@ export function UploadedFilesList({
       </div>
 
       {data.items.length > 0 ? (
-        <footer className={catalogStyles.tableFooter}>
-          <p className={catalogStyles.tableSummary}>
+        <footer className={styles.tableFooter}>
+          <p className={styles.tableSummary}>
             Mostrando {from} a {to} de {pagination.total} archivos
           </p>
 
-          <div className={catalogStyles.tablePagination}>
+          <div className={styles.tablePagination}>
             <button
               type="button"
-              className={catalogStyles.paginationButton}
+              className={styles.paginationButton}
               disabled={pagination.page <= 1}
               onClick={() => onPageChange(pagination.page - 1)}
               aria-label="Página anterior"
@@ -289,13 +288,13 @@ export function UploadedFilesList({
               <ChevronLeft strokeWidth={ICON_STROKE} aria-hidden />
             </button>
 
-            <span className={catalogStyles.paginationLabel}>
+            <span className={styles.paginationLabel}>
               Página {pagination.page} de {Math.max(pagination.totalPages, 1)}
             </span>
 
             <button
               type="button"
-              className={catalogStyles.paginationButton}
+              className={styles.paginationButton}
               disabled={pagination.page >= pagination.totalPages}
               onClick={() => onPageChange(pagination.page + 1)}
               aria-label="Página siguiente"

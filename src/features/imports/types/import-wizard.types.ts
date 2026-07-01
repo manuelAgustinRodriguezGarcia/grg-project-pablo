@@ -30,6 +30,7 @@ export type ImportReportData = {
   itemsCreated?: number;
   itemsSkipped?: number;
   itemsMatched?: number;
+  itemsDeleted?: number;
   formulasDetected: number;
   formulasWithoutCachedValue: number;
   imagesDetected: number;

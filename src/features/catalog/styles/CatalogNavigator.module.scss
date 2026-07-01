@@ -1,11 +1,21 @@
 @use "../../admin/styles/variables" as *;
 
+$catalog-surface: rgba($blue, 0.02);
+$catalog-heading-bg: rgba($blue, 0.045);
+$catalog-panel-bg: rgba($white, 0.94);
+$catalog-shadow:
+  0 2px 8px rgba($blue, 0.035),
+  0 12px 36px rgba($blue, 0.07),
+  0 24px 56px rgba($blue, 0.035);
+$table-image-size: 6.25rem;
+
 .page {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
   gap: 0;
+  padding: clamp(0.75rem, 2vw, 1.25rem);
   overflow: hidden;
 }
 
@@ -141,6 +151,7 @@
   font-weight: 700;
   line-height: 1.2;
   color: $navy;
+  letter-spacing: -0.01em;
 }
 
 .catalogToolbar {
@@ -282,6 +293,15 @@
   min-height: 0;
   padding: clamp(1.25rem, 3vw, 2rem);
   overflow: hidden;
+  border: 1px solid rgba($blue, 0.06);
+  border-radius: $radius-lg;
+  background: linear-gradient(
+    165deg,
+    rgba($blue, 0.03) 0%,
+    $catalog-surface 42%,
+    rgba($blue, 0.018) 100%
+  );
+  box-shadow: $catalog-shadow;
 }
 
 .inlineError {
@@ -305,9 +325,9 @@
   min-width: 0;
   padding: 1rem;
   border-radius: $radius-lg;
-  border: 1px solid rgba($navy, 0.08);
-  background: $white;
-  box-shadow: 0 4px 24px rgba($navy, 0.06);
+  border: 1px solid rgba($blue, 0.08);
+  background: $catalog-panel-bg;
+  box-shadow: 0 2px 14px rgba($blue, 0.035);
 }
 
 .dropdownRow {
@@ -670,9 +690,9 @@
   min-height: 0;
   padding: 0;
   border-radius: $radius-lg;
-  border: 1px solid rgba($navy, 0.08);
-  background: $white;
-  box-shadow: 0 4px 24px rgba($navy, 0.06);
+  border: 1px solid rgba($blue, 0.08);
+  background: $catalog-panel-bg;
+  box-shadow: 0 2px 14px rgba($blue, 0.035);
   overflow: hidden;
 }
 
@@ -725,6 +745,7 @@
 }
 
 .tableWrap {
+  --header-scroll-progress: 0;
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -810,8 +831,22 @@
     text-align: center;
     vertical-align: middle;
     color: $navy-light;
-    background: linear-gradient(rgba($blue, 0.05), rgba($blue, 0.05)), $white;
-    box-shadow: inset 0 -1px 0 rgba($navy, 0.08);
+    background:
+      linear-gradient(
+        180deg,
+        rgba($white, var(--header-scroll-progress, 0)) 0%,
+        rgba($white, var(--header-scroll-progress, 0)) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba($blue, 0.06) 0%,
+        $catalog-heading-bg 100%
+      );
+    box-shadow:
+      inset 0 -1px 0 rgba($blue, calc(0.06 + var(--header-scroll-progress, 0) * 0.04)),
+      0 calc(var(--header-scroll-progress, 0) * 1px)
+        calc(var(--header-scroll-progress, 0) * 5px)
+        rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
     white-space: normal;
 
     &:last-child {
@@ -831,17 +866,17 @@
 }
 
 .tableThumbHeader {
-  width: 3.75rem;
-  min-width: 3.75rem;
-  max-width: 3.75rem;
+  width: calc(#{$table-image-size} + 1.3rem);
+  min-width: calc(#{$table-image-size} + 1.3rem);
+  max-width: calc(#{$table-image-size} + 1.3rem);
   padding-left: 0.85rem !important;
   padding-right: 0.45rem !important;
 }
 
 .tableThumbCell {
-  width: 3.75rem;
-  min-width: 3.75rem;
-  max-width: 3.75rem;
+  width: calc(#{$table-image-size} + 1.3rem);
+  min-width: calc(#{$table-image-size} + 1.3rem);
+  max-width: calc(#{$table-image-size} + 1.3rem);
   padding: 0.5rem 0.45rem 0.5rem 0.85rem !important;
   vertical-align: middle;
   text-align: center;
@@ -849,12 +884,11 @@
 
 .tableThumb {
   display: block;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: $table-image-size;
+  height: $table-image-size;
   margin: 0 auto;
-  border-radius: 8px;
   border: 1px solid rgba($navy, 0.1);
-  object-fit: cover;
+  object-fit: contain;
   background: rgba($navy, 0.04);
 }
 
@@ -865,7 +899,6 @@
   border: 0;
   background: transparent;
   cursor: pointer;
-  border-radius: 8px;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 
   &:hover .tableThumb,
@@ -987,10 +1020,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: $table-image-size;
+  height: $table-image-size;
   margin: 0 auto;
-  border-radius: 8px;
   background: rgba($navy, 0.04);
   color: rgba($navy, 0.35);
   font-size: 0.85rem;
@@ -1003,7 +1035,7 @@
 }
 
 .tableCellWithMedia {
-  min-width: 5.5rem;
+  min-width: calc(#{$table-image-size} + 1rem);
   max-width: 32rem;
   vertical-align: middle;
 }
@@ -1023,15 +1055,28 @@
   border: 0;
   background: transparent;
   cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+
+  &:hover .tableCellThumb,
+  &:focus-visible .tableCellThumb {
+    box-shadow: 0 0 0 2px rgba($blue, 0.35);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
 }
 
 .tableCellThumb {
   display: block;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 6px;
+  width: $table-image-size;
+  height: $table-image-size;
   border: 1px solid rgba($navy, 0.1);
-  object-fit: cover;
+  object-fit: contain;
   background: rgba($navy, 0.04);
 }
 
@@ -1062,6 +1107,258 @@
   white-space: nowrap;
   word-break: keep-all;
   overflow-wrap: normal;
+}
+
+.tableHeaderContent {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 1.5rem;
+  padding-right: 1.1rem;
+}
+
+.tableHeaderFilterable {
+  &:hover .columnFilterButton,
+  &.tableHeaderFiltered .columnFilterButton {
+    opacity: 1;
+  }
+}
+
+.tableHeaderFiltered {
+  background:
+    linear-gradient(
+      180deg,
+      rgba($white, calc(var(--header-scroll-progress, 0) * 0.88)) 0%,
+      rgba($white, calc(var(--header-scroll-progress, 0) * 0.88)) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba($blue, 0.12) 0%,
+      rgba($blue, 0.08) 100%
+    );
+  box-shadow:
+    inset 0 -2px 0 rgba($blue, 0.22),
+    0 calc(var(--header-scroll-progress, 0) * 1px)
+      calc(var(--header-scroll-progress, 0) * 5px)
+      rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
+}
+
+.columnFilterRoot {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: 3;
+  transform: translateY(-50%);
+  flex-shrink: 0;
+}
+
+.columnFilterButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba($navy, 0.55);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover {
+    background: rgba($navy, 0.08);
+    color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 1px;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.tableHeaderFilterable:hover .columnFilterButton,
+.tableHeaderFiltered .columnFilterButton,
+.columnFilterRootActive .columnFilterButton,
+.columnFilterRootOpen .columnFilterButton,
+.columnFilterRoot:focus-within .columnFilterButton {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.columnFilterPopover {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: min(14rem, 70vw);
+  padding: 0.55rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  background: $white;
+  box-shadow: 0 10px 32px rgba($navy, 0.14);
+}
+
+.columnFilterOperatorRow {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.columnFilterOperatorButton {
+  flex: 1;
+  min-height: 1.8rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: 999px;
+  background: rgba($navy, 0.03);
+  color: rgba($navy, 0.72);
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($blue, 0.06);
+    border-color: rgba($blue, 0.2);
+  }
+}
+
+.columnFilterOperatorButtonActive {
+  background: rgba($blue, 0.1);
+  border-color: rgba($blue, 0.28);
+  color: $blue;
+}
+
+.columnFilterInput {
+  width: 100%;
+  min-height: 2rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba($navy, 0.14);
+  border-radius: $radius-sm;
+  background: $white;
+  color: $navy;
+  font-family: $font-sans;
+  font-size: 0.8rem;
+  letter-spacing: normal;
+  word-spacing: normal;
+
+  &::placeholder {
+    color: rgba($navy, 0.45);
+    letter-spacing: normal;
+    word-spacing: normal;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: rgba($blue, 0.45);
+    box-shadow: 0 0 0 2px rgba($blue, 0.12);
+  }
+}
+
+.activeFiltersBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  padding: 0.65rem 0.85rem;
+}
+
+.activeFiltersLabel {
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba($navy, 0.62);
+}
+
+.activeFiltersList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activeFilterPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 100%;
+  padding: 0.2rem 0.35rem 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba($blue, 0.1);
+  color: $blue;
+  font-family: $font-sans;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.activeFilterPillText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activeFilterPillRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($blue, 0.14);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 1px;
+  }
+}
+
+.activeFiltersClearAll {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba($navy, 0.58);
+  font-family: $font-sans;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
 }
 
 .columnEditOverlay {
@@ -1379,8 +1676,8 @@
   gap: 0.75rem;
   margin-top: 0.85rem;
   padding: 0.75rem 1rem 1rem;
-  border-top: 1px solid rgba($navy, 0.08);
-  background: $white;
+  border-top: 1px solid rgba($blue, 0.06);
+  background: rgba($blue, 0.015);
 }
 
 .tableSummary {
@@ -1584,6 +1881,7 @@
 @media (max-width: 768px) {
   .page {
     min-height: 100%;
+    padding: 0.65rem;
     overflow: visible;
   }
 
