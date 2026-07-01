@@ -8,7 +8,6 @@ import {
   listImportImageReviewAction,
 } from "@/features/imports/actions/import.actions";
 import type { ImportImageReviewItem } from "@/features/imports/types/import-job.types";
-import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
 import { ProductImagePreviewModal } from "@/features/catalog/components/ProductImagePreviewModal";
 import { ImportYesNoRadio } from "./ImportYesNoRadio";
 import { ProductSearchCombobox } from "./ProductSearchCombobox";
@@ -34,9 +33,13 @@ type FolderProductOption = {
   label: string;
 };
 
-function formatProductLabel(
-  product: ProductTableResponse["products"][number],
-): string {
+const IMAGE_PAGE_SIZE = 50;
+
+function formatProductOptionLabel(product: {
+  id: string;
+  primaryCode: string | null;
+  description: string | null;
+}): string {
   const code = product.primaryCode?.trim();
   const description = product.description?.trim();
 
@@ -78,18 +81,22 @@ export function ImportStepImageReview({
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imagePage, setImagePage] = useState(1);
+  const [totalImages, setTotalImages] = useState(0);
+  const [isLoadingMoreImages, setIsLoadingMoreImages] = useState(false);
 
   const loadReviewData = useCallback(async () => {
     setIsLoading(true);
+    setImagePage(1);
     try {
       const [reviewResult, productsResponse] = await Promise.all([
         listImportImageReviewAction({
           jobId,
           page: 1,
-          pageSize: 200,
+          pageSize: IMAGE_PAGE_SIZE,
           status: "PENDING_REVIEW",
         }),
-        fetch(`/api/admin/folders/${folderId}/products?page=1&pageSize=200`),
+        fetch(`/api/admin/folders/${folderId}/products/options`),
       ]);
 
       if (!reviewResult.success) {
@@ -100,12 +107,20 @@ export function ImportStepImageReview({
         throw new Error("No se pudieron cargar los productos de la carpeta.");
       }
 
-      const productsData = (await productsResponse.json()) as ProductTableResponse;
+      const productsData = (await productsResponse.json()) as {
+        products: Array<{
+          id: string;
+          primaryCode: string | null;
+          description: string | null;
+        }>;
+      };
+
       setItems(reviewResult.data.items);
+      setTotalImages(reviewResult.data.pagination.total);
       setProducts(
         productsData.products.map((product) => ({
           id: product.id,
-          label: formatProductLabel(product),
+          label: formatProductOptionLabel(product),
         })),
       );
       setSelectedProductByImage({});
@@ -120,6 +135,61 @@ export function ImportStepImageReview({
       setIsLoading(false);
     }
   }, [folderId, jobId, onError]);
+
+  const loadMoreImages = useCallback(async () => {
+    const nextPage = imagePage + 1;
+    setIsLoadingMoreImages(true);
+
+    try {
+      const reviewResult = await listImportImageReviewAction({
+        jobId,
+        page: nextPage,
+        pageSize: IMAGE_PAGE_SIZE,
+        status: "PENDING_REVIEW",
+      });
+
+      if (!reviewResult.success) {
+        throw new Error(reviewResult.error);
+      }
+
+      setItems((current) => [...current, ...reviewResult.data.items]);
+      setImagePage(nextPage);
+      setTotalImages(reviewResult.data.pagination.total);
+    } catch (caught) {
+      onError(
+        caught instanceof Error
+          ? caught.message
+          : "No se pudieron cargar más imágenes.",
+      );
+    } finally {
+      setIsLoadingMoreImages(false);
+    }
+  }, [imagePage, jobId, onError]);
+
+  const fetchAllPendingItems = useCallback(async () => {
+    const allItems: ImportImageReviewItem[] = [];
+    let page = 1;
+    let totalPages = 1;
+
+    while (page <= totalPages) {
+      const reviewResult = await listImportImageReviewAction({
+        jobId,
+        page,
+        pageSize: IMAGE_PAGE_SIZE,
+        status: "PENDING_REVIEW",
+      });
+
+      if (!reviewResult.success) {
+        throw new Error(reviewResult.error);
+      }
+
+      allItems.push(...reviewResult.data.items);
+      totalPages = reviewResult.data.pagination.totalPages;
+      page += 1;
+    }
+
+    return allItems;
+  }, [jobId]);
 
   useEffect(() => {
     void loadReviewData();
@@ -185,8 +255,9 @@ export function ImportStepImageReview({
   async function handleIgnoreAll() {
     setIsSubmitting(true);
     try {
+      const pendingItems = await fetchAllPendingItems();
       await applyReviewDecisions(
-        items.map((item) => ({
+        pendingItems.map((item) => ({
           imageId: item.id,
           link: false,
         })),
@@ -210,8 +281,9 @@ export function ImportStepImageReview({
   const handleCompleteReview = useCallback(async () => {
     setIsSubmitting(true);
     try {
+      const pendingItems = await fetchAllPendingItems();
       await applyReviewDecisions(
-        items.map((item) => ({
+        pendingItems.map((item) => ({
           imageId: item.id,
           link: shouldLinkImage(linkByImage, item.id),
           productId: selectedProductByImage[item.id],
@@ -232,7 +304,7 @@ export function ImportStepImageReview({
       setIsSubmitting(false);
     }
   }, [
-    items,
+    fetchAllPendingItems,
     jobId,
     linkByImage,
     onCompleted,
@@ -331,6 +403,8 @@ export function ImportStepImageReview({
                       src={item.thumbnailUrl}
                       alt=""
                       className={styles.imageReviewThumb}
+                      loading="lazy"
+                      decoding="async"
                     />
                   </button>
                 ) : (
@@ -379,6 +453,17 @@ export function ImportStepImageReview({
           );
         })}
       </div>
+
+      {items.length < totalImages ? (
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => void loadMoreImages()}
+          disabled={disabled || isSubmitting || isLoadingMoreImages}
+        >
+          {isLoadingMoreImages ? "Cargando más imágenes…" : "Cargar más imágenes"}
+        </button>
+      ) : null}
 
       {previewImage ? (
         <ProductImagePreviewModal

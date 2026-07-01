@@ -63,7 +63,7 @@ const sheetFixture = {
   rows: [
     {
       rowNumber: 2,
-      values: {
+      cells: {
         codigo: "A-1",
         precio: "100",
       },

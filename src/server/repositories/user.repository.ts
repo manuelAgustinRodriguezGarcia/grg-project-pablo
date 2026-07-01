@@ -57,6 +57,27 @@ export class UserRepository {
     });
   }
 
+  async touchLastAccessIfStale(
+    id: string,
+    minIntervalMs = 10 * 60 * 1000,
+  ): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { lastAccessAt: true },
+    });
+
+    if (!user) {
+      return;
+    }
+
+    const lastAccessAt = user.lastAccessAt?.getTime() ?? 0;
+    if (Date.now() - lastAccessAt < minIntervalMs) {
+      return;
+    }
+
+    await this.touchLastAccess(id);
+  }
+
   async setStatus(id: string, status: UserStatus): Promise<User> {
     return prisma.user.update({
       where: { id },

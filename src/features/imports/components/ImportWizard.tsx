@@ -247,9 +247,7 @@ export function ImportWizard({
   );
 
   const loadFolderColumns = useCallback(async (folderId: string) => {
-    const response = await fetch(
-      `/api/admin/folders/${folderId}/products?page=1&pageSize=1`,
-    );
+    const response = await fetch(`/api/admin/folders/${folderId}/columns`);
     if (!response.ok) {
       throw new Error("No se pudieron cargar las columnas de la carpeta.");
     }

@@ -94,7 +94,9 @@ export type ProcessExternalImagesResult = {
 
 async function resolveImageUrls(
   image: ProductImage,
+  options?: { includeFullUrls?: boolean },
 ): Promise<{ thumbnailUrl: string | null; fullUrl: string | null }> {
+  const includeFullUrls = options?.includeFullUrls !== false;
   let thumbnailUrl: string | null = null;
   let fullUrl: string | null = null;
 
@@ -115,7 +117,7 @@ async function resolveImageUrls(
       thumbnailUrl = full.signedUrl;
     }
 
-    if (image.storagePath) {
+    if (includeFullUrls && image.storagePath) {
       const full = await createSignedDownloadUrl(bucket, image.storagePath);
       fullUrl = full.signedUrl;
     }
@@ -649,6 +651,52 @@ export class ProductImageService {
     });
   }
 
+  async getProductImageSignedUrl(
+    productId: string,
+    imageId: string,
+    size: "full" | "thumb" = "full",
+  ): Promise<{ url: string | null }> {
+    const { profile } = await requireAuth();
+
+    const product = await productRepository.findById(productId);
+    if (!product) {
+      throw new ProductImageError("Producto no encontrado.", "PRODUCT_NOT_FOUND");
+    }
+
+    const folder = await folderRepository.findById(product.folderId);
+    if (!folder) {
+      throw new ProductImageError("Carpeta no encontrada.", "PRODUCT_NOT_FOUND");
+    }
+
+    const catalog = await catalogRepository.findById(folder.catalogId);
+    if (!catalog) {
+      throw new ProductImageError("Catálogo no encontrado.", "PRODUCT_NOT_FOUND");
+    }
+
+    try {
+      visibilityService.assertCatalogVisibleForRole(catalog, profile.role);
+      visibilityService.assertFolderVisibleForRole(folder, profile.role);
+    } catch (error) {
+      if (error instanceof VisibilityError) {
+        throw new ProductImageError("Producto no encontrado.", "PRODUCT_NOT_FOUND");
+      }
+      throw error;
+    }
+
+    const image = await productImageRepository.findById(imageId);
+    if (!image || image.productId !== productId) {
+      throw new ProductImageError("Imagen no encontrada.", "IMAGE_NOT_FOUND");
+    }
+
+    const urls = await resolveImageUrls(image, { includeFullUrls: true });
+    const url =
+      size === "full"
+        ? (urls.fullUrl ?? urls.thumbnailUrl)
+        : (urls.thumbnailUrl ?? urls.fullUrl);
+
+    return { url };
+  }
+
   async getProductImages(productId: string): Promise<ProductImageReviewItem[]> {
     const { profile } = await requireAuth();
 
@@ -709,6 +757,7 @@ export class ProductImageService {
 
   async resolvePrimaryImagesForProducts(
     productIds: string[],
+    options?: { includeFullUrls?: boolean },
   ): Promise<Map<string, ProductImageUrls>> {
     const images = await productImageRepository.findPrimaryByProductIds(productIds);
     const result = new Map<string, ProductImageUrls>();
@@ -719,7 +768,7 @@ export class ProductImageService {
           return;
         }
 
-        const urls = await resolveImageUrls(image);
+        const urls = await resolveImageUrls(image, options);
         result.set(image.productId, {
           id: image.id,
           thumbnailUrl: urls.thumbnailUrl,
@@ -734,6 +783,7 @@ export class ProductImageService {
   async resolveColumnImagesForProducts(
     productIds: string[],
     columns: ColumnLabelRef[],
+    options?: { includeFullUrls?: boolean },
   ): Promise<Map<string, Record<string, ProductImageUrls[]>>> {
     const images = await productImageRepository.findAssociatedByProductIds(productIds);
     const result = new Map<string, Record<string, ProductImageUrls[]>>();
@@ -749,7 +799,7 @@ export class ProductImageService {
           return;
         }
 
-        const urls = await resolveImageUrls(image);
+        const urls = await resolveImageUrls(image, options);
         const entry = result.get(image.productId) ?? {};
         const bucket = entry[columnKey] ?? [];
         bucket.push({

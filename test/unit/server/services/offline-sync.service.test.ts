@@ -54,6 +54,7 @@ vi.mock("@/server/repositories/column.repository", () => ({
 vi.mock("@/server/repositories/equivalent-code.repository", () => ({
   equivalentCodeRepository: {
     findByProductId: vi.fn(),
+    findByProductIds: vi.fn(),
   },
 }));
 vi.mock("@/server/repositories/product-image.repository", () => ({

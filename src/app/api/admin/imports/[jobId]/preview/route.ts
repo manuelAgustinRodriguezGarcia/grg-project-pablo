@@ -46,14 +46,24 @@ export async function GET(request: Request, context: RouteContext) {
     const total = products.length;
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
     const start = (page - 1) * pageSize;
+    const matchedTotal = matchedProducts.length;
+    const matchedTotalPages =
+      matchedTotal === 0 ? 0 : Math.ceil(matchedTotal / pageSize);
+    const matchedStart = (page - 1) * pageSize;
 
     return NextResponse.json({
       summary,
       products: products.slice(start, start + pageSize),
-      matchedProducts,
+      matchedProducts: matchedProducts.slice(matchedStart, matchedStart + pageSize),
       warnings: job.preview.warnings,
       errors: job.preview.errors,
       pagination: { page, pageSize, total, totalPages },
+      matchedPagination: {
+        page,
+        pageSize,
+        total: matchedTotal,
+        totalPages: matchedTotalPages,
+      },
     });
   } catch (error) {
     return handleAdminApiError(error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ChevronLeft, ChevronRight, File, ICON_STROKE } from "@/shared/icons";
 import type {
@@ -130,9 +130,25 @@ export function ProductTable({
   const [previewImage, setPreviewImage] = useState<{
     url: string;
     alt: string;
+    productId: string;
+    imageId: string;
   } | null>(null);
 
-  if (isLoading) {
+  const sortedColumns = useMemo(
+    () =>
+      data
+        ? getProductTableColumns(
+            [...data.columns].sort((left, right) => left.order - right.order),
+          )
+        : [],
+    [data],
+  );
+  const showImageColumn = useMemo(
+    () => (data ? shouldShowGlobalImageColumn(data.products) : false),
+    [data],
+  );
+
+  if (isLoading && !data) {
     return (
       <section
         className={styles.tablePanel}
@@ -162,15 +178,15 @@ export function ProductTable({
     );
   }
 
-  const sortedColumns = getProductTableColumns(
-    [...data.columns].sort((left, right) => left.order - right.order),
-  );
-  const showImageColumn = shouldShowGlobalImageColumn(data.products);
   const { from, to } = getPaginationRange(data.pagination);
   const { pagination } = data;
 
   return (
-    <section className={styles.tablePanel} aria-label="Tabla de productos">
+    <section
+      className={styles.tablePanel}
+      aria-label="Tabla de productos"
+      aria-busy={isLoading || undefined}
+    >
       <div
         className={`${styles.tableWrap} ${data.products.length === 0 ? styles.tableWrapEmpty : ""}`}
       >
@@ -217,11 +233,14 @@ export function ProductTable({
                           className={styles.tableThumbButton}
                           onClick={() =>
                             setPreviewImage({
-                              url: previewUrl,
+                              url:
+                                product.primaryImage?.thumbnailUrl ?? previewUrl,
                               alt: buildProductImageAlt(
                                 product.primaryCode,
                                 product.description,
                               ),
+                              productId: product.id,
+                              imageId: product.primaryImage?.id ?? "",
                             })
                           }
                           aria-label={`Ver imagen de ${buildProductImageAlt(
@@ -284,12 +303,14 @@ export function ProductTable({
                                 className={styles.tableCellThumbButton}
                                 onClick={() =>
                                   setPreviewImage({
-                                    url,
+                                    url: image.thumbnailUrl ?? url,
                                     alt: buildProductImageAlt(
                                       product.primaryCode,
                                       product.description,
                                       column.displayName,
                                     ),
+                                    productId: product.id,
+                                    imageId: image.id,
                                   })
                                 }
                                 aria-label={`Ver imagen de ${buildProductImageAlt(
@@ -332,7 +353,7 @@ export function ProductTable({
           <button
             type="button"
             className={styles.paginationButton}
-            disabled={pagination.page <= 1}
+            disabled={pagination.page <= 1 || isLoading}
             onClick={() => onPageChange(pagination.page - 1)}
             aria-label="Página anterior"
           >
@@ -346,7 +367,7 @@ export function ProductTable({
           <button
             type="button"
             className={styles.paginationButton}
-            disabled={pagination.page >= pagination.totalPages}
+            disabled={pagination.page >= pagination.totalPages || isLoading}
             onClick={() => onPageChange(pagination.page + 1)}
             aria-label="Página siguiente"
           >
@@ -359,6 +380,8 @@ export function ProductTable({
         <ProductImagePreviewModal
           imageUrl={previewImage.url}
           imageAlt={previewImage.alt}
+          productId={previewImage.productId}
+          imageId={previewImage.imageId}
           onClose={() => setPreviewImage(null)}
         />
       ) : null}

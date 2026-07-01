@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
 
@@ -108,7 +108,15 @@ describe("ProductTable", () => {
     );
   });
 
-  it("opens a preview modal when clicking a thumbnail", () => {
+  it("opens a preview modal when clicking a thumbnail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ url: "https://example.com/full.jpg" }),
+      }),
+    );
+
     const data = createTableData([
       {
         id: "product-1",
@@ -131,10 +139,12 @@ describe("ProductTable", () => {
     fireEvent.click(screen.getByRole("button", { name: /ver imagen de 6205/i }));
 
     const dialog = screen.getByRole("dialog", { name: "6205 — Ruleman" });
-    expect(within(dialog).getByRole("img", { name: "6205 — Ruleman" })).toHaveAttribute(
-      "src",
-      "https://example.com/full.jpg",
-    );
+    await waitFor(() => {
+      expect(within(dialog).getByRole("img", { name: "6205 — Ruleman" })).toHaveAttribute(
+        "src",
+        "https://example.com/full.jpg",
+      );
+    });
   });
 
   it("does not open a preview modal when the row has no image", () => {

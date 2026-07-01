@@ -147,11 +147,18 @@ export class OfflineSyncService {
     }
 
     const productIds = items.map((product) => product.id);
-    const allEquivalences = await Promise.all(
-      productIds.map((productId) =>
-        equivalentCodeRepository.findByProductId(productId),
-      ),
-    );
+    const equivalenceRows =
+      await equivalentCodeRepository.findByProductIds(productIds);
+    const equivalencesByProductId = new Map<
+      string,
+      (typeof equivalenceRows)[number][]
+    >();
+
+    for (const row of equivalenceRows) {
+      const list = equivalencesByProductId.get(row.productId) ?? [];
+      list.push(row);
+      equivalencesByProductId.set(row.productId, list);
+    }
 
     const visibleColumnKeys = new Set(columns.map((column) => column.internalKey));
 
@@ -169,7 +176,7 @@ export class OfflineSyncService {
         dataType: column.dataType,
         visibleToNormalUser: column.visibleToNormalUser,
       })),
-      products: items.map((product, index) => {
+      products: items.map((product) => {
         const dynamicData =
           typeof product.dynamicData === "object" &&
           product.dynamicData !== null &&
@@ -187,10 +194,12 @@ export class OfflineSyncService {
             role,
           ),
           indexedText: product.indexedText,
-          equivalentCodes: (allEquivalences[index] ?? []).map((code) => ({
+          equivalentCodes: (equivalencesByProductId.get(product.id) ?? []).map(
+            (code) => ({
             originalCode: code.originalCode,
             normalizedCode: code.normalizedCode,
-          })),
+          }),
+          ),
         };
       }),
       hasMore,

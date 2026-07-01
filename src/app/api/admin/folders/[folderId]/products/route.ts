@@ -33,6 +33,7 @@ export async function GET(request: Request, context: RouteContext) {
       pageSize: searchParams.get("pageSize") ?? undefined,
       q: searchParams.get("q") ?? undefined,
       filters: searchParams.get("filters") ?? undefined,
+      includeFullUrls: searchParams.get("includeFullUrls") ?? undefined,
     });
 
     if (!parsed.success) {
@@ -51,6 +52,7 @@ export async function GET(request: Request, context: RouteContext) {
       pageSize: parsed.data.pageSize,
       query: parsed.data.q,
       filters: parsed.data.filters,
+      includeFullUrls: parsed.data.includeFullUrls,
     });
 
     return NextResponse.json(table);

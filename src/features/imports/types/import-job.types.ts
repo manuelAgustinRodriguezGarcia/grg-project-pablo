@@ -88,6 +88,12 @@ export type ImportPreviewResponse = {
     total: number;
     totalPages: number;
   };
+  matchedPagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 };
 
 export type ImportReport = Record<string, unknown>;

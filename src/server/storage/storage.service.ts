@@ -13,6 +13,10 @@ import type {
   UploadFileInput,
   UploadFileResult,
 } from "./types";
+import {
+  buildSignedUrlCacheKey,
+  getSignedUrlCache,
+} from "./signed-url-cache";
 import { normalizeStoragePath, validateUpload } from "./validate";
 
 export async function uploadFile(
@@ -69,6 +73,17 @@ export async function createSignedDownloadUrl(
   expiresInSeconds: number = DEFAULT_SIGNED_URL_EXPIRY_SECONDS,
 ): Promise<SignedUrlResult> {
   const normalizedPath = normalizeStoragePath(path);
+  const cache = getSignedUrlCache();
+
+  if (cache) {
+    const cacheKey = buildSignedUrlCacheKey(bucket, normalizedPath);
+    const cached = cache.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+  }
+
   const client = getSupabaseAdminClient();
 
   const { data, error } = await client.storage
@@ -81,12 +96,18 @@ export async function createSignedDownloadUrl(
     );
   }
 
-  return {
+  const result: SignedUrlResult = {
     bucket,
     path: normalizedPath,
     signedUrl: data.signedUrl,
     expiresInSeconds,
   };
+
+  if (cache) {
+    cache.set(buildSignedUrlCacheKey(bucket, normalizedPath), result);
+  }
+
+  return result;
 }
 
 export async function downloadFile(
