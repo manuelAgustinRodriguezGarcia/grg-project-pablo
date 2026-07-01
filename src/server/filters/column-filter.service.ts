@@ -6,6 +6,7 @@ import type {
   ActiveFilterPill,
   ColumnFilterInput,
   ColumnFilterOperator,
+  JsonTextColumnFilter,
 } from "./column-filter.types";
 
 const columnFilterSchema = z.object({
@@ -17,6 +18,11 @@ const columnFilterSchema = z.object({
 const columnFiltersSchema = z
   .array(columnFilterSchema)
   .max(20, "No se pueden aplicar más de 20 filtros.");
+
+export type PartitionedColumnFilters = {
+  prismaFilters: ColumnFilterInput[];
+  jsonTextFilters: JsonTextColumnFilter[];
+};
 
 function operatorLabel(operator: ColumnFilterOperator): string {
   switch (operator) {
@@ -44,6 +50,18 @@ function getDynamicValue(
   }
 
   return (dynamicData as Record<string, unknown>)[key] ?? null;
+}
+
+function isJsonTextDynamicFilter(
+  column: FolderColumn,
+  filter: ColumnFilterInput,
+): boolean {
+  return (
+    !column.isPrimaryCode &&
+    !column.isDescription &&
+    column.dataType === "TEXT" &&
+    column.internalKey === filter.columnInternalKey
+  );
 }
 
 function buildDynamicDataCondition(
@@ -111,7 +129,9 @@ export class ColumnFilterService {
     filters: ColumnFilterInput[],
     columns: FolderColumn[],
     allowedKeys: string[],
+    options?: { requireFilterableColumn?: boolean },
   ): void {
+    const requireFilterableColumn = options?.requireFilterableColumn ?? true;
     const columnsByKey = new Map(columns.map((column) => [column.internalKey, column]));
 
     for (const filter of filters) {
@@ -123,13 +143,38 @@ export class ColumnFilterService {
       }
 
       const column = columnsByKey.get(filter.columnInternalKey);
-      if (!column?.isFilterable) {
+      if (requireFilterableColumn && !column?.isFilterable) {
         throw new ProductError(
           `La columna "${column?.displayName ?? filter.columnInternalKey}" no es filtrable.`,
           "VALIDATION_ERROR",
         );
       }
     }
+  }
+
+  partitionFilters(
+    filters: ColumnFilterInput[],
+    columns: FolderColumn[],
+  ): PartitionedColumnFilters {
+    const columnsByKey = new Map(columns.map((column) => [column.internalKey, column]));
+    const prismaFilters: ColumnFilterInput[] = [];
+    const jsonTextFilters: JsonTextColumnFilter[] = [];
+
+    for (const filter of filters) {
+      const column = columnsByKey.get(filter.columnInternalKey);
+      if (!column) {
+        continue;
+      }
+
+      if (isJsonTextDynamicFilter(column, filter)) {
+        jsonTextFilters.push(filter);
+        continue;
+      }
+
+      prismaFilters.push(filter);
+    }
+
+    return { prismaFilters, jsonTextFilters };
   }
 
   buildFilterWhere(
@@ -152,7 +197,12 @@ export class ColumnFilterService {
       if (column.isPrimaryCode) {
         andConditions.push(
           filter.operator === "equals"
-            ? { primaryCode: filter.value }
+            ? {
+                primaryCode: {
+                  equals: filter.value,
+                  mode: "insensitive",
+                },
+              }
             : {
                 primaryCode: {
                   contains: filter.value,
@@ -166,7 +216,12 @@ export class ColumnFilterService {
       if (column.isDescription) {
         andConditions.push(
           filter.operator === "equals"
-            ? { description: filter.value }
+            ? {
+                description: {
+                  equals: filter.value,
+                  mode: "insensitive",
+                },
+              }
             : {
                 description: {
                   contains: filter.value,

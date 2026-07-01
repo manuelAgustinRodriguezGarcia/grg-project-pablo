@@ -15,6 +15,7 @@ export default async function AdminCatalogosPage() {
     <CatalogNavigator
       catalogs={directory.catalogs}
       isAdmin={auth.profile.role === "ADMIN"}
+      enableColumnFilters
     />
   );
 }

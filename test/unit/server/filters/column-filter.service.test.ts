@@ -8,6 +8,7 @@ describe("column-filter.service", () => {
       internalKey: "montadora",
       displayName: "Montadora",
       isFilterable: true,
+      isPrimaryCode: false,
       dataType: "TEXT",
     }),
     createColumnFixture({
@@ -39,12 +40,47 @@ describe("column-filter.service", () => {
     expect(pills[0]?.label).toBe('Montadora contiene "John D"');
   });
 
-  it("combina filtros con AND", () => {
+  it("combina filtros prisma con AND", () => {
+    const columnsWithPrimaryCode = [
+      ...columns,
+      createColumnFixture({
+        id: "col-codigo",
+        internalKey: "codigo",
+        displayName: "Código",
+        isPrimaryCode: true,
+        isFilterable: true,
+        dataType: "TEXT",
+      }),
+    ];
+
+    const filters = columnFilterService.parseFilters([
+      {
+        columnInternalKey: "estrias",
+        operator: "equals",
+        value: "19",
+      },
+      {
+        columnInternalKey: "codigo",
+        operator: "contains",
+        value: "6205",
+      },
+    ]);
+
+    const { prismaFilters } = columnFilterService.partitionFilters(
+      filters,
+      columnsWithPrimaryCode,
+    );
+
+    const where = columnFilterService.buildFilterWhere(prismaFilters, columnsWithPrimaryCode);
+    expect(where).toHaveProperty("AND");
+  });
+
+  it("separa filtros TEXT dinámicos para consulta ILIKE", () => {
     const filters = columnFilterService.parseFilters([
       {
         columnInternalKey: "montadora",
         operator: "contains",
-        value: "John D",
+        value: "indiel",
       },
       {
         columnInternalKey: "estrias",
@@ -53,8 +89,52 @@ describe("column-filter.service", () => {
       },
     ]);
 
-    const where = columnFilterService.buildFilterWhere(filters, columns);
-    expect(where).toHaveProperty("AND");
+    const partitioned = columnFilterService.partitionFilters(filters, columns);
+
+    expect(partitioned.jsonTextFilters).toEqual([
+      {
+        columnInternalKey: "montadora",
+        operator: "contains",
+        value: "indiel",
+      },
+    ]);
+    expect(partitioned.prismaFilters).toEqual([
+      {
+        columnInternalKey: "estrias",
+        operator: "equals",
+        value: "19",
+      },
+    ]);
+  });
+
+  it("usa equals case-insensitive para primaryCode", () => {
+    const columnsWithPrimaryCode = [
+      createColumnFixture({
+        id: "col-codigo",
+        internalKey: "codigo",
+        displayName: "Código",
+        isPrimaryCode: true,
+        isFilterable: true,
+        dataType: "TEXT",
+      }),
+    ];
+
+    const filters = columnFilterService.parseFilters([
+      {
+        columnInternalKey: "codigo",
+        operator: "equals",
+        value: "abc",
+      },
+    ]);
+
+    const where = columnFilterService.buildFilterWhere(filters, columnsWithPrimaryCode);
+
+    expect(where).toEqual({
+      primaryCode: {
+        equals: "abc",
+        mode: "insensitive",
+      },
+    });
   });
 
   it("rechaza columnas no filtrables", () => {

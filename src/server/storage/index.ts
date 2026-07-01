@@ -27,4 +27,5 @@ export type {
   UploadFileResult,
 } from "./types";
 export { STORAGE_BUCKETS } from "./types";
+export { resolveExcelContentType } from "./resolve-excel-content-type";
 export { normalizeStoragePath, validateUpload } from "./validate";

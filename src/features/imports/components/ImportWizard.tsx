@@ -75,6 +75,7 @@ import { ImportWizardStepContextHint } from "./ImportWizardStepContextHint";
 import { createPriceListAction } from "@/features/prices/actions/price-list.actions";
 import type { PriceListListItem } from "@/features/prices/types/price-list.types";
 import { getImportWizardStepHint } from "@/features/imports/data/import-wizard-step-hints";
+import { getImportConfirmCopy } from "@/features/imports/utils/import-confirm-copy";
 import styles from "./ImportWizard.module.scss";
 
 type ImportPublishedContext = {
@@ -972,6 +973,16 @@ export function ImportWizard({
 
   const currentStepIndex = getStepIndicatorIndex(step);
   const stepContextHint = getImportWizardStepHint(step);
+  const importConfirmCopy = confirmAction
+    ? getImportConfirmCopy({
+        action: confirmAction,
+        isPriceMode,
+        summary: preview?.summary,
+        destinationName: isPriceMode
+          ? selectedPriceList?.name
+          : selectedFolder?.name,
+      })
+    : null;
   const canContinueDestination = isPriceMode
     ? Boolean(selectedPriceListId && selectedSheetName)
     : Boolean(selectedCatalogId && selectedFolderId && selectedSheetName);
@@ -1347,16 +1358,8 @@ export function ImportWizard({
               aria-modal="true"
               aria-label="Confirmar importación"
             >
-              <h3 className={styles.confirmTitle}>
-                {confirmAction === "REEMPLAZAR_LISTA"
-                  ? "Reemplazar productos"
-                  : "Combinar productos"}
-              </h3>
-              <p className={styles.confirmText}>
-                {confirmAction === "REEMPLAZAR_LISTA"
-                  ? `Se eliminarán los ${preview?.summary.folderProductCount ?? 0} productos actuales de la carpeta y se reemplazarán por la nueva lista. Esta acción no se puede deshacer.`
-                  : "Se agregarán únicamente los productos nuevos y se mantendrán los existentes. ¿Querés continuar?"}
-              </p>
+              <h3 className={styles.confirmTitle}>{importConfirmCopy?.title}</h3>
+              <p className={styles.confirmText}>{importConfirmCopy?.message}</p>
               <div className={styles.confirmActions}>
                 <button
                   type="button"
@@ -1374,7 +1377,7 @@ export function ImportWizard({
                   }
                   onClick={() => void applyImport(confirmAction)}
                 >
-                  {confirmAction === "REEMPLAZAR_LISTA" ? "Reemplazar" : "Combinar"}
+                  {importConfirmCopy?.confirmLabel}
                 </button>
               </div>
             </div>

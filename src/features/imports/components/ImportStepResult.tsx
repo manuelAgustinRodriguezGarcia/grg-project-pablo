@@ -43,11 +43,22 @@ export function ImportStepResult({
       <h3 className={styles.resultTitle}>¡Importación completada!</h3>
       {isPriceMode ? (
         <p className={styles.resultText}>
-          Se importaron {report.itemsCreated ?? 0} ítems en la lista{" "}
-          {report.priceListName ?? "de precios"}.
-          {(report.itemsSkipped ?? 0) > 0
-            ? ` Se omitieron ${report.itemsSkipped} ítems ya existentes.`
-            : ""}
+          {report.actionApplied === "REEMPLAZAR_LISTA" &&
+          (report.itemsDeleted ?? 0) > 0 ? (
+            <>
+              Se reemplazaron {(report.itemsDeleted ?? 0).toLocaleString("es-AR")} ítems
+              por {(report.itemsCreated ?? 0).toLocaleString("es-AR")} nuevos en la lista{" "}
+              {report.priceListName ?? "de precios"}.
+            </>
+          ) : (
+            <>
+              Se importaron {(report.itemsCreated ?? 0).toLocaleString("es-AR")} ítems en
+              la lista {report.priceListName ?? "de precios"}.
+              {(report.itemsSkipped ?? 0) > 0
+                ? ` Se omitieron ${(report.itemsSkipped ?? 0).toLocaleString("es-AR")} ítems ya existentes.`
+                : ""}
+            </>
+          )}
         </p>
       ) : (
         <p className={styles.resultText}>

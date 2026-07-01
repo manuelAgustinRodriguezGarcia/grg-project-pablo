@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ImportError } from "@/server/services/import.errors";
 import { importJobRepository } from "@/server/repositories/import-job.repository";
 import { priceColumnRepository } from "@/server/repositories/price-column.repository";
 import { priceItemRepository } from "@/server/repositories/price-item.repository";
@@ -16,6 +17,7 @@ vi.mock("@/server/repositories/import-job.repository", () => ({
 vi.mock("@/server/repositories/price-list.repository", () => ({
   priceListRepository: {
     findById: vi.fn(),
+    findByIdWithItemCount: vi.fn(),
   },
 }));
 vi.mock("@/server/repositories/price-column.repository", () => ({
@@ -81,12 +83,18 @@ const sheetFixture = {
 describe("PriceImportService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(priceListRepository.findById).mockResolvedValue(createPriceListFixture());
+    const listFixture = createPriceListFixture();
+    vi.mocked(priceListRepository.findById).mockResolvedValue(listFixture);
+    vi.mocked(priceListRepository.findByIdWithItemCount).mockResolvedValue({
+      ...listFixture,
+      itemCount: 0,
+    });
     vi.mocked(importJobRepository.update).mockResolvedValue({ id: "job-1" } as never);
     vi.mocked(priceColumnRepository.findByPriceListIdOrdered).mockResolvedValue([]);
     vi.mocked(priceItemRepository.findCodesByPriceList).mockResolvedValue([]);
     vi.mocked(priceItemRepository.countByPriceList).mockResolvedValue(0);
     vi.mocked(priceItemRepository.createMany).mockResolvedValue(1);
+    vi.mocked(priceItemRepository.deleteByPriceList).mockResolvedValue(0);
   });
 
   it("setDestination configura PRICE_LIST y limpia preview previo", async () => {
@@ -117,5 +125,77 @@ describe("PriceImportService", () => {
 
     expect(importJobRepository.upsertPreview).toHaveBeenCalled();
     expect(result).toBeDefined();
+  });
+
+  it("apply REEMPLAZAR_LISTA borra ítems existentes e inserta los nuevos", async () => {
+    vi.mocked(priceListRepository.findByIdWithItemCount).mockResolvedValue({
+      ...createPriceListFixture(),
+      itemCount: 42,
+    });
+    vi.mocked(priceItemRepository.deleteByPriceList).mockResolvedValue(42);
+
+    await priceImportService.apply(
+      "job-1",
+      { actionType: "REEMPLAZAR_LISTA", confirmed: true },
+      "admin-1",
+      sheetFixture,
+      PRICE_LIST_ID,
+      {},
+      [],
+    );
+
+    expect(priceItemRepository.deleteByPriceList).toHaveBeenCalledWith(PRICE_LIST_ID);
+    expect(priceItemRepository.createMany).toHaveBeenCalled();
+    expect(importJobRepository.update).toHaveBeenCalledWith(
+      "job-1",
+      expect.objectContaining({
+        status: "PUBLISHED",
+        actionType: "REEMPLAZAR_LISTA",
+      }),
+    );
+  });
+
+  it("apply REEMPLAZAR_LISTA exige confirmación", async () => {
+    vi.mocked(priceListRepository.findByIdWithItemCount).mockResolvedValue({
+      ...createPriceListFixture(),
+      itemCount: 10,
+    });
+
+    await expect(
+      priceImportService.apply(
+        "job-1",
+        { actionType: "REEMPLAZAR_LISTA", confirmed: false },
+        "admin-1",
+        sheetFixture,
+        PRICE_LIST_ID,
+        {},
+        [],
+      ),
+    ).rejects.toMatchObject({
+      code: "CONFIRMATION_REQUIRED",
+    } satisfies Partial<ImportError>);
+
+    expect(priceItemRepository.deleteByPriceList).not.toHaveBeenCalled();
+  });
+
+  it("apply IMPORTAR_LISTA rechaza lista no vacía", async () => {
+    vi.mocked(priceListRepository.findByIdWithItemCount).mockResolvedValue({
+      ...createPriceListFixture(),
+      itemCount: 5,
+    });
+
+    await expect(
+      priceImportService.apply(
+        "job-1",
+        { actionType: "IMPORTAR_LISTA", confirmed: true },
+        "admin-1",
+        sheetFixture,
+        PRICE_LIST_ID,
+        {},
+        [],
+      ),
+    ).rejects.toMatchObject({
+      code: "FOLDER_NOT_EMPTY",
+    } satisfies Partial<ImportError>);
   });
 });

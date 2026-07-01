@@ -11,3 +11,11 @@ export function getProductTableColumns<T extends { internalKey: string }>(
 ): T[] {
   return columns.filter((column) => !isGeneratedPrimaryCodeColumn(column));
 }
+
+export function getAdminFilterableColumnKeys(
+  columns: Array<{ internalKey: string; isImageCode: boolean }>,
+): string[] {
+  return getProductTableColumns(columns)
+    .filter((column) => !column.isImageCode)
+    .map((column) => column.internalKey);
+}

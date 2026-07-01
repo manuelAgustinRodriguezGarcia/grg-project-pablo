@@ -3,8 +3,9 @@ import { handleAdminApiError } from "@/server/api/admin-api-error";
 import { catalogImportService } from "@/server/services/catalog-import.service";
 import { ImportError } from "@/server/services/import.errors";
 import { BUCKET_CONFIGS } from "@/server/storage/config";
-import { STORAGE_BUCKETS } from "@/server/storage/types";
+import { resolveExcelContentType } from "@/server/storage/resolve-excel-content-type";
 import { getFileExtension } from "@/server/storage/sanitize-filename";
+import { STORAGE_BUCKETS } from "@/server/storage/types";
 
 const EXCEL_CONFIG = BUCKET_CONFIGS[STORAGE_BUCKETS.EXCEL_ORIGINALS];
 const TEMP_CONFIG = BUCKET_CONFIGS[STORAGE_BUCKETS.TEMP_IMPORTS];
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
     const result = await catalogImportService.uploadAndCreateJob({
       buffer,
       originalFilename: file.name,
-      contentType: file.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      contentType: resolveExcelContentType(file.name, file.type),
     });
 
     const optionalImages = await collectOptionalImages(formData);

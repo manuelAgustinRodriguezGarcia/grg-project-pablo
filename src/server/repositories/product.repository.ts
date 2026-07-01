@@ -1,6 +1,13 @@
 import type { Product } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
+import type { JsonTextColumnFilter } from "@/server/filters/column-filter.types";
+
+const VALID_JSON_COLUMN_KEY = /^[a-zA-Z0-9_]+$/;
+
+function escapeIlikePattern(value: string): string {
+  return value.replace(/[%_\\]/g, "\\$&");
+}
 
 export type ProductPaginationOptions = {
   page: number;
@@ -101,6 +108,39 @@ export class ProductRepository {
       pageSize,
       totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
     };
+  }
+
+  async findIdsMatchingJsonTextFilters(
+    folderId: string,
+    filters: JsonTextColumnFilter[],
+  ): Promise<string[]> {
+    if (filters.length === 0) {
+      return [];
+    }
+
+    for (const filter of filters) {
+      if (!VALID_JSON_COLUMN_KEY.test(filter.columnInternalKey)) {
+        throw new Error(`Clave de columna inválida: ${filter.columnInternalKey}`);
+      }
+    }
+
+    const conditions = filters.map((filter) => {
+      if (filter.operator === "equals") {
+        return Prisma.sql`LOWER("dynamicData"->>${filter.columnInternalKey}) = LOWER(${filter.value})`;
+      }
+
+      const pattern = `%${escapeIlikePattern(filter.value)}%`;
+      return Prisma.sql`"dynamicData"->>${filter.columnInternalKey} ILIKE ${pattern}`;
+    });
+
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "Product"
+      WHERE "folderId" = ${folderId}
+      AND ${Prisma.join(conditions, " AND ")}
+    `;
+
+    return rows.map((row) => row.id);
   }
 
   async findOptionsByFolder(

@@ -79,4 +79,41 @@ describe("ImportStepPreview", () => {
     expect(screen.queryByText("Columnas repetidas")).not.toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
+
+  it("muestra combinar y reemplazar cuando la lista de precios tiene ítems", () => {
+    render(
+      <ImportStepPreview
+        preview={{
+          ...createPreview([]),
+          summary: {
+            totalItems: 25,
+            matchedCount: 3,
+            columnCount: 4,
+            priceListItemCount: 80,
+            priceListIsEmpty: false,
+            formulasDetected: 0,
+            formulasWithoutCachedValue: 0,
+          },
+        }}
+        mode="PRICE_LIST"
+        catalogName=""
+        folderName=""
+        priceListName="Lista mayorista"
+        sheetName="Precios"
+        selectedAction={null}
+        onSelectAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /Combinar/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Reemplazar/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Mantiene los 80 ítems actuales y agrega solo los nuevos/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Borra los 80 ítems actuales y los sustituye por la nueva lista/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/lista de precios/)).toBeInTheDocument();
+    expect(screen.getByText(/Lista mayorista/)).toBeInTheDocument();
+  });
 });

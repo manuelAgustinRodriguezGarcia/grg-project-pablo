@@ -287,6 +287,108 @@ describe("ProductTable", () => {
     expect(screen.getByText("Producto A")).toBeInTheDocument();
   });
 
+  it("muestra el menú de filtro en columnas filtrables cuando está habilitado", () => {
+    const data: ProductTableResponse = {
+      ...createTableData([]),
+      columns: [
+        {
+          id: "col-1",
+          folderId: "folder-1",
+          originalName: "Montadora",
+          displayName: "Montadora",
+          internalKey: "montadora",
+          dataType: "TEXT",
+          order: 0,
+          isPrimaryCode: false,
+          isDescription: false,
+          isImageCode: false,
+          isSearchable: false,
+          isFilterable: true,
+          visibleToNormalUser: true,
+          isGloballySearchable: false,
+          isGloballyFilterable: false,
+          globalFieldKey: null,
+          createdAt: new Date("2026-01-01"),
+          updatedAt: new Date("2026-01-01"),
+        },
+        {
+          id: "col-2",
+          folderId: "folder-1",
+          originalName: "Obs",
+          displayName: "Obs",
+          internalKey: "obs",
+          dataType: "TEXT",
+          order: 1,
+          isPrimaryCode: false,
+          isDescription: false,
+          isImageCode: false,
+          isSearchable: false,
+          isFilterable: false,
+          visibleToNormalUser: true,
+          isGloballySearchable: false,
+          isGloballyFilterable: false,
+          globalFieldKey: null,
+          createdAt: new Date("2026-01-01"),
+          updatedAt: new Date("2026-01-01"),
+        },
+      ],
+      products: [
+        {
+          id: "product-1",
+          primaryCode: "6205",
+          description: "Ruleman",
+          dynamicData: { montadora: "John Deere", obs: "35" },
+          primaryImage: null,
+          imagesByColumnKey: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      pagination: {
+        page: 1,
+        pageSize: 25,
+        total: 1,
+        totalPages: 1,
+      },
+      activeFilters: [
+        {
+          id: "montadora",
+          columnInternalKey: "montadora",
+          columnDisplayName: "Montadora",
+          operator: "contains",
+          value: "John",
+          label: 'Montadora contiene "John"',
+        },
+      ],
+    };
+
+    render(
+      <ProductTable
+        data={data}
+        isLoading={false}
+        error={null}
+        onPageChange={vi.fn()}
+        enableColumnFilters
+        columnFilters={[
+          {
+            columnInternalKey: "montadora",
+            operator: "contains",
+            value: "John",
+          },
+        ]}
+        onColumnFilterChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Filtrar columna Montadora" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Filtrar columna Obs" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Montadora contiene "John"')).toBeInTheDocument();
+  });
+
   it("renders images inside their mapped column instead of the global image column", () => {
     const data: ProductTableResponse = {
       ...createTableData([]),

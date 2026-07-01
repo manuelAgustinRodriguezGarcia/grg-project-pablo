@@ -266,7 +266,7 @@ export class PriceImportService {
       );
     }
 
-    const columns = await priceColumnRepository.findByPriceListIdOrdered(priceListId);
+    const columns = await syncPriceColumnsFromSheet(priceListId, sheet, config);
     const mappedItems = mapSheetToPriceItems(sheet, columns, config);
 
     let itemsToInsert = mappedItems;
@@ -280,6 +280,7 @@ export class PriceImportService {
     }
 
     const skippedCount = mappedItems.length - itemsToInsert.length;
+    const matchedInPreview = previewItems.filter((item) => item.isMatch).length;
 
     await prisma.$transaction(async () => {
       if (input.actionType === "REEMPLAZAR_LISTA") {
@@ -313,8 +314,10 @@ export class PriceImportService {
       sheetImported: sheet.sheetName,
       itemsProcessed: mappedItems.length,
       itemsCreated: itemsToInsert.length,
-      itemsSkipped: skippedCount,
-      itemsMatched: skippedCount,
+      itemsSkipped: input.actionType === "COMBINAR_LISTA" ? skippedCount : 0,
+      itemsMatched:
+        input.actionType === "COMBINAR_LISTA" ? skippedCount : matchedInPreview,
+      itemsDeleted: input.actionType === "REEMPLAZAR_LISTA" ? itemCount : 0,
       formulasDetected: formulaStats.formulasDetected,
       formulasWithoutCachedValue: formulaStats.formulasWithoutCachedValue,
       columnsDetected: sheet.columnCount,
