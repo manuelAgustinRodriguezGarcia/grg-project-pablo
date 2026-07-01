@@ -103,6 +103,24 @@ export class ProductRepository {
     };
   }
 
+  async findOptionsByFolder(
+    where: Prisma.ProductWhereInput,
+    limit = 200,
+  ): Promise<
+    Array<Pick<Product, "id" | "primaryCode" | "description">>
+  > {
+    return prisma.product.findMany({
+      where,
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      take: Math.min(Math.max(1, limit), 200),
+      select: {
+        id: true,
+        primaryCode: true,
+        description: true,
+      },
+    });
+  }
+
   async updateIndexedText(id: string, indexedText: string | null): Promise<void> {
     await prisma.product.update({
       where: { id },

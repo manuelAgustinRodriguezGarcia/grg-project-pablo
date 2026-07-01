@@ -1,8 +1,8 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
-import { FileSpreadsheet, ICON_STROKE, Plus, Search } from "@/shared/icons";
+import { useEffect, useState, type ReactNode } from "react";
+import { FileSpreadsheet, ICON_STROKE, Plus, Search, X } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 type ActionCardConfig = {
@@ -30,7 +30,11 @@ const ACTION_CARDS: ActionCardConfig[] = [
   },
 ];
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 type CatalogPageIntroProps = {
+  onDebouncedSearchChange: (value: string) => void;
+  searchResetKey?: number;
   onImportExcelClick?: () => void;
   onAddProductClick?: () => void;
   children?: ReactNode;
@@ -51,10 +55,26 @@ function handleActionCardClick(
 }
 
 export function CatalogPageIntro({
+  onDebouncedSearchChange,
+  searchResetKey = 0,
   onImportExcelClick,
   onAddProductClick,
   children,
 }: CatalogPageIntroProps) {
+  const [searchInput, setSearchInput] = useState("");
+
+  useEffect(() => {
+    setSearchInput("");
+  }, [searchResetKey]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      onDebouncedSearchChange(searchInput.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [onDebouncedSearchChange, searchInput]);
+
   return (
     <section className={styles.sectionIntro} aria-label="Acciones de catálogos">
       <div className={styles.sectionHeader}>
@@ -67,11 +87,27 @@ export function CatalogPageIntro({
           />
           <input
             type="search"
-            className={styles.headerSearch}
+            className={`${styles.headerSearch} ${searchInput ? styles.headerSearchWithClear : ""}`}
             placeholder="Búsqueda global en catálogos, secciones o registros…"
-            readOnly
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setSearchInput("");
+              }
+            }}
             aria-label="Búsqueda global"
           />
+          {searchInput ? (
+            <button
+              type="button"
+              className={styles.headerSearchClear}
+              onClick={() => setSearchInput("")}
+              aria-label="Limpiar búsqueda"
+            >
+              <X strokeWidth={ICON_STROKE} aria-hidden />
+            </button>
+          ) : null}
         </div>
       </div>
 

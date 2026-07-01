@@ -75,6 +75,7 @@ vi.mock("@/server/services/audit.service", () => ({
 }));
 vi.mock("@/server/storage", () => ({
   deleteFile: vi.fn(),
+  runWithSignedUrlCache: vi.fn(async (operation: () => Promise<unknown>) => operation()),
 }));
 vi.mock("@/server/services/column-help.service", () => ({
   columnHelpService: {

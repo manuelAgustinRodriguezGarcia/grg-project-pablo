@@ -20,7 +20,7 @@ import type {
   UploadedFileReportResponse,
 } from "@/features/files/types/uploaded-file.types";
 import type { DirectoryCatalogItem } from "@/features/directory/types/directory.types";
-import { ImportWizard } from "@/features/imports/components/ImportWizard";
+import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
 import styles from "@/features/files/styles/FilesManager.module.scss";
 
 const PAGE_SIZE = 20;
@@ -394,7 +394,7 @@ export function FilesManager({ catalogs }: FilesManagerProps) {
       ) : null}
 
       {isImportOpen ? (
-        <ImportWizard
+        <LazyImportWizard
           catalogs={catalogs}
           initialJobId={wizardJobId ?? undefined}
           onClose={handleImportClose}

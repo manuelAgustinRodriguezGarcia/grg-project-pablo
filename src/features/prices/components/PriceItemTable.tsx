@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ChevronLeft, ChevronRight, Pencil, Receipt, Trash2, ICON_STROKE } from "@/shared/icons";
 import { PriceCellValue } from "@/features/prices/components/PriceCellValue";
@@ -76,6 +77,20 @@ export function PriceItemTable({
   onDeleteItem,
   columnDetails,
 }: PriceItemTableProps) {
+  const sortedColumns = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    return [...data.columns].sort((left, right) => {
+      const leftOrder =
+        columnDetails.find((column) => column.id === left.id)?.order ?? 0;
+      const rightOrder =
+        columnDetails.find((column) => column.id === right.id)?.order ?? 0;
+      return leftOrder - rightOrder || left.displayName.localeCompare(right.displayName, "es");
+    });
+  }, [columnDetails, data]);
+
   if (!hasAnyLists) {
     return (
       <section className={styles.tablePanel} aria-label="Ítems de precios">
@@ -141,11 +156,6 @@ export function PriceItemTable({
 
   const { pagination, columns, items } = data;
   const { from, to } = getPaginationRange(pagination);
-  const sortedColumns = [...columns].sort((left, right) => {
-    const leftOrder = columnDetails.find((column) => column.id === left.id)?.order ?? 0;
-    const rightOrder = columnDetails.find((column) => column.id === right.id)?.order ?? 0;
-    return leftOrder - rightOrder || left.displayName.localeCompare(right.displayName, "es");
-  });
   const primaryColumn = columns.find((column) => column.isPrimaryCode);
 
   return (

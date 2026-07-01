@@ -17,6 +17,7 @@ export {
   listStorageBuckets,
   uploadFile,
 } from "./storage.service";
+export { runWithSignedUrlCache } from "./signed-url-cache";
 export { getSupabaseAdminClient } from "./supabase-admin";
 export type {
   BucketConfig,

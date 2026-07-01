@@ -1,5 +1,6 @@
 "use client";
 
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
@@ -17,7 +18,7 @@ import type { PriceListFormValues } from "@/features/prices/components/PriceList
 import { PriceListSelectorPanel } from "@/features/prices/components/PriceListSelectorPanel";
 import { PricePageChrome } from "@/features/prices/components/PricePageChrome";
 import { PriceToolbar } from "@/features/prices/components/PriceToolbar";
-import { ImportWizard } from "@/features/imports/components/ImportWizard";
+import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
 import type { PriceColumnListItem } from "@/features/prices/types/price-column.types";
 import type { PriceItemTableResponse } from "@/features/prices/types/price-item-table.types";
 import type { PriceItemTableRow } from "@/features/prices/types/price-item-table.types";
@@ -26,7 +27,6 @@ import { sortByName } from "@/features/catalog/utils/sortByName";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
 const PAGE_SIZE = 25;
-const SEARCH_DEBOUNCE_MS = 300;
 
 type PriceNavigatorProps = {
   initialPriceLists: PriceListListItem[];
@@ -72,12 +72,7 @@ export function PriceNavigator({
     [sortedLists, selectedListId],
   );
 
-  const [itemTable, setItemTable] = useState<PriceItemTableResponse | null>(null);
-  const [columnDetails, setColumnDetails] = useState<PriceColumnListItem[]>([]);
-  const [isLoadingItems, setIsLoadingItems] = useState(false);
-  const [itemsError, setItemsError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [reloadToken, setReloadToken] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -94,16 +89,8 @@ export function PriceNavigator({
   const [editingItem, setEditingItem] = useState<PriceItemTableRow | null>(null);
   const [deleteItemTarget, setDeleteItemTarget] = useState<PriceItemTableRow | null>(null);
   const [isItemActionBusy, setIsItemActionBusy] = useState(false);
+  const [itemsActionError, setItemsActionError] = useState<string | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setDebouncedSearch(searchInput.trim());
-      setPage(1);
-    }, SEARCH_DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timeout);
-  }, [searchInput]);
 
   useEffect(() => {
     if (!successMessage) {
@@ -114,112 +101,95 @@ export function PriceNavigator({
     return () => window.clearTimeout(timeout);
   }, [successMessage]);
 
-  useEffect(() => {
-    if (!activeListId) {
-      return;
-    }
+  const handleDebouncedSearchChange = useCallback((query: string) => {
+    setDebouncedSearch(query);
+    setPage(1);
+  }, []);
 
-    let cancelled = false;
+  const columnsQuery = useQuery({
+    queryKey: ["admin", "price-columns", activeListId, reloadToken],
+    queryFn: async (): Promise<PriceColumnListItem[]> => {
+      const response = await fetch(`/api/admin/price-lists/${activeListId}/columns`);
 
-    async function loadItems() {
-      setIsLoadingItems(true);
-      setItemsError(null);
-
-      try {
-        const params = new URLSearchParams({
-          page: String(page),
-          pageSize: String(PAGE_SIZE),
-        });
-
-        if (debouncedSearch) {
-          params.set("q", debouncedSearch);
-        }
-
-        const [itemsResponse, columnsResponse] = await Promise.all([
-          fetch(`/api/admin/price-lists/${activeListId}/items?${params.toString()}`),
-          isAdmin
-            ? fetch(`/api/admin/price-lists/${activeListId}/columns`)
-            : Promise.resolve(null),
-        ]);
-
-        if (!itemsResponse.ok) {
-          const payload = (await itemsResponse.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          throw new Error(payload?.error ?? "No se pudieron cargar los ítems.");
-        }
-
-        const itemsData = (await itemsResponse.json()) as PriceItemTableResponse;
-
-        let nextColumnDetails: PriceColumnListItem[] = itemsData.columns.map(
-          (column) => ({
-            id: column.id,
-            priceListId: activeListId,
-            originalName: column.originalName,
-            displayName: column.displayName,
-            internalKey: column.internalKey,
-            dataType: column.dataType,
-            order: 0,
-            visibleToNormalUser: column.visibleToNormalUser,
-            isSearchable: false,
-            isFilterable: false,
-            isAdminEditable: true,
-            isReadOnly: false,
-            isPrimaryCode: column.isPrimaryCode,
-            isDescription: column.isDescription,
-            isPrice: column.isPrice,
-            helpText: null,
-          }),
-        );
-
-        if (isAdmin && columnsResponse) {
-          if (!columnsResponse.ok) {
-            const payload = (await columnsResponse.json().catch(() => null)) as {
-              error?: string;
-            } | null;
-            throw new Error(payload?.error ?? "No se pudieron cargar las columnas.");
-          }
-
-          const columnsData = (await columnsResponse.json()) as {
-            columns: PriceColumnListItem[];
-          };
-          nextColumnDetails = columnsData.columns;
-        }
-
-        if (cancelled) {
-          return;
-        }
-
-        setItemTable(itemsData);
-        setColumnDetails(nextColumnDetails);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setItemTable(null);
-        setColumnDetails([]);
-        setItemsError(
-          error instanceof Error ? error.message : "No se pudieron cargar los ítems.",
-        );
-      } finally {
-        if (!cancelled) {
-          setIsLoadingItems(false);
-        }
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(payload?.error ?? "No se pudieron cargar las columnas.");
       }
+
+      const columnsData = (await response.json()) as {
+        columns: PriceColumnListItem[];
+      };
+
+      return columnsData.columns;
+    },
+    enabled: isAdmin && Boolean(activeListId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const itemsQuery = useQuery({
+    queryKey: ["admin", "price-items", activeListId, page, debouncedSearch, reloadToken],
+    queryFn: async (): Promise<PriceItemTableResponse> => {
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+      });
+
+      if (debouncedSearch) {
+        params.set("q", debouncedSearch);
+      }
+
+      const itemsResponse = await fetch(
+        `/api/admin/price-lists/${activeListId}/items?${params.toString()}`,
+      );
+
+      if (!itemsResponse.ok) {
+        const payload = (await itemsResponse.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(payload?.error ?? "No se pudieron cargar los ítems.");
+      }
+
+      return (await itemsResponse.json()) as PriceItemTableResponse;
+    },
+    enabled: Boolean(activeListId),
+    placeholderData: keepPreviousData,
+  });
+
+  const itemTable = activeListId ? (itemsQuery.data ?? null) : null;
+  const isLoadingItems = itemsQuery.isFetching;
+  const itemsError =
+    itemsQuery.error instanceof Error ? itemsQuery.error.message : null;
+
+  const columnDetails = useMemo(() => {
+    if (isAdmin && columnsQuery.data) {
+      return columnsQuery.data;
     }
 
-    void loadItems();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeListId, page, debouncedSearch, reloadToken, isAdmin]);
+    return (itemsQuery.data?.columns ?? []).map((column) => ({
+      id: column.id,
+      priceListId: activeListId,
+      originalName: column.originalName,
+      displayName: column.displayName,
+      internalKey: column.internalKey,
+      dataType: column.dataType,
+      order: 0,
+      visibleToNormalUser: column.visibleToNormalUser,
+      isSearchable: false,
+      isFilterable: false,
+      isAdminEditable: true,
+      isReadOnly: false,
+      isPrimaryCode: column.isPrimaryCode,
+      isDescription: column.isDescription,
+      isPrice: column.isPrice,
+      helpText: null,
+    }));
+  }, [activeListId, columnsQuery.data, isAdmin, itemsQuery.data?.columns]);
 
   const handleSelectList = useCallback((listId: string) => {
     setSelectedListId(listId);
     setPage(1);
-    setItemTable(null);
   }, []);
 
   const handlePageChange = useCallback((nextPage: number) => {
@@ -250,7 +220,7 @@ export function PriceNavigator({
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        setItemsError(payload?.error ?? "No se pudo eliminar el ítem.");
+        setItemsActionError(payload?.error ?? "No se pudo eliminar el ítem.");
         return;
       }
 
@@ -376,7 +346,6 @@ export function PriceNavigator({
       if (selectedListId === deleteListTarget.id) {
         setSelectedListId(getInitialListId(nextLists));
         setPage(1);
-        setItemTable(null);
       }
 
       setDeleteListTarget(null);
@@ -456,9 +425,7 @@ export function PriceNavigator({
       <div className={styles.page}>
         <div className={styles.body}>
           <PricePageChrome
-            searchQuery={searchInput}
-            onSearchChange={setSearchInput}
-            onSearchClear={() => setSearchInput("")}
+            onDebouncedSearchChange={handleDebouncedSearchChange}
             searchDisabled={!activeListId}
             onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
             onAddItemClick={isAdmin ? handleAddItemClick : undefined}
@@ -503,7 +470,7 @@ export function PriceNavigator({
           <PriceItemTable
             data={activeListId ? itemTable : null}
             isLoading={isLoadingItems}
-            error={itemsError}
+            error={itemsError ?? itemsActionError}
             isAdmin={isAdmin}
             searchQuery={debouncedSearch}
             hasSelectedList={Boolean(activeListId)}
@@ -569,7 +536,7 @@ export function PriceNavigator({
       ) : null}
 
       {isImportOpen ? (
-        <ImportWizard
+        <LazyImportWizard
           mode="PRICE_LIST"
           catalogs={[]}
           priceLists={sortedLists}

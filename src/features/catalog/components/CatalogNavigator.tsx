@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createCatalogAction,
@@ -11,13 +12,18 @@ import { createFolderAction, deleteFolderAction, updateFolderAction } from "@/fe
 import { CatalogFolderSelectors } from "@/features/catalog/components/CatalogFolderSelectors";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import { CatalogPageIntro } from "@/features/catalog/components/CatalogPageChrome";
+import { LazyCatalogGlobalSearchResults } from "@/features/catalog/components/LazyCatalogGlobalSearchResults";
 import { ProductFormModal } from "@/features/catalog/components/ProductFormModal";
 import { ProductTable } from "@/features/catalog/components/ProductTable";
-import { ImportWizard } from "@/features/imports/components/ImportWizard";
+import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
 import type {
   CatalogNavigationFolderItem,
   DirectoryCatalogItem,
 } from "@/features/catalog/types/catalog-navigator.types";
+import type {
+  GlobalSearchResponse,
+  SearchResultItem,
+} from "@/features/catalog/types/global-search.types";
 import type { CatalogNavigationResponse } from "@/features/catalog/types/navigation.types";
 import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
 import type { CatalogListItem } from "@/features/catalog/types/catalog.types";
@@ -26,6 +32,8 @@ import { sortByName } from "@/features/catalog/utils/sortByName";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 const PAGE_SIZE = 25;
+const MIN_GLOBAL_SEARCH_CHARS = 2;
+const GLOBAL_SEARCH_PAGE_SIZE = 25;
 
 type CatalogTarget = {
   id: string;
@@ -107,14 +115,19 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
     getInitialCatalogId(catalogs),
   );
   const [selectedFolderId, setSelectedFolderId] = useState("");
-  const [folders, setFolders] = useState<CatalogNavigationFolderItem[]>([]);
-  const [isLoadingFolders, setIsLoadingFolders] = useState(false);
-  const [foldersError, setFoldersError] = useState<string | null>(null);
-
-  const [productTable, setProductTable] = useState<ProductTableResponse | null>(null);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-  const [productsError, setProductsError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchResetKey, setSearchResetKey] = useState(0);
+
+  const isSearchActive = debouncedSearch.length >= MIN_GLOBAL_SEARCH_CHARS;
+  const isSearchPending =
+    debouncedSearch.length > 0 && debouncedSearch.length < MIN_GLOBAL_SEARCH_CHARS;
+
+  const handleDebouncedSearchChange = useCallback((query: string) => {
+    setDebouncedSearch(query);
+    setSearchPage(1);
+  }, []);
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
@@ -147,134 +160,115 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
     [sortedCatalogs, selectedCatalogId],
   );
 
+  const navigationQuery = useQuery({
+    queryKey: ["admin", "navigation", activeCatalogId, reloadToken],
+    queryFn: async (): Promise<CatalogNavigationFolderItem[]> => {
+      const response = await fetch(
+        `/api/admin/catalogs/${activeCatalogId}/navigation`,
+      );
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(payload?.error ?? "No se pudieron cargar las carpetas.");
+      }
+
+      const data = (await response.json()) as CatalogNavigationResponse;
+      return sortByName(data.folders);
+    },
+    enabled: Boolean(activeCatalogId),
+  });
+
+  const folders = navigationQuery.data ?? [];
+  const isLoadingFolders = navigationQuery.isFetching && folders.length === 0;
+  const foldersError =
+    navigationQuery.error instanceof Error ? navigationQuery.error.message : null;
+
   const activeFolderId = useMemo(
     () => resolveFolderId(folders, selectedFolderId),
     [folders, selectedFolderId],
   );
 
-  useEffect(() => {
-    if (!activeCatalogId) {
-      return;
-    }
+  const productsQuery = useQuery({
+    queryKey: ["admin", "products", activeFolderId, page, reloadToken],
+    queryFn: async (): Promise<ProductTableResponse> => {
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+        includeFullUrls: "false",
+      });
 
-    let cancelled = false;
+      const response = await fetch(
+        `/api/admin/folders/${activeFolderId}/products?${params.toString()}`,
+      );
 
-    async function loadFolders() {
-      setIsLoadingFolders(true);
-      setFoldersError(null);
-
-      try {
-        const response = await fetch(
-          `/api/admin/catalogs/${activeCatalogId}/navigation`,
-        );
-
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          throw new Error(payload?.error ?? "No se pudieron cargar las carpetas.");
-        }
-
-        const data = (await response.json()) as CatalogNavigationResponse;
-
-        if (cancelled) {
-          return;
-        }
-
-        setFolders(sortByName(data.folders));
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setFolders([]);
-        setFoldersError(
-          error instanceof Error
-            ? error.message
-            : "No se pudieron cargar las carpetas.",
-        );
-      } finally {
-        if (!cancelled) {
-          setIsLoadingFolders(false);
-        }
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(payload?.error ?? "No se pudieron cargar los productos.");
       }
-    }
 
-    void loadFolders();
+      return (await response.json()) as ProductTableResponse;
+    },
+    enabled: Boolean(activeFolderId) && debouncedSearch.length === 0,
+    placeholderData: keepPreviousData,
+  });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [activeCatalogId, reloadToken]);
+  const globalSearchQuery = useQuery({
+    queryKey: ["admin", "global-search", debouncedSearch, searchPage],
+    queryFn: async (): Promise<GlobalSearchResponse> => {
+      const params = new URLSearchParams({
+        q: debouncedSearch,
+        page: String(searchPage),
+        pageSize: String(GLOBAL_SEARCH_PAGE_SIZE),
+      });
 
-  useEffect(() => {
-    if (!activeFolderId) {
-      return;
-    }
+      const response = await fetch(`/api/admin/search/global?${params.toString()}`);
 
-    let cancelled = false;
-
-    async function loadProducts() {
-      setIsLoadingProducts(true);
-      setProductsError(null);
-
-      try {
-        const params = new URLSearchParams({
-          page: String(page),
-          pageSize: String(PAGE_SIZE),
-        });
-
-        const response = await fetch(
-          `/api/admin/folders/${activeFolderId}/products?${params.toString()}`,
-        );
-
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          throw new Error(payload?.error ?? "No se pudieron cargar los productos.");
-        }
-
-        const data = (await response.json()) as ProductTableResponse;
-
-        if (!cancelled) {
-          setProductTable(data);
-        }
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setProductTable(null);
-        setProductsError(
-          error instanceof Error
-            ? error.message
-            : "No se pudieron cargar los productos.",
-        );
-      } finally {
-        if (!cancelled) {
-          setIsLoadingProducts(false);
-        }
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(payload?.error ?? "No se pudo completar la búsqueda global.");
       }
-    }
 
-    void loadProducts();
+      return (await response.json()) as GlobalSearchResponse;
+    },
+    enabled: isSearchActive,
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+  });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [activeFolderId, page, reloadToken]);
+  const productTable = activeFolderId ? (productsQuery.data ?? null) : null;
+  const isLoadingProducts = productsQuery.isFetching;
+  const productsError =
+    productsQuery.error instanceof Error ? productsQuery.error.message : null;
+
+  const globalSearchError =
+    globalSearchQuery.error instanceof Error ? globalSearchQuery.error.message : null;
+
+  const handleSelectSearchResult = useCallback((item: SearchResultItem) => {
+    setSelectedCatalogId(item.catalog.id);
+    setSelectedFolderId(item.folder.id);
+    setPage(1);
+    setDebouncedSearch("");
+    setSearchResetKey((token) => token + 1);
+  }, []);
+
+  const handleSearchPageChange = useCallback((nextPage: number) => {
+    setSearchPage(nextPage);
+  }, []);
 
   const handleSelectCatalog = useCallback((catalogId: string) => {
     setSelectedCatalogId(catalogId);
     setSelectedFolderId("");
-    setProductTable(null);
     setPage(1);
   }, []);
 
   const handleSelectFolder = useCallback((folderId: string) => {
     setSelectedFolderId(folderId);
-    setProductTable(null);
     setPage(1);
   }, []);
 
@@ -344,7 +338,6 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
       setCatalogList((current) => sortByName([...current, created]));
       setSelectedCatalogId(created.id);
       setSelectedFolderId("");
-      setProductTable(null);
       setPage(1);
       setIsCreateCatalogOpen(false);
       setCreateCatalogNameDraft("");
@@ -379,9 +372,7 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
       }
 
       const created = toNavigationFolderItem(result.data);
-      setFolders((current) => sortByName([...current, created]));
       setSelectedFolderId(created.id);
-      setProductTable(null);
       setPage(1);
       setIsCreateFolderOpen(false);
       setCreateFolderNameDraft("");
@@ -460,7 +451,7 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
       const nextFolders = folders.filter(
         (folder) => folder.id !== deleteFolderTarget.id,
       );
-      setFolders(nextFolders);
+
       setCatalogList((current) =>
         current.map((catalog) =>
           catalog.id === activeCatalogId
@@ -475,7 +466,6 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
       if (selectedFolderId === deleteFolderTarget.id) {
         const nextFolderId = sortByName(nextFolders)[0]?.id ?? "";
         setSelectedFolderId(nextFolderId);
-        setProductTable(null);
         setPage(1);
       }
 
@@ -517,12 +507,9 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
         return;
       }
 
-      const updated = toNavigationFolderItem(result.data);
-      setFolders((current) =>
-        current.map((folder) => (folder.id === updated.id ? updated : folder)),
-      );
       setEditFolderTarget(null);
       setEditFolderNameDraft("");
+      setReloadToken((token) => token + 1);
       router.refresh();
     } finally {
       setIsFolderActionBusy(false);
@@ -553,7 +540,6 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
         const nextCatalogId = sortByName(nextCatalogs)[0]?.id ?? "";
         setSelectedCatalogId(nextCatalogId);
         setSelectedFolderId("");
-        setProductTable(null);
         setPage(1);
       }
 
@@ -616,7 +602,7 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
   const createFolderNameEmpty = createFolderNameDraft.trim().length === 0;
 
   const importWizard = isImportOpen ? (
-    <ImportWizard
+    <LazyImportWizard
       catalogs={sortedCatalogs}
       onClose={() => setIsImportOpen(false)}
       onPublished={handleImportPublished}
@@ -631,6 +617,8 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
       <div className={styles.page}>
         <div className={styles.body}>
           <CatalogPageIntro
+            onDebouncedSearchChange={handleDebouncedSearchChange}
+            searchResetKey={searchResetKey}
             onImportExcelClick={handleImportExcelClick}
             onAddProductClick={isAdmin ? handleAddProductClick : undefined}
           >
@@ -662,12 +650,28 @@ export function CatalogNavigator({ catalogs, isAdmin = false }: CatalogNavigator
           <p className={styles.inlineError}>{productActionError}</p>
         ) : null}
 
-        <ProductTable
-          data={tableData}
-          isLoading={isLoadingProducts || isLoadingFolders}
-          error={productsError}
-          onPageChange={handlePageChange}
-        />
+        {isSearchActive ? (
+          <LazyCatalogGlobalSearchResults
+            data={globalSearchQuery.data ?? null}
+            searchQuery={debouncedSearch}
+            isLoading={globalSearchQuery.isFetching}
+            error={globalSearchError}
+            onPageChange={handleSearchPageChange}
+            onSelectResult={handleSelectSearchResult}
+          />
+        ) : isSearchPending ? (
+          <p className={styles.searchHint} role="status">
+            Escribí al menos {MIN_GLOBAL_SEARCH_CHARS} caracteres para buscar en todos los
+            catálogos.
+          </p>
+        ) : (
+          <ProductTable
+            data={tableData}
+            isLoading={isLoadingProducts || isLoadingFolders}
+            error={productsError}
+            onPageChange={handlePageChange}
+          />
+        )}
       </div>
       </div>
       {importWizard}

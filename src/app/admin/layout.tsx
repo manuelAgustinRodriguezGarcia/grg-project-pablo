@@ -1,4 +1,5 @@
 import { AdminSidebar } from "@/features/admin/components/AdminSidebar";
+import { AdminQueryProvider } from "@/features/admin/providers/AdminQueryProvider";
 import { ADMIN_USER_EMAIL_FALLBACK } from "@/features/admin/data/adminNav";
 import layoutStyles from "@/features/admin/styles/adminLayout.module.scss";
 import { requireAuthOrRedirect } from "@/server/auth";
@@ -15,9 +16,11 @@ export default async function AdminLayout({
     ADMIN_USER_EMAIL_FALLBACK;
 
   return (
-    <div className={layoutStyles.shell}>
-      <AdminSidebar userEmail={userEmail} userRole={auth.profile.role} />
-      <main className={layoutStyles.content}>{children}</main>
-    </div>
+    <AdminQueryProvider>
+      <div className={layoutStyles.shell}>
+        <AdminSidebar userEmail={userEmail} userRole={auth.profile.role} />
+        <main className={layoutStyles.content}>{children}</main>
+      </div>
+    </AdminQueryProvider>
   );
 }

@@ -59,6 +59,74 @@
   }
 }
 
+.headerSearchWithClear {
+  padding-right: 2.5rem;
+}
+
+.headerSearchClear {
+  position: absolute;
+  right: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba($navy, 0.5);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($navy, 0.06);
+    color: $navy;
+  }
+}
+
+.searchHint {
+  margin: 0;
+  padding: 1.25rem 0.5rem;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  color: rgba($navy, 0.62);
+}
+
+.searchResultLink {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: $blue;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.searchMatchBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.35rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba($blue, 0.1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: $blue;
+  white-space: nowrap;
+}
+
+.searchMatchValue {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: rgba($navy, 0.72);
+  word-break: break-word;
+}
+
 .sectionIntro {
   display: flex;
   flex-shrink: 0;

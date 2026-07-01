@@ -12,6 +12,7 @@ vi.mock("@/server/repositories/user.repository", () => ({
     findById: vi.fn(),
     upsertFromAuth: vi.fn(),
     touchLastAccess: vi.fn(),
+    touchLastAccessIfStale: vi.fn(),
   },
 }));
 
@@ -45,7 +46,7 @@ describe("guards auto-provision", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     }));
-    vi.mocked(userRepository.touchLastAccess).mockResolvedValue(undefined);
+    vi.mocked(userRepository.touchLastAccessIfStale).mockResolvedValue(undefined);
 
     const auth = await requireAuth();
 

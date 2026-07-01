@@ -73,7 +73,7 @@ describe("product.schemas", () => {
 
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data).toEqual({ page: 1, pageSize: 50 });
+      expect(parsed.data).toEqual({ page: 1, pageSize: 50, includeFullUrls: true });
     }
   });
 

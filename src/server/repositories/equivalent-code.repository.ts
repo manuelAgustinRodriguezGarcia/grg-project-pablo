@@ -16,6 +16,21 @@ export class EquivalentCodeRepository {
     });
   }
 
+  async findByProductIds(productIds: string[]): Promise<EquivalentCode[]> {
+    if (productIds.length === 0) {
+      return [];
+    }
+
+    return prisma.equivalentCode.findMany({
+      where: { productId: { in: productIds } },
+      orderBy: [
+        { productId: "asc" },
+        { createdAt: "asc" },
+        { id: "asc" },
+      ],
+    });
+  }
+
   async findByIdAndProduct(
     id: string,
     productId: string,

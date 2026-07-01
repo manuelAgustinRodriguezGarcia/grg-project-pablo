@@ -9,7 +9,7 @@ import {
   type PaginatedProducts,
 } from "@/server/repositories/product.repository";
 import { productImageRepository } from "@/server/repositories/product-image.repository";
-import { deleteFile } from "@/server/storage";
+import { deleteFile, runWithSignedUrlCache } from "@/server/storage";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
 import { ProductError } from "./product.errors";
 import { productImageService } from "./product-image.service";
@@ -90,6 +90,7 @@ export type ListProductsInput = {
   pageSize?: number;
   query?: string;
   filters?: ColumnFilterInput[] | unknown;
+  includeFullUrls?: boolean;
 };
 
 export type MutateProductInput = {
@@ -204,92 +205,189 @@ export class ProductService {
       throw error;
     }
 
-    const page = input.page ?? 1;
-    const pageSize = input.pageSize ?? 50;
+    return runWithSignedUrlCache(async () => {
+      const page = input.page ?? 1;
+      const pageSize = input.pageSize ?? 50;
 
-    if (page < 1 || pageSize < 1) {
-      throw new ProductError("Parámetros de paginación inválidos.", "VALIDATION_ERROR");
+      if (page < 1 || pageSize < 1) {
+        throw new ProductError("Parámetros de paginación inválidos.", "VALIDATION_ERROR");
+      }
+
+      const columns = await columnRepository.findByFolderIdOrdered(
+        folder.id,
+        visibilityService.columnWhereForRole(role),
+      );
+
+      const columnItems = getProductTableColumns(
+        await columnHelpService.resolveHelpForColumns(columns, role),
+      );
+
+      const parsedFilters = columnFilterService.parseFilters(input.filters);
+      const filterableKeys = resolveFilterableKeys(folder, columns);
+      columnFilterService.validateFiltersForColumns(
+        parsedFilters,
+        columns,
+        filterableKeys,
+      );
+
+      const searchableKeys = resolveSearchableKeys(folder, columns);
+      const query = input.query?.trim() ?? "";
+      const hasSearchOrFilters = query.length > 0 || parsedFilters.length > 0;
+
+      const where = hasSearchOrFilters
+        ? buildFolderProductWhere({
+            folderId: folder.id,
+            query: query || undefined,
+            searchableKeys,
+            filters: parsedFilters,
+            columns,
+          })
+        : { folderId: folder.id };
+
+      const paginated = await productRepository.findPaginatedBasic(where, {
+        page,
+        pageSize,
+      });
+
+      const visibleColumnKeys = columnItems.map((column) => column.internalKey);
+      const productIds = paginated.items.map((product) => product.id);
+      const includeFullUrls = input.includeFullUrls !== false;
+      const primaryImages =
+        await productImageService.resolvePrimaryImagesForProducts(
+          productIds,
+          { includeFullUrls },
+        );
+      const columnImages = await productImageService.resolveColumnImagesForProducts(
+        productIds,
+        columnItems.map((column) => ({
+          internalKey: column.internalKey,
+          originalName: column.originalName,
+          displayName: column.displayName,
+        })),
+        { includeFullUrls },
+      );
+
+      return {
+        folder: {
+          id: folder.id,
+          name: folder.name,
+          catalogId: folder.catalogId,
+        },
+        columns: columnItems,
+        products: paginated.items.map((product) =>
+          toProductTableItem(
+            product,
+            visibleColumnKeys,
+            role,
+            primaryImages.get(product.id) ?? null,
+            columnImages.get(product.id) ?? {},
+          ),
+        ),
+        pagination: {
+          page: paginated.page,
+          pageSize: paginated.pageSize,
+          total: paginated.total,
+          totalPages: paginated.totalPages,
+        },
+        search: query
+          ? {
+              query,
+              normalizedQuery: normalizeSearchTerm(query),
+            }
+          : null,
+        activeFilters: columnFilterService.toActiveFilterPills(parsedFilters, columns),
+      };
+    });
+  }
+
+  async listFolderTableColumns(folderId: string): Promise<ColumnListItem[]> {
+    const { profile } = await requireAuth();
+    const role = profile.role;
+
+    const folder = await folderRepository.findById(folderId);
+    if (!folder) {
+      throw new ProductError("Carpeta no encontrada.", "FOLDER_NOT_FOUND");
+    }
+
+    const catalog = await catalogRepository.findById(folder.catalogId);
+    if (!catalog) {
+      throw new ProductError("Catálogo no encontrado.", "CATALOG_NOT_FOUND");
+    }
+
+    try {
+      visibilityService.assertCatalogVisibleForRole(catalog, role);
+      visibilityService.assertFolderVisibleForRole(folder, role);
+    } catch (error) {
+      if (error instanceof VisibilityError) {
+        throw new ProductError(error.message, "FOLDER_NOT_FOUND");
+      }
+      throw error;
+    }
+
+    return runWithSignedUrlCache(async () => {
+      const columns = await columnRepository.findByFolderIdOrdered(
+        folder.id,
+        visibilityService.columnWhereForRole(role),
+      );
+
+      return getProductTableColumns(
+        await columnHelpService.resolveHelpForColumns(columns, role),
+      );
+    });
+  }
+
+  async listProductOptions(
+    folderId: string,
+    query?: string,
+  ): Promise<Array<{ id: string; primaryCode: string | null; description: string | null }>> {
+    const { profile } = await requireAuth();
+    const role = profile.role;
+
+    const folder = await folderRepository.findById(folderId);
+    if (!folder) {
+      throw new ProductError("Carpeta no encontrada.", "FOLDER_NOT_FOUND");
+    }
+
+    const catalog = await catalogRepository.findById(folder.catalogId);
+    if (!catalog) {
+      throw new ProductError("Catálogo no encontrado.", "CATALOG_NOT_FOUND");
+    }
+
+    try {
+      visibilityService.assertCatalogVisibleForRole(catalog, role);
+      visibilityService.assertFolderVisibleForRole(folder, role);
+    } catch (error) {
+      if (error instanceof VisibilityError) {
+        throw new ProductError(error.message, "FOLDER_NOT_FOUND");
+      }
+      throw error;
     }
 
     const columns = await columnRepository.findByFolderIdOrdered(
       folder.id,
       visibilityService.columnWhereForRole(role),
     );
-
-    const columnItems = getProductTableColumns(
-      await columnHelpService.resolveHelpForColumns(columns, role),
-    );
-
-    const parsedFilters = columnFilterService.parseFilters(input.filters);
-    const filterableKeys = resolveFilterableKeys(folder, columns);
-    columnFilterService.validateFiltersForColumns(
-      parsedFilters,
-      columns,
-      filterableKeys,
-    );
-
     const searchableKeys = resolveSearchableKeys(folder, columns);
-    const query = input.query?.trim() ?? "";
-    const hasSearchOrFilters = query.length > 0 || parsedFilters.length > 0;
+    const trimmedQuery = query?.trim() ?? "";
 
-    const where = hasSearchOrFilters
-      ? buildFolderProductWhere({
-          folderId: folder.id,
-          query: query || undefined,
-          searchableKeys,
-          filters: parsedFilters,
-          columns,
-        })
-      : { folderId: folder.id };
+    const where =
+      trimmedQuery.length > 0
+        ? buildFolderProductWhere({
+            folderId: folder.id,
+            query: trimmedQuery,
+            searchableKeys,
+            filters: [],
+            columns,
+          })
+        : { folderId: folder.id };
 
-    const paginated = await productRepository.findPaginatedBasic(where, {
-      page,
-      pageSize,
-    });
+    const products = await productRepository.findOptionsByFolder(where, 200);
 
-    const visibleColumnKeys = columnItems.map((column) => column.internalKey);
-    const productIds = paginated.items.map((product) => product.id);
-    const primaryImages =
-      await productImageService.resolvePrimaryImagesForProducts(productIds);
-    const columnImages = await productImageService.resolveColumnImagesForProducts(
-      productIds,
-      columnItems.map((column) => ({
-        internalKey: column.internalKey,
-        originalName: column.originalName,
-        displayName: column.displayName,
-      })),
-    );
-
-    return {
-      folder: {
-        id: folder.id,
-        name: folder.name,
-        catalogId: folder.catalogId,
-      },
-      columns: columnItems,
-      products: paginated.items.map((product) =>
-        toProductTableItem(
-          product,
-          visibleColumnKeys,
-          role,
-          primaryImages.get(product.id) ?? null,
-          columnImages.get(product.id) ?? {},
-        ),
-      ),
-      pagination: {
-        page: paginated.page,
-        pageSize: paginated.pageSize,
-        total: paginated.total,
-        totalPages: paginated.totalPages,
-      },
-      search: query
-        ? {
-            query,
-            normalizedQuery: normalizeSearchTerm(query),
-          }
-        : null,
-      activeFilters: columnFilterService.toActiveFilterPills(parsedFilters, columns),
-    };
+    return products.map((product) => ({
+      id: product.id,
+      primaryCode: product.primaryCode,
+      description: product.description,
+    }));
   }
 
   async getProduct(productId: string): Promise<ProductDetail> {

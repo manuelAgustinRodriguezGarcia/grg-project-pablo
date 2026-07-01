@@ -8,16 +8,21 @@ import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 type ProductImagePreviewModalProps = {
   imageUrl: string;
   imageAlt: string;
+  productId?: string;
+  imageId?: string;
   onClose: () => void;
 };
 
 export function ProductImagePreviewModal({
   imageUrl,
   imageAlt,
+  productId,
+  imageId,
   onClose,
 }: ProductImagePreviewModalProps) {
   const imageRef = useRef<HTMLImageElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [resolvedUrl, setResolvedUrl] = useState(imageUrl);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -31,13 +36,52 @@ export function ProductImagePreviewModal({
   }, [onClose]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function resolvePreviewUrl() {
+      setIsLoading(true);
+      setResolvedUrl(imageUrl);
+
+      if (productId && imageId) {
+        try {
+          const response = await fetch(
+            `/api/admin/products/${productId}/images/${imageId}/url?size=full`,
+          );
+
+          if (response.ok) {
+            const payload = (await response.json()) as { url: string | null };
+            if (!cancelled && payload.url) {
+              setResolvedUrl(payload.url);
+            }
+          }
+        } catch {
+          // Mantener thumbnail como fallback.
+        }
+      }
+
+      if (!cancelled) {
+        const image = imageRef.current;
+        if (image?.complete && image.naturalWidth > 0) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void resolvePreviewUrl();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [imageUrl, productId, imageId]);
+
+  useEffect(() => {
     setIsLoading(true);
 
     const image = imageRef.current;
     if (image?.complete && image.naturalWidth > 0) {
       setIsLoading(false);
     }
-  }, [imageUrl]);
+  }, [resolvedUrl]);
 
   if (typeof document === "undefined") {
     return null;
@@ -85,7 +129,7 @@ export function ProductImagePreviewModal({
 
           <img
             ref={imageRef}
-            src={imageUrl}
+            src={resolvedUrl}
             alt={imageAlt}
             className={
               isLoading

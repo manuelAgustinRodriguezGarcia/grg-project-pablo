@@ -48,7 +48,7 @@ async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
     );
   }
 
-  await userRepository.touchLastAccess(user.id);
+  await userRepository.touchLastAccessIfStale(user.id);
 
   return { supabaseUser: user, profile };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { FileSpreadsheet, ICON_STROKE, Plus, Search, X } from "@/shared/icons";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
@@ -31,10 +31,10 @@ const ACTION_CARDS: ActionCardConfig[] = [
   },
 ];
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 type PricePageChromeProps = {
-  searchQuery: string;
-  onSearchChange: (value: string) => void;
-  onSearchClear: () => void;
+  onDebouncedSearchChange: (value: string) => void;
   searchDisabled?: boolean;
   onImportExcelClick?: () => void;
   onAddItemClick?: () => void;
@@ -56,14 +56,22 @@ function handleActionCardClick(
 }
 
 export function PricePageChrome({
-  searchQuery,
-  onSearchChange,
-  onSearchClear,
+  onDebouncedSearchChange,
   searchDisabled = false,
   onImportExcelClick,
   onAddItemClick,
   children,
 }: PricePageChromeProps) {
+  const [searchInput, setSearchInput] = useState("");
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      onDebouncedSearchChange(searchInput.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [onDebouncedSearchChange, searchInput]);
+
   const showActionCards = onImportExcelClick || onAddItemClick;
 
   return (
@@ -80,21 +88,21 @@ export function PricePageChrome({
             type="search"
             className={styles.headerSearch}
             placeholder="Buscar por código, descripción o columna indexada…"
-            value={searchQuery}
-            onChange={(event) => onSearchChange(event.target.value)}
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
-                onSearchClear();
+                setSearchInput("");
               }
             }}
             disabled={searchDisabled}
             aria-label="Búsqueda en lista activa"
           />
-          {searchQuery ? (
+          {searchInput ? (
             <button
               type="button"
               className={styles.headerSearchClear}
-              onClick={onSearchClear}
+              onClick={() => setSearchInput("")}
               aria-label="Limpiar búsqueda"
             >
               <X strokeWidth={ICON_STROKE} aria-hidden />

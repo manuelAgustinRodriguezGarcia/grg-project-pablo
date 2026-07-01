@@ -2,6 +2,7 @@
 
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import Link from "next/link";
+import { useIsDesktopLayout } from "@/shared/hooks/useIsDesktopLayout";
 import {
   Archive,
   ChevronLeft,
@@ -57,6 +58,8 @@ export function UploadedFilesList({
   isActionBusy = false,
   busyFileId = null,
 }: UploadedFilesListProps) {
+  const isDesktopLayout = useIsDesktopLayout();
+
   if (isLoading) {
     return (
       <section
@@ -108,7 +111,7 @@ export function UploadedFilesList({
             </Link>
           </div>
         ) : (
-          <>
+          isDesktopLayout ? (
             <div className={styles.desktopTable}>
               <table className={catalogStyles.productTable}>
                 <thead>
@@ -192,7 +195,7 @@ export function UploadedFilesList({
                 </tbody>
               </table>
             </div>
-
+          ) : (
             <div className={styles.cardList}>
               {data.items.map((item) => {
                 const destination = formatDestinationSummary(item.latestJob);
@@ -265,7 +268,7 @@ export function UploadedFilesList({
                 );
               })}
             </div>
-          </>
+          )
         )}
       </div>
 
