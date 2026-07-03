@@ -83,10 +83,6 @@ export function buildIndexedText(input: BuildIndexedTextInput): string | null {
   }
 
   for (const column of input.columns) {
-    if (!column.isSearchable) {
-      continue;
-    }
-
     const value = input.dynamicData[column.internalKey];
     if (!isEmptyValue(value)) {
       parts.push(stringifyValue(value));

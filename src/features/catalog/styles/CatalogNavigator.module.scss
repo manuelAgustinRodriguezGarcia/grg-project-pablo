@@ -137,6 +137,97 @@ $table-image-size: 6.25rem;
   word-break: break-word;
 }
 
+.searchResultsStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.searchEntitySection,
+.searchProductsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.searchEntityHeading {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba($navy, 0.62);
+  text-transform: uppercase;
+}
+
+.searchEntityList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.searchEntityItem {
+  min-width: 0;
+}
+
+.searchEntityButton {
+  display: flex;
+  width: 100%;
+  min-height: 5.25rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba($blue, 0.12);
+  border-radius: $radius-lg;
+  background: rgba($blue, 0.025);
+  font-family: $font-sans;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+
+  &:hover {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.06);
+    transform: translateY(-1px);
+  }
+}
+
+.searchEntityType {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: $blue;
+  text-transform: uppercase;
+}
+
+.searchEntityTitle {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: $navy;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchEntityMeta {
+  display: -webkit-box;
+  overflow: hidden;
+  color: rgba($navy, 0.62);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .sectionIntro {
   display: flex;
   flex-shrink: 0;

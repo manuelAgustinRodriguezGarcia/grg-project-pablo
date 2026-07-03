@@ -31,6 +31,35 @@ export type ReorderCatalogItem = {
 };
 
 export class CatalogRepository {
+  async findMatching(
+    term: string,
+    where: Prisma.CatalogWhereInput = {},
+    take = 25,
+  ): Promise<Array<Pick<Catalog, "id" | "name" | "description">>> {
+    const trimmed = term.trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    return prisma.catalog.findMany({
+      where: {
+        status: "ACTIVE",
+        ...where,
+        OR: [
+          { name: { contains: trimmed, mode: "insensitive" } },
+          { description: { contains: trimmed, mode: "insensitive" } },
+        ],
+      },
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      take: Math.min(Math.max(1, take), 50),
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+    });
+  }
+
   async findActiveOrdered(
     where: Prisma.CatalogWhereInput = {},
   ): Promise<Catalog[]> {

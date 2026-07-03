@@ -36,6 +36,22 @@ export type SearchResultItem = {
   } | null;
 };
 
+export type CatalogSearchHit = {
+  catalogId: string;
+  name: string;
+  description: string | null;
+};
+
+export type FolderSearchHit = {
+  folderId: string;
+  name: string;
+  description: string | null;
+  catalog: {
+    id: string;
+    name: string;
+  };
+};
+
 export type SearchPagination = {
   page: number;
   pageSize: number;
@@ -55,6 +71,8 @@ export type CatalogSearchResponse = {
 
 export type GlobalSearchResponse = {
   search: SearchQueryMeta;
+  catalogs: CatalogSearchHit[];
+  folders: FolderSearchHit[];
   items: SearchResultItem[];
   pagination: SearchPagination;
 };
