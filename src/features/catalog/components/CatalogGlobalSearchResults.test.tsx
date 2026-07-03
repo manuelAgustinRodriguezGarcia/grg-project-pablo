@@ -12,6 +12,21 @@ const sampleData: GlobalSearchResponse = {
     query: "abc",
     normalizedQuery: "abc",
   },
+  catalogs: [
+    {
+      catalogId: "cat-1",
+      name: "Catálogo A",
+      description: "Catálogo principal",
+    },
+  ],
+  folders: [
+    {
+      folderId: "folder-1",
+      name: "Carpeta 1",
+      description: "Sección principal",
+      catalog: { id: "cat-1", name: "Catálogo A" },
+    },
+  ],
   items: [
     {
       productId: "prod-1",
@@ -41,6 +56,8 @@ describe("CatalogGlobalSearchResults", () => {
         isLoading
         error={null}
         onPageChange={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        onSelectFolder={vi.fn()}
         onSelectResult={vi.fn()}
       />,
     );
@@ -56,6 +73,8 @@ describe("CatalogGlobalSearchResults", () => {
       <CatalogGlobalSearchResults
         data={{
           ...sampleData,
+          catalogs: [],
+          folders: [],
           items: [],
           pagination: { page: 1, pageSize: 25, total: 0, totalPages: 0 },
         }}
@@ -63,6 +82,8 @@ describe("CatalogGlobalSearchResults", () => {
         isLoading={false}
         error={null}
         onPageChange={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        onSelectFolder={vi.fn()}
         onSelectResult={vi.fn()}
       />,
     );
@@ -72,6 +93,8 @@ describe("CatalogGlobalSearchResults", () => {
 
   it("renders rows and notifies selection", () => {
     const onSelectResult = vi.fn();
+    const onSelectCatalog = vi.fn();
+    const onSelectFolder = vi.fn();
 
     render(
       <CatalogGlobalSearchResults
@@ -80,16 +103,28 @@ describe("CatalogGlobalSearchResults", () => {
         isLoading={false}
         error={null}
         onPageChange={vi.fn()}
+        onSelectCatalog={onSelectCatalog}
+        onSelectFolder={onSelectFolder}
         onSelectResult={onSelectResult}
       />,
     );
 
     expect(screen.getByRole("button", { name: "ABC-001" })).toBeInTheDocument();
-    expect(screen.getByText("Catálogo A")).toBeInTheDocument();
-    expect(screen.getByText("Carpeta 1")).toBeInTheDocument();
+    expect(screen.getAllByText("Catálogo A")).toHaveLength(2);
+    expect(screen.getAllByText("Carpeta 1")).toHaveLength(2);
 
     fireEvent.click(screen.getByRole("button", { name: "ABC-001" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /CatálogoCatálogo ACatálogo principal/ }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /SecciónCarpeta 1Catálogo A · Sección principal/,
+      }),
+    );
 
     expect(onSelectResult).toHaveBeenCalledWith(sampleData.items[0]);
+    expect(onSelectCatalog).toHaveBeenCalledWith("cat-1");
+    expect(onSelectFolder).toHaveBeenCalledWith("cat-1", "folder-1");
   });
 });

@@ -1,4 +1,4 @@
-import type { Product } from "@/generated/prisma/client";
+import type { Catalog, CatalogFolder, EquivalentCode, Product } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
 import type { JsonTextColumnFilter } from "@/server/filters/column-filter.types";
@@ -24,6 +24,26 @@ export type PaginatedProducts = {
   page: number;
   pageSize: number;
   totalPages: number;
+};
+
+export type ProductSearchResult = Pick<
+  Product,
+  | "id"
+  | "folderId"
+  | "primaryCode"
+  | "normalizedCode"
+  | "description"
+  | "dynamicData"
+  | "indexedText"
+> & {
+  equivalentCodes: Array<Pick<EquivalentCode, "originalCode" | "normalizedCode">>;
+  folder: Pick<CatalogFolder, "id" | "name"> & {
+    catalog: Pick<Catalog, "id" | "name">;
+  };
+};
+
+export type PaginatedProductSearchResults = Omit<PaginatedProducts, "items"> & {
+  items: ProductSearchResult[];
 };
 
 export type CreateProductData = {
@@ -67,6 +87,60 @@ export class ProductRepository {
           folder: {
             include: {
               catalog: true,
+            },
+          },
+        },
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
+    };
+  }
+
+  async findSearchPaginated(
+    where: Prisma.ProductWhereInput,
+    options: ProductPaginationOptions,
+  ): Promise<PaginatedProductSearchResults> {
+    const page = Math.max(1, options.page);
+    const pageSize = Math.min(Math.max(1, options.pageSize), 200);
+    const skip = (page - 1) * pageSize;
+
+    const [items, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+        skip,
+        take: pageSize,
+        select: {
+          id: true,
+          folderId: true,
+          primaryCode: true,
+          normalizedCode: true,
+          description: true,
+          dynamicData: true,
+          indexedText: true,
+          equivalentCodes: {
+            select: {
+              originalCode: true,
+              normalizedCode: true,
+            },
+          },
+          folder: {
+            select: {
+              id: true,
+              name: true,
+              catalog: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
         },

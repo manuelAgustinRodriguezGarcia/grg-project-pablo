@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createCatalogAction,
@@ -188,7 +188,7 @@ export function CatalogNavigator({
     enabled: Boolean(activeCatalogId),
   });
 
-  const folders = navigationQuery.data ?? [];
+  const folders = useMemo(() => navigationQuery.data ?? [], [navigationQuery.data]);
   const isLoadingFolders = navigationQuery.isFetching && folders.length === 0;
   const foldersError =
     navigationQuery.error instanceof Error ? navigationQuery.error.message : null;
@@ -197,11 +197,6 @@ export function CatalogNavigator({
     () => resolveFolderId(folders, selectedFolderId),
     [folders, selectedFolderId],
   );
-
-  useEffect(() => {
-    setColumnFilters([]);
-    setPage(1);
-  }, [activeFolderId]);
 
   const serializedColumnFilters = useMemo(
     () => serializeColumnFilters(columnFilters),
@@ -240,14 +235,16 @@ export function CatalogNavigator({
 
   const globalSearchQuery = useQuery({
     queryKey: ["admin", "global-search", debouncedSearch, searchPage],
-    queryFn: async (): Promise<GlobalSearchResponse> => {
+    queryFn: async ({ signal }): Promise<GlobalSearchResponse> => {
       const params = new URLSearchParams({
         q: debouncedSearch,
         page: String(searchPage),
         pageSize: String(GLOBAL_SEARCH_PAGE_SIZE),
       });
 
-      const response = await fetch(`/api/admin/search/global?${params.toString()}`);
+      const response = await fetch(`/api/admin/search/global?${params.toString()}`, {
+        signal,
+      });
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as {
@@ -275,9 +272,34 @@ export function CatalogNavigator({
     setSelectedCatalogId(item.catalog.id);
     setSelectedFolderId(item.folder.id);
     setPage(1);
+    setSearchPage(1);
+    setColumnFilters([]);
     setDebouncedSearch("");
     setSearchResetKey((token) => token + 1);
   }, []);
+
+  const handleSelectCatalogSearchResult = useCallback((catalogId: string) => {
+    setSelectedCatalogId(catalogId);
+    setSelectedFolderId("");
+    setPage(1);
+    setSearchPage(1);
+    setColumnFilters([]);
+    setDebouncedSearch("");
+    setSearchResetKey((token) => token + 1);
+  }, []);
+
+  const handleSelectFolderSearchResult = useCallback(
+    (catalogId: string, folderId: string) => {
+      setSelectedCatalogId(catalogId);
+      setSelectedFolderId(folderId);
+      setPage(1);
+      setSearchPage(1);
+      setColumnFilters([]);
+      setDebouncedSearch("");
+      setSearchResetKey((token) => token + 1);
+    },
+    [],
+  );
 
   const handleSearchPageChange = useCallback((nextPage: number) => {
     setSearchPage(nextPage);
@@ -286,11 +308,13 @@ export function CatalogNavigator({
   const handleSelectCatalog = useCallback((catalogId: string) => {
     setSelectedCatalogId(catalogId);
     setSelectedFolderId("");
+    setColumnFilters([]);
     setPage(1);
   }, []);
 
   const handleSelectFolder = useCallback((folderId: string) => {
     setSelectedFolderId(folderId);
+    setColumnFilters([]);
     setPage(1);
   }, []);
 
@@ -694,6 +718,8 @@ export function CatalogNavigator({
             isLoading={globalSearchQuery.isFetching}
             error={globalSearchError}
             onPageChange={handleSearchPageChange}
+            onSelectCatalog={handleSelectCatalogSearchResult}
+            onSelectFolder={handleSelectFolderSearchResult}
             onSelectResult={handleSelectSearchResult}
           />
         ) : isSearchPending ? (

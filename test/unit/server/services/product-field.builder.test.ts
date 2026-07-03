@@ -50,6 +50,29 @@ describe("buildProductFields", () => {
     expect(result.indexedText).toContain("2902");
   });
 
+  it("incluye columnas no marcadas como buscables en indexedText", () => {
+    const result = buildProductFields(
+      [
+        ...columns,
+        createColumnFixture({
+          id: "brand-col",
+          internalKey: "marca",
+          displayName: "Marca",
+          isSearchable: false,
+        }),
+      ],
+      {
+        values: {
+          codigo: "6205",
+          descripcion: "Ruleman 6205",
+          marca: "GRG",
+        },
+      },
+    );
+
+    expect(result.indexedText).toContain("GRG");
+  });
+
   it("rechaza columnas de solo lectura", () => {
     expect(() =>
       buildProductFields(columns, {

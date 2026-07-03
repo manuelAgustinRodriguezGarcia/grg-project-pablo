@@ -1,9 +1,4 @@
-import type {
-  CatalogFolder,
-  EquivalentCode,
-  FolderColumn,
-  Product,
-} from "@/generated/prisma/client";
+import type { CatalogFolder, EquivalentCode, FolderColumn, Product } from "@/generated/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
 import { requireAuth } from "@/server/auth";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
@@ -12,6 +7,7 @@ import { folderRepository } from "@/server/repositories/folder.repository";
 import {
   productRepository,
   type ProductPaginationOptions,
+  type ProductSearchResult,
 } from "@/server/repositories/product.repository";
 import { columnFilterService } from "@/server/filters/column-filter.service";
 import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
@@ -21,10 +17,7 @@ import { ProductError } from "@/server/services/product.errors";
 import { VisibilityError } from "@/server/services/visibility.errors";
 import { visibilityService } from "@/server/services/visibility.service";
 import { SearchError } from "./search.errors";
-import {
-  resolveGloballySearchableKeys,
-  resolveSearchableKeys,
-} from "./search-config.resolver";
+import { resolveSearchableKeys } from "./search-config.resolver";
 import {
   isCodeLikeQuery,
   normalizeSearchTerm,
@@ -47,11 +40,14 @@ type ProductWithRelations = Product & {
   };
 };
 
+const GLOBAL_ENTITY_LIMIT = 25;
+const MIN_GLOBAL_QUERY_CHARS = 2;
+
 export type BuildFolderProductWhereInput = {
   folderId: string;
   folderIds?: never;
   query?: string;
-  searchableKeys: string[];
+  searchableKeys?: string[];
   globallySearchableKeys?: string[];
   filters?: ColumnFilterInput[];
   columns: FolderColumn[];
@@ -62,7 +58,7 @@ export type BuildMultiFolderProductWhereInput = {
   folderIds: string[];
   folderId?: never;
   query?: string;
-  searchableKeys: string[];
+  searchableKeys?: string[];
   globallySearchableKeys?: string[];
   filters?: ColumnFilterInput[];
   columns: FolderColumn[];
@@ -76,17 +72,8 @@ function buildSearchQueryMeta(query: string): SearchQueryMeta {
   };
 }
 
-function buildTextSearchConditions(
-  textTerm: string,
-  searchableKeys: string[],
-): Prisma.ProductWhereInput[] {
-  const conditions: Prisma.ProductWhereInput[] = [
-    {
-      description: {
-        contains: textTerm,
-        mode: "insensitive",
-      },
-    },
+function buildTextSearchConditions(textTerm: string): Prisma.ProductWhereInput[] {
+  return [
     {
       indexedText: {
         contains: textTerm,
@@ -94,23 +81,12 @@ function buildTextSearchConditions(
       },
     },
     {
-      primaryCode: {
+      originalText: {
         contains: textTerm,
         mode: "insensitive",
       },
     },
   ];
-
-  for (const key of searchableKeys) {
-    conditions.push({
-      dynamicData: {
-        path: [key],
-        string_contains: textTerm,
-      },
-    });
-  }
-
-  return conditions;
 }
 
 function buildCodeSearchConditions(normalizedQuery: string): Prisma.ProductWhereInput[] {
@@ -132,7 +108,6 @@ function buildCodeSearchConditions(normalizedQuery: string): Prisma.ProductWhere
 
 export function buildProductSearchWhere(
   query: string,
-  searchableKeys: string[],
 ): Prisma.ProductWhereInput | null {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -148,7 +123,7 @@ export function buildProductSearchWhere(
   }
 
   if (!isCodeLikeQuery(trimmed) || textTerm.length > normalizedQuery.length) {
-    orConditions.push(...buildTextSearchConditions(textTerm, searchableKeys));
+    orConditions.push(...buildTextSearchConditions(textTerm));
   }
 
   if (orConditions.length === 0) {
@@ -172,11 +147,7 @@ export function buildFolderProductWhere(
   }
 
   if (input.query?.trim()) {
-    const keys =
-      input.globallySearchableKeys && input.globallySearchableKeys.length > 0
-        ? [...new Set([...input.searchableKeys, ...input.globallySearchableKeys])]
-        : input.searchableKeys;
-    const searchWhere = buildProductSearchWhere(input.query, keys);
+    const searchWhere = buildProductSearchWhere(input.query);
     if (searchWhere) {
       andConditions.push(searchWhere);
     }
@@ -204,9 +175,8 @@ export function buildFolderProductWhere(
 }
 
 function inferMatchType(
-  product: ProductWithRelations,
+  product: ProductWithRelations | ProductSearchResult,
   query: string,
-  searchableKeys: string[],
 ): { matchType: SearchMatchType; matchValue: string } {
   const trimmed = query.trim();
   const normalizedQuery = normalizeSearchTerm(trimmed);
@@ -248,8 +218,7 @@ function inferMatchType(
       ? (product.dynamicData as Record<string, unknown>)
       : {};
 
-  for (const key of searchableKeys) {
-    const value = dynamicData[key];
+  for (const value of Object.values(dynamicData)) {
     if (value !== null && value !== undefined) {
       const text = String(value);
       if (text.toLowerCase().includes(textTerm)) {
@@ -272,9 +241,8 @@ function inferMatchType(
 }
 
 async function mapSearchItems(
-  products: ProductWithRelations[],
+  products: Array<ProductWithRelations | ProductSearchResult>,
   query: string,
-  searchableKeys: string[],
 ): Promise<SearchResultItem[]> {
   const productIds = products.map((product) => product.id);
   const primaryImages =
@@ -283,7 +251,7 @@ async function mapSearchItems(
   return products.map((product) => {
     const folder = product.folder;
     const catalog = folder?.catalog;
-    const { matchType, matchValue } = inferMatchType(product, query, searchableKeys);
+    const { matchType, matchValue } = inferMatchType(product, query);
 
     return {
       productId: product.id,
@@ -399,7 +367,6 @@ export class SearchService {
       items: await mapSearchItems(
         paginated.items as ProductWithRelations[],
         query,
-        searchableKeys,
       ),
       pagination: {
         page: paginated.page,
@@ -421,6 +388,7 @@ export class SearchService {
     const role = profile.role;
 
     const query = input.query.trim();
+    const hasQuery = query.length > 0;
     if (!query && !input.globalFieldFilter?.value.trim()) {
       throw new SearchError(
         "Debe indicar una consulta o un filtro global.",
@@ -428,7 +396,15 @@ export class SearchService {
       );
     }
 
+    if (hasQuery && query.length < MIN_GLOBAL_QUERY_CHARS) {
+      throw new SearchError(
+        `La consulta debe tener al menos ${MIN_GLOBAL_QUERY_CHARS} caracteres.`,
+        "VALIDATION_ERROR",
+      );
+    }
+
     let folderIds: string[] = [];
+    const isScoped = Boolean(input.scope?.folderId || input.scope?.catalogId);
 
     if (input.scope?.folderId) {
       const folder = await folderRepository.findById(input.scope.folderId);
@@ -467,53 +443,18 @@ export class SearchService {
         throw error;
       }
 
-      const folders = await folderRepository.findByCatalogIdOrdered(
+      folderIds = await folderRepository.findIdsByCatalogId(
         catalog.id,
         visibilityService.folderWhereForRole(role),
       );
-      folderIds = folders.map((folder) => folder.id);
     } else {
-      const catalogs = await catalogRepository.findActiveOrdered(
+      folderIds = await folderRepository.findAccessibleIds(
         visibilityService.catalogWhereForRole(role),
+        visibilityService.folderWhereForRole(role),
       );
-      const folderGroups = await Promise.all(
-        catalogs.map((catalog) =>
-          folderRepository.findByCatalogIdOrdered(
-            catalog.id,
-            visibilityService.folderWhereForRole(role),
-          ),
-        ),
-      );
-      folderIds = folderGroups.flatMap((folders) => folders.map((folder) => folder.id));
     }
 
-    if (folderIds.length === 0) {
-      return {
-        search: buildSearchQueryMeta(query || input.globalFieldFilter?.value || ""),
-        items: [],
-        pagination: {
-          page: input.page ?? 1,
-          pageSize: input.pageSize ?? 50,
-          total: 0,
-          totalPages: 0,
-        },
-      };
-    }
-
-    const columnsByFolder = await Promise.all(
-      folderIds.map(async (folderId) => ({
-        folderId,
-        columns: await columnRepository.findByFolderIdOrdered(
-          folderId,
-          visibilityService.columnWhereForRole(role),
-        ),
-      })),
-    );
-
-    const allColumns = columnsByFolder.flatMap((entry) => entry.columns);
-    const globallySearchableKeys = resolveGloballySearchableKeys(allColumns);
-
-    let globalFieldColumns = allColumns;
+    let globalFieldColumns: FolderColumn[] = [];
     if (input.globalFieldFilter) {
       globalFieldColumns = await columnRepository.findByGlobalFieldKey(
         input.globalFieldFilter.globalFieldKey,
@@ -524,16 +465,6 @@ export class SearchService {
       );
     }
 
-    const searchableKeys = [
-      ...new Set([
-        ...globallySearchableKeys,
-        ...columnsByFolder.flatMap(({ folderId, columns }) => {
-          const folder = { id: folderId } as CatalogFolder;
-          return resolveSearchableKeys(folder, columns);
-        }),
-      ]),
-    ];
-
     const pagination: ProductPaginationOptions = {
       page: input.page ?? 1,
       pageSize: input.pageSize ?? 50,
@@ -542,21 +473,51 @@ export class SearchService {
     const where = buildFolderProductWhere({
       folderIds,
       query: query || undefined,
-      searchableKeys,
-      globallySearchableKeys,
-      columns: input.globalFieldFilter ? globalFieldColumns : allColumns,
+      columns: globalFieldColumns,
       globalFieldFilter: input.globalFieldFilter,
     });
 
-    const paginated = await productRepository.findPaginated(where, pagination);
+    const searchText = query || input.globalFieldFilter?.value || "";
+    const shouldSearchEntities = hasQuery && !isScoped;
+    const [catalogMatches, folderMatches, paginated] = await Promise.all([
+      shouldSearchEntities
+        ? catalogRepository.findMatching(
+            query,
+            visibilityService.catalogWhereForRole(role),
+            GLOBAL_ENTITY_LIMIT,
+          )
+        : Promise.resolve([]),
+      shouldSearchEntities
+        ? folderRepository.findMatching(query, folderIds, GLOBAL_ENTITY_LIMIT)
+        : Promise.resolve([]),
+      folderIds.length > 0
+        ? productRepository.findSearchPaginated(where, pagination)
+        : Promise.resolve({
+            items: [],
+            page: pagination.page,
+            pageSize: pagination.pageSize,
+            total: 0,
+            totalPages: 0,
+          }),
+    ]);
 
     return {
-      search: buildSearchQueryMeta(query || input.globalFieldFilter?.value || ""),
-      items: await mapSearchItems(
-        paginated.items as ProductWithRelations[],
-        query || input.globalFieldFilter?.value || "",
-        searchableKeys,
-      ),
+      search: buildSearchQueryMeta(searchText),
+      catalogs: catalogMatches.map((catalog) => ({
+        catalogId: catalog.id,
+        name: catalog.name,
+        description: catalog.description,
+      })),
+      folders: folderMatches.map((folder) => ({
+        folderId: folder.id,
+        name: folder.name,
+        description: folder.description,
+        catalog: {
+          id: folder.catalog.id,
+          name: folder.catalog.name,
+        },
+      })),
+      items: await mapSearchItems(paginated.items, searchText),
       pagination: {
         page: paginated.page,
         pageSize: paginated.pageSize,

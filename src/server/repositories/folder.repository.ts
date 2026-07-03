@@ -1,4 +1,4 @@
-import type { CatalogFolder, FolderStatus } from "@/generated/prisma/client";
+import type { Catalog, CatalogFolder, FolderStatus } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
 
@@ -28,6 +28,12 @@ export type UpdateFolderData = Partial<{
 }>;
 
 export type FolderWithProductCount = CatalogFolder & { productCount: number };
+export type FolderSearchMatch = Pick<
+  CatalogFolder,
+  "id" | "name" | "description" | "catalogId"
+> & {
+  catalog: Pick<Catalog, "id" | "name">;
+};
 
 export type ReorderFolderItem = {
   id: string;
@@ -35,6 +41,74 @@ export type ReorderFolderItem = {
 };
 
 export class FolderRepository {
+  async findMatching(
+    term: string,
+    folderIds: string[],
+    take = 25,
+  ): Promise<FolderSearchMatch[]> {
+    const trimmed = term.trim();
+    if (!trimmed || folderIds.length === 0) {
+      return [];
+    }
+
+    return prisma.catalogFolder.findMany({
+      where: {
+        id: { in: folderIds },
+        status: "ACTIVE",
+        OR: [
+          { name: { contains: trimmed, mode: "insensitive" } },
+          { description: { contains: trimmed, mode: "insensitive" } },
+        ],
+      },
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      take: Math.min(Math.max(1, take), 50),
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        catalogId: true,
+        catalog: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findAccessibleIds(
+    catalogWhere: Prisma.CatalogWhereInput = {},
+    folderWhere: Prisma.CatalogFolderWhereInput = {},
+  ): Promise<string[]> {
+    const folders = await prisma.catalogFolder.findMany({
+      where: {
+        status: "ACTIVE",
+        ...folderWhere,
+        catalog: {
+          status: "ACTIVE",
+          ...catalogWhere,
+        },
+      },
+      select: { id: true },
+    });
+
+    return folders.map((folder) => folder.id);
+  }
+
+  async findIdsByCatalogId(
+    catalogId: string,
+    where: Prisma.CatalogFolderWhereInput = {},
+  ): Promise<string[]> {
+    const folders = await prisma.catalogFolder.findMany({
+      where: { catalogId, status: "ACTIVE", ...where },
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      select: { id: true },
+    });
+
+    return folders.map((folder) => folder.id);
+  }
+
   async findByCatalogIdOrdered(
     catalogId: string,
     where: Prisma.CatalogFolderWhereInput = {},
