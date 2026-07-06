@@ -25,7 +25,7 @@ import type {
   SearchResultItem,
 } from "@/features/catalog/types/global-search.types";
 import type { CatalogNavigationResponse } from "@/features/catalog/types/navigation.types";
-import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
+import type { ProductTableItem, ProductTableResponse } from "@/features/catalog/types/product-table.types";
 import { serializeColumnFilters, upsertColumnFilter } from "@/features/catalog/utils/column-filter-state";
 import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
 import type { CatalogListItem } from "@/features/catalog/types/catalog.types";
@@ -139,6 +139,7 @@ export function CatalogNavigator({
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<ProductTableItem | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [productActionError, setProductActionError] = useState<string | null>(null);
 
@@ -359,8 +360,15 @@ export function CatalogNavigator({
       return;
     }
 
+    setEditingProduct(null);
     setIsProductFormOpen(true);
   }, [activeCatalogId, activeFolderId, isLoadingProducts, productTable]);
+
+  const handleEditProduct = useCallback((product: ProductTableItem) => {
+    setProductActionError(null);
+    setEditingProduct(product);
+    setIsProductFormOpen(true);
+  }, []);
 
   const handleImportPublished = useCallback(() => {
     setReloadToken((token) => token + 1);
@@ -737,6 +745,8 @@ export function CatalogNavigator({
             columnFilters={columnFilters}
             onColumnFilterChange={handleColumnFilterChange}
             onClearColumnFilters={handleClearColumnFilters}
+            isAdmin={isAdmin}
+            onEditProduct={isAdmin ? handleEditProduct : undefined}
           />
         )}
       </div>
@@ -744,10 +754,15 @@ export function CatalogNavigator({
       {importWizard}
       {isProductFormOpen && productTable ? (
         <ProductFormModal
+          key={editingProduct?.id ?? "create"}
           folderId={productTable.folder.id}
           folderName={productTable.folder.name}
           columns={productTable.columns}
-          onClose={() => setIsProductFormOpen(false)}
+          product={editingProduct}
+          onClose={() => {
+            setIsProductFormOpen(false);
+            setEditingProduct(null);
+          }}
           onSaved={() => {
             setReloadToken((token) => token + 1);
             setPage(1);

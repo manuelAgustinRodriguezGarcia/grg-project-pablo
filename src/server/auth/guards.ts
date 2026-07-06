@@ -4,6 +4,7 @@ import { userRepository } from "@/server/repositories/user.repository";
 import { AUTH_LOGIN_PATH } from "./config";
 import { AuthError, AuthForbiddenError } from "./errors";
 import { createSupabaseServerClient } from "./supabase-server";
+import { resolveSupabaseAuthUser } from "./supabase-user";
 import type { AuthenticatedUser } from "./types";
 
 function resolveDisplayName(
@@ -20,12 +21,9 @@ function resolveDisplayName(
 
 async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  const user = await resolveSupabaseAuthUser(supabase);
 
-  if (error || !user) {
+  if (!user) {
     throw new AuthError("Debes iniciar sesión para continuar.", "UNAUTHENTICATED");
   }
 

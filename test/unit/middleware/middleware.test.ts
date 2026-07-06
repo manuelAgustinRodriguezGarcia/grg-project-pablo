@@ -4,7 +4,7 @@ import {
   ADMIN_HOME_PATH,
 } from "@/server/auth/config";
 import { updateSession } from "@/server/auth/supabase-middleware";
-import { middleware } from "@/middleware";
+import { proxy } from "@/proxy";
 
 vi.mock("@/server/auth/supabase-middleware", () => ({
   updateSession: vi.fn(),
@@ -14,7 +14,7 @@ function createRequest(pathname: string, search = ""): NextRequest {
   return new NextRequest(new URL(`http://localhost:3000${pathname}${search}`));
 }
 
-describe("middleware", () => {
+describe("proxy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(updateSession).mockResolvedValue({
@@ -24,7 +24,7 @@ describe("middleware", () => {
   });
 
   it("redirige /admin al login sin sesión", async () => {
-    const response = await middleware(createRequest("/admin"));
+    const response = await proxy(createRequest("/admin"));
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toContain("/auth/login");
@@ -32,7 +32,7 @@ describe("middleware", () => {
   });
 
   it("responde 401 en /api/admin sin sesión", async () => {
-    const response = await middleware(createRequest("/api/admin/directory"));
+    const response = await proxy(createRequest("/api/admin/directory"));
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: "No autenticado" });
@@ -44,7 +44,7 @@ describe("middleware", () => {
       user: { id: "user-id" } as never,
     });
 
-    const response = await middleware(createRequest("/auth/login"));
+    const response = await proxy(createRequest("/auth/login"));
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
@@ -58,7 +58,7 @@ describe("middleware", () => {
       user: { id: "user-id" } as never,
     });
 
-    const response = await middleware(
+    const response = await proxy(
       createRequest("/auth/login", "?redirectTo=//evil.com"),
     );
 
@@ -75,7 +75,7 @@ describe("middleware", () => {
       user: null,
     });
 
-    const response = await middleware(createRequest("/auth/login"));
+    const response = await proxy(createRequest("/auth/login"));
 
     expect(response).toBe(passthrough);
   });
@@ -87,7 +87,7 @@ describe("middleware", () => {
       user: null,
     });
 
-    const response = await middleware(createRequest("/"));
+    const response = await proxy(createRequest("/"));
 
     expect(response).toBe(passthrough);
   });

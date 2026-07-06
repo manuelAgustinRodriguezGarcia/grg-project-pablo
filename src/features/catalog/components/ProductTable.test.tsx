@@ -92,6 +92,7 @@ describe("ProductTable", () => {
           fullUrl: "https://example.com/full.jpg",
         },
         imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -129,6 +130,7 @@ describe("ProductTable", () => {
           fullUrl: "https://example.com/full.jpg",
         },
         imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -160,6 +162,7 @@ describe("ProductTable", () => {
           fullUrl: null,
         },
         imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -170,6 +173,7 @@ describe("ProductTable", () => {
         dynamicData: {},
         primaryImage: null,
         imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -195,6 +199,7 @@ describe("ProductTable", () => {
           fullUrl: null,
         },
         imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -205,6 +210,7 @@ describe("ProductTable", () => {
         dynamicData: {},
         primaryImage: null,
         imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -268,6 +274,7 @@ describe("ProductTable", () => {
           dynamicData: { detalle: "Producto A" },
           primaryImage: null,
           imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
         },
@@ -340,6 +347,7 @@ describe("ProductTable", () => {
           dynamicData: { montadora: "John Deere", obs: "35" },
           primaryImage: null,
           imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
         },
@@ -434,6 +442,7 @@ describe("ProductTable", () => {
               },
             ],
           },
+          fieldAnnotationsByColumnKey: {},
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
         },
@@ -455,6 +464,73 @@ describe("ProductTable", () => {
     expect(container.querySelector(".tableCellThumb")).toHaveAttribute(
       "src",
       "https://example.com/thumb.jpg",
+    );
+  });
+
+  it("muestra anotación de campo debajo del valor", () => {
+    const data = createTableData([
+      {
+        id: "product-1",
+        primaryCode: "6205",
+        description: "Ruleman",
+        dynamicData: { anclaje_frente: "Delantero" },
+        primaryImage: null,
+        imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {
+          anclaje_frente: {
+            helpText: "Diagrama de montaje",
+            thumbnailUrl: "https://example.com/annotation-thumb.jpg",
+            fullUrl: "https://example.com/annotation-full.jpg",
+          },
+        },
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+
+    data.columns.push({
+      id: "col-2",
+      folderId: "folder-1",
+      originalName: "Anclaje frente",
+      displayName: "Anclaje frente",
+      internalKey: "anclaje_frente",
+      dataType: "TEXT",
+      order: 1,
+      isPrimaryCode: false,
+      isDescription: false,
+      isImageCode: false,
+      isSearchable: false,
+      isFilterable: false,
+      visibleToNormalUser: true,
+      isGloballySearchable: false,
+      isGloballyFilterable: false,
+      isAdminEditable: true,
+      isEquivalence: false,
+      isRequired: false,
+      isReadOnly: false,
+      width: null,
+      format: null,
+      unit: null,
+      label: null,
+      globalFieldKey: null,
+      helpText: null,
+      helpImageAltText: null,
+      hasContextualHelp: false,
+      helpImagePreviewUrl: null,
+      helpImageFullUrl: null,
+      createdAt: new Date("2026-01-01").toISOString(),
+      updatedAt: new Date("2026-01-01").toISOString(),
+    });
+
+    const { container } = render(
+      <ProductTable data={data} isLoading={false} error={null} onPageChange={vi.fn()} />,
+    );
+
+    expect(screen.getByText("Delantero")).toBeInTheDocument();
+    expect(screen.getByText("Diagrama de montaje")).toBeInTheDocument();
+    expect(container.querySelector(".tableCellAnnotationThumb")).toHaveAttribute(
+      "src",
+      "https://example.com/annotation-thumb.jpg",
     );
   });
 });

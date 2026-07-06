@@ -1473,6 +1473,25 @@ $table-image-size: 6.25rem;
   box-shadow: 0 16px 48px rgba($navy, 0.3);
 }
 
+.columnEditCardWide {
+  width: min(100%, 40rem);
+}
+
+.columnEditFieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-bottom: 0.85rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 1px solid rgba($navy, 0.08);
+
+  &:last-of-type {
+    border-bottom: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
 .columnEditHeader {
   display: flex;
   align-items: flex-start;
@@ -1738,6 +1757,94 @@ $table-image-size: 6.25rem;
   margin-top: 1rem;
   padding-top: 0.85rem;
   border-top: 1px solid rgba($navy, 0.08);
+}
+
+.actionsColumn {
+  width: 4.5rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.rowActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.4rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: 0.35rem;
+  background: rgba($white, 0.9);
+  color: $navy;
+  cursor: pointer;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.06);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.tableCellAnnotation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba($navy, 0.1);
+}
+
+.tableCellAnnotationThumbButton {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+    border-radius: $radius-sm;
+  }
+}
+
+.tableCellAnnotationThumb {
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: $radius-sm;
+  object-fit: cover;
+  background: rgba($navy, 0.04);
+}
+
+.tableCellAnnotationText {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: rgba($navy, 0.62);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .tableState,

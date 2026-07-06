@@ -338,6 +338,7 @@ $price-shadow:
 }
 
 .tableWrap {
+  --header-scroll-progress: 0;
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -421,12 +422,22 @@ $price-shadow:
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: $navy-light;
-    background: linear-gradient(
-      180deg,
-      rgba($green, 0.06) 0%,
-      $price-heading-bg 100%
-    );
-    box-shadow: inset 0 -1px 0 rgba($green, 0.06);
+    background:
+      linear-gradient(
+        180deg,
+        rgba($white, var(--header-scroll-progress, 0)) 0%,
+        rgba($white, var(--header-scroll-progress, 0)) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba($green, 0.06) 0%,
+        $price-heading-bg 100%
+      );
+    box-shadow:
+      inset 0 -1px 0 rgba($green, calc(0.06 + var(--header-scroll-progress, 0) * 0.04)),
+      0 calc(var(--header-scroll-progress, 0) * 1px)
+        calc(var(--header-scroll-progress, 0) * 5px)
+        rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
     white-space: nowrap;
   }
 
@@ -459,11 +470,23 @@ $price-shadow:
 
 .priceTable thead .stickyCodeColumn {
   z-index: 3;
-  background: linear-gradient(
-    180deg,
-    rgba($green, 0.06) 0%,
-    $price-heading-bg 100%
-  );
+  background:
+    linear-gradient(
+      180deg,
+      rgba($white, var(--header-scroll-progress, 0)) 0%,
+      rgba($white, var(--header-scroll-progress, 0)) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba($green, 0.06) 0%,
+      $price-heading-bg 100%
+    );
+  box-shadow:
+    inset 0 -1px 0 rgba($green, calc(0.06 + var(--header-scroll-progress, 0) * 0.04)),
+    2px 0 6px rgba($navy, 0.04),
+    0 calc(var(--header-scroll-progress, 0) * 1px)
+      calc(var(--header-scroll-progress, 0) * 5px)
+      rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
 }
 
 .cellCode {

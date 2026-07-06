@@ -431,6 +431,7 @@ $files-shadow:
 }
 
 .tableWrap {
+  --header-scroll-progress: 0;
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -487,12 +488,22 @@ $files-shadow:
     letter-spacing: 0.03em;
     text-transform: uppercase;
     color: $navy-light;
-    background: linear-gradient(
-      180deg,
-      rgba($files-accent, 0.06) 0%,
-      $files-heading-bg 100%
-    );
-    box-shadow: inset 0 -1px 0 rgba($files-accent, 0.06);
+    background:
+      linear-gradient(
+        180deg,
+        rgba($white, var(--header-scroll-progress, 0)) 0%,
+        rgba($white, var(--header-scroll-progress, 0)) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba($files-accent, 0.06) 0%,
+        $files-heading-bg 100%
+      );
+    box-shadow:
+      inset 0 -1px 0 rgba($files-accent, calc(0.06 + var(--header-scroll-progress, 0) * 0.04)),
+      0 calc(var(--header-scroll-progress, 0) * 1px)
+        calc(var(--header-scroll-progress, 0) * 5px)
+        rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
     white-space: nowrap;
   }
 

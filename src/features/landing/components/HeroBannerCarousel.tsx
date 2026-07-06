@@ -46,8 +46,9 @@ export function HeroBannerCarousel() {
             unoptimized
             sizes="(max-width: 900px) 100vw, 50vw"
             className={`${styles.bannerImage} ${isActive ? styles.bannerImageActive : ""}`}
-            loading={index === 0 ? "eager" : "lazy"}
+            loading="eager"
             priority={index === 0}
+            fetchPriority={index === 0 ? "high" : "auto"}
             draggable={false}
           />
         );

@@ -55,6 +55,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const product = await productService.updateProduct({
       productId,
       values: parsed.data.values,
+      fieldAnnotations: parsed.data.fieldAnnotations,
     });
 
     return NextResponse.json(product);

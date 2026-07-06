@@ -76,6 +76,7 @@ export async function createProductAction(
     const product = await productService.createProduct({
       folderId: parsed.data.folderId,
       values: parsed.data.values,
+      fieldAnnotations: parsed.data.fieldAnnotations,
     });
     return { success: true, data: product };
   } catch (error) {
@@ -100,6 +101,7 @@ export async function updateProductAction(
     const product = await productService.updateProduct({
       productId: parsed.data.productId,
       values: parsed.data.values,
+      fieldAnnotations: parsed.data.fieldAnnotations,
     });
     return { success: true, data: product };
   } catch (error) {

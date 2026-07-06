@@ -12,13 +12,13 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient> {
       getAll() {
         return cookieStore.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet, _headers) {
         try {
           cookiesToSet.forEach(({ name, value, options }) => {
             cookieStore.set(name, value, options);
           });
         } catch {
-          // Las Server Components no pueden escribir cookies; el middleware las persiste.
+          // Las Server Components no pueden escribir cookies; el proxy las persiste.
         }
       },
     },
