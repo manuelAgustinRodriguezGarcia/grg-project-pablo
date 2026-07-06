@@ -31,7 +31,7 @@ function buildLoginRedirect(request: NextRequest): URL {
   return loginUrl;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { response, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
 

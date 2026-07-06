@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
-import { ChevronLeft, ChevronRight, File, ICON_STROKE } from "@/shared/icons";
+import { ChevronLeft, ChevronRight, File, ICON_STROKE, Pencil } from "@/shared/icons";
 import type {
   ProductTablePrimaryImage,
   ProductTableItem,
   ProductTableResponse,
+  ProductFieldAnnotation,
 } from "@/features/catalog/types/product-table.types";
 import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPills";
 import { ColumnHeaderCell } from "@/features/catalog/components/ColumnHeaderCell";
@@ -29,6 +31,8 @@ type ProductTableProps = {
     filter: ColumnFilterInput | null,
   ) => void;
   onClearColumnFilters?: () => void;
+  isAdmin?: boolean;
+  onEditProduct?: (product: ProductTableItem) => void;
 };
 
 function formatTableHeaderLines(displayName: string): string[] {
@@ -131,6 +135,14 @@ function shouldShowGlobalImageColumn(products: ProductTableItem[]): boolean {
   );
 }
 
+function hasFieldAnnotation(annotation: ProductFieldAnnotation | undefined): boolean {
+  if (!annotation) {
+    return false;
+  }
+
+  return Boolean(annotation.helpText) || Boolean(annotation.thumbnailUrl ?? annotation.fullUrl);
+}
+
 export function ProductTable({
   data,
   isLoading,
@@ -140,6 +152,8 @@ export function ProductTable({
   columnFilters = [],
   onColumnFilterChange,
   onClearColumnFilters,
+  isAdmin = false,
+  onEditProduct,
 }: ProductTableProps) {
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [previewImage, setPreviewImage] = useState<{
@@ -149,27 +163,10 @@ export function ProductTable({
     imageId: string;
   } | null>(null);
 
-  useEffect(() => {
-    const tableWrap = tableWrapRef.current;
-    if (!tableWrap) {
-      return;
-    }
-
-    const headerSolidScrollDistance = 56;
-
-    const syncHeaderSolidState = () => {
-      const progress = Math.min(1, tableWrap.scrollTop / headerSolidScrollDistance);
-      tableWrap.style.setProperty("--header-scroll-progress", progress.toFixed(3));
-    };
-
-    syncHeaderSolidState();
-    tableWrap.addEventListener("scroll", syncHeaderSolidState, { passive: true });
-
-    return () => {
-      tableWrap.removeEventListener("scroll", syncHeaderSolidState);
-      tableWrap.style.removeProperty("--header-scroll-progress");
-    };
-  }, [data?.products.length, data?.pagination.page]);
+  useTableHeaderScrollProgress(
+    tableWrapRef,
+    data ? `${data.products.length}-${data.pagination.page}` : null,
+  );
 
   const sortedColumns = useMemo(
     () =>
@@ -288,6 +285,11 @@ export function ProductTable({
                   }
                 />
               ))}
+              {isAdmin && onEditProduct ? (
+                <th scope="col" className={styles.actionsColumn}>
+                  Acciones
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -356,11 +358,17 @@ export function ProductTable({
                           Boolean(entry.url),
                       );
 
+                    const fieldAnnotation =
+                      product.fieldAnnotationsByColumnKey?.[column.internalKey];
+                    const annotationThumb =
+                      fieldAnnotation?.thumbnailUrl ?? fieldAnnotation?.fullUrl ?? null;
+                    const showAnnotation = hasFieldAnnotation(fieldAnnotation);
+
                     return (
                       <td
                         key={`${product.id}-${column.id}`}
                         className={
-                          previewImages.length > 0
+                          previewImages.length > 0 || showAnnotation
                             ? `${styles.tableDataCell} ${styles.tableCellWithMedia}`
                             : styles.tableDataCell
                         }
@@ -404,9 +412,62 @@ export function ProductTable({
                         {textValue !== "—" || previewImages.length === 0 ? (
                           <span className={styles.tableCellText}>{textValue}</span>
                         ) : null}
+                        {showAnnotation ? (
+                          <div className={styles.tableCellAnnotation}>
+                            {annotationThumb ? (
+                              <button
+                                type="button"
+                                className={styles.tableCellAnnotationThumbButton}
+                                onClick={() =>
+                                  setPreviewImage({
+                                    url:
+                                      fieldAnnotation?.fullUrl ??
+                                      fieldAnnotation?.thumbnailUrl ??
+                                      annotationThumb,
+                                    alt: buildProductImageAlt(
+                                      product.primaryCode,
+                                      product.description,
+                                      column.displayName,
+                                    ),
+                                    productId: product.id,
+                                    imageId: "",
+                                  })
+                                }
+                                aria-label={`Ver imagen de ayuda de ${column.displayName}`}
+                              >
+                                <img
+                                  src={annotationThumb}
+                                  alt=""
+                                  className={styles.tableCellAnnotationThumb}
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              </button>
+                            ) : null}
+                            {fieldAnnotation?.helpText ? (
+                              <p className={styles.tableCellAnnotationText}>
+                                {fieldAnnotation.helpText}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </td>
                     );
                   })}
+                  {isAdmin && onEditProduct ? (
+                    <td className={styles.actionsColumn}>
+                      <div className={styles.rowActions}>
+                        <button
+                          type="button"
+                          className={styles.rowActionButton}
+                          onClick={() => onEditProduct(product)}
+                          aria-label="Editar producto"
+                        >
+                          <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+                        </button>
+                      </div>
+                    </td>
+                  ) : null}
                 </tr>
                 );
             })}

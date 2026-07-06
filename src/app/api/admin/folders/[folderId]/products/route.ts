@@ -90,6 +90,7 @@ export async function POST(request: Request, context: RouteContext) {
     const product = await productService.createProduct({
       folderId,
       values: parsed.data.values,
+      fieldAnnotations: parsed.data.fieldAnnotations,
     });
 
     return NextResponse.json(product, { status: 201 });

@@ -30,6 +30,13 @@ export const BUCKET_CONFIGS: Record<StorageBucketName, BucketConfig> = {
     allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
     allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
   },
+  [STORAGE_BUCKETS.PRODUCT_FIELD_HELP_IMAGES]: {
+    name: STORAGE_BUCKETS.PRODUCT_FIELD_HELP_IMAGES,
+    public: false,
+    maxSizeBytes: 10 * MB,
+    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+    allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
+  },
   [STORAGE_BUCKETS.TEMP_IMPORTS]: {
     name: STORAGE_BUCKETS.TEMP_IMPORTS,
     public: false,

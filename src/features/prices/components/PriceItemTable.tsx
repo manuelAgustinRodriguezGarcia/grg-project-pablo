@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ChevronLeft, ChevronRight, Pencil, Receipt, Trash2, ICON_STROKE } from "@/shared/icons";
 import { PriceCellValue } from "@/features/prices/components/PriceCellValue";
@@ -77,6 +78,12 @@ export function PriceItemTable({
   onDeleteItem,
   columnDetails,
 }: PriceItemTableProps) {
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  useTableHeaderScrollProgress(
+    tableWrapRef,
+    data ? `${data.items.length}-${data.pagination.page}` : null,
+  );
+
   const sortedColumns = useMemo(() => {
     if (!data) {
       return [];
@@ -160,7 +167,7 @@ export function PriceItemTable({
 
   return (
     <section className={styles.tablePanel} aria-label="Ítems de precios">
-      <div className={styles.tableWrap}>
+      <div ref={tableWrapRef} className={styles.tableWrap}>
         {items.length === 0 ? (
           <div className={styles.tableStatePanel}>
             <Receipt className={styles.tableStateIcon} strokeWidth={ICON_STROKE} aria-hidden />

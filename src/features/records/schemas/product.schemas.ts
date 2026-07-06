@@ -13,12 +13,21 @@ export type ProductPaginationQuery = z.infer<typeof productPaginationQuerySchema
 
 export const productValuesSchema = z.record(z.string(), z.unknown());
 
+export const fieldAnnotationInputSchema = z.object({
+  helpText: z.string().max(2000).nullable().optional(),
+  removeImage: z.boolean().optional(),
+});
+
+export const fieldAnnotationsSchema = z.record(z.string(), fieldAnnotationInputSchema);
+
 export const createProductBodySchema = z.object({
   values: productValuesSchema,
+  fieldAnnotations: fieldAnnotationsSchema.optional(),
 });
 
 export const updateProductBodySchema = z.object({
   values: productValuesSchema,
+  fieldAnnotations: fieldAnnotationsSchema.optional(),
 });
 
 export const productIdParamSchema = z.object({
@@ -46,11 +55,13 @@ export const updateProductImageBodySchema = z
 export const createProductInputSchema = z.object({
   folderId: z.string().min(1),
   values: productValuesSchema,
+  fieldAnnotations: fieldAnnotationsSchema.optional(),
 });
 
 export const updateProductInputSchema = z.object({
   productId: z.string().min(1),
   values: productValuesSchema,
+  fieldAnnotations: fieldAnnotationsSchema.optional(),
 });
 
 export const equivalenceIdParamSchema = z.object({

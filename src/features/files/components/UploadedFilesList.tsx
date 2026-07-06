@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
+import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import Link from "next/link";
 import { useIsDesktopLayout } from "@/shared/hooks/useIsDesktopLayout";
 import {
@@ -57,7 +59,12 @@ export function UploadedFilesList({
   isActionBusy = false,
   busyFileId = null,
 }: UploadedFilesListProps) {
+  const tableWrapRef = useRef<HTMLDivElement>(null);
   const isDesktopLayout = useIsDesktopLayout();
+  useTableHeaderScrollProgress(
+    tableWrapRef,
+    data ? `${data.items.length}-${data.pagination.page}` : null,
+  );
 
   if (isLoading) {
     return (
@@ -95,6 +102,7 @@ export function UploadedFilesList({
   return (
     <section className={styles.tablePanel} aria-label="Listado de archivos">
       <div
+        ref={tableWrapRef}
         className={`${styles.tableWrap} ${data.items.length === 0 ? styles.tableWrapEmpty : ""}`}
       >
         {data.items.length === 0 ? (

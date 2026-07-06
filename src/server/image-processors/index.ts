@@ -12,5 +12,6 @@ export {
 export {
   buildColumnHelpImageStoragePaths,
   buildImportExternalImagePath,
+  buildProductFieldHelpImageStoragePaths,
   buildProductImageStoragePaths,
 } from "./image-paths";

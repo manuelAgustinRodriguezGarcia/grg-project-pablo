@@ -116,6 +116,13 @@ vi.mock("@/server/services/column-help.service", () => ({
     ),
   },
 }));
+vi.mock("@/server/services/product-field-annotation.service", () => ({
+  productFieldAnnotationService: {
+    resolveForProducts: vi.fn(async () => new Map()),
+    syncFieldAnnotations: vi.fn(async () => undefined),
+    deleteAllForProductBestEffort: vi.fn(async () => undefined),
+  },
+}));
 
 describe("ProductService", () => {
   const columns = [

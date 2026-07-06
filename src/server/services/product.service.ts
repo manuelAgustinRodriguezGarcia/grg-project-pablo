@@ -11,7 +11,7 @@ import {
 import { productImageRepository } from "@/server/repositories/product-image.repository";
 import { deleteFile, runWithSignedUrlCache } from "@/server/storage";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
-import { ProductError } from "./product.errors";
+import { ProductError, type ProductErrorCode } from "./product.errors";
 import { productImageService } from "./product-image.service";
 import { VisibilityError } from "./visibility.errors";
 import { visibilityService } from "./visibility.service";
@@ -25,6 +25,12 @@ import { equivalenceService } from "./equivalence.service";
 import { getProductTableColumns, getAdminFilterableColumnKeys } from "@/features/catalog/utils/product-table-columns";
 import type { EquivalenceListItem } from "./equivalence.service";
 import { columnHelpService } from "./column-help.service";
+import {
+  productFieldAnnotationService,
+  type FieldAnnotationInput,
+} from "./product-field-annotation.service";
+import { ProductFieldAnnotationError } from "./product-field-annotation.errors";
+import type { ProductFieldAnnotationDisplay } from "./product-field-annotation.utils";
 import { columnFilterService } from "@/server/filters/column-filter.service";
 import type { ColumnFilterInput, ActiveFilterPill } from "@/server/filters/column-filter.types";
 import { buildFolderProductWhere } from "@/server/search/search.service";
@@ -58,6 +64,7 @@ export type ProductTableItem = {
       fullUrl: string | null;
     }>
   >;
+  fieldAnnotationsByColumnKey: Record<string, ProductFieldAnnotationDisplay>;
   createdAt: string;
   updatedAt: string;
 };
@@ -94,16 +101,19 @@ export type ListProductsInput = {
 
 export type MutateProductInput = {
   values: Record<string, unknown>;
+  fieldAnnotations?: Record<string, FieldAnnotationInput>;
 };
 
 export type CreateProductInput = {
   folderId: string;
   values: Record<string, unknown>;
+  fieldAnnotations?: Record<string, FieldAnnotationInput>;
 };
 
 export type UpdateProductInput = {
   productId: string;
   values: Record<string, unknown>;
+  fieldAnnotations?: Record<string, FieldAnnotationInput>;
 };
 
 function parseDynamicData(value: unknown): Record<string, unknown> {
@@ -120,6 +130,7 @@ function toProductTableItem(
   role: "ADMIN" | "CONSULTA",
   primaryImage: ProductTableItem["primaryImage"],
   imagesByColumnKey: ProductTableItem["imagesByColumnKey"],
+  fieldAnnotationsByColumnKey: ProductTableItem["fieldAnnotationsByColumnKey"],
 ): ProductTableItem {
   const dynamicData = visibilityService.stripHiddenDynamicData(
     parseDynamicData(product.dynamicData),
@@ -134,6 +145,7 @@ function toProductTableItem(
     dynamicData,
     primaryImage,
     imagesByColumnKey,
+    fieldAnnotationsByColumnKey,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   };
@@ -155,6 +167,31 @@ async function assertFolderForAdmin(folderId: string) {
   }
 
   return { folder, catalog };
+}
+
+async function syncProductFieldAnnotations(
+  productId: string,
+  folderId: string,
+  fieldAnnotations: Record<string, FieldAnnotationInput> | undefined,
+): Promise<void> {
+  try {
+    await productFieldAnnotationService.syncFieldAnnotations(
+      productId,
+      folderId,
+      fieldAnnotations,
+    );
+  } catch (error) {
+    if (error instanceof ProductFieldAnnotationError) {
+      const code: ProductErrorCode =
+        error.code === "PRODUCT_NOT_FOUND" ||
+        error.code === "VALIDATION_ERROR"
+          ? error.code
+          : "VALIDATION_ERROR";
+      throw new ProductError(error.message, code);
+    }
+
+    throw error;
+  }
 }
 
 async function deleteProductImagesBestEffort(productId: string): Promise<void> {
@@ -284,6 +321,10 @@ export class ProductService {
         })),
         { includeFullUrls },
       );
+      const fieldAnnotations = await productFieldAnnotationService.resolveForProducts(
+        productIds,
+        { includeFullUrls },
+      );
 
       return {
         folder: {
@@ -299,6 +340,7 @@ export class ProductService {
             role,
             primaryImages.get(product.id) ?? null,
             columnImages.get(product.id) ?? {},
+            fieldAnnotations.get(product.id) ?? {},
           ),
         ),
         pagination: {
@@ -429,6 +471,9 @@ export class ProductService {
         displayName: column.displayName,
       })),
     );
+    const fieldAnnotationsMap = await productFieldAnnotationService.resolveForProducts(
+      [product.id],
+    );
     const equivalences = await equivalenceService.listByProduct(product.id);
 
     const item = toProductTableItem(
@@ -437,6 +482,7 @@ export class ProductService {
       profile.role,
       primaryImages.get(product.id) ?? null,
       columnImages.get(product.id) ?? {},
+      fieldAnnotationsMap.get(product.id) ?? {},
     );
 
     return {
@@ -475,6 +521,12 @@ export class ProductService {
       product.id,
       columns,
       built.dynamicData,
+    );
+
+    await syncProductFieldAnnotations(
+      product.id,
+      input.folderId,
+      input.fieldAnnotations,
     );
 
     auditService.logOperationSafe({
@@ -526,6 +578,12 @@ export class ProductService {
       built.dynamicData,
     );
 
+    await syncProductFieldAnnotations(
+      existing.id,
+      existing.folderId,
+      input.fieldAnnotations,
+    );
+
     auditService.logOperationSafe({
       userId: admin.id,
       action: AUDIT_ACTIONS.PRODUCT_UPDATED,
@@ -546,6 +604,7 @@ export class ProductService {
 
     await assertFolderForAdmin(product.folderId);
     await deleteProductImagesBestEffort(productId);
+    await productFieldAnnotationService.deleteAllForProductBestEffort(productId);
     await productRepository.delete(productId);
 
     auditService.logOperationSafe({

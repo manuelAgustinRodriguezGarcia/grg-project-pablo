@@ -14,6 +14,12 @@ export type ProductTablePrimaryImage = {
   fullUrl: string | null;
 };
 
+export type ProductFieldAnnotation = {
+  helpText: string | null;
+  thumbnailUrl: string | null;
+  fullUrl: string | null;
+};
+
 export type ProductTableItem = {
   id: string;
   primaryCode: string | null;
@@ -21,6 +27,7 @@ export type ProductTableItem = {
   dynamicData: Record<string, unknown>;
   primaryImage: ProductTablePrimaryImage | null;
   imagesByColumnKey: Record<string, ProductTablePrimaryImage[]>;
+  fieldAnnotationsByColumnKey: Record<string, ProductFieldAnnotation>;
   createdAt: string;
   updatedAt: string;
 };
