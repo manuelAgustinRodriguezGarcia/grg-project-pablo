@@ -8,6 +8,7 @@ import {
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { PriceListError } from "./price-list.errors";
+import { uploadedFileRetentionService } from "./uploaded-file-retention";
 import { visibilityService } from "./visibility.service";
 
 const VALID_PRICE_LIST_STATUSES: PriceListStatus[] = ["ACTIVE", "INACTIVE"];
@@ -167,6 +168,7 @@ export class PriceListService {
   async deletePriceList(id: string): Promise<void> {
     const { profile: admin } = await requireRole("ADMIN");
     await requirePriceList(id);
+    await uploadedFileRetentionService.purgeFilesForPriceList(id);
     await priceListRepository.delete(id);
 
     auditService.logOperationSafe({

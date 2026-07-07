@@ -1,5 +1,6 @@
 import type { Prisma, UploadedFile, UploadedFileStatus } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
+import { retainedUploadedFileWhere } from "@/server/services/uploaded-file-retention";
 
 export type CreateUploadedFileData = {
   originalName: string;
@@ -27,9 +28,11 @@ export type PaginatedUploadedFiles = {
 export type UploadedFileJobSummary = {
   id: string;
   status: string;
+  destinationType: string;
   actionType: string | null;
   catalogId: string | null;
   folderId: string | null;
+  priceListId: string | null;
   targetSheetName: string | null;
   resultados: unknown;
   errorMessage: string | null;
@@ -37,6 +40,7 @@ export type UploadedFileJobSummary = {
   createdAt: Date;
   catalog: { id: string; name: string } | null;
   folder: { id: string; name: string; catalogId: string } | null;
+  priceList: { id: string; name: string } | null;
   sheets: { id: string; sheetName: string }[];
 };
 
@@ -54,6 +58,7 @@ const uploadedFileHistoryInclude = {
     include: {
       catalog: { select: { id: true, name: true } },
       folder: { select: { id: true, name: true, catalogId: true } },
+      priceList: { select: { id: true, name: true } },
       sheets: { select: { id: true, sheetName: true } },
     },
   },
@@ -91,14 +96,18 @@ export class UploadedFileRepository {
     const pageSize = Math.min(Math.max(1, options.pageSize), 100);
     const skip = (page - 1) * pageSize;
 
-    const where: Prisma.UploadedFileWhereInput = options.query
+    const searchFilter: Prisma.UploadedFileWhereInput | undefined = options.query
       ? {
           originalName: {
             contains: options.query,
             mode: "insensitive",
           },
         }
-      : {};
+      : undefined;
+
+    const where: Prisma.UploadedFileWhereInput = searchFilter
+      ? { AND: [retainedUploadedFileWhere, searchFilter] }
+      : retainedUploadedFileWhere;
 
     const [items, total] = await Promise.all([
       prisma.uploadedFile.findMany({
@@ -129,6 +138,13 @@ export class UploadedFileRepository {
 
   async deleteById(id: string): Promise<void> {
     await prisma.uploadedFile.delete({ where: { id } });
+  }
+
+  async findAllWithHistory(): Promise<UploadedFileWithHistory[]> {
+    return prisma.uploadedFile.findMany({
+      orderBy: { createdAt: "desc" },
+      include: uploadedFileHistoryInclude,
+    });
   }
 }
 

@@ -8,10 +8,12 @@ type AdminTableSkeletonProps = {
   variant: AdminTableSkeletonVariant;
   label: string;
   rowCount?: number;
+  fillHeight?: boolean;
 };
 
 const CATALOG_COLUMN_COUNT = 5;
 const FILES_COLUMN_COUNT = 8;
+const PRICES_COLUMN_COUNT = 7;
 
 function ShimmerBar({
   className,
@@ -74,9 +76,22 @@ function CatalogSkeleton({ label, rowCount }: { label: string; rowCount: number 
   );
 }
 
-function FilesSkeleton({ label, rowCount }: { label: string; rowCount: number }) {
+function FilesSkeleton({
+  label,
+  rowCount,
+  fillHeight = false,
+}: {
+  label: string;
+  rowCount: number;
+  fillHeight?: boolean;
+}) {
   return (
-    <div role="status" aria-live="polite" aria-label={label}>
+    <div
+      className={`${styles.filesSkeleton} ${fillHeight ? styles.filesSkeletonFill : ""}`}
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    >
       <span className={styles.visuallyHidden}>{label}</span>
 
       <div className={styles.filesDesktop} aria-hidden>
@@ -88,23 +103,25 @@ function FilesSkeleton({ label, rowCount }: { label: string; rowCount: number })
           ))}
         </div>
 
-        {Array.from({ length: rowCount }).map((_, rowIndex) => (
-          <div key={`files-row-${rowIndex}`} className={styles.filesDataRow}>
-            {Array.from({ length: FILES_COLUMN_COUNT }).map((_, columnIndex) => (
-              <div key={`files-cell-${rowIndex}-${columnIndex}`} className={styles.filesDataCell}>
-                <ShimmerBar
-                  width={
-                    columnIndex === 0 ? "full" : columnIndex % 2 === 0 ? "medium" : "short"
-                  }
-                />
-              </div>
-            ))}
-          </div>
-        ))}
+        <div className={styles.filesSkeletonBody}>
+          {Array.from({ length: rowCount }).map((_, rowIndex) => (
+            <div key={`files-row-${rowIndex}`} className={styles.filesDataRow}>
+              {Array.from({ length: FILES_COLUMN_COUNT }).map((_, columnIndex) => (
+                <div key={`files-cell-${rowIndex}-${columnIndex}`} className={styles.filesDataCell}>
+                  <ShimmerBar
+                    width={
+                      columnIndex === 0 ? "full" : columnIndex % 2 === 0 ? "medium" : "short"
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className={styles.filesMobile} aria-hidden>
-        {Array.from({ length: Math.min(rowCount, 4) }).map((_, index) => (
+        {Array.from({ length: Math.min(rowCount, 6) }).map((_, index) => (
           <article key={`files-card-${index}`} className={styles.filesCard}>
             <div className={styles.filesCardHeader}>
               <ShimmerBar width="full" />
@@ -132,21 +149,52 @@ function FilesSkeleton({ label, rowCount }: { label: string; rowCount: number })
   );
 }
 
-function PricesSkeleton({ label, rowCount }: { label: string; rowCount: number }) {
+function PricesSkeleton({
+  label,
+  rowCount,
+  fillHeight = false,
+}: {
+  label: string;
+  rowCount: number;
+  fillHeight?: boolean;
+}) {
   return (
     <div
-      className={styles.pricesTable}
+      className={`${styles.pricesSkeleton} ${fillHeight ? styles.pricesSkeletonFill : ""}`}
       role="status"
       aria-live="polite"
       aria-label={label}
     >
       <span className={styles.visuallyHidden}>{label}</span>
 
-      {Array.from({ length: rowCount }).map((_, index) => (
-        <div key={`price-row-${index}`} className={styles.pricesRow} aria-hidden>
-          <ShimmerBar width="full" />
+      <div className={styles.pricesDesktop} aria-hidden>
+        <div className={styles.pricesHeaderRow}>
+          {Array.from({ length: PRICES_COLUMN_COUNT }).map((_, index) => (
+            <div key={`prices-header-${index}`} className={styles.pricesHeaderCell}>
+              <ShimmerBar width={index === 0 ? "medium" : "short"} />
+            </div>
+          ))}
         </div>
-      ))}
+
+        <div className={styles.pricesSkeletonBody}>
+          {Array.from({ length: rowCount }).map((_, rowIndex) => (
+            <div key={`prices-row-${rowIndex}`} className={styles.pricesDataRow}>
+              {Array.from({ length: PRICES_COLUMN_COUNT }).map((_, columnIndex) => (
+                <div
+                  key={`prices-cell-${rowIndex}-${columnIndex}`}
+                  className={styles.pricesDataCell}
+                >
+                  <ShimmerBar
+                    width={
+                      columnIndex === 0 ? "full" : columnIndex % 2 === 0 ? "medium" : "short"
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -155,14 +203,27 @@ export function AdminTableSkeleton({
   variant,
   label,
   rowCount = 6,
+  fillHeight = false,
 }: AdminTableSkeletonProps) {
   switch (variant) {
     case "catalog":
       return <CatalogSkeleton label={label} rowCount={rowCount} />;
     case "files":
-      return <FilesSkeleton label={label} rowCount={rowCount} />;
+      return (
+        <FilesSkeleton
+          label={label}
+          rowCount={rowCount}
+          fillHeight={fillHeight}
+        />
+      );
     case "prices":
-      return <PricesSkeleton label={label} rowCount={rowCount} />;
+      return (
+        <PricesSkeleton
+          label={label}
+          rowCount={rowCount}
+          fillHeight={fillHeight}
+        />
+      );
     default: {
       const exhaustiveCheck: never = variant;
       return exhaustiveCheck;

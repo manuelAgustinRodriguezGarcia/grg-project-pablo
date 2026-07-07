@@ -1,0 +1,53 @@
+@use "@/features/admin/styles/variables" as *;
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  z-index: 1200;
+  max-width: min(32rem, calc(100vw - 2rem));
+  padding: 0.85rem 1.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba($green, 0.28);
+  background: $navy;
+  color: $white;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow:
+    0 12px 32px rgba(6, 43, 95, 0.22),
+    0 0 0 1px rgba($green, 0.12) inset;
+  pointer-events: none;
+  transform: translate(-50%, calc(100% + 1.5rem));
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.35s ease;
+}
+
+.toastVisible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.toastHiding {
+  transform: translate(-50%, calc(100% + 1.5rem));
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: opacity 0.2s ease;
+    transform: translate(-50%, 0);
+
+    &:not(.toastVisible) {
+      opacity: 0;
+    }
+  }
+
+  .toastHiding {
+    transform: translate(-50%, 0);
+  }
+}

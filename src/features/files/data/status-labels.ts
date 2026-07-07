@@ -56,4 +56,5 @@ export const IMPORT_ACTION_TYPE_LABELS: Record<ImportActionType, string> = {
 
 export const DESTINATION_TYPE_LABELS = {
   CATALOG: "Catálogos",
+  PRICE_LIST: "Precios",
 } as const;

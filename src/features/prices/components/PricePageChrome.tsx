@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { FileSpreadsheet, ICON_STROKE, Plus, Search, X } from "@/shared/icons";
+import { FileSpreadsheet, ICON_STROKE, Search, X } from "@/shared/icons";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
@@ -16,16 +16,9 @@ type ActionCardConfig = {
 
 const ACTION_CARDS: ActionCardConfig[] = [
   {
-    id: "add-item",
-    title: "Agregar ítem",
-    subtitle: "Agregar ítem a la lista",
-    icon: Plus,
-    variant: "blue",
-  },
-  {
     id: "import-excel",
     title: "Importar Excel",
-    subtitle: "Subir lista de precios",
+    subtitle: "Subir nueva lista de precios o reemplazar la actual",
     icon: FileSpreadsheet,
     variant: "green",
   },
@@ -37,21 +30,15 @@ type PricePageChromeProps = {
   onDebouncedSearchChange: (value: string) => void;
   searchDisabled?: boolean;
   onImportExcelClick?: () => void;
-  onAddItemClick?: () => void;
   children?: ReactNode;
 };
 
 function handleActionCardClick(
   cardId: string,
-  handlers: Pick<PricePageChromeProps, "onImportExcelClick" | "onAddItemClick">,
+  handlers: Pick<PricePageChromeProps, "onImportExcelClick">,
 ): void {
   if (cardId === "import-excel") {
     handlers.onImportExcelClick?.();
-    return;
-  }
-
-  if (cardId === "add-item") {
-    handlers.onAddItemClick?.();
   }
 }
 
@@ -59,7 +46,6 @@ export function PricePageChrome({
   onDebouncedSearchChange,
   searchDisabled = false,
   onImportExcelClick,
-  onAddItemClick,
   children,
 }: PricePageChromeProps) {
   const [searchInput, setSearchInput] = useState("");
@@ -72,7 +58,7 @@ export function PricePageChrome({
     return () => window.clearTimeout(timeout);
   }, [onDebouncedSearchChange, searchInput]);
 
-  const showActionCards = onImportExcelClick || onAddItemClick;
+  const showActionCards = Boolean(onImportExcelClick);
 
   return (
     <section className={styles.sectionIntro} aria-label="Precios">
@@ -114,7 +100,9 @@ export function PricePageChrome({
       {showActionCards || children ? (
         <div className={catalogStyles.catalogToolbar}>
           {showActionCards ? (
-            <div className={catalogStyles.actionCards}>
+            <div
+              className={`${catalogStyles.actionCards} ${styles.priceToolbarActionCards}`}
+            >
               {ACTION_CARDS.map((card) => {
                 const Icon = card.icon;
                 const cardClassName =
@@ -126,22 +114,19 @@ export function PricePageChrome({
                     ? catalogStyles.actionCardIconGreen
                     : catalogStyles.actionCardIconBlue;
 
-                const isDisabled =
-                  (card.id === "import-excel" && !onImportExcelClick) ||
-                  (card.id === "add-item" && !onAddItemClick);
+                const isDisabled = card.id === "import-excel" && !onImportExcelClick;
 
                 return (
                   <button
                     key={card.id}
                     type="button"
-                    className={`${catalogStyles.actionCard} ${cardClassName}`}
+                    className={`${catalogStyles.actionCard} ${cardClassName} ${styles.priceToolbarActionCard}`}
                     aria-label={card.title}
                     data-testid={`price-action-${card.id}`}
                     disabled={isDisabled}
                     onClick={() =>
                       handleActionCardClick(card.id, {
                         onImportExcelClick,
-                        onAddItemClick,
                       })
                     }
                   >

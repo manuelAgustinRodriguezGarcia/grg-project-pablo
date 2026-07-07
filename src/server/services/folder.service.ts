@@ -9,6 +9,7 @@ import {
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { FolderError } from "./folder.errors";
+import { uploadedFileRetentionService } from "./uploaded-file-retention";
 
 const VALID_FOLDER_STATUSES: FolderStatus[] = ["ACTIVE", "INACTIVE"];
 
@@ -337,6 +338,7 @@ export class FolderService {
 
     await requireFolder(id);
 
+    await uploadedFileRetentionService.purgeFilesForFolder(id);
     await folderRepository.delete(id);
 
     auditService.logOperationSafe({

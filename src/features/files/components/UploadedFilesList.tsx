@@ -12,9 +12,10 @@ import {
   Eye,
   FileDown,
   ICON_STROKE,
+  Trash2,
 } from "@/shared/icons";
 import { ImportJobStatusBadge } from "@/features/files/components/ImportJobStatusBadge";
-import type { UploadedFileListResponse } from "@/features/files/types/uploaded-file.types";
+import type { UploadedFileListItem, UploadedFileListResponse } from "@/features/files/types/uploaded-file.types";
 import { formatAdminDateTime } from "@/features/files/utils/format-admin-datetime";
 import { formatFileSize } from "@/features/files/utils/format-file-size";
 import {
@@ -28,9 +29,11 @@ type UploadedFilesListProps = {
   data: UploadedFileListResponse | null;
   isLoading: boolean;
   error: string | null;
+  isAdmin: boolean;
   onPageChange: (page: number) => void;
   onViewDetail: (fileId: string) => void;
   onDownload: (fileId: string) => void;
+  onDelete: (item: UploadedFileListItem) => void;
   isActionBusy?: boolean;
   busyFileId?: string | null;
 };
@@ -53,9 +56,11 @@ export function UploadedFilesList({
   data,
   isLoading,
   error,
+  isAdmin,
   onPageChange,
   onViewDetail,
   onDownload,
+  onDelete,
   isActionBusy = false,
   busyFileId = null,
 }: UploadedFilesListProps) {
@@ -73,8 +78,13 @@ export function UploadedFilesList({
         aria-label="Listado de archivos"
         aria-busy="true"
       >
-        <div className={styles.tableWrap}>
-          <AdminTableSkeleton variant="files" label="Cargando archivos" />
+        <div className={`${styles.tableWrap} ${styles.tableWrapLoading}`}>
+          <AdminTableSkeleton
+            variant="files"
+            label="Cargando archivos"
+            rowCount={18}
+            fillHeight
+          />
         </div>
       </section>
     );
@@ -113,9 +123,11 @@ export function UploadedFilesList({
               aria-hidden
             />
             <p className={styles.tableEmptyText}>No hay archivos subidos.</p>
-            <Link href="/admin/catalogos" className={styles.emptyCta}>
-              Importar desde Catálogos
-            </Link>
+            {isAdmin ? (
+              <Link href="/admin/catalogos" className={styles.emptyCta}>
+                Importar desde Catálogos
+              </Link>
+            ) : null}
           </div>
         ) : (
           isDesktopLayout ? (
@@ -124,15 +136,13 @@ export function UploadedFilesList({
                 <thead>
                   <tr>
                     <th scope="col">Archivo</th>
-                    <th scope="col">Tamaño</th>
-                    <th scope="col">Carga</th>
+                    <th scope="col">Fecha</th>
                     <th scope="col" className={styles.hideTablet}>
                       Usuario
                     </th>
                     <th scope="col">Destino</th>
                     <th scope="col">Catálogo / carpeta</th>
                     <th scope="col">Estado</th>
-                    <th scope="col">Último proc.</th>
                     <th scope="col">Productos</th>
                     <th scope="col">Acciones</th>
                   </tr>
@@ -147,11 +157,16 @@ export function UploadedFilesList({
                         <td className={styles.fileNameCell}>
                           <span className={styles.fileNamePrimary}>{item.originalName}</span>
                           <span className={styles.fileNameMeta}>
-                            {item.extension ? `.${item.extension}` : "Sin extensión"} ·{" "}
-                            {formatDestinationTypeLabel(item.destinationType)}
+                            <span>
+                              {item.extension ? `.${item.extension}` : "Sin extensión"} ·{" "}
+                              {formatDestinationTypeLabel(item.destinationType)}
+                            </span>
+                            <span className={styles.fileNameMetaSeparator} aria-hidden>
+                              |
+                            </span>
+                            <span>{formatFileSize(item.sizeBytes)}</span>
                           </span>
                         </td>
-                        <td className={styles.metricCell}>{formatFileSize(item.sizeBytes)}</td>
                         <td>{formatAdminDateTime(item.uploadedAt)}</td>
                         <td className={styles.hideTablet}>{item.uploadedBy.name}</td>
                         <td>{formatDestinationTypeLabel(item.destinationType)}</td>
@@ -168,33 +183,54 @@ export function UploadedFilesList({
                             <span>—</span>
                           )}
                         </td>
-                        <td>
-                          {item.latestJob?.finishedAt
-                            ? formatAdminDateTime(item.latestJob.finishedAt)
-                            : "—"}
-                        </td>
                         <td className={styles.metricCell}>
                           {formatImportMetrics(item.latestJob)}
                         </td>
                         <td className={styles.actionsCell}>
-                          <button
-                            type="button"
-                            className={styles.iconButton}
-                            onClick={() => onViewDetail(item.id)}
-                            aria-label={`Ver detalle de ${item.originalName}`}
-                            disabled={isBusy}
-                          >
-                            <Eye strokeWidth={ICON_STROKE} aria-hidden />
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.iconButton}
-                            onClick={() => onDownload(item.id)}
-                            aria-label={`Descargar ${item.originalName}`}
-                            disabled={isBusy}
-                          >
-                            <FileDown strokeWidth={ICON_STROKE} aria-hidden />
-                          </button>
+                          <div className={styles.actionsGroup}>
+                            {isAdmin ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className={styles.iconButton}
+                                  onClick={() => onViewDetail(item.id)}
+                                  aria-label={`Ver detalle de ${item.originalName}`}
+                                  disabled={isBusy}
+                                >
+                                  <Eye strokeWidth={ICON_STROKE} aria-hidden />
+                                </button>
+                                <button
+                                  type="button"
+                                  className={styles.iconButtonSuccess}
+                                  onClick={() => onDownload(item.id)}
+                                  aria-label={`Descargar ${item.originalName}`}
+                                  disabled={isBusy}
+                                >
+                                  <FileDown strokeWidth={ICON_STROKE} aria-hidden />
+                                </button>
+                                <button
+                                  type="button"
+                                  className={styles.iconButtonDanger}
+                                  onClick={() => onDelete(item)}
+                                  aria-label={`Eliminar ${item.originalName}`}
+                                  disabled={isBusy}
+                                >
+                                  <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                className={styles.downloadActionButton}
+                                onClick={() => onDownload(item.id)}
+                                aria-label={`Descargar ${item.originalName}`}
+                                disabled={isBusy}
+                              >
+                                <FileDown strokeWidth={ICON_STROKE} aria-hidden />
+                                Descargar
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -211,7 +247,19 @@ export function UploadedFilesList({
                 return (
                   <article key={item.id} className={styles.fileCard}>
                     <div className={styles.fileCardHeader}>
-                      <h2 className={styles.fileCardTitle}>{item.originalName}</h2>
+                      <div className={styles.fileCardTitleBlock}>
+                        <h2 className={styles.fileCardTitle}>{item.originalName}</h2>
+                        <p className={styles.fileNameMeta}>
+                          <span>
+                            {item.extension ? `.${item.extension}` : "Sin extensión"} ·{" "}
+                            {formatDestinationTypeLabel(item.destinationType)}
+                          </span>
+                          <span className={styles.fileNameMetaSeparator} aria-hidden>
+                            |
+                          </span>
+                          <span>{formatFileSize(item.sizeBytes)}</span>
+                        </p>
+                      </div>
                       {item.latestJob ? (
                         <ImportJobStatusBadge status={item.latestJob.status} />
                       ) : null}
@@ -219,13 +267,7 @@ export function UploadedFilesList({
 
                     <dl className={styles.fileCardMeta}>
                       <div className={styles.fileCardMetaItem}>
-                        <dt className={styles.fileCardMetaLabel}>Tamaño</dt>
-                        <dd className={styles.fileCardMetaValue}>
-                          {formatFileSize(item.sizeBytes)}
-                        </dd>
-                      </div>
-                      <div className={styles.fileCardMetaItem}>
-                        <dt className={styles.fileCardMetaLabel}>Carga</dt>
+                        <dt className={styles.fileCardMetaLabel}>Fecha</dt>
                         <dd className={styles.fileCardMetaValue}>
                           {formatAdminDateTime(item.uploadedAt)}
                         </dd>
@@ -251,25 +293,54 @@ export function UploadedFilesList({
                       </p>
                     </div>
 
-                    <div className={styles.fileCardActions}>
-                      <button
-                        type="button"
-                        className={styles.cardActionButton}
-                        onClick={() => onViewDetail(item.id)}
-                        disabled={isBusy}
-                      >
-                        <Eye strokeWidth={ICON_STROKE} aria-hidden />
-                        Ver detalle
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.cardActionButton}
-                        onClick={() => onDownload(item.id)}
-                        disabled={isBusy}
-                      >
-                        <FileDown strokeWidth={ICON_STROKE} aria-hidden />
-                        Descargar
-                      </button>
+                    <div
+                      className={
+                        isAdmin
+                          ? styles.fileCardActions
+                          : `${styles.fileCardActions} ${styles.fileCardActionsSingle}`
+                      }
+                    >
+                      {isAdmin ? (
+                        <>
+                          <button
+                            type="button"
+                            className={styles.cardActionButton}
+                            onClick={() => onViewDetail(item.id)}
+                            disabled={isBusy}
+                          >
+                            <Eye strokeWidth={ICON_STROKE} aria-hidden />
+                            Ver detalle
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.cardActionButton} ${styles.cardActionButtonSuccess}`}
+                            onClick={() => onDownload(item.id)}
+                            disabled={isBusy}
+                          >
+                            <FileDown strokeWidth={ICON_STROKE} aria-hidden />
+                            Descargar
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.cardActionButton} ${styles.cardActionButtonDanger}`}
+                            onClick={() => onDelete(item)}
+                            disabled={isBusy}
+                          >
+                            <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+                            Eliminar
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className={`${styles.cardActionButton} ${styles.cardActionButtonSuccess}`}
+                          onClick={() => onDownload(item.id)}
+                          disabled={isBusy}
+                        >
+                          <FileDown strokeWidth={ICON_STROKE} aria-hidden />
+                          Descargar
+                        </button>
+                      )}
                     </div>
                   </article>
                 );

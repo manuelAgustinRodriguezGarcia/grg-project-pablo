@@ -16,6 +16,7 @@ import {
 } from "@/features/files/actions/uploaded-file.actions";
 import type {
   UploadedFileDetail,
+  UploadedFileListItem,
   UploadedFileListResponse,
   UploadedFileReportResponse,
 } from "@/features/files/types/uploaded-file.types";
@@ -28,6 +29,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 type FilesManagerProps = {
   catalogs: DirectoryCatalogItem[];
+  isAdmin: boolean;
 };
 
 function readErrorMessage(payload: unknown, fallback: string): string {
@@ -43,7 +45,7 @@ function readErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-export function FilesManager({ catalogs }: FilesManagerProps) {
+export function FilesManager({ catalogs, isAdmin }: FilesManagerProps) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -66,7 +68,10 @@ export function FilesManager({ catalogs }: FilesManagerProps) {
   const [busyFileId, setBusyFileId] = useState<string | null>(null);
   const [isActionBusy, setIsActionBusy] = useState(false);
 
-  const [deleteTarget, setDeleteTarget] = useState<UploadedFileDetail | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    originalName: string;
+  } | null>(null);
   const [deleteRequiresConfirmation, setDeleteRequiresConfirmation] = useState(false);
 
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -256,8 +261,13 @@ export function FilesManager({ catalogs }: FilesManagerProps) {
     }
 
     setDeleteRequiresConfirmation(false);
-    setDeleteTarget(detail);
+    setDeleteTarget({ id: detail.id, originalName: detail.originalName });
   }, [detail]);
+
+  const handleDeleteFromList = useCallback((item: UploadedFileListItem) => {
+    setDeleteRequiresConfirmation(false);
+    setDeleteTarget({ id: item.id, originalName: item.originalName });
+  }, []);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deleteTarget) {
@@ -314,92 +324,100 @@ export function FilesManager({ catalogs }: FilesManagerProps) {
             data={data}
             isLoading={isLoading}
             error={listError}
+            isAdmin={isAdmin}
             onPageChange={setPage}
             onViewDetail={handleViewDetail}
             onDownload={(fileId) => void handleDownload(fileId)}
+            onDelete={handleDeleteFromList}
             isActionBusy={isActionBusy}
             busyFileId={busyFileId}
           />
         </div>
       </div>
 
-      <UploadedFileDetailModal
-        isOpen={detailFileId !== null}
-        isLoading={isDetailLoading}
-        error={detailError}
-        detail={detail}
-        isBusy={isActionBusy}
-        actionError={detailActionError}
-        onClose={handleCloseDetail}
-        onDownload={() => {
-          if (detail) {
-            void handleDownload(detail.id);
-          }
-        }}
-        onReprocess={() => void handleReprocess()}
-        onDelete={handleDeleteRequest}
-        onViewReport={(jobId) => {
-          if (detail) {
-            void handleOpenReport(detail.id, jobId);
-          }
-        }}
-      />
+      {isAdmin ? (
+        <>
+          <UploadedFileDetailModal
+            isOpen={detailFileId !== null}
+            isLoading={isDetailLoading}
+            error={detailError}
+            detail={detail}
+            isBusy={isActionBusy}
+            actionError={detailActionError}
+            onClose={handleCloseDetail}
+            onDownload={() => {
+              if (detail) {
+                void handleDownload(detail.id);
+              }
+            }}
+            onReprocess={() => void handleReprocess()}
+            onDelete={handleDeleteRequest}
+            onViewReport={(jobId) => {
+              if (detail) {
+                void handleOpenReport(detail.id, jobId);
+              }
+            }}
+          />
 
-      <UploadedFileReportModal
-        isOpen={reportFileId !== null}
-        isLoading={isReportLoading}
-        error={reportError}
-        report={report}
-        onClose={handleCloseReport}
-      />
+          <UploadedFileReportModal
+            isOpen={reportFileId !== null}
+            isLoading={isReportLoading}
+            error={reportError}
+            report={report}
+            onClose={handleCloseReport}
+          />
 
-      {deleteTarget ? (
-        <ConfirmDialog
-          title={
-            deleteRequiresConfirmation
-              ? "Confirmar eliminación definitiva"
-              : "Eliminar archivo"
-          }
-          message={
-            deleteRequiresConfirmation ? (
-              <>
-                El archivo{" "}
-                <strong className={catalogStyles.confirmHighlight}>
-                  {deleteTarget.originalName}
-                </strong>{" "}
-                tiene importaciones publicadas o en revisión. Si lo eliminás, se borrará
-                también el respaldo original en almacenamiento.
-              </>
-            ) : (
-              <>
-                ¿Eliminar el archivo{" "}
-                <strong className={catalogStyles.confirmHighlight}>
-                  {deleteTarget.originalName}
-                </strong>
-                ? Esta acción no se puede deshacer.
-              </>
-            )
-          }
-          confirmLabel={deleteRequiresConfirmation ? "Sí, eliminar archivo" : "Eliminar"}
-          variant="danger"
-          isBusy={isActionBusy}
-          onConfirm={() => void handleConfirmDelete()}
-          onCancel={() => {
-            if (!isActionBusy) {
-              setDeleteTarget(null);
-              setDeleteRequiresConfirmation(false);
-            }
-          }}
-        />
-      ) : null}
+          {deleteTarget ? (
+            <ConfirmDialog
+              title={
+                deleteRequiresConfirmation
+                  ? "Confirmar eliminación definitiva"
+                  : "Eliminar archivo"
+              }
+              message={
+                deleteRequiresConfirmation ? (
+                  <>
+                    El archivo{" "}
+                    <strong className={catalogStyles.confirmHighlight}>
+                      {deleteTarget.originalName}
+                    </strong>{" "}
+                    tiene importaciones publicadas o en revisión. Si lo eliminás, se borrará
+                    también el respaldo original en almacenamiento.
+                  </>
+                ) : (
+                  <>
+                    ¿Eliminar el archivo{" "}
+                    <strong className={catalogStyles.confirmHighlight}>
+                      {deleteTarget.originalName}
+                    </strong>
+                    ? Esta acción no se puede deshacer.
+                  </>
+                )
+              }
+              confirmLabel={
+                deleteRequiresConfirmation ? "Sí, eliminar archivo" : "Eliminar"
+              }
+              variant="danger"
+              isBusy={isActionBusy}
+              onConfirm={() => void handleConfirmDelete()}
+              onCancel={() => {
+                if (!isActionBusy) {
+                  setDeleteTarget(null);
+                  setDeleteRequiresConfirmation(false);
+                }
+              }}
+            />
+          ) : null}
 
-      {isImportOpen ? (
-        <LazyImportWizard
-          catalogs={catalogs}
-          initialJobId={wizardJobId ?? undefined}
-          onClose={handleImportClose}
-          onPublished={handleImportPublished}
-        />
+          {isImportOpen ? (
+            <LazyImportWizard
+              catalogs={catalogs}
+              initialJobId={wizardJobId ?? undefined}
+              onClose={handleImportClose}
+              onPublished={handleImportPublished}
+            />
+          ) : null}
+        </>
       ) : null}
     </>
   );

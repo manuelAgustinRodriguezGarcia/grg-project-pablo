@@ -8,6 +8,7 @@ import type {
   Prisma,
 } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
+import { RETAINED_IMPORT_JOB_STATUSES } from "@/server/services/uploaded-file-retention";
 
 export type CreateImportJobData = {
   uploadedFileId: string;
@@ -87,6 +88,26 @@ export class ImportJobRepository {
     });
   }
 
+  async cancelAllActiveByUploadedFileId(uploadedFileId: string): Promise<number> {
+    const result = await prisma.importJob.updateMany({
+      where: {
+        uploadedFileId,
+        status: { notIn: TERMINAL_IMPORT_JOB_STATUSES },
+      },
+      data: {
+        status: "CANCELLED",
+        finishedAt: new Date(),
+        progress: {
+          phase: "cancelled",
+          percent: 100,
+          message: "Importación cancelada por eliminación del archivo.",
+        },
+      },
+    });
+
+    return result.count;
+  }
+
   async findByUploadedFileId(uploadedFileId: string) {
     return prisma.importJob.findMany({
       where: { uploadedFileId },
@@ -103,10 +124,46 @@ export class ImportJobRepository {
     const count = await prisma.importJob.count({
       where: {
         uploadedFileId,
-        status: { in: ["PUBLISHED", "PENDING_REVIEW"] },
+        status: { in: RETAINED_IMPORT_JOB_STATUSES },
       },
     });
     return count > 0;
+  }
+
+  async findRetainedUploadedFileIdsByCatalogId(catalogId: string): Promise<string[]> {
+    const jobs = await prisma.importJob.findMany({
+      where: {
+        catalogId,
+        status: { in: RETAINED_IMPORT_JOB_STATUSES },
+      },
+      select: { uploadedFileId: true },
+      distinct: ["uploadedFileId"],
+    });
+    return jobs.map((job) => job.uploadedFileId);
+  }
+
+  async findRetainedUploadedFileIdsByFolderId(folderId: string): Promise<string[]> {
+    const jobs = await prisma.importJob.findMany({
+      where: {
+        folderId,
+        status: { in: RETAINED_IMPORT_JOB_STATUSES },
+      },
+      select: { uploadedFileId: true },
+      distinct: ["uploadedFileId"],
+    });
+    return jobs.map((job) => job.uploadedFileId);
+  }
+
+  async findRetainedUploadedFileIdsByPriceListId(priceListId: string): Promise<string[]> {
+    const jobs = await prisma.importJob.findMany({
+      where: {
+        priceListId,
+        status: { in: RETAINED_IMPORT_JOB_STATUSES },
+      },
+      select: { uploadedFileId: true },
+      distinct: ["uploadedFileId"],
+    });
+    return jobs.map((job) => job.uploadedFileId);
   }
 
   async findByIdWithRelations(id: string): Promise<ImportJobWithRelations | null> {
