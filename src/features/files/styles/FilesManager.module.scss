@@ -176,8 +176,17 @@ $files-shadow:
 }
 
 .fileNameMeta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
   font-size: 0.78rem;
-  color: rgba($navy, 0.55);
+  color: $blue;
+}
+
+.fileNameMetaSeparator {
+  margin: 0 0.4rem;
+  color: rgba($blue, 0.45);
 }
 
 .destinationCell {
@@ -206,9 +215,130 @@ $files-shadow:
   vertical-align: middle;
   text-align: center;
   white-space: nowrap;
+}
 
-  .iconButton + .iconButton {
-    margin-left: 0.35rem;
+.actionsGroup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.downloadActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: $navy;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($green, 0.35);
+    background: rgba($green, 0.14);
+    color: #157a3f;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $green;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.iconButtonSuccess {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: $white;
+  color: $navy;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($green, 0.35);
+    background: rgba($green, 0.14);
+    color: #157a3f;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $green;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.iconButtonDanger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(#c0392b, 0.22);
+  border-radius: $radius-md;
+  background: rgba(#c0392b, 0.06);
+  color: #c0392b;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba(#c0392b, 0.45);
+    background: rgba(#c0392b, 0.12);
+    color: #9b2c2c;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #c0392b;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 }
 
@@ -271,6 +401,13 @@ $files-shadow:
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.fileCardTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .fileCardTitle {
@@ -338,8 +475,12 @@ $files-shadow:
 
 .fileCardActions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.55rem;
+}
+
+.fileCardActionsSingle {
+  grid-template-columns: 1fr;
 }
 
 .cardActionButton {
@@ -380,6 +521,36 @@ $files-shadow:
   }
 }
 
+.cardActionButtonDanger {
+  border-color: rgba(#c0392b, 0.22);
+  background: rgba(#c0392b, 0.06);
+  color: #c0392b;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(#c0392b, 0.45);
+    background: rgba(#c0392b, 0.12);
+    color: #9b2c2c;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #c0392b;
+    outline-offset: 2px;
+  }
+}
+
+.cardActionButtonSuccess {
+  &:hover:not(:disabled) {
+    border-color: rgba($green, 0.35);
+    background: rgba($green, 0.14);
+    color: #157a3f;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $green;
+    outline-offset: 2px;
+  }
+}
+
 .tablePanel {
   display: flex;
   flex: 1;
@@ -395,6 +566,11 @@ $files-shadow:
 }
 
 .tableWrapEmpty {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableWrapLoading {
   display: flex;
   flex-direction: column;
 }
@@ -664,6 +840,20 @@ $files-shadow:
   border-bottom: 1px solid rgba($navy, 0.08);
 }
 
+.modalHeaderMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.modalSubtitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
 .modalTitle {
   margin: 0;
   font-family: $font-sans;
@@ -815,6 +1005,22 @@ $files-shadow:
 .detailValueMuted {
   font-size: 0.82rem;
   color: rgba($navy, 0.58);
+}
+
+.detailDateGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.detailDateSeparator {
+  color: rgba($navy, 0.35);
+}
+
+.detailDateSecondary {
+  font-size: 0.86rem;
+  color: rgba($navy, 0.62);
 }
 
 .sectionBlock {
@@ -1075,6 +1281,9 @@ $files-shadow:
 
 @media (prefers-reduced-motion: reduce) {
   .iconButton,
+  .iconButtonSuccess,
+  .iconButtonDanger,
+  .downloadActionButton,
   .cardActionButton,
   .modalCloseButton,
   .modalButton,

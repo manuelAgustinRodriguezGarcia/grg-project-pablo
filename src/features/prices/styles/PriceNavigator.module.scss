@@ -43,6 +43,21 @@ $price-shadow:
   gap: 0.85rem;
 }
 
+.priceToolbarActionCards {
+  grid-template-columns: 1fr;
+  width: min(100%, calc(2 * 15rem + 0.85rem));
+}
+
+.priceToolbarActionCard {
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .priceToolbarActionCards {
+    width: 100%;
+  }
+}
+
 .sectionHeader {
   display: flex;
   flex-shrink: 0;
@@ -299,32 +314,6 @@ $price-shadow:
   color: #9b2c2c;
 }
 
-.successBanner {
-  flex-shrink: 0;
-  margin: 0;
-  padding: 0.75rem 0.95rem;
-  border-radius: $radius-md;
-  border: 1px solid rgba($green, 0.22);
-  background: rgba($green, 0.08);
-  font-family: $font-sans;
-  font-size: 0.88rem;
-  line-height: 1.45;
-  color: darken($green, 8%);
-  animation: bannerFadeIn 0.25s ease-out;
-}
-
-@keyframes bannerFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .tablePanel {
   display: flex;
   flex: 1;
@@ -335,6 +324,21 @@ $price-shadow:
   background: $price-panel-bg;
   box-shadow: 0 2px 14px rgba($green, 0.035);
   overflow: hidden;
+}
+
+.tableWrapLoading {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableWrapEmpty {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableWrapEmpty .tableStatePanel {
+  flex: 1;
+  min-height: 100%;
 }
 
 .tableWrap {
@@ -711,7 +715,6 @@ $price-shadow:
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .successBanner,
   .tbodyFade {
     animation: none;
   }

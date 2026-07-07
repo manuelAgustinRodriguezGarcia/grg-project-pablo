@@ -21,8 +21,6 @@ type PriceItemTableProps = {
   hasSelectedList: boolean;
   hasAnyLists: boolean;
   onPageChange: (page: number) => void;
-  onAddItem: () => void;
-  onCreateList: () => void;
   onImportExcel?: () => void;
   onEditItem?: (item: PriceItemTableRow) => void;
   onDeleteItem?: (item: PriceItemTableRow) => void;
@@ -71,8 +69,6 @@ export function PriceItemTable({
   hasSelectedList,
   hasAnyLists,
   onPageChange,
-  onAddItem,
-  onCreateList,
   onImportExcel,
   onEditItem,
   onDeleteItem,
@@ -105,22 +101,16 @@ export function PriceItemTable({
           <Receipt className={styles.tableStateIcon} strokeWidth={ICON_STROKE} aria-hidden />
           <h2 className={styles.tableStateTitle}>No hay listas de precios</h2>
           <p className={styles.tableStateText}>
-            Importá un Excel para crear la lista automáticamente o creá una lista vacía
-            manualmente.
+            Importe un Excel para crear la lista automáticamente.
           </p>
-          {isAdmin ? (
+          {isAdmin && onImportExcel ? (
             <div className={styles.emptyStateActions}>
-              {onImportExcel ? (
-                <button
-                  type="button"
-                  className={`${styles.emptyStateCta} ${styles.emptyStateCtaGreen}`}
-                  onClick={onImportExcel}
-                >
-                  Importar Excel
-                </button>
-              ) : null}
-              <button type="button" className={styles.emptyStateCta} onClick={onCreateList}>
-                Crear lista vacía
+              <button
+                type="button"
+                className={`${styles.emptyStateCta} ${styles.emptyStateCtaGreen}`}
+                onClick={onImportExcel}
+              >
+                Importar Excel
               </button>
             </div>
           ) : null}
@@ -142,7 +132,14 @@ export function PriceItemTable({
   if (isLoading && !data) {
     return (
       <section className={styles.tablePanel} aria-label="Ítems de precios" aria-busy="true">
-        <AdminTableSkeleton variant="prices" label="Cargando ítems de precios" />
+        <div className={`${styles.tableWrap} ${styles.tableWrapLoading}`}>
+          <AdminTableSkeleton
+            variant="prices"
+            label="Cargando ítems de precios"
+            rowCount={18}
+            fillHeight
+          />
+        </div>
       </section>
     );
   }
@@ -167,7 +164,10 @@ export function PriceItemTable({
 
   return (
     <section className={styles.tablePanel} aria-label="Ítems de precios">
-      <div ref={tableWrapRef} className={styles.tableWrap}>
+      <div
+        ref={tableWrapRef}
+        className={`${styles.tableWrap} ${items.length === 0 ? styles.tableWrapEmpty : ""}`}
+      >
         {items.length === 0 ? (
           <div className={styles.tableStatePanel}>
             <Receipt className={styles.tableStateIcon} strokeWidth={ICON_STROKE} aria-hidden />
@@ -176,15 +176,10 @@ export function PriceItemTable({
                 ? `Sin resultados para «${searchQuery.trim()}»`
                 : "Esta lista está vacía"}
             </h2>
-            <p className={styles.tableStateText}>
-              {searchQuery.trim()
-                ? "Probá con otro término o limpiá la búsqueda."
-                : "Agregá ítems manualmente o importá un Excel."}
-            </p>
-            {isAdmin && !searchQuery.trim() ? (
-              <button type="button" className={styles.emptyStateCta} onClick={onAddItem}>
-                Agregar ítem
-              </button>
+            {searchQuery.trim() ? (
+              <p className={styles.tableStateText}>
+                Probá con otro término o limpiá la búsqueda.
+              </p>
             ) : null}
           </div>
         ) : (

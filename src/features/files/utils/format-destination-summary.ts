@@ -8,6 +8,17 @@ export function formatDestinationSummary(
     return { primary: "—", secondary: "Sin importación finalizada" };
   }
 
+  if (latestJob.destinationType === "PRICE_LIST") {
+    if (!latestJob.priceList) {
+      return { primary: "—", secondary: "Lista de precios pendiente" };
+    }
+
+    return {
+      primary: latestJob.priceList.name,
+      secondary: "Lista de precios",
+    };
+  }
+
   if (!latestJob.catalog && !latestJob.folder) {
     return { primary: "—", secondary: "Destino pendiente" };
   }
@@ -32,6 +43,24 @@ export function formatImportMetrics(
 ): string {
   if (!latestJob) {
     return "—";
+  }
+
+  if (latestJob.destinationType === "PRICE_LIST") {
+    const rowCount =
+      latestJob.itemsProcessed > 0
+        ? latestJob.itemsProcessed
+        : latestJob.productsCreated + latestJob.productsSkipped;
+    const parts = [`${rowCount} filas`];
+
+    if (latestJob.productsSkipped > 0) {
+      parts.push(`${latestJob.productsSkipped} omitidas`);
+    }
+
+    if (latestJob.errorCount > 0) {
+      parts.push(`${latestJob.errorCount} errores`);
+    }
+
+    return parts.join(" · ");
   }
 
   const parts = [`${latestJob.productsCreated} creados`];

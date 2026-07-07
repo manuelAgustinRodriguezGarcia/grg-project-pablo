@@ -91,8 +91,41 @@
   max-width: 3.75rem;
 }
 
+.filesSkeleton {
+  width: 100%;
+}
+
+.filesSkeletonFill {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 100%;
+}
+
 .filesDesktop {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.filesSkeletonFill .filesDesktop {
+  flex: 1;
+  min-height: 100%;
+}
+
+.filesSkeletonBody {
+  display: flex;
+  flex-direction: column;
+}
+
+.filesSkeletonFill .filesSkeletonBody {
+  flex: 1;
+  min-height: 0;
+}
+
+.filesSkeletonFill .filesDataRow {
+  flex: 1 1 0;
+  min-height: 3.25rem;
 }
 
 .filesMobile {
@@ -107,11 +140,11 @@
   display: grid;
   grid-template-columns:
     minmax(10rem, 1.6fr)
-    minmax(4.5rem, 0.7fr)
     minmax(6.5rem, 0.9fr)
     minmax(5.5rem, 0.8fr)
     minmax(5rem, 0.75fr)
     minmax(7rem, 1fr)
+    minmax(5.5rem, 0.8fr)
     minmax(5.5rem, 0.8fr)
     minmax(4.5rem, 0.65fr);
   align-items: center;
@@ -176,24 +209,79 @@
   gap: 0.65rem;
 }
 
-.pricesTable {
+.pricesSkeleton {
+  width: 100%;
+}
+
+.pricesSkeletonFill {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.pricesDesktop {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 1rem;
-}
-
-.pricesRow {
-  display: flex;
-  align-items: center;
-  height: 2.25rem;
-  padding-inline: 0.15rem;
-}
-
-.pricesRow .shimmerBar {
   width: 100%;
-  height: 100%;
-  max-height: 1.35rem;
+}
+
+.pricesSkeletonFill .pricesDesktop {
+  flex: 1;
+  min-height: 100%;
+}
+
+.pricesSkeletonBody {
+  display: flex;
+  flex-direction: column;
+}
+
+.pricesSkeletonFill .pricesSkeletonBody {
+  flex: 1;
+  min-height: 0;
+}
+
+.pricesSkeletonFill .pricesDataRow {
+  flex: 1 1 0;
+  min-height: 3.25rem;
+}
+
+.pricesSkeletonFill .pricesHeaderRow {
+  flex-shrink: 0;
+}
+
+.pricesHeaderRow,
+.pricesDataRow {
+  display: grid;
+  grid-template-columns:
+    minmax(7rem, 0.95fr)
+    minmax(9rem, 1.25fr)
+    minmax(6rem, 0.9fr)
+    minmax(6rem, 0.9fr)
+    minmax(6rem, 0.9fr)
+    minmax(5.5rem, 0.8fr)
+    minmax(4.5rem, 0.65fr);
+  align-items: center;
+  border-bottom: 1px solid rgba($navy, 0.08);
+}
+
+.pricesHeaderRow {
+  background: linear-gradient(rgba($blue, 0.05), rgba($blue, 0.05)), $white;
+}
+
+.pricesHeaderCell,
+.pricesDataCell {
+  padding: 0.75rem 0.85rem;
+  border-right: 1px solid rgba($navy, 0.08);
+  min-width: 0;
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+.pricesHeaderCell {
+  padding-block: 0.55rem;
 }
 
 @keyframes skeletonShimmer {
@@ -225,7 +313,20 @@
   }
 }
 
+.filesSkeletonFill .filesHeaderRow {
+  flex-shrink: 0;
+}
+
+.filesSkeletonFill .filesMobile {
+  flex: 1;
+  min-height: 100%;
+}
+
 @media (max-width: 768px) {
+  .filesSkeletonFill {
+    min-height: 100%;
+  }
+
   .filesDesktop {
     display: none;
   }
@@ -249,8 +350,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shimmerBar,
-  .pricesRow .shimmerBar {
+  .shimmerBar {
     animation: none;
   }
 }

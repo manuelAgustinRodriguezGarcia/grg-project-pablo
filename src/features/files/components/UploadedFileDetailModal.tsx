@@ -101,15 +101,18 @@ export function UploadedFileDetailModal({
         aria-labelledby={titleId}
       >
         <header className={styles.modalHeader}>
-          <div>
+          <div className={styles.modalHeaderMain}>
             <h2 id={titleId} className={styles.modalTitle}>
               {detail?.originalName ?? "Detalle del archivo"}
             </h2>
             {detail ? (
-              <p className={styles.modalSubtitle}>
-                {detail.extension ? `.${detail.extension}` : "Sin extensión"} ·{" "}
-                {formatFileSize(detail.sizeBytes)}
-              </p>
+              <div className={styles.modalSubtitleRow}>
+                <p className={styles.modalSubtitle}>
+                  {detail.extension ? `.${detail.extension}` : "Sin extensión"} ·{" "}
+                  {formatFileSize(detail.sizeBytes)}
+                </p>
+                <UploadedFileStatusBadge status={detail.status} />
+              </div>
             ) : null}
           </div>
           <button
@@ -141,21 +144,22 @@ export function UploadedFileDetailModal({
               {actionError ? <p className={styles.inlineError}>{actionError}</p> : null}
 
               <div className={styles.detailGrid}>
-                <DetailItem label="Estado del archivo">
-                  <UploadedFileStatusBadge status={detail.status} />
-                </DetailItem>
                 <DetailItem label="Tipo de destino">
                   {formatDestinationTypeLabel(detail.destinationType)}
                 </DetailItem>
                 <DetailItem label="Fecha de carga">
-                  {formatAdminDateTime(detail.uploadedAt)}
+                  <span className={styles.detailDateGroup}>
+                    <span>{formatAdminDateTime(detail.uploadedAt)}</span>
+                    <span className={styles.detailDateSeparator} aria-hidden>
+                      ·
+                    </span>
+                    <span className={styles.detailDateSecondary}>
+                      Actualizado {formatAdminDateTime(detail.updatedAt)}
+                    </span>
+                  </span>
                 </DetailItem>
                 <DetailItem label="Usuario">{detail.uploadedBy.name}</DetailItem>
                 <DetailItem label="Correo">{detail.uploadedBy.email}</DetailItem>
-                <DetailItem label="Importaciones">{String(detail.jobCount)}</DetailItem>
-                <DetailItem label="Última actualización">
-                  {formatAdminDateTime(detail.updatedAt)}
-                </DetailItem>
                 <DetailItem label="Ruta en almacenamiento" wide>
                   <span className={styles.detailValueMuted}>{detail.storagePath}</span>
                 </DetailItem>
@@ -173,12 +177,20 @@ export function UploadedFileDetailModal({
                         ? formatAdminDateTime(detail.latestJob.finishedAt)
                         : "—"}
                     </DetailItem>
-                    <DetailItem label="Catálogo">
-                      {latestDestination?.primary ?? "—"}
-                    </DetailItem>
-                    <DetailItem label="Carpeta">
-                      {detail.latestJob.folder?.name ?? "—"}
-                    </DetailItem>
+                    {detail.latestJob.destinationType === "PRICE_LIST" ? (
+                      <DetailItem label="Lista de precios">
+                        {detail.latestJob.priceList?.name ?? latestDestination?.primary ?? "—"}
+                      </DetailItem>
+                    ) : (
+                      <>
+                        <DetailItem label="Catálogo">
+                          {latestDestination?.primary ?? "—"}
+                        </DetailItem>
+                        <DetailItem label="Carpeta">
+                          {detail.latestJob.folder?.name ?? "—"}
+                        </DetailItem>
+                      </>
+                    )}
                     <DetailItem label="Hojas detectadas">
                       {String(detail.latestJob.sheetsDetected)}
                     </DetailItem>

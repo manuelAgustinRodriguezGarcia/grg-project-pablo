@@ -50,6 +50,7 @@ import { auditService } from "./audit.service";
 import { priceImportService } from "./price-import.service";
 import type { MappedPriceItemRow } from "@/server/importers/price-item-row.mapper";
 import { ImportError } from "./import.errors";
+import { uploadedFileRetentionService } from "./uploaded-file-retention";
 
 const BATCH_SIZE = 500;
 
@@ -377,6 +378,7 @@ export class CatalogImportService {
       });
 
       await uploadedFileRepository.updateStatus(job.uploadedFileId, "FAILED");
+      await uploadedFileRetentionService.purgeIfWithoutRetainedImport(job.uploadedFileId);
       throw new ImportError(clientMessage, "ANALYSIS_FAILED");
     }
   }
@@ -1407,6 +1409,7 @@ export class CatalogImportService {
         progress: { phase: "failed", percent: 100, message: clientMessage },
       });
 
+      await uploadedFileRetentionService.purgeIfWithoutRetainedImport(job.uploadedFileId);
       throw new ImportError(clientMessage, "PUBLISH_FAILED");
     }
   }
@@ -1423,7 +1426,7 @@ export class CatalogImportService {
       throw new ImportError("La importación ya finalizó.", "INVALID_STATE");
     }
 
-    return importJobRepository.update(jobId, {
+    const updated = await importJobRepository.update(jobId, {
       status: "CANCELLED",
       finishedAt: new Date(),
       progress: {
@@ -1432,6 +1435,10 @@ export class CatalogImportService {
         message: "Importación cancelada.",
       },
     });
+
+    await uploadedFileRetentionService.purgeIfWithoutRetainedImport(job.uploadedFileId);
+
+    return updated;
   }
 }
 

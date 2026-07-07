@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UploadedFileError } from "@/server/services/uploaded-file.errors";
 
 vi.mock("@/server/auth", () => ({
+  requireAuth: vi.fn(async () => ({
+    profile: { id: "admin-1", role: "ADMIN", email: "admin@test.com", name: "Admin" },
+  })),
   requireRole: vi.fn(async () => ({
     profile: { id: "admin-1", role: "ADMIN", email: "admin@test.com", name: "Admin" },
   })),
@@ -19,6 +22,7 @@ vi.mock("@/server/repositories/uploaded-file.repository", () => ({
 vi.mock("@/server/repositories/import-job.repository", () => ({
   importJobRepository: {
     findActiveByUploadedFileId: vi.fn(),
+    cancelAllActiveByUploadedFileId: vi.fn(),
     hasPublishedOrPendingReviewJob: vi.fn(),
   },
 }));
@@ -62,9 +66,11 @@ const baseFile = {
     {
       id: "job-1",
       status: "PUBLISHED",
+      destinationType: "CATALOG_FOLDER",
       actionType: "COMBINAR_LISTA",
       catalogId: "cat-1",
       folderId: "folder-1",
+      priceListId: null,
       targetSheetName: "SKF",
       resultados: {
         sheetsDetected: 3,
@@ -77,6 +83,7 @@ const baseFile = {
       createdAt: new Date("2026-06-22T12:10:00.000Z"),
       catalog: { id: "cat-1", name: "Rulemanes" },
       folder: { id: "folder-1", name: "SKF", catalogId: "cat-1" },
+      priceList: null,
       sheets: [{ id: "sheet-1", sheetName: "SKF" }],
     },
   ],
@@ -109,7 +116,7 @@ describe("UploadedFileService", () => {
   });
 
   it("getDownloadUrl genera URL firmada en excel-originals", async () => {
-    vi.mocked(uploadedFileRepository.findById).mockResolvedValue(baseFile);
+    vi.mocked(uploadedFileRepository.findByIdWithHistory).mockResolvedValue(baseFile);
     vi.mocked(createSignedDownloadUrl).mockResolvedValue({
       bucket: STORAGE_BUCKETS.EXCEL_ORIGINALS,
       path: baseFile.storagePath,
@@ -128,7 +135,7 @@ describe("UploadedFileService", () => {
   });
 
   it("reprocess delega a createJobFromUploadedFile", async () => {
-    vi.mocked(uploadedFileRepository.findById).mockResolvedValue(baseFile);
+    vi.mocked(uploadedFileRepository.findByIdWithHistory).mockResolvedValue(baseFile);
     vi.mocked(importJobRepository.findActiveByUploadedFileId).mockResolvedValue(null);
     vi.mocked(catalogImportService.createJobFromUploadedFile).mockResolvedValue({
       jobId: "job-2",
@@ -141,9 +148,21 @@ describe("UploadedFileService", () => {
     expect(catalogImportService.createJobFromUploadedFile).toHaveBeenCalledWith("file-1");
   });
 
+  it("deleteFile cancela importaciones activas antes de eliminar", async () => {
+    vi.mocked(uploadedFileRepository.findByIdWithHistory).mockResolvedValue(baseFile);
+    vi.mocked(importJobRepository.cancelAllActiveByUploadedFileId).mockResolvedValue(1);
+    vi.mocked(importJobRepository.hasPublishedOrPendingReviewJob).mockResolvedValue(false);
+
+    await uploadedFileService.deleteFile("file-1", { confirmed: false });
+
+    expect(importJobRepository.cancelAllActiveByUploadedFileId).toHaveBeenCalledWith("file-1");
+    expect(deleteFile).toHaveBeenCalled();
+    expect(uploadedFileRepository.deleteById).toHaveBeenCalledWith("file-1");
+  });
+
   it("deleteFile rechaza sin confirmación si hay job publicado", async () => {
-    vi.mocked(uploadedFileRepository.findById).mockResolvedValue(baseFile);
-    vi.mocked(importJobRepository.findActiveByUploadedFileId).mockResolvedValue(null);
+    vi.mocked(uploadedFileRepository.findByIdWithHistory).mockResolvedValue(baseFile);
+    vi.mocked(importJobRepository.cancelAllActiveByUploadedFileId).mockResolvedValue(0);
     vi.mocked(importJobRepository.hasPublishedOrPendingReviewJob).mockResolvedValue(true);
 
     await expect(
@@ -156,8 +175,8 @@ describe("UploadedFileService", () => {
   });
 
   it("deleteFile elimina Storage y registro cuando es válido", async () => {
-    vi.mocked(uploadedFileRepository.findById).mockResolvedValue(baseFile);
-    vi.mocked(importJobRepository.findActiveByUploadedFileId).mockResolvedValue(null);
+    vi.mocked(uploadedFileRepository.findByIdWithHistory).mockResolvedValue(baseFile);
+    vi.mocked(importJobRepository.cancelAllActiveByUploadedFileId).mockResolvedValue(0);
     vi.mocked(importJobRepository.hasPublishedOrPendingReviewJob).mockResolvedValue(true);
 
     const result = await uploadedFileService.deleteFile("file-1", { confirmed: true });

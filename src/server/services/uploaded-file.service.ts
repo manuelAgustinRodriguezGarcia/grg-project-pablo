@@ -1,11 +1,15 @@
 import type { ImportJobStatus } from "@/generated/prisma/client";
-import { requireRole } from "@/server/auth";
+import { requireAuth, requireRole } from "@/server/auth";
 import { importJobRepository } from "@/server/repositories/import-job.repository";
 import { uploadedFileRepository } from "@/server/repositories/uploaded-file.repository";
 import { catalogImportService } from "@/server/services/catalog-import.service";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/server/services/audit.constants";
 import { auditService } from "@/server/services/audit.service";
 import { UploadedFileError } from "@/server/services/uploaded-file.errors";
+import {
+  hasRetainedImport,
+  uploadedFileRetentionService,
+} from "@/server/services/uploaded-file-retention";
 import {
   toUploadedFileDetail,
   toUploadedFileListItem,
@@ -23,12 +27,20 @@ const REPORT_AVAILABLE_STATUSES: ImportJobStatus[] = [
 ];
 
 export class UploadedFileService {
+  private async requireRetainedFile(fileId: string) {
+    const file = await uploadedFileRepository.findByIdWithHistory(fileId);
+    if (!file || !hasRetainedImport(file.importJobs)) {
+      throw new UploadedFileError("Archivo no encontrado.", "FILE_NOT_FOUND");
+    }
+    return file;
+  }
+
   async listFiles(input: {
     page: number;
     pageSize: number;
     query?: string;
   }): Promise<UploadedFileListResponse> {
-    await requireRole("ADMIN");
+    await requireAuth();
 
     const paginated = await uploadedFileRepository.findManyPaginated({
       page: input.page,
@@ -49,22 +61,13 @@ export class UploadedFileService {
 
   async getFileDetail(fileId: string) {
     await requireRole("ADMIN");
-
-    const file = await uploadedFileRepository.findByIdWithHistory(fileId);
-    if (!file) {
-      throw new UploadedFileError("Archivo no encontrado.", "FILE_NOT_FOUND");
-    }
-
+    const file = await this.requireRetainedFile(fileId);
     return toUploadedFileDetail(file);
   }
 
   async getDownloadUrl(fileId: string): Promise<UploadedFileDownloadResponse> {
-    await requireRole("ADMIN");
-
-    const file = await uploadedFileRepository.findById(fileId);
-    if (!file) {
-      throw new UploadedFileError("Archivo no encontrado.", "FILE_NOT_FOUND");
-    }
+    await requireAuth();
+    const file = await this.requireRetainedFile(fileId);
 
     const signed = await createSignedDownloadUrl(
       STORAGE_BUCKETS.EXCEL_ORIGINALS,
@@ -85,11 +88,7 @@ export class UploadedFileService {
     jobId?: string,
   ): Promise<UploadedFileReportResponse> {
     await requireRole("ADMIN");
-
-    const file = await uploadedFileRepository.findByIdWithHistory(fileId);
-    if (!file) {
-      throw new UploadedFileError("Archivo no encontrado.", "FILE_NOT_FOUND");
-    }
+    const file = await this.requireRetainedFile(fileId);
 
     const targetJob = jobId
       ? file.importJobs.find((job) => job.id === jobId)
@@ -130,11 +129,7 @@ export class UploadedFileService {
 
   async reprocess(fileId: string) {
     const { profile: admin } = await requireRole("ADMIN");
-
-    const file = await uploadedFileRepository.findById(fileId);
-    if (!file) {
-      throw new UploadedFileError("Archivo no encontrado.", "FILE_NOT_FOUND");
-    }
+    const file = await this.requireRetainedFile(fileId);
 
     const active = await importJobRepository.findActiveByUploadedFileId(fileId);
     if (active) {
@@ -158,19 +153,9 @@ export class UploadedFileService {
 
   async deleteFile(fileId: string, input: { confirmed: boolean }) {
     const { profile: admin } = await requireRole("ADMIN");
+    const file = await this.requireRetainedFile(fileId);
 
-    const file = await uploadedFileRepository.findById(fileId);
-    if (!file) {
-      throw new UploadedFileError("Archivo no encontrado.", "FILE_NOT_FOUND");
-    }
-
-    const active = await importJobRepository.findActiveByUploadedFileId(fileId);
-    if (active) {
-      throw new UploadedFileError(
-        "Hay una importación en curso para este archivo.",
-        "ACTIVE_JOB_EXISTS",
-      );
-    }
+    await importJobRepository.cancelAllActiveByUploadedFileId(fileId);
 
     const requiresConfirmation =
       await importJobRepository.hasPublishedOrPendingReviewJob(fileId);
@@ -193,6 +178,47 @@ export class UploadedFileService {
     });
 
     return { success: true as const };
+  }
+
+  async cleanupOrphanFiles(input?: { dryRun?: boolean }) {
+    await requireRole("ADMIN");
+    const dryRun = input?.dryRun ?? false;
+
+    const files = await uploadedFileRepository.findAllWithHistory();
+    const orphans = files.filter((file) => !hasRetainedImport(file.importJobs));
+
+    const deleted: Array<{ id: string; originalName: string }> = [];
+    const errors: Array<{ id: string; originalName: string; error: string }> = [];
+
+    for (const file of orphans) {
+      if (dryRun) {
+        deleted.push({ id: file.id, originalName: file.originalName });
+        continue;
+      }
+
+      try {
+        const purged = await uploadedFileRetentionService.purgeIfWithoutRetainedImport(
+          file.id,
+        );
+        if (purged) {
+          deleted.push({ id: file.id, originalName: file.originalName });
+        }
+      } catch (error) {
+        errors.push({
+          id: file.id,
+          originalName: file.originalName,
+          error: error instanceof Error ? error.message : "Error desconocido.",
+        });
+      }
+    }
+
+    return {
+      dryRun,
+      scanned: files.length,
+      orphanCount: orphans.length,
+      deleted,
+      errors,
+    };
   }
 }
 

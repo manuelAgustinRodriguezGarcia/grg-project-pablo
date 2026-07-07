@@ -10,6 +10,7 @@ import { StorageError } from "@/server/storage/errors";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { CatalogError } from "./catalog.errors";
+import { uploadedFileRetentionService } from "./uploaded-file-retention";
 
 const VALID_CATALOG_STATUSES: CatalogStatus[] = [
   "ACTIVE",
@@ -234,6 +235,7 @@ export class CatalogService {
     const existing = await requireCatalog(id);
 
     await deleteCoverImageBestEffort(existing.coverImagePath);
+    await uploadedFileRetentionService.purgeFilesForCatalog(id);
     await catalogRepository.delete(id);
 
     auditService.logOperationSafe({

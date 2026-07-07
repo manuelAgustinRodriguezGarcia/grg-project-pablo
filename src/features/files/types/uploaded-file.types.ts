@@ -3,8 +3,12 @@ import type {
   UploadedFileJobSummary,
   UploadedFileWithHistory,
 } from "@/server/repositories/uploaded-file.repository";
+import {
+  hasRetainedImport,
+  type ImportJobRetentionSummary,
+} from "@/server/services/uploaded-file-retention";
 
-export type UploadedFileDestinationType = "CATALOG";
+export type UploadedFileDestinationType = "CATALOG" | "PRICE_LIST";
 
 export type UploadedFileUserSummary = {
   id: string;
@@ -15,8 +19,10 @@ export type UploadedFileUserSummary = {
 export type UploadedFileJobListItem = {
   id: string;
   status: ImportJobStatus;
+  destinationType: "CATALOG_FOLDER" | "PRICE_LIST";
   catalog: { id: string; name: string } | null;
   folder: { id: string; name: string; catalogId: string } | null;
+  priceList: { id: string; name: string } | null;
   actionType: ImportActionType | null;
   finishedAt: string | null;
   createdAt: string;
@@ -27,14 +33,17 @@ export type UploadedFileJobListItem = {
 export type UploadedFileLatestJobSummary = {
   id: string;
   status: ImportJobStatus;
+  destinationType: "CATALOG_FOLDER" | "PRICE_LIST";
   catalog: { id: string; name: string } | null;
   folder: { id: string; name: string; catalogId: string } | null;
+  priceList: { id: string; name: string } | null;
   actionType: ImportActionType | null;
   finishedAt: string | null;
   sheetsDetected: number;
   sheetImported: string | null;
   productsCreated: number;
   productsSkipped: number;
+  itemsProcessed: number;
   errorCount: number;
 };
 
@@ -97,19 +106,49 @@ export function parseExtension(originalName: string): string {
   return originalName.slice(lastDot + 1).toLowerCase();
 }
 
-function readReportMetrics(resultados: unknown) {
+function readReportMetrics(
+  resultados: unknown,
+  destinationType: "CATALOG_FOLDER" | "PRICE_LIST",
+) {
   if (typeof resultados !== "object" || resultados === null) {
     return {
       sheetsDetected: 0,
       sheetImported: null as string | null,
       productsCreated: 0,
       productsSkipped: 0,
+      itemsProcessed: 0,
       errorCount: 0,
     };
   }
 
   const report = resultados as Record<string, unknown>;
   const errors = Array.isArray(report.errors) ? report.errors : [];
+
+  const isPriceReport =
+    destinationType === "PRICE_LIST" ||
+    typeof report.priceListName === "string" ||
+    typeof report.itemsProcessed === "number";
+
+  if (isPriceReport) {
+    const itemsCreated =
+      typeof report.itemsCreated === "number" ? report.itemsCreated : 0;
+    const itemsSkipped =
+      typeof report.itemsSkipped === "number" ? report.itemsSkipped : 0;
+    const itemsProcessed =
+      typeof report.itemsProcessed === "number"
+        ? report.itemsProcessed
+        : itemsCreated + itemsSkipped;
+
+    return {
+      sheetsDetected: 0,
+      sheetImported:
+        typeof report.sheetImported === "string" ? report.sheetImported : null,
+      productsCreated: itemsCreated,
+      productsSkipped: itemsSkipped,
+      itemsProcessed,
+      errorCount: errors.length,
+    };
+  }
 
   return {
     sheetsDetected: typeof report.sheetsDetected === "number" ? report.sheetsDetected : 0,
@@ -119,6 +158,7 @@ function readReportMetrics(resultados: unknown) {
       typeof report.productsCreated === "number" ? report.productsCreated : 0,
     productsSkipped:
       typeof report.productsSkipped === "number" ? report.productsSkipped : 0,
+    itemsProcessed: 0,
     errorCount: errors.length,
   };
 }
@@ -130,19 +170,25 @@ function toLatestJobSummary(
     return null;
   }
 
-  const metrics = readReportMetrics(job.resultados);
+  const destinationType =
+    job.destinationType === "PRICE_LIST" ? "PRICE_LIST" : "CATALOG_FOLDER";
+
+  const metrics = readReportMetrics(job.resultados, destinationType);
 
   return {
     id: job.id,
     status: job.status as ImportJobStatus,
+    destinationType,
     catalog: job.catalog,
     folder: job.folder,
+    priceList: job.priceList,
     actionType: job.actionType as ImportActionType | null,
     finishedAt: job.finishedAt?.toISOString() ?? null,
     sheetsDetected: job.sheets.length || metrics.sheetsDetected,
     sheetImported: job.targetSheetName ?? metrics.sheetImported,
     productsCreated: metrics.productsCreated,
     productsSkipped: metrics.productsSkipped,
+    itemsProcessed: metrics.itemsProcessed,
     errorCount: metrics.errorCount,
   };
 }
@@ -154,17 +200,39 @@ function findLatestTerminalJob(jobs: UploadedFileJobSummary[]) {
 }
 
 function toJobListItem(job: UploadedFileJobSummary): UploadedFileJobListItem {
+  const destinationType =
+    job.destinationType === "PRICE_LIST" ? "PRICE_LIST" : "CATALOG_FOLDER";
+
   return {
     id: job.id,
     status: job.status as ImportJobStatus,
+    destinationType,
     catalog: job.catalog,
     folder: job.folder,
+    priceList: job.priceList,
     actionType: job.actionType as ImportActionType | null,
     finishedAt: job.finishedAt?.toISOString() ?? null,
     createdAt: job.createdAt.toISOString(),
     sheetCount: job.sheets.length,
     targetSheetName: job.targetSheetName,
   };
+}
+
+export function isUploadedFileAnchored(jobs: ImportJobRetentionSummary[]): boolean {
+  return hasRetainedImport(jobs);
+}
+
+function resolveDestinationType(
+  jobs: UploadedFileJobSummary[],
+): UploadedFileDestinationType {
+  const priceJob = jobs.find(
+    (job) => job.destinationType === "PRICE_LIST" || job.priceListId !== null,
+  );
+  if (priceJob) {
+    return "PRICE_LIST";
+  }
+
+  return "CATALOG";
 }
 
 export function toUploadedFileListItem(
@@ -181,7 +249,7 @@ export function toUploadedFileListItem(
     status: file.status,
     uploadedAt: file.createdAt.toISOString(),
     uploadedBy: file.uploadedBy,
-    destinationType: "CATALOG",
+    destinationType: resolveDestinationType(file.importJobs),
     jobCount: file.importJobs.length,
     latestJob: toLatestJobSummary(latestJob),
   };

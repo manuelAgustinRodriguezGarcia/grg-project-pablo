@@ -1,12 +1,11 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 import {
-  clearPriceListAction,
   createPriceListAction,
   deletePriceListAction,
   updatePriceListAction,
@@ -17,13 +16,13 @@ import { PriceListFormModal } from "@/features/prices/components/PriceListFormMo
 import type { PriceListFormValues } from "@/features/prices/components/PriceListFormModal";
 import { PriceListSelectorPanel } from "@/features/prices/components/PriceListSelectorPanel";
 import { PricePageChrome } from "@/features/prices/components/PricePageChrome";
-import { PriceToolbar } from "@/features/prices/components/PriceToolbar";
 import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
 import type { PriceColumnListItem } from "@/features/prices/types/price-column.types";
 import type { PriceItemTableResponse } from "@/features/prices/types/price-item-table.types";
 import type { PriceItemTableRow } from "@/features/prices/types/price-item-table.types";
 import type { PriceListListItem } from "@/features/prices/types/price-list.types";
 import { sortByName } from "@/features/catalog/utils/sortByName";
+import { FloatingToast } from "@/shared/components/FloatingToast";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
 const PAGE_SIZE = 25;
@@ -76,13 +75,15 @@ export function PriceNavigator({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [reloadToken, setReloadToken] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successToastKey, setSuccessToastKey] = useState(0);
 
-  const [listFormMode, setListFormMode] = useState<"create" | "edit" | null>(null);
+  const [isCreateListOpen, setIsCreateListOpen] = useState(false);
+  const [createListNameDraft, setCreateListNameDraft] = useState("");
+  const [listFormMode, setListFormMode] = useState<"edit" | null>(null);
   const [editingList, setEditingList] = useState<PriceListListItem | null>(null);
   const [deleteListTarget, setDeleteListTarget] = useState<PriceListListItem | null>(
     null,
   );
-  const [clearListTarget, setClearListTarget] = useState<PriceListListItem | null>(null);
   const [isListActionBusy, setIsListActionBusy] = useState(false);
   const [listActionError, setListActionError] = useState<string | null>(null);
   const [isItemFormOpen, setIsItemFormOpen] = useState(false);
@@ -92,14 +93,14 @@ export function PriceNavigator({
   const [itemsActionError, setItemsActionError] = useState<string | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
-  useEffect(() => {
-    if (!successMessage) {
-      return;
-    }
+  const notifySuccess = useCallback((message: string) => {
+    setSuccessToastKey((current) => current + 1);
+    setSuccessMessage(message);
+  }, []);
 
-    const timeout = window.setTimeout(() => setSuccessMessage(null), 3000);
-    return () => window.clearTimeout(timeout);
-  }, [successMessage]);
+  const dismissSuccessToast = useCallback(() => {
+    setSuccessMessage(null);
+  }, []);
 
   const handleDebouncedSearchChange = useCallback((query: string) => {
     setDebouncedSearch(query);
@@ -226,7 +227,7 @@ export function PriceNavigator({
 
       setDeleteItemTarget(null);
       setReloadToken((token) => token + 1);
-      setSuccessMessage("Ítem eliminado correctamente.");
+      notifySuccess("Ítem eliminado correctamente.");
       void refreshListsFromServer();
     } finally {
       setIsItemActionBusy(false);
@@ -237,22 +238,10 @@ export function PriceNavigator({
     setIsImportOpen(true);
   }, []);
 
-  const handleAddItemClick = useCallback(() => {
-    setListActionError(null);
-
-    if (!activeListId) {
-      setListActionError("Seleccioná una lista de precios para agregar ítems.");
-      return;
-    }
-
-    setEditingItem(null);
-    setIsItemFormOpen(true);
-  }, [activeListId]);
-
   const handleImportPublished = useCallback(
     async (context?: { priceListId?: string }) => {
       setReloadToken((token) => token + 1);
-      setSuccessMessage("Importación de precios completada.");
+      notifySuccess("Importación de precios completada.");
 
       const response = await fetch("/api/admin/price-lists");
       if (response.ok) {
@@ -273,57 +262,70 @@ export function PriceNavigator({
 
   const handleSubmitListForm = useCallback(
     async (values: PriceListFormValues) => {
+      if (!editingList) {
+        return;
+      }
+
       setIsListActionBusy(true);
       setListActionError(null);
 
       try {
-        if (listFormMode === "create") {
-          const result = await createPriceListAction({
-            name: values.name,
-            description: values.description || null,
-            status: values.status,
-            visibleToNormalUser: values.visibleToNormalUser,
-          });
+        const result = await updatePriceListAction({
+          id: editingList.id,
+          name: values.name,
+          description: values.description || null,
+          status: values.status,
+          visibleToNormalUser: values.visibleToNormalUser,
+        });
 
-          if (!result.success) {
-            setListActionError(result.error);
-            return;
-          }
-
-          setPriceLists((current) => [...current, result.data]);
-          setSelectedListId(result.data.id);
-          setListFormMode(null);
-          setSuccessMessage("Lista de precios creada correctamente.");
-        } else if (editingList) {
-          const result = await updatePriceListAction({
-            id: editingList.id,
-            name: values.name,
-            description: values.description || null,
-            status: values.status,
-            visibleToNormalUser: values.visibleToNormalUser,
-          });
-
-          if (!result.success) {
-            setListActionError(result.error);
-            return;
-          }
-
-          setPriceLists((current) =>
-            current.map((list) => (list.id === result.data.id ? result.data : list)),
-          );
-          setEditingList(null);
-          setListFormMode(null);
-          setSuccessMessage("Lista actualizada correctamente.");
+        if (!result.success) {
+          setListActionError(result.error);
+          return;
         }
 
+        setPriceLists((current) =>
+          current.map((list) => (list.id === result.data.id ? result.data : list)),
+        );
+        setEditingList(null);
+        setListFormMode(null);
+        notifySuccess("Lista actualizada correctamente.");
         setReloadToken((token) => token + 1);
         router.refresh();
       } finally {
         setIsListActionBusy(false);
       }
     },
-    [editingList, listFormMode, router],
+    [editingList, router],
   );
+
+  const handleConfirmCreateList = useCallback(async () => {
+    const nextName = createListNameDraft.trim();
+    if (!nextName) {
+      setListActionError("El nombre no puede estar vacío.");
+      return;
+    }
+
+    setIsListActionBusy(true);
+    setListActionError(null);
+
+    try {
+      const result = await createPriceListAction({ name: nextName });
+      if (!result.success) {
+        setListActionError(result.error);
+        return;
+      }
+
+      setPriceLists((current) => [...current, result.data]);
+      setSelectedListId(result.data.id);
+      setIsCreateListOpen(false);
+      setCreateListNameDraft("");
+      notifySuccess("Lista de precios creada correctamente.");
+      setReloadToken((token) => token + 1);
+      router.refresh();
+    } finally {
+      setIsListActionBusy(false);
+    }
+  }, [createListNameDraft, router]);
 
   const handleConfirmDeleteList = useCallback(async () => {
     if (!deleteListTarget) {
@@ -349,49 +351,12 @@ export function PriceNavigator({
       }
 
       setDeleteListTarget(null);
-      setSuccessMessage("Lista eliminada correctamente.");
+      notifySuccess("Lista eliminada correctamente.");
       router.refresh();
     } finally {
       setIsListActionBusy(false);
     }
   }, [deleteListTarget, priceLists, router, selectedListId]);
-
-  const handleConfirmClearList = useCallback(async () => {
-    if (!clearListTarget) {
-      return;
-    }
-
-    setIsListActionBusy(true);
-    setListActionError(null);
-
-    try {
-      const result = await clearPriceListAction({ id: clearListTarget.id });
-      if (!result.success) {
-        setListActionError(result.error);
-        return;
-      }
-
-      setPriceLists((current) =>
-        current.map((list) =>
-          list.id === clearListTarget.id
-            ? { ...list, itemCount: 0, updatedAt: new Date().toISOString() }
-            : list,
-        ),
-      );
-      setClearListTarget(null);
-      setReloadToken((token) => token + 1);
-      setSuccessMessage(
-        `Se eliminaron ${result.data.deletedCount.toLocaleString("es-AR")} ítems.`,
-      );
-      void refreshListsFromServer();
-      router.refresh();
-    } finally {
-      setIsListActionBusy(false);
-    }
-  }, [clearListTarget, refreshListsFromServer, router]);
-
-  const activeList =
-    sortedLists.find((list) => list.id === activeListId) ?? null;
 
   const openEditList = useCallback(
     (listId?: string) => {
@@ -420,6 +385,8 @@ export function PriceNavigator({
     [activeListId, sortedLists],
   );
 
+  const createListNameEmpty = createListNameDraft.trim().length === 0;
+
   return (
     <>
       <div className={styles.page}>
@@ -428,7 +395,6 @@ export function PriceNavigator({
             onDebouncedSearchChange={handleDebouncedSearchChange}
             searchDisabled={!activeListId}
             onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
-            onAddItemClick={isAdmin ? handleAddItemClick : undefined}
           >
             <PriceListSelectorPanel
               priceLists={sortedLists}
@@ -438,8 +404,8 @@ export function PriceNavigator({
                 isAdmin
                   ? () => {
                       setListActionError(null);
-                      setEditingList(null);
-                      setListFormMode("create");
+                      setCreateListNameDraft("");
+                      setIsCreateListOpen(true);
                     }
                   : undefined
               }
@@ -448,24 +414,8 @@ export function PriceNavigator({
             />
           </PricePageChrome>
 
-          {isAdmin ? (
-            <PriceToolbar
-              hasSelectedList={Boolean(activeListId)}
-              onClearList={() => {
-                if (activeList) {
-                  setClearListTarget(activeList);
-                }
-              }}
-            />
-          ) : null}
-
           {loadError ? <p className={styles.inlineError}>{loadError}</p> : null}
           {listActionError ? <p className={styles.inlineError}>{listActionError}</p> : null}
-          {successMessage ? (
-            <p className={styles.successBanner} role="status">
-              {successMessage}
-            </p>
-          ) : null}
 
           <PriceItemTable
             data={activeListId ? itemTable : null}
@@ -476,13 +426,6 @@ export function PriceNavigator({
             hasSelectedList={Boolean(activeListId)}
             hasAnyLists={sortedLists.length > 0}
             onPageChange={handlePageChange}
-            onAddItem={() => {
-              setEditingItem(null);
-              setIsItemFormOpen(true);
-            }}
-            onCreateList={() => {
-              setListFormMode("create");
-            }}
             onImportExcel={isAdmin ? handleImportExcelClick : undefined}
             onEditItem={
               isAdmin
@@ -498,10 +441,10 @@ export function PriceNavigator({
         </div>
       </div>
 
-      {listFormMode ? (
+      {listFormMode === "edit" ? (
         <PriceListFormModal
-          mode={listFormMode}
-          initialList={listFormMode === "edit" ? editingList : null}
+          mode="edit"
+          initialList={editingList}
           isBusy={isListActionBusy}
           error={listActionError}
           onClose={() => {
@@ -513,6 +456,44 @@ export function PriceNavigator({
           }}
           onSubmit={(values) => void handleSubmitListForm(values)}
         />
+      ) : null}
+
+      {isCreateListOpen ? (
+        <ConfirmDialog
+          title="Nueva lista de precios"
+          message="Ingrese el nombre de la lista de precios que desea crear."
+          confirmLabel="Crear lista"
+          isBusy={isListActionBusy}
+          confirmDisabled={createListNameEmpty}
+          onConfirm={() => void handleConfirmCreateList()}
+          onCancel={() => {
+            if (!isListActionBusy) {
+              setIsCreateListOpen(false);
+              setCreateListNameDraft("");
+              setListActionError(null);
+            }
+          }}
+        >
+          <input
+            className={catalogStyles.confirmInput}
+            value={createListNameDraft}
+            onChange={(event) => setCreateListNameDraft(event.target.value)}
+            maxLength={200}
+            autoFocus
+            disabled={isListActionBusy}
+            aria-label="Nombre de la lista de precios"
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter" &&
+                !createListNameEmpty &&
+                !isListActionBusy
+              ) {
+                event.preventDefault();
+                void handleConfirmCreateList();
+              }
+            }}
+          />
+        </ConfirmDialog>
       ) : null}
 
       {isItemFormOpen && activeListId ? (
@@ -527,7 +508,7 @@ export function PriceNavigator({
           }}
           onSaved={() => {
             setReloadToken((token) => token + 1);
-            setSuccessMessage(
+            notifySuccess(
               editingItem ? "Ítem actualizado correctamente." : "Ítem creado correctamente.",
             );
             void refreshListsFromServer();
@@ -594,27 +575,11 @@ export function PriceNavigator({
         />
       ) : null}
 
-      {clearListTarget ? (
-        <ConfirmDialog
-          title="Vaciar lista de precios"
-          message={
-            <>
-              ¿Vaciar todos los ítems de{" "}
-              <strong className={catalogStyles.confirmHighlight}>
-                {clearListTarget.name}
-              </strong>
-              ? La lista seguirá existiendo, pero quedará sin registros.
-            </>
-          }
-          confirmLabel="Vaciar lista"
-          variant="danger"
-          isBusy={isListActionBusy}
-          onConfirm={() => void handleConfirmClearList()}
-          onCancel={() => {
-            if (!isListActionBusy) {
-              setClearListTarget(null);
-            }
-          }}
+      {successMessage ? (
+        <FloatingToast
+          key={successToastKey}
+          message={successMessage}
+          onDismiss={dismissSuccessToast}
         />
       ) : null}
     </>
