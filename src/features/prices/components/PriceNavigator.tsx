@@ -16,6 +16,11 @@ import { PriceListFormModal } from "@/features/prices/components/PriceListFormMo
 import type { PriceListFormValues } from "@/features/prices/components/PriceListFormModal";
 import { PriceListSelectorPanel } from "@/features/prices/components/PriceListSelectorPanel";
 import { PricePageChrome } from "@/features/prices/components/PricePageChrome";
+import { PriceSupplierBanner } from "@/features/prices/components/PriceSupplierBanner";
+import {
+  PriceSupplierEditModal,
+  type PriceSupplierEditValues,
+} from "@/features/prices/components/PriceSupplierEditModal";
 import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
 import type { PriceColumnListItem } from "@/features/prices/types/price-column.types";
 import type { PriceItemTableResponse } from "@/features/prices/types/price-item-table.types";
@@ -92,6 +97,7 @@ export function PriceNavigator({
   const [isItemActionBusy, setIsItemActionBusy] = useState(false);
   const [itemsActionError, setItemsActionError] = useState<string | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isSupplierEditOpen, setIsSupplierEditOpen] = useState(false);
 
   const notifySuccess = useCallback((message: string) => {
     setSuccessToastKey((current) => current + 1);
@@ -101,6 +107,45 @@ export function PriceNavigator({
   const dismissSuccessToast = useCallback(() => {
     setSuccessMessage(null);
   }, []);
+
+  const activeList = useMemo(
+    () => sortedLists.find((list) => list.id === activeListId) ?? null,
+    [activeListId, sortedLists],
+  );
+
+  const handleSubmitSupplierEdit = useCallback(
+    async (values: PriceSupplierEditValues) => {
+      if (!activeList) {
+        return;
+      }
+
+      setIsListActionBusy(true);
+      setListActionError(null);
+
+      try {
+        const result = await updatePriceListAction({
+          id: activeList.id,
+          supplierName: values.supplierName || null,
+          supplierDate: values.supplierDate,
+        });
+
+        if (!result.success) {
+          setListActionError(result.error);
+          return;
+        }
+
+        setPriceLists((current) =>
+          current.map((list) => (list.id === result.data.id ? result.data : list)),
+        );
+        setIsSupplierEditOpen(false);
+        notifySuccess("Proveedor actualizado correctamente.");
+        router.refresh();
+      } finally {
+        setIsListActionBusy(false);
+      }
+    },
+    [activeList, notifySuccess, router],
+  );
 
   const handleDebouncedSearchChange = useCallback((query: string) => {
     setDebouncedSearch(query);
@@ -273,9 +318,9 @@ export function PriceNavigator({
         const result = await updatePriceListAction({
           id: editingList.id,
           name: values.name,
-          description: values.description || null,
-          status: values.status,
           visibleToNormalUser: values.visibleToNormalUser,
+          supplierName: values.supplierName || null,
+          supplierDate: values.supplierDate,
         });
 
         if (!result.success) {
@@ -395,6 +440,23 @@ export function PriceNavigator({
             onDebouncedSearchChange={handleDebouncedSearchChange}
             searchDisabled={!activeListId}
             onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
+            supplierBanner={
+              activeList ? (
+                <PriceSupplierBanner
+                  supplierName={activeList.supplierName}
+                  supplierDate={activeList.supplierDate}
+                  isAdmin={isAdmin}
+                  onEdit={
+                    isAdmin
+                      ? () => {
+                          setListActionError(null);
+                          setIsSupplierEditOpen(true);
+                        }
+                      : undefined
+                  }
+                />
+              ) : null
+            }
           >
             <PriceListSelectorPanel
               priceLists={sortedLists}
@@ -440,6 +502,22 @@ export function PriceNavigator({
           />
         </div>
       </div>
+
+      {isSupplierEditOpen && activeList ? (
+        <PriceSupplierEditModal
+          initialSupplierName={activeList.supplierName}
+          initialSupplierDate={activeList.supplierDate}
+          isBusy={isListActionBusy}
+          error={listActionError}
+          onClose={() => {
+            if (!isListActionBusy) {
+              setIsSupplierEditOpen(false);
+              setListActionError(null);
+            }
+          }}
+          onSubmit={(values) => void handleSubmitSupplierEdit(values)}
+        />
+      ) : null}
 
       {listFormMode === "edit" ? (
         <PriceListFormModal

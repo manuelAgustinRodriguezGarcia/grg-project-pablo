@@ -3,11 +3,17 @@
 import { useEffect, useId, useRef, useState } from "react";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
+export type DropdownOptionBadge = {
+  label: string;
+  tone: "visible" | "hidden";
+};
+
 export type DropdownOption = {
   id: string;
   label: string;
   description?: string;
   meta?: string;
+  badge?: DropdownOptionBadge;
 };
 
 type CustomDropdownProps = {
@@ -139,7 +145,20 @@ export function CustomDropdown({
           <span
             className={`${styles.dropdownTriggerContent} ${selectedOption?.meta ? styles.dropdownTriggerContentWithMeta : ""}`}
           >
-            <span className={styles.dropdownTriggerLabel}>{triggerLabel}</span>
+            <span className={styles.dropdownTriggerLabelRow}>
+              <span className={styles.dropdownTriggerLabel}>{triggerLabel}</span>
+              {selectedOption?.badge ? (
+                <span
+                  className={`${styles.dropdownTriggerBadge} ${
+                    selectedOption.badge.tone === "visible"
+                      ? styles.dropdownTriggerBadgeVisible
+                      : styles.dropdownTriggerBadgeHidden
+                  }`}
+                >
+                  {selectedOption.badge.label}
+                </span>
+              ) : null}
+            </span>
             {selectedOption?.meta ? (
               <span className={styles.dropdownTriggerMeta}>{selectedOption.meta}</span>
             ) : null}

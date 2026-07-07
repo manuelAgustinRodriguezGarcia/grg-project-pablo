@@ -330,6 +330,8 @@ model PriceList {
   status               PriceListStatus @default(ACTIVE)
   order                Int             @default(0)
   visibleToNormalUser  Boolean         @default(true)
+  supplierName         String?
+  supplierDate         DateTime?       @db.Date
   sourceUploadedFileId String?
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt

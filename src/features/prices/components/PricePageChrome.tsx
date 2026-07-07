@@ -30,6 +30,7 @@ type PricePageChromeProps = {
   onDebouncedSearchChange: (value: string) => void;
   searchDisabled?: boolean;
   onImportExcelClick?: () => void;
+  supplierBanner?: ReactNode;
   children?: ReactNode;
 };
 
@@ -46,6 +47,7 @@ export function PricePageChrome({
   onDebouncedSearchChange,
   searchDisabled = false,
   onImportExcelClick,
+  supplierBanner,
   children,
 }: PricePageChromeProps) {
   const [searchInput, setSearchInput] = useState("");
@@ -100,46 +102,49 @@ export function PricePageChrome({
       {showActionCards || children ? (
         <div className={catalogStyles.catalogToolbar}>
           {showActionCards ? (
-            <div
-              className={`${catalogStyles.actionCards} ${styles.priceToolbarActionCards}`}
-            >
-              {ACTION_CARDS.map((card) => {
-                const Icon = card.icon;
-                const cardClassName =
-                  card.variant === "green"
-                    ? catalogStyles.actionCardGreen
-                    : catalogStyles.actionCardBlue;
-                const iconClassName =
-                  card.variant === "green"
-                    ? catalogStyles.actionCardIconGreen
-                    : catalogStyles.actionCardIconBlue;
+            <div className={styles.priceToolbarColumn}>
+              <div
+                className={`${catalogStyles.actionCards} ${styles.priceToolbarActionCards}`}
+              >
+                {ACTION_CARDS.map((card) => {
+                  const Icon = card.icon;
+                  const cardClassName =
+                    card.variant === "green"
+                      ? catalogStyles.actionCardGreen
+                      : catalogStyles.actionCardBlue;
+                  const iconClassName =
+                    card.variant === "green"
+                      ? catalogStyles.actionCardIconGreen
+                      : catalogStyles.actionCardIconBlue;
 
-                const isDisabled = card.id === "import-excel" && !onImportExcelClick;
+                  const isDisabled = card.id === "import-excel" && !onImportExcelClick;
 
-                return (
-                  <button
-                    key={card.id}
-                    type="button"
-                    className={`${catalogStyles.actionCard} ${cardClassName} ${styles.priceToolbarActionCard}`}
-                    aria-label={card.title}
-                    data-testid={`price-action-${card.id}`}
-                    disabled={isDisabled}
-                    onClick={() =>
-                      handleActionCardClick(card.id, {
-                        onImportExcelClick,
-                      })
-                    }
-                  >
-                    <span className={`${catalogStyles.actionCardIcon} ${iconClassName}`}>
-                      <Icon strokeWidth={ICON_STROKE} aria-hidden />
-                    </span>
-                    <span className={catalogStyles.actionCardText}>
-                      <span className={catalogStyles.actionCardTitle}>{card.title}</span>
-                      <span className={catalogStyles.actionCardSubtitle}>{card.subtitle}</span>
-                    </span>
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={card.id}
+                      type="button"
+                      className={`${catalogStyles.actionCard} ${cardClassName} ${styles.priceToolbarActionCard}`}
+                      aria-label={card.title}
+                      data-testid={`price-action-${card.id}`}
+                      disabled={isDisabled}
+                      onClick={() =>
+                        handleActionCardClick(card.id, {
+                          onImportExcelClick,
+                        })
+                      }
+                    >
+                      <span className={`${catalogStyles.actionCardIcon} ${iconClassName}`}>
+                        <Icon strokeWidth={ICON_STROKE} aria-hidden />
+                      </span>
+                      <span className={catalogStyles.actionCardText}>
+                        <span className={catalogStyles.actionCardTitle}>{card.title}</span>
+                        <span className={catalogStyles.actionCardSubtitle}>{card.subtitle}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {supplierBanner}
             </div>
           ) : null}
           {children}

@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { CustomDatePicker } from "@/shared/components/CustomDatePicker";
 import type { PriceListListItem } from "@/features/prices/types/price-list.types";
+import { getTodayIsoDateOnly } from "@/shared/utils/date-only";
 import modalStyles from "@/features/prices/styles/PriceColumnEditModal.module.scss";
 
 export type PriceListFormValues = {
   name: string;
-  description: string;
-  status: "ACTIVE" | "INACTIVE";
   visibleToNormalUser: boolean;
+  supplierName: string;
+  supplierDate: string;
 };
 
 type PriceListFormModalProps = {
@@ -30,12 +32,12 @@ export function PriceListFormModal({
   onSubmit,
 }: PriceListFormModalProps) {
   const [name, setName] = useState(initialList?.name ?? "");
-  const [description, setDescription] = useState(initialList?.description ?? "");
-  const [status, setStatus] = useState<"ACTIVE" | "INACTIVE">(
-    initialList?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
-  );
   const [visibleToNormalUser, setVisibleToNormalUser] = useState(
     initialList?.visibleToNormalUser ?? true,
+  );
+  const [supplierName, setSupplierName] = useState(initialList?.supplierName ?? "");
+  const [supplierDate, setSupplierDate] = useState(
+    initialList?.supplierDate ?? getTodayIsoDateOnly(),
   );
 
   useEffect(() => {
@@ -57,9 +59,9 @@ export function PriceListFormModal({
     event.preventDefault();
     onSubmit({
       name: name.trim(),
-      description: description.trim(),
-      status,
       visibleToNormalUser,
+      supplierName: supplierName.trim(),
+      supplierDate,
     });
   }
 
@@ -106,46 +108,51 @@ export function PriceListFormModal({
           </div>
 
           <div className={modalStyles.formField}>
-            <label className={modalStyles.formLabel} htmlFor="price-list-description">
-              Descripción (opcional)
+            <label className={modalStyles.formLabel} htmlFor="price-list-supplier-name">
+              Nombre de proveedor
             </label>
-            <textarea
-              id="price-list-description"
-              className={modalStyles.formTextarea}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              maxLength={1000}
+            <input
+              id="price-list-supplier-name"
+              className={modalStyles.formInput}
+              value={supplierName}
+              onChange={(event) => setSupplierName(event.target.value)}
+              maxLength={200}
               disabled={isBusy}
             />
           </div>
 
           <div className={modalStyles.formField}>
-            <label className={modalStyles.formLabel} htmlFor="price-list-status">
-              Estado
+            <label className={modalStyles.formLabel} htmlFor="price-list-supplier-date">
+              Fecha del proveedor
+            </label>
+            <CustomDatePicker
+              value={supplierDate}
+              onChange={setSupplierDate}
+              disabled={isBusy}
+              ariaLabel="Fecha del proveedor"
+            />
+          </div>
+
+          <div className={modalStyles.formField}>
+            <label
+              className={`${modalStyles.formLabel} ${modalStyles.formSectionLabel}`}
+              htmlFor="price-list-visibility"
+            >
+              Visibilidad para usuarios
             </label>
             <select
-              id="price-list-status"
+              id="price-list-visibility"
               className={modalStyles.formSelect}
-              value={status}
+              value={visibleToNormalUser ? "visible" : "hidden"}
               onChange={(event) =>
-                setStatus(event.target.value as "ACTIVE" | "INACTIVE")
+                setVisibleToNormalUser(event.target.value === "visible")
               }
               disabled={isBusy}
             >
-              <option value="ACTIVE">Activa</option>
-              <option value="INACTIVE">Inactiva</option>
+              <option value="visible">Visible</option>
+              <option value="hidden">No visible</option>
             </select>
           </div>
-
-          <label className={modalStyles.toggleField}>
-            <input
-              type="checkbox"
-              checked={visibleToNormalUser}
-              onChange={(event) => setVisibleToNormalUser(event.target.checked)}
-              disabled={isBusy}
-            />
-            Visible para usuarios de consulta
-          </label>
 
           {error ? <p className={modalStyles.formError}>{error}</p> : null}
 

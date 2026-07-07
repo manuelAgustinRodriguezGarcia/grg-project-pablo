@@ -84,6 +84,8 @@ export async function setPriceImportDestinationAction(
       destinationType: "PRICE_LIST",
       priceListId: parsed.data.priceListId,
       sheetName: parsed.data.sheetName,
+      supplierName: parsed.data.supplierName,
+      supplierDate: parsed.data.supplierDate,
     });
     const job = await catalogImportService.getJob(parsed.data.jobId);
     return { success: true, data: toImportJobDetail(job) };

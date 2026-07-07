@@ -162,6 +162,8 @@ export type SetImportDestinationInput =
       destinationType: "PRICE_LIST";
       priceListId: string;
       sheetName: string;
+      supplierName: string;
+      supplierDate: string;
     };
 
 export type SetImportConfigInput = ImportJobConfig;
@@ -409,6 +411,8 @@ export class CatalogImportService {
       return priceImportService.setDestination(jobId, {
         priceListId: input.priceListId,
         sheetName: input.sheetName,
+        supplierName: input.supplierName,
+        supplierDate: input.supplierDate,
       });
     }
 

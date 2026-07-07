@@ -20,6 +20,15 @@
   background: $white;
   box-shadow: 0 16px 48px rgba($navy, 0.3);
   animation: modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.modalCardCompact {
+  width: min(100%, 24rem);
 }
 
 @keyframes modalEnter {
@@ -64,6 +73,14 @@
   color: rgba($navy, 0.78);
 }
 
+.formSectionLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.55);
+}
+
 .formInput,
 .formTextarea,
 .formSelect {
@@ -90,6 +107,12 @@
 .formTextarea {
   min-height: 4.5rem;
   resize: vertical;
+}
+
+.formDateControl {
+  min-height: 2.45rem;
+  height: 2.45rem;
+  box-sizing: border-box;
 }
 
 .toggleGrid {
@@ -133,9 +156,9 @@
 
 .modalCancelButton,
 .modalSaveButton {
-  min-height: 2.25rem;
-  padding: 0.45rem 0.95rem;
-  border-radius: $radius-sm;
+  min-height: 2.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
   font-family: $font-sans;
   font-size: 0.86rem;
   font-weight: 600;

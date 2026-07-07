@@ -8,6 +8,8 @@ export type CreatePriceListData = {
   status?: PriceListStatus;
   order?: number;
   visibleToNormalUser?: boolean;
+  supplierName?: string | null;
+  supplierDate?: Date | null;
   sourceUploadedFileId?: string | null;
 };
 
@@ -17,6 +19,8 @@ export type UpdatePriceListData = Partial<{
   status: PriceListStatus;
   order: number;
   visibleToNormalUser: boolean;
+  supplierName: string | null;
+  supplierDate: Date | null;
   sourceUploadedFileId: string | null;
 }>;
 
@@ -79,6 +83,8 @@ export class PriceListRepository {
         status: data.status ?? "ACTIVE",
         order: data.order ?? 0,
         visibleToNormalUser: data.visibleToNormalUser ?? true,
+        supplierName: data.supplierName ?? null,
+        supplierDate: data.supplierDate ?? null,
         sourceUploadedFileId: data.sourceUploadedFileId ?? null,
       },
     });

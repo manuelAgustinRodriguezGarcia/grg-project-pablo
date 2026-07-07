@@ -52,8 +52,105 @@ $price-shadow:
   width: 100%;
 }
 
+.priceToolbarColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: min(100%, calc(2 * 15rem + 0.85rem));
+  flex: 0 0 auto;
+}
+
+.supplierBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  background: $white;
+  box-shadow: 0 2px 10px rgba($navy, 0.05);
+}
+
+.supplierBannerText {
+  margin: 0;
+  min-width: 0;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgba($navy, 0.82);
+}
+
+.supplierBannerLabel {
+  font-weight: 400;
+  color: rgba($navy, 0.55);
+}
+
+.supplierBannerValue {
+  font-weight: 700;
+  color: $navy;
+}
+
+.supplierBannerDivider {
+  margin: 0 0.45rem;
+  color: rgba($navy, 0.28);
+}
+
+.supplierBannerEditButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba($blue, 0.22);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  background: rgba($blue, 0.08);
+  color: $blue;
+  font-family: $font-sans;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(2px);
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    background-color 0.18s ease;
+
+  svg {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+}
+
+.supplierBannerEditable {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover .supplierBannerEditButton,
+    &:focus-within .supplierBannerEditButton {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+  }
+
+  .supplierBannerEditButton:focus-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    outline: 2px solid rgba($blue, 0.45);
+    outline-offset: 2px;
+  }
+}
+
 @media (max-width: 1100px) {
   .priceToolbarActionCards {
+    width: 100%;
+  }
+
+  .priceToolbarColumn {
     width: 100%;
   }
 }
@@ -291,6 +388,16 @@ $price-shadow:
 .metaChipAmber {
   background: $amber-soft;
   color: $amber;
+}
+
+.metaChipSupplier {
+  background: rgba($blue, 0.1);
+  color: $blue;
+}
+
+.metaChipSupplierDate {
+  background: rgba($navy, 0.06);
+  color: rgba($navy, 0.68);
 }
 
 .listDescription {
