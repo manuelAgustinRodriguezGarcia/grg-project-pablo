@@ -18,6 +18,7 @@ vi.mock("@/server/repositories/price-list.repository", () => ({
   priceListRepository: {
     findById: vi.fn(),
     findByIdWithItemCount: vi.fn(),
+    update: vi.fn(),
   },
 }));
 vi.mock("@/server/repositories/price-column.repository", () => ({
@@ -89,6 +90,7 @@ describe("PriceImportService", () => {
       ...listFixture,
       itemCount: 0,
     });
+    vi.mocked(priceListRepository.update).mockResolvedValue(listFixture);
     vi.mocked(importJobRepository.update).mockResolvedValue({ id: "job-1" } as never);
     vi.mocked(priceColumnRepository.findByPriceListIdOrdered).mockResolvedValue([]);
     vi.mocked(priceItemRepository.findCodesByPriceList).mockResolvedValue([]);
@@ -101,9 +103,17 @@ describe("PriceImportService", () => {
     await priceImportService.setDestination("job-1", {
       priceListId: PRICE_LIST_ID,
       sheetName: "Precios",
+      supplierName: "Proveedor Test",
+      supplierDate: "2026-07-07",
     });
 
     expect(importJobRepository.deletePreview).toHaveBeenCalledWith("job-1");
+    expect(priceListRepository.update).toHaveBeenCalledWith(
+      PRICE_LIST_ID,
+      expect.objectContaining({
+        supplierName: "Proveedor Test",
+      }),
+    );
     expect(importJobRepository.update).toHaveBeenCalledWith(
       "job-1",
       expect.objectContaining({

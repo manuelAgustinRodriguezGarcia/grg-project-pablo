@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CustomDropdown } from "@/features/catalog/components/CustomDropdown";
+import { CustomDatePicker } from "@/shared/components/CustomDatePicker";
 import type { ImportSheetItem } from "@/features/imports/types/import-job.types";
 import type { PriceListListItem } from "@/features/prices/types/price-list.types";
 import { Plus, FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
@@ -14,7 +15,11 @@ type ImportStepPriceDestinationProps = {
   excludedSheetCount: number;
   selectedPriceListId: string;
   selectedSheetName: string;
+  supplierName: string;
+  supplierDate: string;
   isBusy: boolean;
+  onSupplierNameChange: (value: string) => void;
+  onSupplierDateChange: (value: string) => void;
   onSelectPriceList: (priceListId: string) => void;
   onSelectSheet: (sheetName: string) => void;
   onCreatePriceList: (name: string) => Promise<boolean>;
@@ -27,7 +32,11 @@ export function ImportStepPriceDestination({
   excludedSheetCount,
   selectedPriceListId,
   selectedSheetName,
+  supplierName,
+  supplierDate,
   isBusy,
+  onSupplierNameChange,
+  onSupplierDateChange,
   onSelectPriceList,
   onSelectSheet,
   onCreatePriceList,
@@ -79,6 +88,36 @@ export function ImportStepPriceDestination({
             <FileSpreadsheet strokeWidth={ICON_STROKE} aria-hidden />
           </span>
           <span className={styles.importSourceFileName}>{fileName}</span>
+        </div>
+      </div>
+
+      <div className={styles.supplierRow}>
+        <div className={`${styles.field} ${styles.supplierNameField}`}>
+          <div className={styles.fieldHeader}>
+            <span className={styles.fieldLabel}>Nombre de proveedor</span>
+          </div>
+          <input
+            className={styles.inlineInput}
+            value={supplierName}
+            onChange={(event) => onSupplierNameChange(event.target.value)}
+            placeholder="Ingrese el nombre del proveedor"
+            maxLength={200}
+            disabled={isBusy}
+            aria-label="Nombre de proveedor"
+          />
+        </div>
+
+        <div className={`${styles.field} ${styles.supplierDateField}`}>
+          <div className={styles.fieldHeader}>
+            <span className={styles.fieldLabel}>Fecha</span>
+          </div>
+          <CustomDatePicker
+            value={supplierDate}
+            onChange={onSupplierDateChange}
+            disabled={isBusy}
+            ariaLabel="Fecha del proveedor"
+            triggerClassName={styles.supplierDateControl}
+          />
         </div>
       </div>
 

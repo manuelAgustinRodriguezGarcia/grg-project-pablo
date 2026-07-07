@@ -16,6 +16,7 @@ import { priceColumnRepository } from "@/server/repositories/price-column.reposi
 import { priceItemRepository } from "@/server/repositories/price-item.repository";
 import { priceListRepository } from "@/server/repositories/price-list.repository";
 import { buildIndexedTextForMappedPriceItem } from "@/server/services/price-field.builder";
+import { isoDateOnlyToDate } from "@/shared/utils/date-only";
 import { prisma } from "@/server/database/prisma";
 import { ImportError } from "./import.errors";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
@@ -26,6 +27,8 @@ const BATCH_SIZE = 500;
 export type SetPriceImportDestinationInput = {
   priceListId: string;
   sheetName: string;
+  supplierName: string;
+  supplierDate: string;
 };
 
 export type ApplyPriceImportInput = {
@@ -161,6 +164,11 @@ export class PriceImportService {
     }
 
     await importJobRepository.deletePreview(jobId);
+
+    await priceListRepository.update(input.priceListId, {
+      supplierName: input.supplierName.trim(),
+      supplierDate: isoDateOnlyToDate(input.supplierDate),
+    });
 
     return importJobRepository.update(jobId, {
       destinationType: "PRICE_LIST",

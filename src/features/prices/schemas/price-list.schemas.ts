@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+const isoDateOnlySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha debe tener formato AAAA-MM-DD.");
+
 export const priceListIdSchema = z.object({
   id: z.string().min(1, "ID requerido."),
 });
@@ -9,6 +13,8 @@ export const createPriceListSchema = z.object({
   description: z.string().max(1000).nullable().optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
   visibleToNormalUser: z.boolean().optional(),
+  supplierName: z.string().max(200).nullable().optional(),
+  supplierDate: isoDateOnlySchema.nullable().optional(),
 });
 
 export const updatePriceListSchema = z.object({
@@ -17,6 +23,8 @@ export const updatePriceListSchema = z.object({
   description: z.string().max(1000).nullable().optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
   visibleToNormalUser: z.boolean().optional(),
+  supplierName: z.string().max(200).nullable().optional(),
+  supplierDate: isoDateOnlySchema.nullable().optional(),
 });
 
 export const priceItemListQuerySchema = z.object({

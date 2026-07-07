@@ -45,6 +45,10 @@ export const setPriceImportDestinationInputSchema = z.object({
   destinationType: z.literal("PRICE_LIST"),
   priceListId: z.string().min(1),
   sheetName: z.string().min(1),
+  supplierName: z.string().trim().min(1, "El nombre del proveedor es obligatorio.").max(200),
+  supplierDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha del proveedor es inválida."),
 });
 
 export const importApplySchema = z.object({

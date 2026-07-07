@@ -13,12 +13,16 @@ import { visibilityService } from "./visibility.service";
 
 const VALID_PRICE_LIST_STATUSES: PriceListStatus[] = ["ACTIVE", "INACTIVE"];
 
+import { dateToIsoDateOnly, isoDateOnlyToDate } from "@/shared/utils/date-only";
+
 export type CreatePriceListInput = {
   name: string;
   description?: string | null;
   status?: PriceListStatus;
   order?: number;
   visibleToNormalUser?: boolean;
+  supplierName?: string | null;
+  supplierDate?: string | null;
 };
 
 export type UpdatePriceListInput = {
@@ -27,6 +31,8 @@ export type UpdatePriceListInput = {
   description?: string | null;
   status?: PriceListStatus;
   visibleToNormalUser?: boolean;
+  supplierName?: string | null;
+  supplierDate?: string | null;
 };
 
 export type ReorderPriceListsInput = {
@@ -111,6 +117,8 @@ export class PriceListService {
         status: input.status,
         order,
         visibleToNormalUser: input.visibleToNormalUser,
+        supplierName: input.supplierName?.trim() || null,
+        supplierDate: input.supplierDate ? isoDateOnlyToDate(input.supplierDate) : null,
       }),
     );
 
@@ -151,6 +159,16 @@ export class PriceListService {
         ...(input.status !== undefined ? { status: input.status } : {}),
         ...(input.visibleToNormalUser !== undefined
           ? { visibleToNormalUser: input.visibleToNormalUser }
+          : {}),
+        ...(input.supplierName !== undefined
+          ? { supplierName: input.supplierName?.trim() || null }
+          : {}),
+        ...(input.supplierDate !== undefined
+          ? {
+              supplierDate: input.supplierDate
+                ? isoDateOnlyToDate(input.supplierDate)
+                : null,
+            }
           : {}),
       }),
     );

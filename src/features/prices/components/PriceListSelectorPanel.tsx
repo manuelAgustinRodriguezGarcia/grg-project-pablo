@@ -2,7 +2,7 @@
 
 import { CustomDropdown } from "@/features/catalog/components/CustomDropdown";
 import type { PriceListListItem } from "@/features/prices/types/price-list.types";
-import { formatPriceListMeta, formatPriceListUpdatedAt } from "@/features/prices/utils/format-price-list-meta";
+import { formatPriceListMeta } from "@/features/prices/utils/format-price-list-meta";
 import { sortByName } from "@/features/catalog/utils/sortByName";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
@@ -24,13 +24,15 @@ export function PriceListSelectorPanel({
   onDeleteList,
 }: PriceListSelectorPanelProps) {
   const sortedLists = sortByName(priceLists);
-  const selectedList = sortedLists.find((list) => list.id === selectedListId) ?? null;
 
   const options = sortedLists.map((list) => ({
     id: list.id,
     label: list.name,
-    description: list.description ?? undefined,
     meta: formatPriceListMeta(list.itemCount, list.updatedAt),
+    badge: {
+      label: list.visibleToNormalUser ? "Visible" : "No visible",
+      tone: list.visibleToNormalUser ? ("visible" as const) : ("hidden" as const),
+    },
   }));
 
   return (
@@ -47,40 +49,6 @@ export function PriceListSelectorPanel({
         placeholder="Seleccioná una lista"
         preferPlaceholderWithoutOptions
       />
-
-      {selectedList ? (
-        <>
-          <div className={styles.metaChips}>
-            <span
-              className={`${styles.metaChip} ${
-                selectedList.visibleToNormalUser
-                  ? styles.metaChipVisible
-                  : styles.metaChipHidden
-              }`}
-            >
-              {selectedList.visibleToNormalUser ? "Visible" : "Oculta"}
-            </span>
-            <span
-              className={`${styles.metaChip} ${
-                selectedList.status === "ACTIVE"
-                  ? styles.metaChipActive
-                  : styles.metaChipInactive
-              }`}
-            >
-              {selectedList.status === "ACTIVE" ? "Activa" : "Inactiva"}
-            </span>
-            <span className={`${styles.metaChip} ${styles.metaChipAmber}`}>
-              {selectedList.itemCount.toLocaleString("es-AR")} ítems
-            </span>
-            <span className={`${styles.metaChip} ${styles.metaChipUpdated}`}>
-              Actualizado {formatPriceListUpdatedAt(selectedList.updatedAt)}
-            </span>
-          </div>
-          {selectedList.description ? (
-            <p className={styles.listDescription}>{selectedList.description}</p>
-          ) : null}
-        </>
-      ) : null}
     </section>
   );
 }

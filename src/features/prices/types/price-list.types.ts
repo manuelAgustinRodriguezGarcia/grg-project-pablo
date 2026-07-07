@@ -1,4 +1,5 @@
 import type { PriceListWithItemCount } from "@/server/repositories/price-list.repository";
+import { dateToIsoDateOnly } from "@/shared/utils/date-only";
 
 export type PriceListListItem = {
   id: string;
@@ -7,6 +8,8 @@ export type PriceListListItem = {
   status: string;
   order: number;
   visibleToNormalUser: boolean;
+  supplierName: string | null;
+  supplierDate: string | null;
   itemCount: number;
   updatedAt: string;
 };
@@ -23,6 +26,8 @@ export function toPriceListListItem(list: PriceListWithItemCount): PriceListList
     status: list.status,
     order: list.order,
     visibleToNormalUser: list.visibleToNormalUser,
+    supplierName: list.supplierName,
+    supplierDate: list.supplierDate ? dateToIsoDateOnly(list.supplierDate) : null,
     itemCount: list.itemCount,
     updatedAt: list.updatedAt.toISOString(),
   };

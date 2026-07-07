@@ -74,6 +74,7 @@ import { ImportWizardLoading } from "./ImportWizardLoading";
 import { ImportWizardStepContextHint } from "./ImportWizardStepContextHint";
 import { createPriceListAction } from "@/features/prices/actions/price-list.actions";
 import type { PriceListListItem } from "@/features/prices/types/price-list.types";
+import { getTodayIsoDateOnly } from "@/shared/utils/date-only";
 import { getImportWizardStepHint } from "@/features/imports/data/import-wizard-step-hints";
 import { getImportConfirmCopy } from "@/features/imports/utils/import-confirm-copy";
 import styles from "./ImportWizard.module.scss";
@@ -203,6 +204,13 @@ export function ImportWizard({
   const [selectedSheetName, setSelectedSheetName] = useState("");
   const [priceListList, setPriceListList] = useState<PriceListListItem[]>(priceLists);
   const [selectedPriceListId, setSelectedPriceListId] = useState(initialPriceListId);
+  const initialSelectedPriceList = priceLists.find((list) => list.id === initialPriceListId);
+  const [supplierName, setSupplierName] = useState(
+    initialSelectedPriceList?.supplierName ?? "",
+  );
+  const [supplierDate, setSupplierDate] = useState(
+    initialSelectedPriceList?.supplierDate ?? getTodayIsoDateOnly(),
+  );
 
   const [folderColumns, setFolderColumns] = useState<FolderColumn[]>([]);
   const [mappingRows, setMappingRows] = useState<ColumnMappingRow[]>([]);
@@ -285,6 +293,18 @@ export function ImportWizard({
   const selectedCatalog = catalogList.find((item) => item.id === selectedCatalogId);
   const selectedFolder = folders.find((item) => item.id === selectedFolderId);
   const selectedPriceList = priceListList.find((item) => item.id === selectedPriceListId);
+
+  const handleSelectPriceList = useCallback(
+    (priceListId: string) => {
+      setSelectedPriceListId(priceListId);
+      const list = priceListList.find((item) => item.id === priceListId);
+      if (list) {
+        setSupplierName(list.supplierName ?? "");
+        setSupplierDate(list.supplierDate ?? getTodayIsoDateOnly());
+      }
+    },
+    [priceListList],
+  );
 
   useEffect(() => {
     if (!jobId || step === "upload") {
@@ -701,7 +721,11 @@ export function ImportWizard({
     setInlineBusy(true);
     setError(null);
     try {
-      const result = await createPriceListAction({ name });
+      const result = await createPriceListAction({
+        name,
+        supplierName: supplierName.trim() || null,
+        supplierDate,
+      });
       if (!result.success) {
         setError(result.error);
         return false;
@@ -737,10 +761,24 @@ export function ImportWizard({
           destinationType: "PRICE_LIST",
           priceListId: selectedPriceListId,
           sheetName: selectedSheetName,
+          supplierName: supplierName.trim(),
+          supplierDate,
         });
         if (!destinationResult.success) {
           throw new Error(destinationResult.error);
         }
+
+        setPriceListList((current) =>
+          current.map((list) =>
+            list.id === selectedPriceListId
+              ? {
+                  ...list,
+                  supplierName: supplierName.trim(),
+                  supplierDate,
+                }
+              : list,
+          ),
+        );
 
         updateLoadingOverlay("Preparando columnas…", 68);
 
@@ -984,7 +1022,7 @@ export function ImportWizard({
       })
     : null;
   const canContinueDestination = isPriceMode
-    ? Boolean(selectedPriceListId && selectedSheetName)
+    ? Boolean(selectedPriceListId && selectedSheetName && supplierName.trim())
     : Boolean(selectedCatalogId && selectedFolderId && selectedSheetName);
 
   if (typeof document === "undefined") {
@@ -1091,8 +1129,12 @@ export function ImportWizard({
                   excludedSheetCount={excludedSheetCount}
                   selectedPriceListId={selectedPriceListId}
                   selectedSheetName={selectedSheetName}
+                  supplierName={supplierName}
+                  supplierDate={supplierDate}
                   isBusy={isBusy}
-                  onSelectPriceList={setSelectedPriceListId}
+                  onSupplierNameChange={setSupplierName}
+                  onSupplierDateChange={setSupplierDate}
+                  onSelectPriceList={handleSelectPriceList}
                   onSelectSheet={setSelectedSheetName}
                   onCreatePriceList={handleCreatePriceList}
                 />

@@ -15,6 +15,8 @@ export function createPriceListFixture(
     status: "ACTIVE",
     order: 0,
     visibleToNormalUser: true,
+    supplierName: null,
+    supplierDate: null,
     sourceUploadedFileId: null,
     createdAt: baseDate,
     updatedAt: baseDate,
