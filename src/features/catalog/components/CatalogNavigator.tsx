@@ -1,7 +1,7 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createCatalogAction,
@@ -108,6 +108,9 @@ export function CatalogNavigator({
   enableColumnFilters = false,
 }: CatalogNavigatorProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const stableTableFolderIdRef = useRef<string | null>(null);
+  const stableTableDataRef = useRef<ProductTableResponse | null>(null);
   const [catalogList, setCatalogList] = useState(catalogs);
   const [prevCatalogs, setPrevCatalogs] = useState(catalogs);
 
@@ -189,6 +192,7 @@ export function CatalogNavigator({
       return sortByName(data.folders);
     },
     enabled: Boolean(activeCatalogId),
+    placeholderData: keepPreviousData,
   });
 
   const folders = useMemo(() => navigationQuery.data ?? [], [navigationQuery.data]);
@@ -279,6 +283,46 @@ export function CatalogNavigator({
   const isLoadingProducts = productsQuery.isFetching;
   const productsError =
     productsQuery.error instanceof Error ? productsQuery.error.message : null;
+
+  if (activeFolderId && productTable) {
+    stableTableFolderIdRef.current = activeFolderId;
+    stableTableDataRef.current = productTable;
+  } else if (!activeFolderId) {
+    stableTableFolderIdRef.current = null;
+    stableTableDataRef.current = null;
+  }
+
+  const tableData =
+    activeFolderId && productTable
+      ? productTable
+      : activeFolderId &&
+          stableTableFolderIdRef.current === activeFolderId &&
+          stableTableDataRef.current
+        ? stableTableDataRef.current
+        : null;
+
+  const handleColumnsChanged = useCallback(() => {
+    if (!activeFolderId) {
+      return;
+    }
+
+    void queryClient.invalidateQueries({
+      queryKey: [
+        "admin",
+        "products",
+        activeFolderId,
+        page,
+        serializedColumnFilters,
+        folderSearch,
+      ],
+    });
+  }, [
+    activeFolderId,
+    folderSearch,
+    page,
+    queryClient,
+    serializedColumnFilters,
+  ]);
 
   const globalSearchError =
     globalSearchQuery.error instanceof Error ? globalSearchQuery.error.message : null;
@@ -717,7 +761,6 @@ export function CatalogNavigator({
   ) : null;
 
   const visibleFolders = activeCatalogId ? folders : [];
-  const tableData = activeFolderId ? productTable : null;
   const activeFolderName =
     folders.find((folder) => folder.id === activeFolderId)?.name ?? "";
 
@@ -786,9 +829,7 @@ export function CatalogNavigator({
             onColumnFilterChange={handleColumnFilterChange}
             onClearColumnFilters={handleClearColumnFilters}
             isAdmin={isAdmin}
-            onColumnsChanged={
-              isAdmin ? () => setReloadToken((token) => token + 1) : undefined
-            }
+            onColumnsChanged={isAdmin ? handleColumnsChanged : undefined}
             onEditProduct={isAdmin ? handleEditProduct : undefined}
             folderName={activeFolderName}
             folderSearchQuery={folderSearch}

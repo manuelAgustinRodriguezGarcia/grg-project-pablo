@@ -75,6 +75,29 @@ describe("ProductTable", () => {
     expect(screen.getByLabelText("Tabla de productos")).toHaveAttribute("aria-busy", "true");
   });
 
+  it("muestra una capa semitransparente al recargar con datos existentes", () => {
+    const data = createTableData([
+      {
+        id: "product-1",
+        primaryCode: "6205",
+        description: "Ruleman",
+        dynamicData: { montadora: "John Deere" },
+        primaryImage: null,
+        imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
+      },
+    ]);
+
+    const { container } = render(
+      <ProductTable data={data} isLoading error={null} onPageChange={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("status", { name: "Actualizando productos" })).toBeInTheDocument();
+    expect(screen.getByText("6205")).toBeInTheDocument();
+    expect(container.querySelector(".tableRefreshOverlay")).toBeInTheDocument();
+    expect(container.querySelector(".tableWrapRefreshing")).toBeInTheDocument();
+  });
+
   it("muestra el estado vacío centrado con icono", () => {
     const data = createTableData([]);
 
@@ -374,7 +397,7 @@ describe("ProductTable", () => {
           columnDisplayName: "Montadora",
           operator: "contains",
           value: "John",
-          label: 'Montadora contiene "John"',
+          label: 'Montadora: "John"',
         },
       ],
     };
@@ -397,13 +420,14 @@ describe("ProductTable", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: "Filtrar columna Montadora" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Filtrar columna Obs" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Montadora contiene "John"')).toBeInTheDocument();
+    expect(screen.getByText("Montadora")).toBeInTheDocument();
+    expect(screen.getByText("Obs")).toBeInTheDocument();
+    expect(screen.getByText('Montadora: "John"')).toBeInTheDocument();
+
+    fireEvent.doubleClick(screen.getByText("Obs"));
+
+    expect(screen.getByRole("dialog", { name: "Filtro de Obs" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Valor de filtro para Obs")).toBeInTheDocument();
   });
 
   it("renders images inside their mapped column instead of the global image column", () => {
@@ -537,9 +561,70 @@ describe("ProductTable", () => {
 
     expect(screen.getByText("Delantero")).toBeInTheDocument();
     expect(screen.getByText("Diagrama de montaje")).toBeInTheDocument();
-    expect(container.querySelector(".tableCellAnnotationThumb")).toHaveAttribute(
+    expect(container.querySelector(".tableCellThumb")).toHaveAttribute(
       "src",
       "https://example.com/annotation-thumb.jpg",
     );
+  });
+
+  it("no muestra guion vacio cuando solo hay imagen de campo", () => {
+    const data = createTableData([
+      {
+        id: "product-1",
+        primaryCode: "6205",
+        description: "Ruleman",
+        dynamicData: { anclaje_frente: "" },
+        primaryImage: null,
+        imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {
+          anclaje_frente: {
+            helpText: null,
+            thumbnailUrl: "https://example.com/annotation-thumb.jpg",
+            fullUrl: "https://example.com/annotation-full.jpg",
+          },
+        },
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+
+    data.columns.push({
+      id: "col-2",
+      folderId: "folder-1",
+      originalName: "Anclaje frente",
+      displayName: "Anclaje frente",
+      internalKey: "anclaje_frente",
+      dataType: "TEXT",
+      order: 1,
+      isPrimaryCode: false,
+      isDescription: false,
+      isImageCode: false,
+      isSearchable: false,
+      isFilterable: false,
+      visibleToNormalUser: true,
+      isGloballySearchable: false,
+      isGloballyFilterable: false,
+      isAdminEditable: true,
+      isEquivalence: false,
+      isRequired: false,
+      isReadOnly: false,
+      width: null,
+      format: null,
+      unit: null,
+      label: null,
+      globalFieldKey: null,
+      helpText: null,
+      helpImageAltText: null,
+      hasContextualHelp: false,
+      helpImagePreviewUrl: null,
+      helpImageFullUrl: null,
+      createdAt: new Date("2026-01-01"),
+      updatedAt: new Date("2026-01-01"),
+    });
+
+    render(<ProductTable data={data} isLoading={false} error={null} onPageChange={vi.fn()} />);
+
+    expect(screen.queryByText("—")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Ver imagen de ayuda de Anclaje frente")).toBeInTheDocument();
   });
 });

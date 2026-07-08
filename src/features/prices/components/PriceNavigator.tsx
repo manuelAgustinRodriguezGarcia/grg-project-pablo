@@ -1,10 +1,14 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
+import {
+  serializeColumnFilters,
+  upsertColumnFilter,
+} from "@/features/catalog/utils/column-filter-state";
 import {
   createPriceListAction,
   deletePriceListAction,
@@ -27,6 +31,7 @@ import type { PriceItemTableResponse } from "@/features/prices/types/price-item-
 import type { PriceItemTableRow } from "@/features/prices/types/price-item-table.types";
 import type { PriceListListItem } from "@/features/prices/types/price-list.types";
 import { sortByName } from "@/features/catalog/utils/sortByName";
+import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
 import { FloatingToast } from "@/shared/components/FloatingToast";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
@@ -77,7 +82,8 @@ export function PriceNavigator({
   );
 
   const [page, setPage] = useState(1);
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [listSearchQuery, setListSearchQuery] = useState("");
+  const [columnFilters, setColumnFilters] = useState<ColumnFilterInput[]>([]);
   const [reloadToken, setReloadToken] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [successToastKey, setSuccessToastKey] = useState(0);
@@ -147,8 +153,28 @@ export function PriceNavigator({
     [activeList, notifySuccess, router],
   );
 
-  const handleDebouncedSearchChange = useCallback((query: string) => {
-    setDebouncedSearch(query);
+  const handleSearchSubmit = useCallback((query: string) => {
+    setListSearchQuery(query);
+    setPage(1);
+  }, []);
+
+  const serializedColumnFilters = useMemo(
+    () => serializeColumnFilters(columnFilters),
+    [columnFilters],
+  );
+
+  const handleColumnFilterChange = useCallback(
+    (columnInternalKey: string, filter: ColumnFilterInput | null) => {
+      setColumnFilters((current) =>
+        upsertColumnFilter(current, columnInternalKey, filter),
+      );
+      setPage(1);
+    },
+    [],
+  );
+
+  const handleClearColumnFilters = useCallback(() => {
+    setColumnFilters([]);
     setPage(1);
   }, []);
 
@@ -175,19 +201,32 @@ export function PriceNavigator({
   });
 
   const itemsQuery = useQuery({
-    queryKey: ["admin", "price-items", activeListId, page, debouncedSearch, reloadToken],
-    queryFn: async (): Promise<PriceItemTableResponse> => {
+    queryKey: [
+      "admin",
+      "price-items",
+      activeListId,
+      page,
+      listSearchQuery,
+      serializedColumnFilters,
+      reloadToken,
+    ],
+    queryFn: async ({ signal }): Promise<PriceItemTableResponse> => {
       const params = new URLSearchParams({
         page: String(page),
         pageSize: String(PAGE_SIZE),
       });
 
-      if (debouncedSearch) {
-        params.set("q", debouncedSearch);
+      if (listSearchQuery) {
+        params.set("q", listSearchQuery);
+      }
+
+      if (columnFilters.length > 0) {
+        params.set("filters", JSON.stringify(columnFilters));
       }
 
       const itemsResponse = await fetch(
         `/api/admin/price-lists/${activeListId}/items?${params.toString()}`,
+        { signal },
       );
 
       if (!itemsResponse.ok) {
@@ -201,10 +240,11 @@ export function PriceNavigator({
     },
     enabled: Boolean(activeListId),
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   const itemTable = activeListId ? (itemsQuery.data ?? null) : null;
-  const isLoadingItems = itemsQuery.isLoading || itemsQuery.isRefetching;
+  const isLoadingItems = itemsQuery.isFetching;
   const itemsError =
     itemsQuery.error instanceof Error ? itemsQuery.error.message : null;
 
@@ -236,6 +276,8 @@ export function PriceNavigator({
   const handleSelectList = useCallback((listId: string) => {
     setSelectedListId(listId);
     setPage(1);
+    setColumnFilters([]);
+    setListSearchQuery("");
   }, []);
 
   const handlePageChange = useCallback((nextPage: number) => {
@@ -437,8 +479,6 @@ export function PriceNavigator({
       <div className={styles.page}>
         <div className={styles.body}>
           <PricePageChrome
-            onDebouncedSearchChange={handleDebouncedSearchChange}
-            searchDisabled={!activeListId}
             onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
             supplierBanner={
               activeList ? (
@@ -491,7 +531,16 @@ export function PriceNavigator({
             isLoading={isLoadingItems}
             error={itemsError ?? itemsActionError}
             isAdmin={isAdmin}
-            searchQuery={debouncedSearch}
+            priceListId={activeListId}
+            searchQuery={listSearchQuery}
+            listName={activeList?.name ?? ""}
+            listSearchResetKey={activeListId}
+            onSearchSubmit={handleSearchSubmit}
+            enableColumnFilters
+            columnFilters={columnFilters}
+            onColumnFilterChange={handleColumnFilterChange}
+            onClearColumnFilters={handleClearColumnFilters}
+            onColumnsChanged={() => setReloadToken((token) => token + 1)}
             hasSelectedList={Boolean(activeListId)}
             hasAnyLists={sortedLists.length > 0}
             onPageChange={handlePageChange}

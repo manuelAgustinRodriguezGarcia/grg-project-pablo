@@ -1,6 +1,13 @@
 import type { PriceItem } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
+import type { JsonTextColumnFilter } from "@/server/filters/column-filter.types";
+
+const VALID_JSON_COLUMN_KEY = /^[a-z0-9_]+$/;
+
+function escapeIlikePattern(value: string): string {
+  return value.replace(/[%_\\]/g, "\\$&");
+}
 
 export type PriceItemPaginationOptions = {
   page: number;
@@ -35,6 +42,57 @@ export class PriceItemRepository {
     return this.findPaginated({ priceListId, ...extraWhere }, options);
   }
 
+  async findByPriceListPaginatedWithTextSearch(
+    priceListId: string,
+    options: PriceItemPaginationOptions,
+    textTerm: string,
+    normalizedQuery: string,
+  ): Promise<PaginatedPriceItems> {
+    const page = Math.max(1, options.page);
+    const pageSize = Math.min(Math.max(1, options.pageSize), 200);
+    const skip = (page - 1) * pageSize;
+    const pattern = `%${escapeIlikePattern(textTerm)}%`;
+    const normalizedPattern = `%${escapeIlikePattern(normalizedQuery)}%`;
+
+    const searchCondition = Prisma.sql`
+      "priceListId" = ${priceListId}
+      AND (
+        COALESCE("indexedText", '') ILIKE ${pattern}
+        OR COALESCE("primaryCode", '') ILIKE ${pattern}
+        OR COALESCE("description", '') ILIKE ${pattern}
+        OR COALESCE("amount"::text, '') ILIKE ${pattern}
+        OR COALESCE("normalizedCode", '') ILIKE ${normalizedPattern}
+        OR COALESCE("dynamicData"::text, '') ILIKE ${pattern}
+      )
+    `;
+
+    const [items, countResult] = await Promise.all([
+      prisma.$queryRaw<PriceItem[]>`
+        SELECT *
+        FROM "PriceItem"
+        WHERE ${searchCondition}
+        ORDER BY "updatedAt" DESC, "id" ASC
+        LIMIT ${pageSize}
+        OFFSET ${skip}
+      `,
+      prisma.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(*)::bigint AS count
+        FROM "PriceItem"
+        WHERE ${searchCondition}
+      `,
+    ]);
+
+    const total = Number(countResult[0]?.count ?? 0);
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
+    };
+  }
+
   async findPaginated(
     where: Prisma.PriceItemWhereInput,
     options: PriceItemPaginationOptions,
@@ -60,6 +118,62 @@ export class PriceItemRepository {
       pageSize,
       totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
     };
+  }
+
+  async findIdsMatchingJsonTextFilters(
+    priceListId: string,
+    filters: JsonTextColumnFilter[],
+  ): Promise<string[]> {
+    if (filters.length === 0) {
+      return [];
+    }
+
+    for (const filter of filters) {
+      if (!VALID_JSON_COLUMN_KEY.test(filter.columnInternalKey)) {
+        throw new Error(`Clave de columna inválida: ${filter.columnInternalKey}`);
+      }
+    }
+
+    const conditions = filters.map((filter) => {
+      if (filter.operator === "equals") {
+        return Prisma.sql`LOWER("dynamicData"->>${filter.columnInternalKey}) = LOWER(${filter.value})`;
+      }
+
+      const pattern = `%${escapeIlikePattern(filter.value)}%`;
+      return Prisma.sql`"dynamicData"->>${filter.columnInternalKey} ILIKE ${pattern}`;
+    });
+
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "PriceItem"
+      WHERE "priceListId" = ${priceListId}
+      AND ${Prisma.join(conditions, " AND ")}
+    `;
+
+    return rows.map((row) => row.id);
+  }
+
+  async findIdsMatchingAmountContainsFilters(
+    priceListId: string,
+    filters: JsonTextColumnFilter[],
+  ): Promise<string[]> {
+    if (filters.length === 0) {
+      return [];
+    }
+
+    const conditions = filters.map((filter) => {
+      const pattern = `%${escapeIlikePattern(filter.value)}%`;
+      return Prisma.sql`COALESCE("amount"::text, '') ILIKE ${pattern}`;
+    });
+
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "PriceItem"
+      WHERE "priceListId" = ${priceListId}
+      AND ${Prisma.join(conditions, " AND ")}
+    `;
+
+    return rows.map((row) => row.id);
   }
 
   async findById(id: string): Promise<PriceItem | null> {

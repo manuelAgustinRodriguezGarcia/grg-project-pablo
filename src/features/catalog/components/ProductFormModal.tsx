@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ColumnListItem } from "@/features/catalog/types/column.types";
 import type { ProductTableItem } from "@/features/catalog/types/product-table.types";
-import { formatColumnTitleForDisplay } from "@/features/catalog/utils/column-title-display";
+import { formatProductFormColumnTitle } from "@/features/catalog/utils/column-title-display";
 import {
   folderHasLinkedImages,
   isGeneratedPrimaryCodeColumn,
@@ -14,6 +14,7 @@ import {
   deleteProductFieldHelpImage,
   uploadProductFieldHelpImage,
 } from "@/features/catalog/utils/product-field-annotation.client";
+import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import { Image, X, ICON_STROKE } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
@@ -72,6 +73,20 @@ function buildInitialValues(
   return values;
 }
 
+function getFieldImagePreviewUrl(
+  product: ProductTableItem | null | undefined,
+  columnInternalKey: string,
+): string | null {
+  const annotation = product?.fieldAnnotationsByColumnKey?.[columnInternalKey];
+  const annotationUrl = annotation?.thumbnailUrl ?? annotation?.fullUrl ?? null;
+  if (annotationUrl) {
+    return annotationUrl;
+  }
+
+  const linkedImage = product?.imagesByColumnKey?.[columnInternalKey]?.[0];
+  return linkedImage?.thumbnailUrl ?? linkedImage?.fullUrl ?? null;
+}
+
 function buildInitialImageDrafts(
   editableColumns: ColumnListItem[],
   product?: ProductTableItem | null,
@@ -79,15 +94,29 @@ function buildInitialImageDrafts(
   const drafts: Record<string, FieldImageDraft> = {};
 
   for (const column of editableColumns) {
-    const existing = product?.fieldAnnotationsByColumnKey?.[column.internalKey];
     drafts[column.internalKey] = {
-      previewUrl: existing?.thumbnailUrl ?? existing?.fullUrl ?? null,
+      previewUrl: getFieldImagePreviewUrl(product, column.internalKey),
       pendingFile: null,
       removeImage: false,
     };
   }
 
   return drafts;
+}
+
+function buildInitialHadImage(
+  editableColumns: ColumnListItem[],
+  product?: ProductTableItem | null,
+): Record<string, boolean> {
+  const initialHadImage: Record<string, boolean> = {};
+
+  for (const column of editableColumns) {
+    initialHadImage[column.internalKey] = Boolean(
+      getFieldImagePreviewUrl(product, column.internalKey),
+    );
+  }
+
+  return initialHadImage;
 }
 
 function autoResizeTextarea(element: HTMLTextAreaElement) {
@@ -112,6 +141,11 @@ export function ProductFormModal({
   const [imageDrafts, setImageDrafts] = useState<Record<string, FieldImageDraft>>(() =>
     buildInitialImageDrafts(editableColumns, product),
   );
+  const [imageRemovalTarget, setImageRemovalTarget] = useState<string | null>(null);
+  const initialHadImage = useMemo(
+    () => buildInitialHadImage(editableColumns, product),
+    [editableColumns, product],
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -126,8 +160,58 @@ export function ProductFormModal({
   }, []);
 
   useEffect(() => {
+    setValues(buildInitialValues(editableColumns, product));
+    setImageDrafts(buildInitialImageDrafts(editableColumns, product));
+  }, [editableColumns, product]);
+
+  useEffect(() => {
     resizeAllTextareas();
   }, [editableColumns, resizeAllTextareas, values]);
+
+  useEffect(() => {
+    if (!isEditMode || !product?.id || !showFieldImages) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetch(`/api/admin/products/${product.id}`)
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        return (await response.json()) as ProductTableItem;
+      })
+      .then((detail) => {
+        if (!detail || cancelled) {
+          return;
+        }
+
+        setImageDrafts((current) => {
+          const refreshed = buildInitialImageDrafts(editableColumns, detail);
+          const merged: Record<string, FieldImageDraft> = {};
+
+          for (const column of editableColumns) {
+            const key = column.internalKey;
+            const currentDraft = current[key];
+
+            if (currentDraft?.pendingFile || currentDraft?.removeImage) {
+              merged[key] = currentDraft;
+              continue;
+            }
+
+            merged[key] = refreshed[key] ?? currentDraft;
+          }
+
+          return merged;
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editableColumns, isEditMode, product?.id, showFieldImages]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -175,6 +259,37 @@ export function ProductFormModal({
         removeImage: true,
       },
     }));
+  }
+
+  function shouldConfirmImageRemoval(internalKey: string): boolean {
+    const draft = imageDrafts[internalKey];
+    if (!draft?.previewUrl) {
+      return false;
+    }
+
+    if (draft.pendingFile) {
+      return false;
+    }
+
+    return initialHadImage[internalKey] ?? false;
+  }
+
+  function requestRemoveImage(internalKey: string) {
+    if (shouldConfirmImageRemoval(internalKey)) {
+      setImageRemovalTarget(internalKey);
+      return;
+    }
+
+    handleRemoveImage(internalKey);
+  }
+
+  function confirmRemoveImage() {
+    if (!imageRemovalTarget) {
+      return;
+    }
+
+    handleRemoveImage(imageRemovalTarget);
+    setImageRemovalTarget(null);
   }
 
   async function persistFieldImages(productId: string): Promise<string | null> {
@@ -346,39 +461,24 @@ export function ProductFormModal({
             onSubmit={(event) => void handleSubmit(event)}
           >
             <div className={styles.productFormGrid}>
-              {editableColumns.map((column) => {
+              {editableColumns.map((column, columnIndex) => {
                 const imageDraft = imageDrafts[column.internalKey];
                 const hasPreview = Boolean(imageDraft?.previewUrl);
+                const columnTitle = formatProductFormColumnTitle(
+                  columnIndex + 1,
+                  column.displayName,
+                );
 
                 return (
                   <div key={column.id} className={styles.productFormFieldCard}>
-                    <div className={styles.productFormColumnTitle}>
-                      {formatColumnTitleForDisplay(column.displayName)}
-                    </div>
+                    <div className={styles.productFormColumnTitle}>{columnTitle}</div>
                     <div className={styles.productFormFieldBody}>
-                      <textarea
-                        ref={(element) => {
-                          textareaRefs.current[column.internalKey] = element;
-                          if (element) {
-                            autoResizeTextarea(element);
-                          }
-                        }}
-                        className={styles.productFormTextarea}
-                        value={values[column.internalKey] ?? ""}
-                        onChange={(event) => {
-                          updateValue(column.internalKey, event.target.value);
-                          autoResizeTextarea(event.currentTarget);
-                        }}
-                        disabled={isSaving}
-                        required={column.isRequired}
-                        rows={1}
-                        aria-label={formatColumnTitleForDisplay(column.displayName)}
-                      />
-
                       {showFieldImages ? (
                         <div className={styles.productFormImageWrap}>
                           {hasPreview ? (
-                            <div className={styles.productFormImageDropzone}>
+                            <div
+                              className={`${styles.productFormImageDropzone} ${styles.productFormImageDropzoneFilled}`}
+                            >
                               <button
                                 type="button"
                                 className={styles.productFormImagePreviewButton}
@@ -386,7 +486,7 @@ export function ProductFormModal({
                                   fileInputRefs.current[column.internalKey]?.click()
                                 }
                                 disabled={isSaving}
-                                aria-label={`Reemplazar imagen de ${column.displayName}`}
+                                aria-label={`Reemplazar imagen de ${columnTitle}`}
                               >
                                 <img
                                   src={imageDraft?.previewUrl ?? ""}
@@ -397,9 +497,9 @@ export function ProductFormModal({
                               <button
                                 type="button"
                                 className={styles.productFormImageRemove}
-                                onClick={() => handleRemoveImage(column.internalKey)}
+                                onClick={() => requestRemoveImage(column.internalKey)}
                                 disabled={isSaving}
-                                aria-label={`Quitar imagen de ${column.displayName}`}
+                                aria-label={`Quitar imagen de ${columnTitle}`}
                               >
                                 <X strokeWidth={ICON_STROKE} aria-hidden />
                               </button>
@@ -412,7 +512,7 @@ export function ProductFormModal({
                                 fileInputRefs.current[column.internalKey]?.click()
                               }
                               disabled={isSaving}
-                              aria-label={`Agregar imagen a ${column.displayName}`}
+                              aria-label={`Agregar imagen a ${columnTitle}`}
                             >
                               <Image
                                 className={styles.productFormImageDropzoneIcon}
@@ -440,6 +540,25 @@ export function ProductFormModal({
                           />
                         </div>
                       ) : null}
+
+                      <textarea
+                        ref={(element) => {
+                          textareaRefs.current[column.internalKey] = element;
+                          if (element) {
+                            autoResizeTextarea(element);
+                          }
+                        }}
+                        className={styles.productFormTextarea}
+                        value={values[column.internalKey] ?? ""}
+                        onChange={(event) => {
+                          updateValue(column.internalKey, event.target.value);
+                          autoResizeTextarea(event.currentTarget);
+                        }}
+                        disabled={isSaving}
+                        required={column.isRequired}
+                        rows={1}
+                        aria-label={columnTitle}
+                      />
                     </div>
                   </div>
                 );
@@ -476,6 +595,17 @@ export function ProductFormModal({
           </form>
         )}
       </div>
+      {imageRemovalTarget ? (
+        <ConfirmDialog
+          title="Eliminar imagen"
+          message="La imagen eliminada no podrá recuperarse. ¿Desea quitarla de esta columna?"
+          confirmLabel="Eliminar imagen"
+          variant="danger"
+          onConfirm={confirmRemoveImage}
+          onCancel={() => setImageRemovalTarget(null)}
+          overlayClassName={styles.confirmOverlayElevated}
+        />
+      ) : null}
     </div>,
     document.body,
   );

@@ -8,6 +8,7 @@ import { priceItemService } from "@/server/services/price-item.service";
 import { priceListService } from "@/server/services/price-list.service";
 import {
   adminUserFixture,
+  mockRequireAuth,
   mockRequireRole,
 } from "../../../helpers/mocks/auth";
 import { PRICE_LIST_ID } from "../../../helpers/fixtures/price-list.fixture";
@@ -19,6 +20,10 @@ vi.mock("@/server/auth", () => ({
 vi.mock("@/server/repositories/price-item.repository", () => ({
   priceItemRepository: {
     findByPriceListPaginated: vi.fn(),
+    findByPriceListPaginatedWithTextSearch: vi.fn(),
+    findPaginated: vi.fn(),
+    findIdsMatchingJsonTextFilters: vi.fn(),
+    findIdsMatchingAmountContainsFilters: vi.fn(),
     findById: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
@@ -99,11 +104,80 @@ const itemFixture = {
 describe("PriceItemService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRequireAuth(adminUserFixture);
     mockRequireRole(adminUserFixture);
     vi.mocked(priceListService.requirePriceListForAdmin).mockResolvedValue(undefined);
     vi.mocked(priceColumnRepository.findByPriceListIdOrdered).mockResolvedValue([
       columnFixture,
     ]);
+  });
+
+  it("listItems busca en todas las columnas de la lista", async () => {
+    vi.mocked(priceListService.getPriceList).mockResolvedValue({
+      id: PRICE_LIST_ID,
+      name: "Nueva",
+    } as never);
+    vi.mocked(priceColumnRepository.findByPriceListIdOrdered).mockResolvedValue([
+      columnFixture,
+      {
+        ...columnFixture,
+        id: "col-montadora",
+        internalKey: "montadora",
+        displayName: "Montadora",
+        isPrimaryCode: false,
+        isSearchable: false,
+      },
+    ]);
+    vi.mocked(priceItemRepository.findByPriceListPaginatedWithTextSearch).mockResolvedValue({
+      items: [itemFixture],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      totalPages: 1,
+    });
+
+    const result = await priceItemService.listItems({
+      priceListId: PRICE_LIST_ID,
+      query: "fiat",
+    });
+
+    expect(priceItemRepository.findByPriceListPaginatedWithTextSearch).toHaveBeenCalledWith(
+      PRICE_LIST_ID,
+      { page: 1, pageSize: 50 },
+      "fiat",
+      "FIAT",
+    );
+    expect(priceItemRepository.findByPriceListPaginated).not.toHaveBeenCalled();
+    expect(result.items).toHaveLength(1);
+  });
+
+  it("listItems aplica filtros de columna acumulables", async () => {
+    vi.mocked(priceListService.getPriceList).mockResolvedValue({
+      id: PRICE_LIST_ID,
+      name: "Nueva",
+    } as never);
+    vi.mocked(priceItemRepository.findPaginated).mockResolvedValue({
+      items: [itemFixture],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      totalPages: 1,
+    });
+
+    const result = await priceItemService.listItems({
+      priceListId: PRICE_LIST_ID,
+      filters: [
+        {
+          columnInternalKey: "codigo",
+          operator: "contains",
+          value: "ABC",
+        },
+      ],
+    });
+
+    expect(priceItemRepository.findPaginated).toHaveBeenCalled();
+    expect(priceItemRepository.findByPriceListPaginatedWithTextSearch).not.toHaveBeenCalled();
+    expect(result.items).toHaveLength(1);
   });
 
   it("updateItem persiste cambios y audita", async () => {

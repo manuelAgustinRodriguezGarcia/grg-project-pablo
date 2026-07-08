@@ -12,6 +12,7 @@ type ConfirmDialogProps = {
   variant?: "primary" | "danger";
   isBusy?: boolean;
   confirmDisabled?: boolean;
+  overlayClassName?: string;
   onConfirm: () => void;
   onCancel: () => void;
   children?: ReactNode;
@@ -25,6 +26,7 @@ export function ConfirmDialog({
   variant = "primary",
   isBusy = false,
   confirmDisabled = false,
+  overlayClassName,
   onConfirm,
   onCancel,
   children,
@@ -38,7 +40,7 @@ export function ConfirmDialog({
 
   return createPortal(
     <div
-      className={styles.confirmOverlay}
+      className={`${styles.confirmOverlay} ${overlayClassName ?? ""}`.trim()}
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !isBusy) {

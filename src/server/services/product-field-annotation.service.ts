@@ -94,24 +94,21 @@ export class ProductFieldAnnotationService {
       return { thumbnailUrl: null, fullUrl: null };
     }
 
-    const [preview, full] = await Promise.all([
-      annotation.helpImageThumbnailPath
-        ? createSignedDownloadUrl(
-            STORAGE_BUCKETS.PRODUCT_FIELD_HELP_IMAGES,
-            annotation.helpImageThumbnailPath,
-          ).then((result) => result.signedUrl)
-        : Promise.resolve(null),
-      includeFullUrls
-        ? createSignedDownloadUrl(
-            STORAGE_BUCKETS.PRODUCT_FIELD_HELP_IMAGES,
-            annotation.helpImagePath,
-          ).then((result) => result.signedUrl)
-        : Promise.resolve(null),
-    ]);
+    const bucket = STORAGE_BUCKETS.PRODUCT_FIELD_HELP_IMAGES;
+
+    const thumbnailUrl = annotation.helpImageThumbnailPath
+      ? (
+          await createSignedDownloadUrl(bucket, annotation.helpImageThumbnailPath)
+        ).signedUrl
+      : (await createSignedDownloadUrl(bucket, annotation.helpImagePath)).signedUrl;
+
+    const fullUrl = includeFullUrls
+      ? (await createSignedDownloadUrl(bucket, annotation.helpImagePath)).signedUrl
+      : null;
 
     return {
-      thumbnailUrl: preview ?? full,
-      fullUrl: full ?? preview,
+      thumbnailUrl,
+      fullUrl: fullUrl ?? thumbnailUrl,
     };
   }
 
