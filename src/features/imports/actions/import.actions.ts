@@ -141,6 +141,8 @@ export async function setImportConfigAction(
         : parsed.data.primaryCodeColumnKey,
       descriptionColumnKey: parsed.data.descriptionColumnKey,
       useGeneratedPrimaryCodes: parsed.data.useGeneratedPrimaryCodes ?? false,
+      expectedPriceListId: parsed.data.expectedPriceListId,
+      expectedFolderId: parsed.data.expectedFolderId,
     });
     const job = await catalogImportService.getJob(parsed.data.jobId);
     return { success: true, data: toImportJobDetail(job) };

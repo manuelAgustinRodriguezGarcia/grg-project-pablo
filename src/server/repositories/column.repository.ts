@@ -159,6 +159,13 @@ export class ColumnRepository {
     });
   }
 
+  async deleteByFolder(folderId: string): Promise<number> {
+    const result = await prisma.folderColumn.deleteMany({
+      where: { folderId },
+    });
+    return result.count;
+  }
+
   async reorder(items: ReorderColumnItem[]): Promise<void> {
     await prisma.$transaction(
       items.map((item) =>

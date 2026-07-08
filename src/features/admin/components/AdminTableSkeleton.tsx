@@ -39,10 +39,18 @@ function ShimmerBar({
   );
 }
 
-function CatalogSkeleton({ label, rowCount }: { label: string; rowCount: number }) {
+function CatalogSkeleton({
+  label,
+  rowCount,
+  fillHeight = false,
+}: {
+  label: string;
+  rowCount: number;
+  fillHeight?: boolean;
+}) {
   return (
     <div
-      className={styles.catalogTable}
+      className={`${styles.catalogTable} ${fillHeight ? styles.catalogTableFill : ""}`}
       role="status"
       aria-live="polite"
       aria-label={label}
@@ -207,7 +215,13 @@ export function AdminTableSkeleton({
 }: AdminTableSkeletonProps) {
   switch (variant) {
     case "catalog":
-      return <CatalogSkeleton label={label} rowCount={rowCount} />;
+      return (
+        <CatalogSkeleton
+          label={label}
+          rowCount={rowCount}
+          fillHeight={fillHeight}
+        />
+      );
     case "files":
       return (
         <FilesSkeleton

@@ -11,6 +11,15 @@ vi.mock("@/features/catalog/styles/CatalogNavigator.module.scss", () => ({
   ),
 }));
 
+vi.mock("@/features/catalog/actions/column.actions", () => ({
+  updateColumnAction: vi.fn(),
+  setColumnVisibilityAction: vi.fn(),
+}));
+
+vi.mock("@/features/catalog/actions/column-help.actions", () => ({
+  deleteColumnHelpImageAction: vi.fn(),
+}));
+
 import { ProductTable } from "./ProductTable";
 
 function createTableData(

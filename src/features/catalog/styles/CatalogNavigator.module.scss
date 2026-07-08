@@ -67,6 +67,23 @@ $table-image-size: 6.25rem;
     outline: none;
     border-color: rgba($blue, 0.55);
   }
+
+  &::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+
+  &::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  &::-ms-clear {
+    display: none;
+    width: 0;
+    height: 0;
+  }
 }
 
 .headerSearchWithClear {
@@ -850,7 +867,9 @@ $table-image-size: 6.25rem;
 
 .tableWrapEmpty {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  min-height: 0;
 }
 
 .tableEmpty {
@@ -918,6 +937,13 @@ $table-image-size: 6.25rem;
   }
 }
 
+.tableWrap.tableWrapLoading {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
 .productTable {
   width: max-content;
   min-width: 100%;
@@ -963,7 +989,8 @@ $table-image-size: 6.25rem;
         180deg,
         rgba($blue, 0.06) 0%,
         $catalog-heading-bg 100%
-      );
+      ),
+      $white;
     box-shadow:
       inset 0 -1px 0 rgba($blue, calc(0.06 + var(--header-scroll-progress, 0) * 0.04)),
       0 calc(var(--header-scroll-progress, 0) * 1px)
@@ -1239,7 +1266,6 @@ $table-image-size: 6.25rem;
   width: 100%;
   min-width: 0;
   min-height: 1.5rem;
-  padding-right: 1.1rem;
 }
 
 .tableHeaderFilterable {
@@ -1269,15 +1295,16 @@ $table-image-size: 6.25rem;
 }
 
 .columnFilterRoot {
+  position: static;
+  flex-shrink: 0;
+}
+
+.columnFilterButton {
   position: absolute;
   top: 50%;
   right: 0;
   z-index: 3;
   transform: translateY(-50%);
-  flex-shrink: 0;
-}
-
-.columnFilterButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1325,8 +1352,9 @@ $table-image-size: 6.25rem;
 
 .columnFilterPopover {
   position: absolute;
-  top: calc(100% + 0.35rem);
-  right: 0;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -1395,6 +1423,159 @@ $table-image-size: 6.25rem;
   }
 }
 
+.columnMenuActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-top: 0.45rem;
+  margin-top: 0.1rem;
+  border-top: 1px solid rgba($navy, 0.1);
+}
+
+.columnMenuAction {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: rgba($navy, 0.82);
+  font-family: $font-sans;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba($blue, 0.08);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.tableColumnHidden {
+  background: rgba($navy, 0.16) !important;
+}
+
+.tableToolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+}
+
+.tableToolbarFilters {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+}
+
+.tableToolbarFilters .activeFiltersBar {
+  padding: 0;
+}
+
+.folderSearchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 22rem;
+  max-width: 100%;
+  margin-left: auto;
+}
+
+.folderSearchIcon {
+  position: absolute;
+  left: 1rem;
+  width: 1rem;
+  height: 1rem;
+  color: $blue;
+  pointer-events: none;
+}
+
+.folderSearch {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem 0.55rem 2.5rem;
+  border: 1.5px solid $blue;
+  border-radius: 999px;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: $navy;
+
+  &::placeholder {
+    color: rgba($navy, 0.45);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba($blue, 0.15);
+  }
+
+  &::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+
+  &::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  &::-ms-clear {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+.folderSearchWithClear {
+  padding-right: 2.5rem;
+}
+
+.folderSearchClear {
+  position: absolute;
+  right: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba($navy, 0.5);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($navy, 0.06);
+    color: $navy;
+  }
+}
+
 .activeFiltersBar {
   display: flex;
   flex-wrap: wrap;
@@ -1441,6 +1622,7 @@ $table-image-size: 6.25rem;
 
 .activeFilterPillRemove {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 1.2rem;
@@ -1451,6 +1633,11 @@ $table-image-size: 6.25rem;
   background: transparent;
   color: inherit;
   cursor: pointer;
+
+  svg {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
 
   &:hover {
     background: rgba($blue, 0.14);
@@ -1506,6 +1693,221 @@ $table-image-size: 6.25rem;
 
 .columnEditCardWide {
   width: min(100%, 40rem);
+}
+
+.columnEditCardFullscreen {
+  width: min(100%, calc(100vw - 2rem));
+  height: min(100%, calc(100vh - 2rem));
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.productForm {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+}
+
+.productFormGrid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-content: start;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.15rem;
+
+  @media (max-width: 1500px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (max-width: 800px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.productFormFieldCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  background: $white;
+  overflow: hidden;
+}
+
+.productFormColumnTitle {
+  padding: 0.45rem 0.6rem;
+  background: rgba($blue, 0.14);
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  color: $navy;
+  word-break: break-word;
+}
+
+.productFormFieldBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.55rem;
+}
+
+.productFormTextarea {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba($navy, 0.18);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: $navy;
+  resize: none;
+  overflow: hidden;
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+}
+
+.productFormImageWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.productFormImageDropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  max-width: 7.5rem;
+  aspect-ratio: 1;
+  padding: 0.35rem;
+  border: 1px dashed rgba($navy, 0.22);
+  border-radius: $radius-md;
+  background: rgba($navy, 0.02);
+  color: rgba($navy, 0.72);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    border-color: rgba($blue, 0.4);
+    background: rgba($blue, 0.04);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.productFormImageDropzoneIcon {
+  width: 1.2rem;
+  height: 1.2rem;
+  color: rgba($blue, 0.75);
+}
+
+.productFormImageDropzoneLabel {
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: rgba($navy, 0.62);
+}
+
+.productFormImagePreviewButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.productFormImagePreviewImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.productFormImageRemove {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba($navy, 0.72);
+  color: $white;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: rgba($navy, 0.9);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
 .columnEditFieldGroup {
@@ -1649,6 +2051,36 @@ $table-image-size: 6.25rem;
   resize: none;
   overflow: hidden;
   line-height: 1.45;
+}
+
+.columnEditTitleTextarea {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba($navy, 0.18);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: $navy;
+  resize: none;
+  overflow: hidden;
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
 }
 
 .columnEditDropzone {

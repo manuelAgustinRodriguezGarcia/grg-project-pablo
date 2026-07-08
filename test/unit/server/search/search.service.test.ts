@@ -101,6 +101,22 @@ describe("buildProductSearchWhere", () => {
       expect.arrayContaining([expect.objectContaining({ dynamicData: expect.anything() })]),
     );
   });
+
+  it("busca en texto para una palabra única sin separadores (p. ej. marca INDIEL)", () => {
+    const where = buildProductSearchWhere("INDIEL");
+    const conditions = (where as { OR: unknown[] }).OR;
+
+    expect(conditions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          indexedText: expect.objectContaining({ contains: "INDIEL" }),
+        }),
+        expect.objectContaining({
+          originalText: expect.objectContaining({ contains: "INDIEL" }),
+        }),
+      ]),
+    );
+  });
 });
 
 describe("searchService.searchInCatalog", () => {

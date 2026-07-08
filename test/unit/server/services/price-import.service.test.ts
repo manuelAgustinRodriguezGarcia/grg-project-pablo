@@ -26,6 +26,7 @@ vi.mock("@/server/repositories/price-column.repository", () => ({
     findByPriceListIdOrdered: vi.fn(),
     createMany: vi.fn(),
     update: vi.fn(),
+    deleteByPriceList: vi.fn(),
   },
 }));
 vi.mock("@/server/repositories/price-item.repository", () => ({
@@ -125,7 +126,7 @@ describe("PriceImportService", () => {
     );
   });
 
-  it("buildPreview genera resumen de ítems", async () => {
+  it("buildPreview genera resumen de ítems sin persistir columnas", async () => {
     const result = await priceImportService.buildPreview(
       "job-1",
       sheetFixture,
@@ -133,11 +134,28 @@ describe("PriceImportService", () => {
       {},
     );
 
+    expect(priceColumnRepository.createMany).not.toHaveBeenCalled();
+    expect(priceColumnRepository.deleteByPriceList).not.toHaveBeenCalled();
     expect(importJobRepository.upsertPreview).toHaveBeenCalled();
     expect(result).toBeDefined();
   });
 
-  it("apply REEMPLAZAR_LISTA borra ítems existentes e inserta los nuevos", async () => {
+  it("apply IMPORTAR_LISTA persiste columnas en la lista destino", async () => {
+    await priceImportService.apply(
+      "job-1",
+      { actionType: "IMPORTAR_LISTA", confirmed: true },
+      "admin-1",
+      sheetFixture,
+      PRICE_LIST_ID,
+      {},
+      [],
+    );
+
+    expect(priceColumnRepository.createMany).toHaveBeenCalled();
+    expect(priceItemRepository.createMany).toHaveBeenCalled();
+  });
+
+  it("apply REEMPLAZAR_LISTA reemplaza columnas e ítems de la lista destino", async () => {
     vi.mocked(priceListRepository.findByIdWithItemCount).mockResolvedValue({
       ...createPriceListFixture(),
       itemCount: 42,
@@ -155,6 +173,8 @@ describe("PriceImportService", () => {
     );
 
     expect(priceItemRepository.deleteByPriceList).toHaveBeenCalledWith(PRICE_LIST_ID);
+    expect(priceColumnRepository.deleteByPriceList).toHaveBeenCalledWith(PRICE_LIST_ID);
+    expect(priceColumnRepository.createMany).toHaveBeenCalled();
     expect(priceItemRepository.createMany).toHaveBeenCalled();
     expect(importJobRepository.update).toHaveBeenCalledWith(
       "job-1",

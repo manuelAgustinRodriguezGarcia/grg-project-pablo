@@ -299,12 +299,32 @@ export function ImportWizard({
       setSelectedPriceListId(priceListId);
       const list = priceListList.find((item) => item.id === priceListId);
       if (list) {
-        setSupplierName(list.supplierName ?? "");
-        setSupplierDate(list.supplierDate ?? getTodayIsoDateOnly());
+        if (list.supplierName?.trim()) {
+          setSupplierName(list.supplierName.trim());
+        }
+        if (list.supplierDate) {
+          setSupplierDate(list.supplierDate);
+        }
       }
+      setFolderColumns([]);
+      setMappingRows([]);
+      setPrimaryCodeHeaderKey("");
+      setDescriptionHeaderKey("");
+      setPreview(null);
+      setSelectedAction(null);
     },
     [priceListList],
   );
+
+  const handleSelectFolder = useCallback((folderId: string) => {
+    setSelectedFolderId(folderId);
+    setFolderColumns([]);
+    setMappingRows([]);
+    setPrimaryCodeHeaderKey("");
+    setDescriptionHeaderKey("");
+    setPreview(null);
+    setSelectedAction(null);
+  }, []);
 
   useEffect(() => {
     if (!jobId || step === "upload") {
@@ -879,6 +899,12 @@ export function ImportWizard({
         descriptionColumnKey,
         useGeneratedPrimaryCodes: isPriceMode ? false : !zipAttached,
         skipImageZipValidation: isPriceMode,
+        ...(isPriceMode && selectedPriceListId
+          ? { expectedPriceListId: selectedPriceListId }
+          : {}),
+        ...(!isPriceMode && selectedFolderId
+          ? { expectedFolderId: selectedFolderId }
+          : {}),
       });
       if (!configResult.success) {
         throw new Error(configResult.error);
@@ -1134,6 +1160,10 @@ export function ImportWizard({
                   isBusy={isBusy}
                   onSupplierNameChange={setSupplierName}
                   onSupplierDateChange={setSupplierDate}
+                  onStartCreatePriceList={() => {
+                    setSupplierName("");
+                    setSupplierDate(getTodayIsoDateOnly());
+                  }}
                   onSelectPriceList={handleSelectPriceList}
                   onSelectSheet={setSelectedSheetName}
                   onCreatePriceList={handleCreatePriceList}
@@ -1154,7 +1184,7 @@ export function ImportWizard({
                   isLoadingFolders={isLoadingFolders}
                   isBusy={isBusy}
                   onSelectCatalog={handleSelectCatalog}
-                  onSelectFolder={setSelectedFolderId}
+                  onSelectFolder={handleSelectFolder}
                   onSelectSheet={setSelectedSheetName}
                   onCreateCatalog={handleCreateCatalog}
                   onCreateFolder={handleCreateFolder}

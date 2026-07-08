@@ -1,4 +1,10 @@
 const IMAGE_HEADER_PATTERNS = [/imagen/i, /image/i, /foto/i, /photo/i];
+const IMAGE_CODE_COLUMN_PATTERNS = [
+  /\bcod(?:igo)?\.?\s*imagen\b/i,
+  /\bcod(?:igo)?\.?\s*img\.?\b/i,
+  /\bcodigoimagen\b/i,
+  /\bcodimg\b/i,
+];
 const CODE_HEADER_PATTERNS = [/c[oó]digo/i, /^cod\./i, /referencia/i, /^ref\.?$/i];
 const DESCRIPTION_HEADER_PATTERNS = [/descripci[oó]n/i, /^desc\.?$/i, /detalle/i];
 const PRICE_HEADER_PATTERNS = [/precio/i, /importe/i, /monto/i, /costo/i, /valor/i];
@@ -61,6 +67,11 @@ export function semanticKindLabel(kind: ColumnSemanticKind): string | null {
   }
 }
 
+export function isImageCodeColumnName(headerName: string): boolean {
+  const normalized = normalizeHeaderNameForSemantics(headerName);
+  return IMAGE_CODE_COLUMN_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
 export function isImageCodeHeader(headerName: string): boolean {
-  return detectSemanticFlags(headerName).isImageCode;
+  return detectSemanticFlags(headerName).isImageCode || isImageCodeColumnName(headerName);
 }

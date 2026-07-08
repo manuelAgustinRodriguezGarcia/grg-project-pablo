@@ -4,6 +4,7 @@ import {
   buildExistingCodeIndex,
   detectSemanticFlags,
   findMatchingProductId,
+  type DetectedHeader,
   type ImportJobConfig,
   type ParsedSheet,
 } from "@/server/importers";
@@ -23,6 +24,7 @@ import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 
 const BATCH_SIZE = 500;
+const PREVIEW_COLUMN_ID_PREFIX = "preview:";
 
 export type SetPriceImportDestinationInput = {
   priceListId: string;
@@ -34,6 +36,20 @@ export type SetPriceImportDestinationInput = {
 export type ApplyPriceImportInput = {
   actionType: ImportActionType;
   confirmed: boolean;
+};
+
+type PriceColumnCreateInput = {
+  priceListId: string;
+  originalName: string;
+  displayName: string;
+  internalKey: string;
+  dataType: PriceColumn["dataType"];
+  order: number;
+  isPrimaryCode: boolean;
+  isDescription: boolean;
+  isPrice: boolean;
+  isSearchable: boolean;
+  isFilterable: boolean;
 };
 
 function toPrismaJsonValue(value: unknown): Prisma.InputJsonValue {
@@ -61,32 +77,211 @@ function countFormulas(items: MappedPriceItemRow[]): {
   return { formulasDetected, formulasWithoutCachedValue };
 }
 
-async function syncPriceColumnsFromSheet(
+function filterActiveHeaders(sheet: ParsedSheet): DetectedHeader[] {
+  return sheet.headers.filter(
+    (header) => !/^columna \d+$/i.test(header.originalName.trim()),
+  );
+}
+
+function resolveMappedPriceColumnKey(
+  header: DetectedHeader,
+  columns: PriceColumn[],
+  config: ImportJobConfig,
+): string | null {
+  const mapping = new Map(
+    (config.columnMapping ?? []).map((entry) => [
+      entry.headerInternalKey,
+      entry.folderColumnInternalKey,
+    ]),
+  );
+
+  const mapped = mapping.get(header.internalKey);
+  if (mapped === "__ignore__") {
+    return null;
+  }
+
+  if (mapped) {
+    return mapped;
+  }
+
+  const byName = columns.find(
+    (column) =>
+      column.originalName.trim().toLowerCase() ===
+      header.originalName.trim().toLowerCase(),
+  );
+
+  return byName?.internalKey ?? header.internalKey;
+}
+
+function buildPriceColumnCreateInput(
+  priceListId: string,
+  header: DetectedHeader,
+  targetKey: string,
+  order: number,
+  config: ImportJobConfig,
+): PriceColumnCreateInput {
+  const flags = detectSemanticFlags(header.originalName);
+  const nextPrimary = targetKey === config.primaryCodeColumnKey;
+  const nextDescription = targetKey === config.descriptionColumnKey;
+
+  return {
+    priceListId,
+    originalName: header.originalName,
+    displayName: header.originalName,
+    internalKey: targetKey,
+    dataType: flags.isPrice ? "NUMBER" : header.inferredDataType,
+    order,
+    isPrimaryCode: nextPrimary || (!config.primaryCodeColumnKey && flags.isPrimaryCode),
+    isDescription: nextDescription || (!config.descriptionColumnKey && flags.isDescription),
+    isPrice: flags.isPrice,
+    isSearchable:
+      nextPrimary ||
+      nextDescription ||
+      flags.isPrice ||
+      flags.isPrimaryCode ||
+      flags.isDescription,
+    isFilterable: flags.isPrice,
+  };
+}
+
+function toPreviewPriceColumn(input: PriceColumnCreateInput): PriceColumn {
+  const now = new Date(0);
+
+  return {
+    id: `${PREVIEW_COLUMN_ID_PREFIX}${input.internalKey}`,
+    priceListId: input.priceListId,
+    originalName: input.originalName,
+    displayName: input.displayName,
+    internalKey: input.internalKey,
+    dataType: input.dataType,
+    order: input.order,
+    visibleToNormalUser: true,
+    isSearchable: input.isSearchable,
+    isFilterable: input.isFilterable,
+    isAdminEditable: true,
+    isPrimaryCode: input.isPrimaryCode,
+    isDescription: input.isDescription,
+    isPrice: input.isPrice,
+    isRequired: false,
+    isReadOnly: false,
+    width: null,
+    format: null,
+    unit: null,
+    label: null,
+    helpText: null,
+    helpImageAltText: null,
+    helpImagePath: null,
+    helpImageThumbnailPath: null,
+    helpImageMimeType: null,
+    helpImageSizeBytes: null,
+    helpImageOriginalName: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function applySemanticFlagsInMemory(
+  columns: PriceColumn[],
+  config: ImportJobConfig,
+): PriceColumn[] {
+  if (!config.primaryCodeColumnKey && !config.descriptionColumnKey) {
+    return columns;
+  }
+
+  return columns.map((column) => {
+    const nextPrimary = column.internalKey === config.primaryCodeColumnKey;
+    const nextDescription = column.internalKey === config.descriptionColumnKey;
+
+    if (column.isPrimaryCode === nextPrimary && column.isDescription === nextDescription) {
+      return column;
+    }
+
+    return {
+      ...column,
+      isPrimaryCode: nextPrimary,
+      isDescription: nextDescription,
+      isSearchable: nextPrimary || nextDescription || column.isPrice || column.isSearchable,
+    };
+  });
+}
+
+async function resolvePriceColumnsFromSheet(
   priceListId: string,
   sheet: ParsedSheet,
   config: ImportJobConfig,
+  existingColumns: PriceColumn[],
 ): Promise<PriceColumn[]> {
+  const activeHeaders = filterActiveHeaders(sheet).filter(
+    (header) => resolveMappedPriceColumnKey(header, existingColumns, config) !== null,
+  );
+
+  if (existingColumns.length === 0) {
+    const resolved = activeHeaders.map((header, index) => {
+      const targetKey = resolveMappedPriceColumnKey(header, existingColumns, config)!;
+      return toPreviewPriceColumn(
+        buildPriceColumnCreateInput(priceListId, header, targetKey, index, config),
+      );
+    });
+
+    return applySemanticFlagsInMemory(resolved, config);
+  }
+
+  const existingKeys = new Set(existingColumns.map((column) => column.internalKey));
+  const existingNames = new Set(
+    existingColumns.map((column) => column.originalName.trim().toLowerCase()),
+  );
+  const previewColumns = [...existingColumns];
+
+  for (let index = 0; index < activeHeaders.length; index += 1) {
+    const header = activeHeaders[index];
+    const targetKey = resolveMappedPriceColumnKey(header, existingColumns, config);
+    if (!targetKey) {
+      continue;
+    }
+
+    if (existingKeys.has(targetKey)) {
+      continue;
+    }
+
+    if (existingNames.has(header.originalName.trim().toLowerCase())) {
+      continue;
+    }
+
+    previewColumns.push(
+      toPreviewPriceColumn(
+        buildPriceColumnCreateInput(
+          priceListId,
+          header,
+          targetKey,
+          existingColumns.length + index,
+          config,
+        ),
+      ),
+    );
+  }
+
+  return applySemanticFlagsInMemory(previewColumns, config);
+}
+
+async function persistPriceColumnsFromSheet(
+  priceListId: string,
+  sheet: ParsedSheet,
+  config: ImportJobConfig,
+  actionType: ImportActionType,
+): Promise<PriceColumn[]> {
+  if (actionType === "REEMPLAZAR_LISTA") {
+    await priceColumnRepository.deleteByPriceList(priceListId);
+  }
+
   let columns = await priceColumnRepository.findByPriceListIdOrdered(priceListId);
-  const activeHeaders = sheet.headers.filter(
-    (header) => !/^columna \d+$/i.test(header.originalName.trim()),
+  const activeHeaders = filterActiveHeaders(sheet).filter(
+    (header) => resolveMappedPriceColumnKey(header, columns, config) !== null,
   );
 
   if (columns.length === 0) {
     const columnsToCreate = activeHeaders.map((header, index) => {
-      const flags = detectSemanticFlags(header.originalName);
-      return {
-        priceListId,
-        originalName: header.originalName,
-        displayName: header.originalName,
-        internalKey: header.internalKey,
-        dataType: flags.isPrice ? ("NUMBER" as const) : header.inferredDataType,
-        order: index,
-        isPrimaryCode: flags.isPrimaryCode,
-        isDescription: flags.isDescription,
-        isPrice: flags.isPrice,
-        isSearchable: flags.isPrimaryCode || flags.isDescription || flags.isPrice,
-        isFilterable: flags.isPrice,
-      };
+      const targetKey = resolveMappedPriceColumnKey(header, columns, config)!;
+      return buildPriceColumnCreateInput(priceListId, header, targetKey, index, config);
     });
 
     if (columnsToCreate.length > 0) {
@@ -94,38 +289,39 @@ async function syncPriceColumnsFromSheet(
       columns = await priceColumnRepository.findByPriceListIdOrdered(priceListId);
     }
 
-    return columns;
+    return applySemanticFlagsInMemory(columns, config);
   }
 
   const existingKeys = new Set(columns.map((column) => column.internalKey));
   const existingNames = new Set(
     columns.map((column) => column.originalName.trim().toLowerCase()),
   );
-  const columnsToCreate = [];
+  const columnsToCreate: PriceColumnCreateInput[] = [];
 
   for (let index = 0; index < activeHeaders.length; index += 1) {
     const header = activeHeaders[index];
-    if (existingKeys.has(header.internalKey)) {
+    const targetKey = resolveMappedPriceColumnKey(header, columns, config);
+    if (!targetKey) {
       continue;
     }
+
+    if (existingKeys.has(targetKey)) {
+      continue;
+    }
+
     if (existingNames.has(header.originalName.trim().toLowerCase())) {
       continue;
     }
 
-    const flags = detectSemanticFlags(header.originalName);
-    columnsToCreate.push({
-      priceListId,
-      originalName: header.originalName,
-      displayName: header.originalName,
-      internalKey: header.internalKey,
-      dataType: flags.isPrice ? ("NUMBER" as const) : header.inferredDataType,
-      order: columns.length + index,
-      isPrimaryCode: flags.isPrimaryCode,
-      isDescription: flags.isDescription,
-      isPrice: flags.isPrice,
-      isSearchable: flags.isPrimaryCode || flags.isDescription || flags.isPrice,
-      isFilterable: flags.isPrice,
-    });
+    columnsToCreate.push(
+      buildPriceColumnCreateInput(
+        priceListId,
+        header,
+        targetKey,
+        columns.length + index,
+        config,
+      ),
+    );
   }
 
   if (columnsToCreate.length > 0) {
@@ -191,7 +387,13 @@ export class PriceImportService {
     priceListId: string,
     config: ImportJobConfig,
   ) {
-    const columns = await syncPriceColumnsFromSheet(priceListId, sheet, config);
+    const existingColumns = await priceColumnRepository.findByPriceListIdOrdered(priceListId);
+    const columns = await resolvePriceColumnsFromSheet(
+      priceListId,
+      sheet,
+      config,
+      existingColumns,
+    );
     const mappedItems = mapSheetToPriceItems(sheet, columns, config);
     const existingItems = await priceItemRepository.findCodesByPriceList(priceListId);
     const matchIndex = buildExistingCodeIndex(existingItems);
@@ -214,7 +416,7 @@ export class PriceImportService {
       totalItems: recognizedItems.length,
       matchedCount: matchedItems.length,
       imageCount: 0,
-      columnCount: sheet.columnCount,
+      columnCount: columns.length,
       priceListItemCount: itemCount,
       priceListIsEmpty: itemCount === 0,
       formulasDetected: formulaStats.formulasDetected,
@@ -274,7 +476,12 @@ export class PriceImportService {
       );
     }
 
-    const columns = await syncPriceColumnsFromSheet(priceListId, sheet, config);
+    const columns = await persistPriceColumnsFromSheet(
+      priceListId,
+      sheet,
+      config,
+      input.actionType,
+    );
     const mappedItems = mapSheetToPriceItems(sheet, columns, config);
 
     let itemsToInsert = mappedItems;
@@ -328,7 +535,7 @@ export class PriceImportService {
       itemsDeleted: input.actionType === "REEMPLAZAR_LISTA" ? itemCount : 0,
       formulasDetected: formulaStats.formulasDetected,
       formulasWithoutCachedValue: formulaStats.formulasWithoutCachedValue,
-      columnsDetected: sheet.columnCount,
+      columnsDetected: columns.length,
       errors: [] as string[],
       warnings: previewItems.flatMap((item) => item.warnings),
       actionApplied: input.actionType,

@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
@@ -200,11 +200,11 @@ export function PriceNavigator({
       return (await itemsResponse.json()) as PriceItemTableResponse;
     },
     enabled: Boolean(activeListId),
-    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
   });
 
   const itemTable = activeListId ? (itemsQuery.data ?? null) : null;
-  const isLoadingItems = itemsQuery.isFetching;
+  const isLoadingItems = itemsQuery.isLoading || itemsQuery.isRefetching;
   const itemsError =
     itemsQuery.error instanceof Error ? itemsQuery.error.message : null;
 
@@ -455,7 +455,14 @@ export function PriceNavigator({
                       : undefined
                   }
                 />
-              ) : null
+              ) : (
+                <PriceSupplierBanner
+                  supplierName={null}
+                  supplierDate={null}
+                  isAdmin={isAdmin}
+                  placeholder
+                />
+              )
             }
           >
             <PriceListSelectorPanel
@@ -599,7 +606,7 @@ export function PriceNavigator({
           mode="PRICE_LIST"
           catalogs={[]}
           priceLists={sortedLists}
-          initialPriceListId={activeListId}
+          initialPriceListId=""
           onClose={() => setIsImportOpen(false)}
           onPublished={handleImportPublished}
         />

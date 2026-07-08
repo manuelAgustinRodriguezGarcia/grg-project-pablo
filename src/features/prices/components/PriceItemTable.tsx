@@ -129,14 +129,18 @@ export function PriceItemTable({
     );
   }
 
-  if (isLoading && !data) {
+  if (isLoading) {
+    const skeletonRowCount = data?.items.length
+      ? Math.min(Math.max(data.items.length, 4), 12)
+      : 18;
+
     return (
       <section className={styles.tablePanel} aria-label="Ítems de precios" aria-busy="true">
         <div className={`${styles.tableWrap} ${styles.tableWrapLoading}`}>
           <AdminTableSkeleton
             variant="prices"
             label="Cargando ítems de precios"
-            rowCount={18}
+            rowCount={skeletonRowCount}
             fillHeight
           />
         </div>
@@ -160,7 +164,7 @@ export function PriceItemTable({
 
   const { pagination, columns, items } = data;
   const { from, to } = getPaginationRange(pagination);
-  const primaryColumn = columns.find((column) => column.isPrimaryCode);
+  const showActionsColumn = isAdmin;
 
   return (
     <section className={styles.tablePanel} aria-label="Ítems de precios">
@@ -187,13 +191,9 @@ export function PriceItemTable({
             <thead>
               <tr>
                 {sortedColumns.map((column) => (
-                  <PriceColumnHeaderCell
-                    key={column.id}
-                    column={column}
-                    isSticky={primaryColumn?.id === column.id}
-                  />
+                  <PriceColumnHeaderCell key={column.id} column={column} />
                 ))}
-                {isAdmin && (onEditItem || onDeleteItem) ? (
+                {showActionsColumn ? (
                   <th scope="col" className={styles.actionsColumn}>
                     Acciones
                   </th>
@@ -204,19 +204,14 @@ export function PriceItemTable({
               {items.map((item) => (
                 <tr key={item.id}>
                   {sortedColumns.map((column) => (
-                    <td
-                      key={`${item.id}-${column.id}`}
-                      className={
-                        primaryColumn?.id === column.id ? styles.stickyCodeColumn : undefined
-                      }
-                    >
+                    <td key={`${item.id}-${column.id}`}>
                       <PriceCellValue
                         column={column}
                         value={getCellValue(item, column)}
                       />
                     </td>
                   ))}
-                  {isAdmin && (onEditItem || onDeleteItem) ? (
+                  {showActionsColumn ? (
                     <td className={styles.actionsColumn}>
                       <div className={styles.rowActions}>
                         {onEditItem ? (

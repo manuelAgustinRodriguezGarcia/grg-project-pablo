@@ -1,5 +1,15 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/features/catalog/actions/column.actions", () => ({
+  updateColumnAction: vi.fn(),
+  setColumnVisibilityAction: vi.fn(),
+}));
+
+vi.mock("@/features/catalog/actions/column-help.actions", () => ({
+  deleteColumnHelpImageAction: vi.fn(),
+}));
+
 import { ColumnFilterMenu } from "@/features/catalog/components/ColumnFilterMenu";
 import type { ColumnListItem } from "@/features/catalog/types/column.types";
 
@@ -139,5 +149,40 @@ describe("ColumnFilterMenu", () => {
       operator: "contains",
       value: "indiel",
     });
+  });
+
+  it("no vuelve a aplicar el filtro cuando el padre lo limpia externamente", () => {
+    vi.useFakeTimers();
+    const onFilterChange = vi.fn();
+    const column = createColumn();
+    const activeFilter = {
+      columnInternalKey: "anclaje_frente",
+      operator: "contains" as const,
+      value: "indiel",
+    };
+
+    const { rerender } = render(
+      <ColumnFilterMenu
+        column={column}
+        activeFilter={activeFilter}
+        onFilterChange={onFilterChange}
+      />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(2500);
+    });
+
+    onFilterChange.mockClear();
+
+    rerender(
+      <ColumnFilterMenu column={column} onFilterChange={onFilterChange} />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(2500);
+    });
+
+    expect(onFilterChange).not.toHaveBeenCalled();
   });
 });

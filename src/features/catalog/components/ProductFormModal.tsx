@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ColumnListItem } from "@/features/catalog/types/column.types";
 import type { ProductTableItem } from "@/features/catalog/types/product-table.types";
 import { formatColumnTitleForDisplay } from "@/features/catalog/utils/column-title-display";
-import { isGeneratedPrimaryCodeColumn } from "@/features/catalog/utils/product-table-columns";
+import {
+  folderHasLinkedImages,
+  isGeneratedPrimaryCodeColumn,
+  isImageCodeColumn,
+} from "@/features/catalog/utils/product-table-columns";
 import {
   deleteProductFieldHelpImage,
   uploadProductFieldHelpImage,
@@ -22,8 +26,7 @@ type ProductFormModalProps = {
   onSaved: () => void;
 };
 
-type FieldAnnotationDraft = {
-  helpText: string;
+type FieldImageDraft = {
   previewUrl: string | null;
   pendingFile: File | null;
   removeImage: boolean;
@@ -34,7 +37,8 @@ function getEditableColumns(columns: ColumnListItem[]): ColumnListItem[] {
     (column) =>
       column.isAdminEditable &&
       !column.isReadOnly &&
-      !isGeneratedPrimaryCodeColumn(column),
+      !isGeneratedPrimaryCodeColumn(column) &&
+      !isImageCodeColumn(column),
   );
 }
 
@@ -68,23 +72,27 @@ function buildInitialValues(
   return values;
 }
 
-function buildInitialAnnotations(
+function buildInitialImageDrafts(
   editableColumns: ColumnListItem[],
   product?: ProductTableItem | null,
-): Record<string, FieldAnnotationDraft> {
-  const annotations: Record<string, FieldAnnotationDraft> = {};
+): Record<string, FieldImageDraft> {
+  const drafts: Record<string, FieldImageDraft> = {};
 
   for (const column of editableColumns) {
     const existing = product?.fieldAnnotationsByColumnKey?.[column.internalKey];
-    annotations[column.internalKey] = {
-      helpText: existing?.helpText ?? "",
+    drafts[column.internalKey] = {
       previewUrl: existing?.thumbnailUrl ?? existing?.fullUrl ?? null,
       pendingFile: null,
       removeImage: false,
     };
   }
 
-  return annotations;
+  return drafts;
+}
+
+function autoResizeTextarea(element: HTMLTextAreaElement) {
+  element.style.height = "auto";
+  element.style.height = `${element.scrollHeight}px`;
 }
 
 export function ProductFormModal({
@@ -97,15 +105,29 @@ export function ProductFormModal({
 }: ProductFormModalProps) {
   const isEditMode = product !== null && product !== undefined;
   const editableColumns = useMemo(() => getEditableColumns(columns), [columns]);
+  const showFieldImages = useMemo(() => !folderHasLinkedImages(columns), [columns]);
   const [values, setValues] = useState<Record<string, string>>(() =>
     buildInitialValues(editableColumns, product),
   );
-  const [annotations, setAnnotations] = useState<Record<string, FieldAnnotationDraft>>(() =>
-    buildInitialAnnotations(editableColumns, product),
+  const [imageDrafts, setImageDrafts] = useState<Record<string, FieldImageDraft>>(() =>
+    buildInitialImageDrafts(editableColumns, product),
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+
+  const resizeAllTextareas = useCallback(() => {
+    for (const element of Object.values(textareaRefs.current)) {
+      if (element) {
+        autoResizeTextarea(element);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    resizeAllTextareas();
+  }, [editableColumns, resizeAllTextareas, values]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -126,23 +148,13 @@ export function ProductFormModal({
     setValues((current) => ({ ...current, [internalKey]: value }));
   }
 
-  function updateAnnotationHelpText(internalKey: string, helpText: string) {
-    setAnnotations((current) => ({
-      ...current,
-      [internalKey]: {
-        ...current[internalKey],
-        helpText,
-      },
-    }));
-  }
-
   function handleSelectImage(internalKey: string, file: File | null) {
     if (!file) {
       return;
     }
 
     const previewUrl = URL.createObjectURL(file);
-    setAnnotations((current) => ({
+    setImageDrafts((current) => ({
       ...current,
       [internalKey]: {
         ...current[internalKey],
@@ -154,7 +166,7 @@ export function ProductFormModal({
   }
 
   function handleRemoveImage(internalKey: string) {
-    setAnnotations((current) => ({
+    setImageDrafts((current) => ({
       ...current,
       [internalKey]: {
         ...current[internalKey],
@@ -166,8 +178,12 @@ export function ProductFormModal({
   }
 
   async function persistFieldImages(productId: string): Promise<string | null> {
+    if (!showFieldImages) {
+      return null;
+    }
+
     for (const column of editableColumns) {
-      const draft = annotations[column.internalKey];
+      const draft = imageDrafts[column.internalKey];
       if (!draft) {
         continue;
       }
@@ -206,34 +222,20 @@ export function ProductFormModal({
       if (raw.trim() === "") {
         continue;
       }
-      payloadValues[column.internalKey] = raw.trim();
+      payloadValues[column.internalKey] = raw;
     }
 
-    const fieldAnnotations: Record<
-      string,
-      { helpText: string | null; removeImage?: boolean }
-    > = {};
+    const fieldAnnotations: Record<string, { removeImage?: boolean }> = {};
 
-    for (const column of editableColumns) {
-      const draft = annotations[column.internalKey];
-      if (!draft) {
-        continue;
+    if (showFieldImages) {
+      for (const column of editableColumns) {
+        const draft = imageDrafts[column.internalKey];
+        if (!draft?.removeImage) {
+          continue;
+        }
+
+        fieldAnnotations[column.internalKey] = { removeImage: true };
       }
-
-      const helpText = draft.helpText.trim();
-      const hasExistingImage = Boolean(
-        product?.fieldAnnotationsByColumnKey?.[column.internalKey]?.thumbnailUrl ??
-          product?.fieldAnnotationsByColumnKey?.[column.internalKey]?.fullUrl,
-      );
-
-      if (!helpText && !draft.pendingFile && !draft.removeImage && !hasExistingImage) {
-        continue;
-      }
-
-      fieldAnnotations[column.internalKey] = {
-        helpText: helpText || null,
-        ...(draft.removeImage ? { removeImage: true } : {}),
-      };
     }
 
     try {
@@ -245,7 +247,8 @@ export function ProductFormModal({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             values: payloadValues,
-            fieldAnnotations,
+            fieldAnnotations:
+              Object.keys(fieldAnnotations).length > 0 ? fieldAnnotations : undefined,
           }),
         });
 
@@ -263,7 +266,8 @@ export function ProductFormModal({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             values: payloadValues,
-            fieldAnnotations,
+            fieldAnnotations:
+              Object.keys(fieldAnnotations).length > 0 ? fieldAnnotations : undefined,
           }),
         });
 
@@ -308,7 +312,7 @@ export function ProductFormModal({
       }}
     >
       <div
-        className={`${styles.columnEditCard} ${styles.columnEditCardWide}`}
+        className={`${styles.columnEditCard} ${styles.columnEditCardFullscreen}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="product-form-title"
@@ -337,120 +341,110 @@ export function ProductFormModal({
             configurá columnas primero.
           </p>
         ) : (
-          <form className={styles.columnEditForm} onSubmit={(event) => void handleSubmit(event)}>
-            {editableColumns.map((column) => {
-              const draft = annotations[column.internalKey];
+          <form
+            className={styles.productForm}
+            onSubmit={(event) => void handleSubmit(event)}
+          >
+            <div className={styles.productFormGrid}>
+              {editableColumns.map((column) => {
+                const imageDraft = imageDrafts[column.internalKey];
+                const hasPreview = Boolean(imageDraft?.previewUrl);
 
-              return (
-                <div key={column.id} className={styles.columnEditFieldGroup}>
-                  <label className={styles.columnEditField}>
-                    <span className={styles.columnEditLabel}>
+                return (
+                  <div key={column.id} className={styles.productFormFieldCard}>
+                    <div className={styles.productFormColumnTitle}>
                       {formatColumnTitleForDisplay(column.displayName)}
-                      {column.isPrimaryCode ? " (código)" : null}
-                      {column.isDescription ? " (descripción)" : null}
-                      {column.isRequired ? null : (
-                        <span className={styles.columnEditOptional}> (opcional)</span>
-                      )}
-                    </span>
-                    <input
-                      type="text"
-                      className={styles.columnEditInput}
-                      value={values[column.internalKey] ?? ""}
-                      onChange={(event) =>
-                        updateValue(column.internalKey, event.target.value)
-                      }
-                      disabled={isSaving}
-                      required={column.isRequired}
-                    />
-                  </label>
-
-                  <label className={styles.columnEditField}>
-                    <span className={styles.columnEditLabel}>
-                      Texto descriptivo
-                      <span className={styles.columnEditOptional}> (opcional)</span>
-                    </span>
-                    <textarea
-                      className={styles.columnEditTextarea}
-                      value={draft?.helpText ?? ""}
-                      onChange={(event) =>
-                        updateAnnotationHelpText(column.internalKey, event.target.value)
-                      }
-                      disabled={isSaving}
-                      maxLength={2000}
-                      rows={2}
-                      placeholder="Nota o aclaración para este campo"
-                    />
-                  </label>
-
-                  <div className={styles.columnEditField}>
-                    <span className={styles.columnEditLabel}>
-                      Imagen de ayuda
-                      <span className={styles.columnEditOptional}> (opcional)</span>
-                    </span>
-                    {draft?.previewUrl ? (
-                      <div className={styles.columnEditImagePreview}>
-                        <img
-                          src={draft.previewUrl}
-                          alt=""
-                          className={styles.columnEditImagePreviewImg}
-                        />
-                        <div className={styles.columnEditImageActions}>
-                          <button
-                            type="button"
-                            className={styles.columnEditImageReplace}
-                            onClick={() => fileInputRefs.current[column.internalKey]?.click()}
-                            disabled={isSaving}
-                          >
-                            Reemplazar
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.columnEditImageRemove}
-                            onClick={() => handleRemoveImage(column.internalKey)}
-                            disabled={isSaving}
-                          >
-                            Quitar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className={styles.columnEditDropzone}
-                        onClick={() => fileInputRefs.current[column.internalKey]?.click()}
+                    </div>
+                    <div className={styles.productFormFieldBody}>
+                      <textarea
+                        ref={(element) => {
+                          textareaRefs.current[column.internalKey] = element;
+                          if (element) {
+                            autoResizeTextarea(element);
+                          }
+                        }}
+                        className={styles.productFormTextarea}
+                        value={values[column.internalKey] ?? ""}
+                        onChange={(event) => {
+                          updateValue(column.internalKey, event.target.value);
+                          autoResizeTextarea(event.currentTarget);
+                        }}
                         disabled={isSaving}
-                      >
-                        <Image
-                          className={styles.columnEditDropzoneIcon}
-                          strokeWidth={ICON_STROKE}
-                          aria-hidden
-                        />
-                        <span className={styles.columnEditDropzoneTitle}>
-                          Agregar imagen
-                        </span>
-                        <span className={styles.columnEditDropzoneHint}>
-                          JPG, PNG o WebP
-                        </span>
-                      </button>
-                    )}
-                    <input
-                      ref={(element) => {
-                        fileInputRefs.current[column.internalKey] = element;
-                      }}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      className={styles.columnEditHiddenInput}
-                      onChange={(event) =>
-                        handleSelectImage(
-                          column.internalKey,
-                          event.target.files?.[0] ?? null,
-                        )
-                      }
-                    />
+                        required={column.isRequired}
+                        rows={1}
+                        aria-label={formatColumnTitleForDisplay(column.displayName)}
+                      />
+
+                      {showFieldImages ? (
+                        <div className={styles.productFormImageWrap}>
+                          {hasPreview ? (
+                            <div className={styles.productFormImageDropzone}>
+                              <button
+                                type="button"
+                                className={styles.productFormImagePreviewButton}
+                                onClick={() =>
+                                  fileInputRefs.current[column.internalKey]?.click()
+                                }
+                                disabled={isSaving}
+                                aria-label={`Reemplazar imagen de ${column.displayName}`}
+                              >
+                                <img
+                                  src={imageDraft?.previewUrl ?? ""}
+                                  alt=""
+                                  className={styles.productFormImagePreviewImg}
+                                />
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.productFormImageRemove}
+                                onClick={() => handleRemoveImage(column.internalKey)}
+                                disabled={isSaving}
+                                aria-label={`Quitar imagen de ${column.displayName}`}
+                              >
+                                <X strokeWidth={ICON_STROKE} aria-hidden />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className={styles.productFormImageDropzone}
+                              onClick={() =>
+                                fileInputRefs.current[column.internalKey]?.click()
+                              }
+                              disabled={isSaving}
+                              aria-label={`Agregar imagen a ${column.displayName}`}
+                            >
+                              <Image
+                                className={styles.productFormImageDropzoneIcon}
+                                strokeWidth={ICON_STROKE}
+                                aria-hidden
+                              />
+                              <span className={styles.productFormImageDropzoneLabel}>
+                                Imagen
+                              </span>
+                            </button>
+                          )}
+                          <input
+                            ref={(element) => {
+                              fileInputRefs.current[column.internalKey] = element;
+                            }}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className={styles.columnEditHiddenInput}
+                            onChange={(event) =>
+                              handleSelectImage(
+                                column.internalKey,
+                                event.target.files?.[0] ?? null,
+                              )
+                            }
+                          />
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
 
             {error ? (
               <p className={styles.columnEditError} role="alert">

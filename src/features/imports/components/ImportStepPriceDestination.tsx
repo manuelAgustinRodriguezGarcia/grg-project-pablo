@@ -23,6 +23,7 @@ type ImportStepPriceDestinationProps = {
   onSelectPriceList: (priceListId: string) => void;
   onSelectSheet: (sheetName: string) => void;
   onCreatePriceList: (name: string) => Promise<boolean>;
+  onStartCreatePriceList?: () => void;
 };
 
 export function ImportStepPriceDestination({
@@ -40,6 +41,7 @@ export function ImportStepPriceDestination({
   onSelectPriceList,
   onSelectSheet,
   onCreatePriceList,
+  onStartCreatePriceList,
 }: ImportStepPriceDestinationProps) {
   const [listDraft, setListDraft] = useState<string | null>(null);
 
@@ -91,36 +93,6 @@ export function ImportStepPriceDestination({
         </div>
       </div>
 
-      <div className={styles.supplierRow}>
-        <div className={`${styles.field} ${styles.supplierNameField}`}>
-          <div className={styles.fieldHeader}>
-            <span className={styles.fieldLabel}>Nombre de proveedor</span>
-          </div>
-          <input
-            className={styles.inlineInput}
-            value={supplierName}
-            onChange={(event) => onSupplierNameChange(event.target.value)}
-            placeholder="Ingrese el nombre del proveedor"
-            maxLength={200}
-            disabled={isBusy}
-            aria-label="Nombre de proveedor"
-          />
-        </div>
-
-        <div className={`${styles.field} ${styles.supplierDateField}`}>
-          <div className={styles.fieldHeader}>
-            <span className={styles.fieldLabel}>Fecha</span>
-          </div>
-          <CustomDatePicker
-            value={supplierDate}
-            onChange={onSupplierDateChange}
-            disabled={isBusy}
-            ariaLabel="Fecha del proveedor"
-            triggerClassName={styles.supplierDateControl}
-          />
-        </div>
-      </div>
-
       <div className={styles.field}>
         <div className={styles.fieldHeader}>
           <span className={styles.fieldLabel}>Lista de precios</span>
@@ -128,7 +100,13 @@ export function ImportStepPriceDestination({
             type="button"
             className={styles.addButton}
             onClick={() =>
-              setListDraft((value) => (value === null ? selectedSheetName : null))
+              setListDraft((value) => {
+                if (value === null) {
+                  onStartCreatePriceList?.();
+                  return selectedSheetName;
+                }
+                return null;
+              })
             }
             disabled={isBusy}
           >
@@ -174,6 +152,36 @@ export function ImportStepPriceDestination({
             </button>
           </div>
         ) : null}
+      </div>
+
+      <div className={styles.supplierRow}>
+        <div className={`${styles.field} ${styles.supplierNameField}`}>
+          <div className={styles.fieldHeader}>
+            <span className={styles.fieldLabel}>Nombre de proveedor</span>
+          </div>
+          <input
+            className={styles.inlineInput}
+            value={supplierName}
+            onChange={(event) => onSupplierNameChange(event.target.value)}
+            placeholder="Ingrese el nombre del proveedor"
+            maxLength={200}
+            disabled={isBusy}
+            aria-label="Nombre de proveedor"
+          />
+        </div>
+
+        <div className={`${styles.field} ${styles.supplierDateField}`}>
+          <div className={styles.fieldHeader}>
+            <span className={styles.fieldLabel}>Fecha</span>
+          </div>
+          <CustomDatePicker
+            value={supplierDate}
+            onChange={onSupplierDateChange}
+            disabled={isBusy}
+            ariaLabel="Fecha del proveedor"
+            triggerClassName={styles.supplierDateControl}
+          />
+        </div>
       </div>
 
       <div className={styles.field}>

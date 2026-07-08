@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { CustomDatePicker } from "@/shared/components/CustomDatePicker";
+import { CustomSelect } from "@/shared/components/CustomSelect";
 import type { PriceListListItem } from "@/features/prices/types/price-list.types";
 import { getTodayIsoDateOnly } from "@/shared/utils/date-only";
 import modalStyles from "@/features/prices/styles/PriceColumnEditModal.module.scss";
@@ -93,7 +94,7 @@ export function PriceListFormModal({
         <form onSubmit={handleSubmit}>
           <div className={modalStyles.formField}>
             <label className={modalStyles.formLabel} htmlFor="price-list-name">
-              Nombre
+              Nombre de lista
             </label>
             <input
               id="price-list-name"
@@ -140,18 +141,17 @@ export function PriceListFormModal({
             >
               Visibilidad para usuarios
             </label>
-            <select
+            <CustomSelect
               id="price-list-visibility"
-              className={modalStyles.formSelect}
               value={visibleToNormalUser ? "visible" : "hidden"}
-              onChange={(event) =>
-                setVisibleToNormalUser(event.target.value === "visible")
-              }
+              onChange={(next) => setVisibleToNormalUser(next === "visible")}
               disabled={isBusy}
-            >
-              <option value="visible">Visible</option>
-              <option value="hidden">No visible</option>
-            </select>
+              ariaLabel="Visibilidad para usuarios"
+              options={[
+                { value: "visible", label: "Visible" },
+                { value: "hidden", label: "No visible" },
+              ]}
+            />
           </div>
 
           {error ? <p className={modalStyles.formError}>{error}</p> : null}

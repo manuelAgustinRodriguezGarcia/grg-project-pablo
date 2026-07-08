@@ -127,6 +127,8 @@ export function CatalogNavigator({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [searchPage, setSearchPage] = useState(1);
   const [searchResetKey, setSearchResetKey] = useState(0);
+  const [folderSearch, setFolderSearch] = useState("");
+  const [folderSearchResetKey, setFolderSearchResetKey] = useState(0);
 
   const isSearchActive = debouncedSearch.length >= MIN_GLOBAL_SEARCH_CHARS;
   const isSearchPending =
@@ -205,7 +207,15 @@ export function CatalogNavigator({
   );
 
   const productsQuery = useQuery({
-    queryKey: ["admin", "products", activeFolderId, page, serializedColumnFilters, reloadToken],
+    queryKey: [
+      "admin",
+      "products",
+      activeFolderId,
+      page,
+      serializedColumnFilters,
+      folderSearch,
+      reloadToken,
+    ],
     queryFn: async (): Promise<ProductTableResponse> => {
       const params = new URLSearchParams({
         page: String(page),
@@ -215,6 +225,10 @@ export function CatalogNavigator({
 
       if (enableColumnFilters && columnFilters.length > 0) {
         params.set("filters", JSON.stringify(columnFilters));
+      }
+
+      if (folderSearch) {
+        params.set("q", folderSearch);
       }
 
       const response = await fetch(
@@ -277,6 +291,8 @@ export function CatalogNavigator({
     setColumnFilters([]);
     setDebouncedSearch("");
     setSearchResetKey((token) => token + 1);
+    setFolderSearch("");
+    setFolderSearchResetKey((token) => token + 1);
   }, []);
 
   const handleSelectCatalogSearchResult = useCallback((catalogId: string) => {
@@ -287,6 +303,8 @@ export function CatalogNavigator({
     setColumnFilters([]);
     setDebouncedSearch("");
     setSearchResetKey((token) => token + 1);
+    setFolderSearch("");
+    setFolderSearchResetKey((token) => token + 1);
   }, []);
 
   const handleSelectFolderSearchResult = useCallback(
@@ -298,6 +316,8 @@ export function CatalogNavigator({
       setColumnFilters([]);
       setDebouncedSearch("");
       setSearchResetKey((token) => token + 1);
+      setFolderSearch("");
+      setFolderSearchResetKey((token) => token + 1);
     },
     [],
   );
@@ -306,21 +326,39 @@ export function CatalogNavigator({
     setSearchPage(nextPage);
   }, []);
 
-  const handleSelectCatalog = useCallback((catalogId: string) => {
-    setSelectedCatalogId(catalogId);
-    setSelectedFolderId("");
-    setColumnFilters([]);
-    setPage(1);
+  const resetFolderSearch = useCallback(() => {
+    setFolderSearch("");
+    setFolderSearchResetKey((token) => token + 1);
   }, []);
 
-  const handleSelectFolder = useCallback((folderId: string) => {
-    setSelectedFolderId(folderId);
-    setColumnFilters([]);
-    setPage(1);
-  }, []);
+  const handleSelectCatalog = useCallback(
+    (catalogId: string) => {
+      setSelectedCatalogId(catalogId);
+      setSelectedFolderId("");
+      setColumnFilters([]);
+      setPage(1);
+      resetFolderSearch();
+    },
+    [resetFolderSearch],
+  );
+
+  const handleSelectFolder = useCallback(
+    (folderId: string) => {
+      setSelectedFolderId(folderId);
+      setColumnFilters([]);
+      setPage(1);
+      resetFolderSearch();
+    },
+    [resetFolderSearch],
+  );
 
   const handlePageChange = useCallback((nextPage: number) => {
     setPage(nextPage);
+  }, []);
+
+  const handleFolderSearchChange = useCallback((value: string) => {
+    setFolderSearch(value);
+    setPage(1);
   }, []);
 
   const handleColumnFilterChange = useCallback(
@@ -680,6 +718,8 @@ export function CatalogNavigator({
 
   const visibleFolders = activeCatalogId ? folders : [];
   const tableData = activeFolderId ? productTable : null;
+  const activeFolderName =
+    folders.find((folder) => folder.id === activeFolderId)?.name ?? "";
 
   return (
     <>
@@ -746,7 +786,16 @@ export function CatalogNavigator({
             onColumnFilterChange={handleColumnFilterChange}
             onClearColumnFilters={handleClearColumnFilters}
             isAdmin={isAdmin}
+            onColumnsChanged={
+              isAdmin ? () => setReloadToken((token) => token + 1) : undefined
+            }
             onEditProduct={isAdmin ? handleEditProduct : undefined}
+            folderName={activeFolderName}
+            folderSearchQuery={folderSearch}
+            onFolderSearchChange={
+              activeFolderId ? handleFolderSearchChange : undefined
+            }
+            folderSearchResetKey={folderSearchResetKey}
           />
         )}
       </div>
