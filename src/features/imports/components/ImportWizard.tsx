@@ -471,8 +471,12 @@ export function ImportWizard({
       }
 
       const sheetsData = (await sheetsResponse.json()) as ImportSheetsResponse;
-      setSheets(sheetsData.sheets);
-      setSelectedSheetName("");
+      const loadedSheets = sheetsData.sheets;
+      setSheets(loadedSheets);
+      const firstImportableSheet = loadedSheets.find(
+        (sheet) => sheet.classification === "IMPORTABLE",
+      );
+      setSelectedSheetName(firstImportableSheet?.sheetName ?? "");
 
       const uploadedSources = options?.externalImagesSelection
         ? snapshotExternalImageSources(options.externalImagesSelection)

@@ -1,8 +1,8 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { FileSpreadsheet, ICON_STROKE, Search, X } from "@/shared/icons";
+import type { ReactNode } from "react";
+import { FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
@@ -24,11 +24,7 @@ const ACTION_CARDS: ActionCardConfig[] = [
   },
 ];
 
-const SEARCH_DEBOUNCE_MS = 300;
-
 type PricePageChromeProps = {
-  onDebouncedSearchChange: (value: string) => void;
-  searchDisabled?: boolean;
   onImportExcelClick?: () => void;
   supplierBanner?: ReactNode;
   children?: ReactNode;
@@ -44,59 +40,16 @@ function handleActionCardClick(
 }
 
 export function PricePageChrome({
-  onDebouncedSearchChange,
-  searchDisabled = false,
   onImportExcelClick,
   supplierBanner,
   children,
 }: PricePageChromeProps) {
-  const [searchInput, setSearchInput] = useState("");
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      onDebouncedSearchChange(searchInput.trim());
-    }, SEARCH_DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timeout);
-  }, [onDebouncedSearchChange, searchInput]);
-
   const showActionCards = Boolean(onImportExcelClick);
 
   return (
     <section className={styles.sectionIntro} aria-label="Precios">
       <div className={styles.sectionHeader}>
         <h1 className={styles.sectionTitle}>Precios</h1>
-        <div className={styles.headerSearchWrap}>
-          <Search
-            className={styles.headerSearchIcon}
-            strokeWidth={ICON_STROKE}
-            aria-hidden
-          />
-          <input
-            type="search"
-            className={styles.headerSearch}
-            placeholder="Buscar por código, descripción o columna indexada…"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                setSearchInput("");
-              }
-            }}
-            disabled={searchDisabled}
-            aria-label="Búsqueda en lista activa"
-          />
-          {searchInput ? (
-            <button
-              type="button"
-              className={styles.headerSearchClear}
-              onClick={() => setSearchInput("")}
-              aria-label="Limpiar búsqueda"
-            >
-              <X strokeWidth={ICON_STROKE} aria-hidden />
-            </button>
-          ) : null}
-        </div>
       </div>
 
       {showActionCards || children ? (

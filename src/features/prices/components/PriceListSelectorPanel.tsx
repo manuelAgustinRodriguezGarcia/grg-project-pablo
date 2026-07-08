@@ -28,7 +28,7 @@ export function PriceListSelectorPanel({
   const options = sortedLists.map((list) => ({
     id: list.id,
     label: list.name,
-    meta: formatPriceListMeta(list.itemCount, list.updatedAt),
+    meta: formatPriceListMeta(list.itemCount),
     badge: {
       label: list.visibleToNormalUser ? "Visible" : "No visible",
       tone: list.visibleToNormalUser ? ("visible" as const) : ("hidden" as const),

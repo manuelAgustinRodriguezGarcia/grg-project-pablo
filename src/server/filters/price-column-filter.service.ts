@@ -1,7 +1,8 @@
 import { z } from "zod";
-import type { FolderColumn } from "@/generated/prisma/client";
+import type { PriceColumn } from "@/generated/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
-import { ProductError } from "@/server/services/product.errors";
+import { Prisma as PrismaNamespace } from "@/generated/prisma/client";
+import { PriceItemError } from "@/server/services/price-item.errors";
 import type {
   ActiveFilterPill,
   ColumnFilterInput,
@@ -19,48 +20,42 @@ const columnFiltersSchema = z
   .array(columnFilterSchema)
   .max(20, "No se pueden aplicar más de 20 filtros.");
 
-export type PartitionedColumnFilters = {
+export type PartitionedPriceColumnFilters = {
   prismaFilters: ColumnFilterInput[];
   jsonTextFilters: JsonTextColumnFilter[];
+  amountContainsFilters: JsonTextColumnFilter[];
 };
 
 function formatActiveFilterLabel(displayName: string, value: string): string {
   return `${displayName}: "${value}"`;
 }
 
-function getDynamicValue(
-  dynamicData: unknown,
-  key: string,
-): unknown {
-  if (
-    typeof dynamicData !== "object" ||
-    dynamicData === null ||
-    Array.isArray(dynamicData)
-  ) {
-    return null;
-  }
-
-  return (dynamicData as Record<string, unknown>)[key] ?? null;
-}
-
 function isJsonTextDynamicFilter(
-  column: FolderColumn,
+  column: PriceColumn,
   filter: ColumnFilterInput,
 ): boolean {
   return (
     !column.isPrimaryCode &&
     !column.isDescription &&
+    !column.isPrice &&
     column.dataType === "TEXT" &&
     column.internalKey === filter.columnInternalKey
   );
+}
+
+function isAmountContainsFilter(
+  column: PriceColumn,
+  filter: ColumnFilterInput,
+): boolean {
+  return column.isPrice && filter.operator === "contains";
 }
 
 function buildDynamicDataCondition(
   columnInternalKey: string,
   operator: ColumnFilterOperator,
   value: string,
-  dataType: FolderColumn["dataType"],
-): Prisma.ProductWhereInput {
+  dataType: PriceColumn["dataType"],
+): Prisma.PriceItemWhereInput {
   if (dataType === "NUMBER" && operator === "equals") {
     const numeric = Number(value);
     if (!Number.isNaN(numeric)) {
@@ -90,7 +85,7 @@ function buildDynamicDataCondition(
   };
 }
 
-export class ColumnFilterService {
+export class PriceColumnFilterService {
   parseFilters(raw: unknown): ColumnFilterInput[] {
     if (raw === undefined || raw === null || raw === "") {
       return [];
@@ -101,13 +96,13 @@ export class ColumnFilterService {
       try {
         parsedRaw = JSON.parse(raw);
       } catch {
-        throw new ProductError("Formato de filtros inválido.", "VALIDATION_ERROR");
+        throw new PriceItemError("Formato de filtros inválido.", "VALIDATION_ERROR");
       }
     }
 
     const parsed = columnFiltersSchema.safeParse(parsedRaw);
     if (!parsed.success) {
-      throw new ProductError(
+      throw new PriceItemError(
         parsed.error.issues[0]?.message ?? "Filtros inválidos.",
         "VALIDATION_ERROR",
       );
@@ -118,7 +113,7 @@ export class ColumnFilterService {
 
   validateFiltersForColumns(
     filters: ColumnFilterInput[],
-    columns: FolderColumn[],
+    columns: PriceColumn[],
     allowedKeys: string[],
     options?: { requireFilterableColumn?: boolean },
   ): void {
@@ -127,15 +122,15 @@ export class ColumnFilterService {
 
     for (const filter of filters) {
       if (!allowedKeys.includes(filter.columnInternalKey)) {
-        throw new ProductError(
-          `La columna "${filter.columnInternalKey}" no admite filtros en esta carpeta.`,
+        throw new PriceItemError(
+          `La columna "${filter.columnInternalKey}" no admite filtros en esta lista.`,
           "VALIDATION_ERROR",
         );
       }
 
       const column = columnsByKey.get(filter.columnInternalKey);
       if (requireFilterableColumn && !column?.isFilterable) {
-        throw new ProductError(
+        throw new PriceItemError(
           `La columna "${column?.displayName ?? filter.columnInternalKey}" no es filtrable.`,
           "VALIDATION_ERROR",
         );
@@ -145,11 +140,12 @@ export class ColumnFilterService {
 
   partitionFilters(
     filters: ColumnFilterInput[],
-    columns: FolderColumn[],
-  ): PartitionedColumnFilters {
+    columns: PriceColumn[],
+  ): PartitionedPriceColumnFilters {
     const columnsByKey = new Map(columns.map((column) => [column.internalKey, column]));
     const prismaFilters: ColumnFilterInput[] = [];
     const jsonTextFilters: JsonTextColumnFilter[] = [];
+    const amountContainsFilters: JsonTextColumnFilter[] = [];
 
     for (const filter of filters) {
       const column = columnsByKey.get(filter.columnInternalKey);
@@ -162,22 +158,27 @@ export class ColumnFilterService {
         continue;
       }
 
+      if (isAmountContainsFilter(column, filter)) {
+        amountContainsFilters.push(filter);
+        continue;
+      }
+
       prismaFilters.push(filter);
     }
 
-    return { prismaFilters, jsonTextFilters };
+    return { prismaFilters, jsonTextFilters, amountContainsFilters };
   }
 
   buildFilterWhere(
     filters: ColumnFilterInput[],
-    columns: FolderColumn[],
-  ): Prisma.ProductWhereInput {
+    columns: PriceColumn[],
+  ): Prisma.PriceItemWhereInput {
     if (filters.length === 0) {
       return {};
     }
 
     const columnsByKey = new Map(columns.map((column) => [column.internalKey, column]));
-    const andConditions: Prisma.ProductWhereInput[] = [];
+    const andConditions: Prisma.PriceItemWhereInput[] = [];
 
     for (const filter of filters) {
       const column = columnsByKey.get(filter.columnInternalKey);
@@ -223,6 +224,21 @@ export class ColumnFilterService {
         continue;
       }
 
+      if (column.isPrice) {
+        if (filter.operator === "equals") {
+          try {
+            andConditions.push({
+              amount: {
+                equals: new PrismaNamespace.Decimal(filter.value.replace(",", ".")),
+              },
+            });
+          } catch {
+            andConditions.push({ id: { in: [] } });
+          }
+        }
+        continue;
+      }
+
       andConditions.push(
         buildDynamicDataCondition(
           filter.columnInternalKey,
@@ -233,14 +249,12 @@ export class ColumnFilterService {
       );
     }
 
-    return andConditions.length === 1
-      ? andConditions[0]!
-      : { AND: andConditions };
+    return andConditions.length === 1 ? andConditions[0]! : { AND: andConditions };
   }
 
   toActiveFilterPills(
     filters: ColumnFilterInput[],
-    columns: FolderColumn[],
+    columns: PriceColumn[],
   ): ActiveFilterPill[] {
     const columnsByKey = new Map(columns.map((column) => [column.internalKey, column]));
 
@@ -258,29 +272,6 @@ export class ColumnFilterService {
       };
     });
   }
-
-  buildGlobalFieldFilterWhere(
-    columns: FolderColumn[],
-    globalFieldKey: string,
-    value: string,
-  ): Prisma.ProductWhereInput {
-    const matchingColumns = columns.filter(
-      (column) =>
-        column.globalFieldKey === globalFieldKey && column.isGloballyFilterable,
-    );
-
-    if (matchingColumns.length === 0) {
-      return { id: { in: [] } };
-    }
-
-    return {
-      OR: matchingColumns.map((column) =>
-        buildDynamicDataCondition(column.internalKey, "contains", value, column.dataType),
-      ),
-    };
-  }
 }
 
-export const columnFilterService = new ColumnFilterService();
-
-export { getDynamicValue };
+export const priceColumnFilterService = new PriceColumnFilterService();

@@ -34,6 +34,7 @@ export async function GET(request: Request, context: RouteContext) {
       page: searchParams.get("page") ?? undefined,
       pageSize: searchParams.get("pageSize") ?? undefined,
       q: searchParams.get("q") ?? undefined,
+      filters: searchParams.get("filters") ?? undefined,
     });
 
     if (!parsed.success) {
@@ -51,6 +52,7 @@ export async function GET(request: Request, context: RouteContext) {
       page: parsed.data.page,
       pageSize: parsed.data.pageSize,
       query: parsed.data.q,
+      filters: parsed.data.filters,
     });
 
     return NextResponse.json(table);

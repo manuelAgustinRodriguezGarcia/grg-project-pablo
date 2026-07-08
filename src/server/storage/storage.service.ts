@@ -20,6 +20,10 @@ import {
 import { normalizeStoragePath, validateUpload } from "./validate";
 
 function formatStorageUploadError(message: string): string {
+  if (message.includes("Bucket not found")) {
+    return "El bucket de Storage no existe. Ejecute pnpm storage:setup para crearlo.";
+  }
+
   if (message === "Bad Request") {
     return "No se pudo guardar el archivo en Storage. Ejecute pnpm storage:setup y verifique que el Excel sea .xlsx o .xlsm.";
   }

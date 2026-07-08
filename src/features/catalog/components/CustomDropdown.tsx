@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { ICON_STROKE, Pencil, Trash2 } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 export type DropdownOptionBadge = {
@@ -30,6 +31,43 @@ type CustomDropdownProps = {
   placeholder?: string;
   preferPlaceholderWithoutOptions?: boolean;
 };
+
+function DropdownIconAction({
+  label,
+  onClick,
+  variant = "default",
+  children,
+}: {
+  label: string;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+  variant?: "default" | "danger";
+  children: ReactNode;
+}) {
+  const buttonClassName =
+    variant === "danger"
+      ? `${styles.rowActionButton} ${styles.rowActionButtonDanger}`
+      : styles.rowActionButton;
+  const tooltipClassName =
+    variant === "danger"
+      ? `${styles.dropdownOptionActionTooltip} ${styles.dropdownOptionActionTooltipDanger}`
+      : styles.dropdownOptionActionTooltip;
+
+  return (
+    <span className={styles.dropdownOptionActionWrap}>
+      <button
+        type="button"
+        className={buttonClassName}
+        aria-label={label}
+        onClick={onClick}
+      >
+        {children}
+      </button>
+      <span className={tooltipClassName} role="tooltip">
+        {label}
+      </span>
+    </span>
+  );
+}
 
 export function CustomDropdown({
   label,
@@ -219,32 +257,29 @@ export function CustomDropdown({
                 {hasOptionActions ? (
                   <span className={styles.dropdownOptionActions}>
                     {onOptionEdit ? (
-                      <button
-                        type="button"
-                        className={styles.dropdownOptionAction}
-                        aria-label={`Editar ${option.label}`}
+                      <DropdownIconAction
+                        label="Editar"
                         onClick={(event) => {
                           event.stopPropagation();
                           setIsOpen(false);
                           onOptionEdit(option.id);
                         }}
                       >
-                        Editar
-                      </button>
+                        <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+                      </DropdownIconAction>
                     ) : null}
                     {onOptionDelete ? (
-                      <button
-                        type="button"
-                        className={`${styles.dropdownOptionAction} ${styles.dropdownOptionActionDanger}`}
-                        aria-label={`Eliminar ${option.label}`}
+                      <DropdownIconAction
+                        label="Eliminar"
+                        variant="danger"
                         onClick={(event) => {
                           event.stopPropagation();
                           setIsOpen(false);
                           onOptionDelete(option.id);
                         }}
                       >
-                        Eliminar
-                      </button>
+                        <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+                      </DropdownIconAction>
                     ) : null}
                   </span>
                 ) : null}

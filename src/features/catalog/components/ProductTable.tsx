@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
-import { useDelayedFlag } from "@/shared/hooks/useDelayedFlag";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ChevronLeft, ChevronRight, File, ICON_STROKE, Pencil } from "@/shared/icons";
 import type {
@@ -15,7 +14,7 @@ import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPil
 import { FolderTableSearch } from "@/features/catalog/components/FolderTableSearch";
 import { ColumnHeaderCell } from "@/features/catalog/components/ColumnHeaderCell";
 import { ProductImagePreviewModal } from "./ProductImagePreviewModal";
-import { getProductTableColumns } from "@/features/catalog/utils/product-table-columns";
+import { getProductTableColumns, isImageCodeColumn } from "@/features/catalog/utils/product-table-columns";
 import { toActiveFilterPillsFromState } from "@/features/catalog/utils/column-filter-state";
 import { normalizeMultilineText } from "@/shared/text/normalize-multiline-text";
 import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
@@ -180,6 +179,8 @@ export function ProductTable({
     data ? `${data.products.length}-${data.pagination.page}` : null,
   );
 
+  const [openFilterColumnId, setOpenFilterColumnId] = useState<string | null>(null);
+
   const sortedColumns = useMemo(
     () =>
       data
@@ -188,6 +189,10 @@ export function ProductTable({
           )
         : [],
     [data],
+  );
+  const firstFilterableColumnId = useMemo(
+    () => sortedColumns.find((column) => !isImageCodeColumn(column))?.id ?? null,
+    [sortedColumns],
   );
   const showImageColumn = useMemo(
     () => (data ? shouldShowGlobalImageColumn(data.products) : false),
@@ -210,8 +215,6 @@ export function ProductTable({
   );
 
   const activeFilterCount = activeFilterPills.length;
-
-  const showDelayedSkeleton = useDelayedFlag(isLoading && Boolean(data), 500);
 
   const showFolderSearch = Boolean(onFolderSearchChange && folderName);
   const hasActiveFilters = enableColumnFilters && activeFilterPills.length > 0;
@@ -237,7 +240,7 @@ export function ProductTable({
       </div>
     ) : null;
 
-  if ((isLoading && !data) || showDelayedSkeleton) {
+  if (isLoading && !data) {
     return (
       <section
         className={styles.tablePanel}
@@ -288,8 +291,15 @@ export function ProductTable({
       {tableToolbar}
       <div
         ref={tableWrapRef}
-        className={`${styles.tableWrap} ${data.products.length === 0 ? styles.tableWrapEmpty : ""}`}
+        className={`${styles.tableWrap} ${data.products.length === 0 ? styles.tableWrapEmpty : ""} ${isLoading ? styles.tableWrapRefreshing : ""}`}
       >
+        {isLoading ? (
+          <div
+            className={styles.tableRefreshOverlay}
+            role="status"
+            aria-label="Actualizando productos"
+          />
+        ) : null}
         {data.products.length === 0 ? (
           <div className={styles.tableEmpty} role="status">
             <File
@@ -328,6 +338,10 @@ export function ProductTable({
                       ? (filter) => onColumnFilterChange?.(column.internalKey, filter)
                       : undefined
                   }
+                  isFilterMenuOpen={openFilterColumnId === column.id}
+                  onFilterMenuOpen={() => setOpenFilterColumnId(column.id)}
+                  onFilterMenuClose={() => setOpenFilterColumnId(null)}
+                  alignFilterPopoverStart={column.id === firstFilterableColumnId}
                   isAdmin={isAdmin}
                   onColumnsChanged={onColumnsChanged}
                 />
@@ -409,10 +423,16 @@ export function ProductTable({
                       product.fieldAnnotationsByColumnKey?.[column.internalKey];
                     const annotationThumb =
                       fieldAnnotation?.thumbnailUrl ?? fieldAnnotation?.fullUrl ?? null;
+                    const hasText = textValue !== "—";
                     const showAnnotation = hasFieldAnnotation(fieldAnnotation);
+                    const hasColumnImages = previewImages.length > 0;
+                    const hasAnnotationImage = Boolean(annotationThumb);
+                    const hasAnyImage = hasColumnImages || hasAnnotationImage;
+                    const hasVisibleContent =
+                      hasText || hasAnyImage || Boolean(fieldAnnotation?.helpText);
                     const isHiddenColumn = isAdmin && !column.visibleToNormalUser;
                     const mediaClass =
-                      previewImages.length > 0 || showAnnotation
+                      hasAnyImage || showAnnotation
                         ? ` ${styles.tableCellWithMedia}`
                         : "";
                     const hiddenClass = isHiddenColumn
@@ -424,7 +444,7 @@ export function ProductTable({
                         key={`${product.id}-${column.id}`}
                         className={`${styles.tableDataCell}${mediaClass}${hiddenClass}`}
                       >
-                        {previewImages.length > 0 ? (
+                        {hasColumnImages ? (
                           <div className={styles.tableCellImages}>
                             {previewImages.map(({ image, url }) => (
                               <button
@@ -460,47 +480,48 @@ export function ProductTable({
                             ))}
                           </div>
                         ) : null}
-                        {textValue !== "—" || previewImages.length === 0 ? (
+                        {hasAnnotationImage ? (
+                          <div className={styles.tableCellImages}>
+                            <button
+                              type="button"
+                              className={styles.tableCellThumbButton}
+                              onClick={() =>
+                                setPreviewImage({
+                                  url:
+                                    fieldAnnotation?.fullUrl ??
+                                    fieldAnnotation?.thumbnailUrl ??
+                                    annotationThumb,
+                                  alt: buildProductImageAlt(
+                                    product.primaryCode,
+                                    product.description,
+                                    column.displayName,
+                                  ),
+                                  productId: product.id,
+                                  imageId: "",
+                                })
+                              }
+                              aria-label={`Ver imagen de ayuda de ${column.displayName}`}
+                            >
+                              <img
+                                src={annotationThumb}
+                                alt=""
+                                className={styles.tableCellThumb}
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            </button>
+                          </div>
+                        ) : null}
+                        {hasText ? (
                           <span className={styles.tableCellText}>{textValue}</span>
                         ) : null}
-                        {showAnnotation ? (
-                          <div className={styles.tableCellAnnotation}>
-                            {annotationThumb ? (
-                              <button
-                                type="button"
-                                className={styles.tableCellAnnotationThumbButton}
-                                onClick={() =>
-                                  setPreviewImage({
-                                    url:
-                                      fieldAnnotation?.fullUrl ??
-                                      fieldAnnotation?.thumbnailUrl ??
-                                      annotationThumb,
-                                    alt: buildProductImageAlt(
-                                      product.primaryCode,
-                                      product.description,
-                                      column.displayName,
-                                    ),
-                                    productId: product.id,
-                                    imageId: "",
-                                  })
-                                }
-                                aria-label={`Ver imagen de ayuda de ${column.displayName}`}
-                              >
-                                <img
-                                  src={annotationThumb}
-                                  alt=""
-                                  className={styles.tableCellAnnotationThumb}
-                                  loading="lazy"
-                                  decoding="async"
-                                />
-                              </button>
-                            ) : null}
-                            {fieldAnnotation?.helpText ? (
-                              <p className={styles.tableCellAnnotationText}>
-                                {fieldAnnotation.helpText}
-                              </p>
-                            ) : null}
-                          </div>
+                        {!hasVisibleContent ? (
+                          <span className={styles.tableCellText}>—</span>
+                        ) : null}
+                        {fieldAnnotation?.helpText ? (
+                          <p className={styles.tableCellAnnotationText}>
+                            {fieldAnnotation.helpText}
+                          </p>
                         ) : null}
                       </td>
                     );

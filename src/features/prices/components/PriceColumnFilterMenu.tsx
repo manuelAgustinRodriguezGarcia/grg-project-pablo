@@ -11,15 +11,13 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { Eye, EyeOff, ICON_STROKE, Pencil, X } from "@/shared/icons";
-import { ColumnEditModal } from "@/features/catalog/components/ColumnEditModal";
-import { setColumnVisibilityAction } from "@/features/catalog/actions/column.actions";
-import type { ColumnListItem } from "@/features/catalog/types/column.types";
+import { Eye, EyeOff, ICON_STROKE, X } from "@/shared/icons";
+import type { PriceColumnListItem } from "@/features/prices/types/price-column.types";
 import type {
   ColumnFilterInput,
   ColumnFilterOperator,
 } from "@/server/filters/column-filter.types";
-import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
+import filterStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 const FILTER_DEBOUNCE_MS = 2500;
 const POPOVER_WIDTH_PX = 224;
@@ -28,21 +26,21 @@ const POPOVER_START_OFFSET_PX = 8;
 const VIEWPORT_PADDING_PX = 8;
 const POPOVER_Z_INDEX = 1100;
 
-type ColumnFilterMenuProps = {
-  column: ColumnListItem;
+type PriceColumnFilterMenuProps = {
+  column: PriceColumnListItem;
+  priceListId: string;
   activeFilter?: ColumnFilterInput;
   onFilterChange?: (filter: ColumnFilterInput | null) => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   anchorRef: RefObject<HTMLTableCellElement | null>;
   alignPopover?: "center" | "start";
-  mode?: "filter" | "visibility-only";
   isAdmin?: boolean;
   onColumnsChanged?: () => void;
 };
 
-function defaultOperator(column: ColumnListItem): ColumnFilterOperator {
-  return column.dataType === "NUMBER" ? "equals" : "contains";
+function defaultOperator(column: PriceColumnListItem): ColumnFilterOperator {
+  return column.dataType === "NUMBER" || column.isPrice ? "equals" : "contains";
 }
 
 function formatColumnFilterPlaceholder(displayName: string): string {
@@ -123,25 +121,23 @@ function getPopoverPosition(
   };
 }
 
-export function ColumnFilterMenu({
+export function PriceColumnFilterMenu({
   column,
+  priceListId,
   activeFilter,
   onFilterChange,
   isOpen,
   onOpenChange,
   anchorRef,
   alignPopover = "center",
-  mode = "filter",
   isAdmin = false,
   onColumnsChanged,
-}: ColumnFilterMenuProps) {
-  const isVisibilityOnly = mode === "visibility-only";
+}: PriceColumnFilterMenuProps) {
   const menuId = useId();
   const popoverRef = useRef<HTMLDivElement>(null);
   const debounceTimeoutRef = useRef<number | null>(null);
   const wasOpenRef = useRef(false);
   const externalClearRef = useRef(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({
     visibility: "hidden",
@@ -183,13 +179,7 @@ export function ColumnFilterMenu({
     }
 
     onFilterChange?.(nextFilter);
-  }, [
-    activeFilter,
-    column,
-    draftOperator,
-    draftValue,
-    onFilterChange,
-  ]);
+  }, [activeFilter, column, draftOperator, draftValue, onFilterChange]);
 
   const clearDebounce = useCallback(() => {
     if (debounceTimeoutRef.current !== null) {
@@ -265,10 +255,6 @@ export function ColumnFilterMenu({
   }, [anchorRef, closeMenu, isOpen, updatePopoverPosition]);
 
   useEffect(() => {
-    if (isVisibilityOnly) {
-      return;
-    }
-
     const nextFilter = buildFilterFromDraft(column.internalKey, draftOperator, draftValue);
 
     if (!isOpen && filtersAreEqual(activeFilter, nextFilter)) {
@@ -288,22 +274,17 @@ export function ColumnFilterMenu({
     draftOperator,
     draftValue,
     isOpen,
-    isVisibilityOnly,
     scheduleDebouncedCommit,
   ]);
 
   useEffect(() => {
-    if (isVisibilityOnly) {
-      return;
-    }
-
     if (wasOpenRef.current && !isOpen) {
       clearDebounce();
       commitFilter();
     }
 
     wasOpenRef.current = isOpen;
-  }, [clearDebounce, commitFilter, isOpen, isVisibilityOnly]);
+  }, [clearDebounce, commitFilter, isOpen]);
 
   useEffect(
     () => () => {
@@ -312,11 +293,6 @@ export function ColumnFilterMenu({
     [clearDebounce],
   );
 
-  const handleOpenEdit = useCallback(() => {
-    closeMenu();
-    setIsEditModalOpen(true);
-  }, [closeMenu]);
-
   const handleToggleVisibility = useCallback(async () => {
     if (isTogglingVisibility) {
       return;
@@ -324,54 +300,63 @@ export function ColumnFilterMenu({
 
     setIsTogglingVisibility(true);
     try {
-      const result = await setColumnVisibilityAction({
-        id: column.id,
-        visible: !column.visibleToNormalUser,
+      const response = await fetch(`/api/admin/price-lists/${priceListId}/columns`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: column.id,
+          visibleToNormalUser: !column.visibleToNormalUser,
+        }),
       });
 
-      if (result.success) {
+      if (response.ok) {
         closeMenu();
         onColumnsChanged?.();
       }
     } finally {
       setIsTogglingVisibility(false);
     }
-  }, [closeMenu, column.id, column.visibleToNormalUser, isTogglingVisibility, onColumnsChanged]);
+  }, [
+    closeMenu,
+    column.id,
+    column.visibleToNormalUser,
+    isTogglingVisibility,
+    onColumnsChanged,
+    priceListId,
+  ]);
+
+  const showNumberOperators = column.dataType === "NUMBER" || column.isPrice;
 
   const popover =
     isOpen && typeof document !== "undefined" ? (
       <div
         ref={popoverRef}
         id={menuId}
-        className={styles.columnFilterPopover}
+        className={filterStyles.columnFilterPopover}
         style={popoverStyle}
         role="dialog"
-        aria-label={
-          isVisibilityOnly
-            ? `Opciones de ${column.displayName}`
-            : `Filtro de ${column.displayName}`
-        }
+        aria-label={`Filtro de ${column.displayName}`}
       >
-        <div className={styles.columnFilterPopoverHeader}>
-          <span className={styles.columnFilterPopoverTitle}>
-            {isVisibilityOnly ? "Opciones de columna" : "Filtrar columna"}
-          </span>
+        <div className={filterStyles.columnFilterPopoverHeader}>
+          <span className={filterStyles.columnFilterPopoverTitle}>Filtrar columna</span>
           <button
             type="button"
-            className={styles.columnFilterPopoverClose}
-            aria-label={isVisibilityOnly ? "Cerrar menú" : "Cerrar filtro"}
+            className={filterStyles.columnFilterPopoverClose}
+            aria-label="Cerrar filtro"
             onClick={closeMenu}
           >
             <X strokeWidth={ICON_STROKE} aria-hidden />
           </button>
         </div>
 
-        {!isVisibilityOnly && column.dataType === "NUMBER" ? (
-          <div className={styles.columnFilterOperatorRow}>
+        {showNumberOperators ? (
+          <div className={filterStyles.columnFilterOperatorRow}>
             <button
               type="button"
-              className={`${styles.columnFilterOperatorButton} ${
-                draftOperator === "contains" ? styles.columnFilterOperatorButtonActive : ""
+              className={`${filterStyles.columnFilterOperatorButton} ${
+                draftOperator === "contains"
+                  ? filterStyles.columnFilterOperatorButtonActive
+                  : ""
               }`}
               onClick={() => setDraftOperator("contains")}
             >
@@ -379,8 +364,10 @@ export function ColumnFilterMenu({
             </button>
             <button
               type="button"
-              className={`${styles.columnFilterOperatorButton} ${
-                draftOperator === "equals" ? styles.columnFilterOperatorButtonActive : ""
+              className={`${filterStyles.columnFilterOperatorButton} ${
+                draftOperator === "equals"
+                  ? filterStyles.columnFilterOperatorButtonActive
+                  : ""
               }`}
               onClick={() => setDraftOperator("equals")}
             >
@@ -389,40 +376,28 @@ export function ColumnFilterMenu({
           </div>
         ) : null}
 
-        {!isVisibilityOnly ? (
-          <input
-            type="text"
-            className={styles.columnFilterInput}
-            value={draftValue}
-            onChange={(event) => setDraftValue(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                clearDebounce();
-                commitFilter();
-              }
-            }}
-            placeholder={formatColumnFilterPlaceholder(column.displayName)}
-            autoFocus
-            aria-label={`Valor de filtro para ${column.displayName}`}
-          />
-        ) : null}
+        <input
+          type="text"
+          className={filterStyles.columnFilterInput}
+          value={draftValue}
+          onChange={(event) => setDraftValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              clearDebounce();
+              commitFilter();
+            }
+          }}
+          placeholder={formatColumnFilterPlaceholder(column.displayName)}
+          autoFocus
+          aria-label={`Valor de filtro para ${column.displayName}`}
+        />
 
-        {isVisibilityOnly || isAdmin ? (
-          <div className={styles.columnMenuActions}>
-            {!isVisibilityOnly && isAdmin ? (
-              <button
-                type="button"
-                className={styles.columnMenuAction}
-                onClick={handleOpenEdit}
-              >
-                <Pencil strokeWidth={ICON_STROKE} aria-hidden />
-                <span>Editar columna</span>
-              </button>
-            ) : null}
+        {isAdmin ? (
+          <div className={filterStyles.columnMenuActions}>
             <button
               type="button"
-              className={styles.columnMenuAction}
+              className={filterStyles.columnMenuAction}
               onClick={() => void handleToggleVisibility()}
               disabled={isTogglingVisibility}
             >
@@ -440,19 +415,5 @@ export function ColumnFilterMenu({
       </div>
     ) : null;
 
-  return (
-    <>
-      {popover ? createPortal(popover, document.body) : null}
-      {!isVisibilityOnly && isEditModalOpen ? (
-        <ColumnEditModal
-          column={column}
-          onClose={() => setIsEditModalOpen(false)}
-          onSaved={() => {
-            setIsEditModalOpen(false);
-            onColumnsChanged?.();
-          }}
-        />
-      ) : null}
-    </>
-  );
+  return popover ? createPortal(popover, document.body) : null;
 }

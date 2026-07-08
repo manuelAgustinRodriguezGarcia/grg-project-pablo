@@ -10,3 +10,10 @@ export function formatColumnTitleForDisplay(value: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+export function formatProductFormColumnTitle(
+  columnIndex: number,
+  displayName: string,
+): string {
+  return `COL ${columnIndex}. - ${formatColumnTitleForDisplay(displayName)}`;
+}

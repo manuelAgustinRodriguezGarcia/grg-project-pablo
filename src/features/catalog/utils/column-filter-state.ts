@@ -1,21 +1,10 @@
 import type {
   ActiveFilterPill,
   ColumnFilterInput,
-  ColumnFilterOperator,
 } from "@/server/filters/column-filter.types";
-import type { ColumnListItem } from "@/features/catalog/types/column.types";
 
-function operatorLabel(operator: ColumnFilterOperator): string {
-  switch (operator) {
-    case "contains":
-      return "contiene";
-    case "equals":
-      return "=";
-    default: {
-      const exhaustive: never = operator;
-      return exhaustive;
-    }
-  }
+function formatActiveFilterLabel(displayName: string, value: string): string {
+  return `${displayName}: "${value}"`;
 }
 
 export function upsertColumnFilter(
@@ -40,7 +29,7 @@ export function serializeColumnFilters(filters: ColumnFilterInput[]): string {
 
 export function toActiveFilterPillsFromState(
   filters: ColumnFilterInput[],
-  columns: Pick<ColumnListItem, "internalKey" | "displayName">[],
+  columns: Array<{ internalKey: string; displayName: string }>,
 ): ActiveFilterPill[] {
   const columnsByKey = new Map(columns.map((column) => [column.internalKey, column]));
 
@@ -54,7 +43,7 @@ export function toActiveFilterPillsFromState(
       columnDisplayName: displayName,
       operator: filter.operator,
       value: filter.value,
-      label: `${displayName} ${operatorLabel(filter.operator)} "${filter.value}"`,
+      label: formatActiveFilterLabel(displayName, filter.value),
     };
   });
 }

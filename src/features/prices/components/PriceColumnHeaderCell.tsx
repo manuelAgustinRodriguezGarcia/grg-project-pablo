@@ -1,38 +1,103 @@
 "use client";
 
+import { useRef } from "react";
+import { PriceColumnFilterMenu } from "@/features/prices/components/PriceColumnFilterMenu";
+import type { PriceColumnListItem } from "@/features/prices/types/price-column.types";
 import type { PriceItemTableColumn } from "@/features/prices/types/price-item-table.types";
+import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
+import filterStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
 type PriceColumnHeaderCellProps = {
   column: PriceItemTableColumn;
+  columnDetail?: PriceColumnListItem;
+  priceListId: string;
+  headerLines: string[];
+  enableColumnFilters?: boolean;
+  activeFilter?: ColumnFilterInput;
+  onFilterChange?: (filter: ColumnFilterInput | null) => void;
+  isFilterMenuOpen?: boolean;
+  onFilterMenuOpen?: () => void;
+  onFilterMenuClose?: () => void;
+  alignFilterPopoverStart?: boolean;
+  isAdmin?: boolean;
+  onColumnsChanged?: () => void;
 };
 
-function formatHeaderLines(displayName: string): string[] {
-  const normalized = displayName.replace(/\r\n/g, "\n").trim();
-  if (normalized.includes("\n")) {
-    return normalized
-      .split("\n")
-      .map((part) => part.trim())
-      .filter(Boolean);
-  }
+export function PriceColumnHeaderCell({
+  column,
+  columnDetail,
+  priceListId,
+  headerLines,
+  enableColumnFilters = false,
+  activeFilter,
+  onFilterChange,
+  isFilterMenuOpen = false,
+  onFilterMenuOpen,
+  onFilterMenuClose,
+  alignFilterPopoverStart = false,
+  isAdmin = false,
+  onColumnsChanged,
+}: PriceColumnHeaderCellProps) {
+  const headerRef = useRef<HTMLTableCellElement>(null);
+  const showFilterMenu = enableColumnFilters && Boolean(onFilterChange) && Boolean(columnDetail);
+  const hasActiveFilter = Boolean(activeFilter?.value);
+  const isHiddenForNormalUser = isAdmin && !column.visibleToNormalUser;
 
-  return [normalized];
-}
-
-export function PriceColumnHeaderCell({ column }: PriceColumnHeaderCellProps) {
-  const headerLines = formatHeaderLines(column.displayName);
-
-  const thClassName = column.isPrice ? styles.priceHeaderPrice : undefined;
+  const thClassName = [
+    column.isPrice ? styles.priceHeaderPrice : undefined,
+    showFilterMenu ? filterStyles.tableHeaderFilterable : undefined,
+    hasActiveFilter ? filterStyles.tableHeaderFiltered : undefined,
+    isFilterMenuOpen ? filterStyles.tableHeaderFilterOpen : undefined,
+    isHiddenForNormalUser ? filterStyles.tableColumnHidden : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <th scope="col" className={thClassName}>
-      <span className={styles.tableHeaderLabel}>
-        {headerLines.map((line, index) => (
-          <span key={`${column.id}-${index}`} className={styles.tableHeaderLine}>
-            {line}
-          </span>
-        ))}
-      </span>
+    <th
+      ref={headerRef}
+      scope="col"
+      className={thClassName || undefined}
+      onDoubleClick={(event) => {
+        if (!showFilterMenu) {
+          return;
+        }
+
+        event.preventDefault();
+        onFilterMenuOpen?.();
+      }}
+    >
+      <div className={filterStyles.tableHeaderContent}>
+        <span className={styles.tableHeaderLabel}>
+          {headerLines.map((line, index) => (
+            <span key={`${column.id}-${index}`} className={styles.tableHeaderLine}>
+              {line}
+            </span>
+          ))}
+        </span>
+        {showFilterMenu && columnDetail ? (
+          <PriceColumnFilterMenu
+            column={columnDetail}
+            priceListId={priceListId}
+            activeFilter={activeFilter}
+            onFilterChange={onFilterChange}
+            isOpen={isFilterMenuOpen}
+            anchorRef={headerRef}
+            onOpenChange={(open) => {
+              if (open) {
+                onFilterMenuOpen?.();
+                return;
+              }
+
+              onFilterMenuClose?.();
+            }}
+            alignPopover={alignFilterPopoverStart ? "start" : "center"}
+            isAdmin={isAdmin}
+            onColumnsChanged={onColumnsChanged}
+          />
+        ) : null}
+      </div>
     </th>
   );
 }

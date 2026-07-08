@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { columnFiltersQuerySchema } from "@/features/catalog/schemas/search.schemas";
 
 const isoDateOnlySchema = z
   .string()
@@ -31,6 +32,7 @@ export const priceItemListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
   q: z.string().optional(),
+  filters: columnFiltersQuerySchema,
 });
 
 export const createPriceItemSchema = z.object({

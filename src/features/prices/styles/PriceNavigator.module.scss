@@ -165,9 +165,7 @@ $price-shadow:
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
-  flex-wrap: wrap;
 }
 
 .sectionTitle {
@@ -177,90 +175,6 @@ $price-shadow:
   font-weight: 700;
   line-height: 1.2;
   color: $navy;
-}
-
-.headerSearchWrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: 1;
-  max-width: 40rem;
-  min-width: 12rem;
-  margin-left: auto;
-}
-
-.headerSearchIcon {
-  position: absolute;
-  left: 1rem;
-  width: 1rem;
-  height: 1rem;
-  color: $blue;
-  pointer-events: none;
-}
-
-.headerSearch {
-  width: 100%;
-  min-height: 2.5rem;
-  padding: 0.55rem 2.25rem 0.55rem 2.5rem;
-  border: 1px solid rgba($blue, 0.4);
-  border-radius: 999px;
-  background: $white;
-  font-family: $font-sans;
-  font-size: 0.88rem;
-  line-height: 1.4;
-  color: $navy;
-
-  &::placeholder {
-    color: rgba($navy, 0.45);
-  }
-
-  &:focus,
-  &:focus-visible {
-    outline: none;
-    border-color: rgba($blue, 0.55);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  &::-webkit-search-cancel-button {
-    -webkit-appearance: none;
-    appearance: none;
-    display: none;
-  }
-
-  &::-webkit-search-decoration {
-    -webkit-appearance: none;
-    appearance: none;
-  }
-
-  &::-ms-clear {
-    display: none;
-    width: 0;
-    height: 0;
-  }
-}
-
-.headerSearchClear {
-  position: absolute;
-  right: 0.65rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: rgba($navy, 0.5);
-  cursor: pointer;
-
-  &:hover {
-    background: rgba($navy, 0.06);
-    color: $navy;
-  }
 }
 
 .toolbar {
@@ -444,6 +358,104 @@ $price-shadow:
   color: #9b2c2c;
 }
 
+.tableToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid rgba($green, 0.08);
+}
+
+.listSearchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 22rem;
+  max-width: 100%;
+}
+
+.listSearchIcon {
+  position: absolute;
+  left: 1rem;
+  width: 1rem;
+  height: 1rem;
+  color: $green;
+  pointer-events: none;
+}
+
+.listSearch {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem 0.55rem 2.5rem;
+  border: 1.5px solid rgba($green, 0.45);
+  border-radius: 999px;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: $navy;
+
+  &::placeholder {
+    color: rgba($navy, 0.45);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    border-color: rgba($green, 0.65);
+    box-shadow: 0 0 0 3px rgba($green, 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+
+  &::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  &::-ms-clear {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+.listSearchWithClear {
+  padding-right: 2.25rem;
+}
+
+.listSearchClear {
+  position: absolute;
+  right: 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba($navy, 0.55);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($navy, 0.06);
+    color: $navy;
+  }
+}
+
 .tablePanel {
   display: flex;
   flex: 1;
@@ -474,6 +486,7 @@ $price-shadow:
 
 .tableWrap {
   --header-scroll-progress: 0;
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -525,8 +538,8 @@ $price-shadow:
 }
 
 .priceTable {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   font-family: $font-sans;
@@ -541,6 +554,8 @@ $price-shadow:
     border-right: 1px solid $ledger-line;
     text-align: left;
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     &:last-child {
       border-right: none;
@@ -801,6 +816,31 @@ $price-shadow:
   }
 }
 
+.colPrimaryCode {
+  width: 9rem;
+}
+
+.colDescription {
+  width: 14rem;
+}
+
+.colDynamic {
+  width: 11rem;
+}
+
+.colPrice {
+  width: 7.5rem;
+}
+
+.colActions {
+  width: 6.75rem;
+}
+
+.descriptionCell {
+  white-space: normal;
+  word-break: break-word;
+}
+
 .actionsColumn {
   width: 6.75rem;
   text-align: center;
@@ -850,14 +890,6 @@ $price-shadow:
   }
 }
 
-@media (max-width: 1100px) {
-  .headerSearchWrap {
-    flex-basis: 100%;
-    max-width: none;
-    margin-left: 0;
-  }
-}
-
 @media (max-width: 768px) {
   .page {
     padding: 0.65rem;
@@ -865,6 +897,10 @@ $price-shadow:
 
   .body {
     overflow: auto;
+  }
+
+  .listSearchWrap {
+    width: 100%;
   }
 
   .metaChipUpdated {

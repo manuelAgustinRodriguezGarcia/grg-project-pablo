@@ -34,7 +34,7 @@ export function buildIndexedTextForMappedPriceItem(
   }
 
   for (const column of columns) {
-    if (!column.isSearchable) {
+    if (column.isPrimaryCode || column.isDescription || column.isPrice) {
       continue;
     }
 
