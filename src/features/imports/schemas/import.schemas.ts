@@ -24,6 +24,8 @@ export const importConfigSchema = z
     descriptionColumnKey: z.string().min(1).optional(),
     useGeneratedPrimaryCodes: z.boolean().optional(),
     skipImageZipValidation: z.boolean().optional(),
+    expectedPriceListId: z.string().min(1).optional(),
+    expectedFolderId: z.string().min(1).optional(),
   })
   .superRefine((data, context) => {
     if (data.skipImageZipValidation) {

@@ -166,7 +166,10 @@ export type SetImportDestinationInput =
       supplierDate: string;
     };
 
-export type SetImportConfigInput = ImportJobConfig;
+export type SetImportConfigInput = ImportJobConfig & {
+  expectedPriceListId?: string;
+  expectedFolderId?: string;
+};
 
 export type ApplyImportInput = {
   actionType: ImportActionType;
@@ -452,6 +455,7 @@ export class CatalogImportService {
     }
 
     assertCanConfigureImport(job);
+    this.assertImportDestinationMatches(job, input);
 
     const previousStatus = job.status;
     const existingConfig = (job.config as ImportJobConfig | null) ?? {};
@@ -799,6 +803,40 @@ export class CatalogImportService {
     }
   }
 
+  private assertImportDestinationMatches(
+    job: NonNullable<Awaited<ReturnType<typeof importJobRepository.findByIdWithRelations>>>,
+    input: SetImportConfigInput,
+  ): void {
+    if (job.destinationType === "PRICE_LIST") {
+      if (!input.expectedPriceListId) {
+        throw new ImportError(
+          "Debe confirmar la lista de precios destino.",
+          "VALIDATION_ERROR",
+        );
+      }
+
+      if (job.priceListId !== input.expectedPriceListId) {
+        throw new ImportError(
+          "La lista de precios destino no coincide. Volvé al paso Destino y confirmá de nuevo.",
+          "VALIDATION_ERROR",
+        );
+      }
+
+      return;
+    }
+
+    if (!input.expectedFolderId) {
+      throw new ImportError("Debe confirmar la carpeta destino.", "VALIDATION_ERROR");
+    }
+
+    if (job.folderId !== input.expectedFolderId) {
+      throw new ImportError(
+        "La carpeta destino no coincide. Volvé al paso Destino y confirmá de nuevo.",
+        "VALIDATION_ERROR",
+      );
+    }
+  }
+
   private resolveMappedFolderColumnKey(
     header: DetectedHeader,
     columns: Awaited<ReturnType<typeof columnRepository.findByFolderIdOrdered>>,
@@ -833,7 +871,12 @@ export class CatalogImportService {
     folderId: string,
     sheet: ParsedSheet,
     config: ImportJobConfig,
+    options: { persist: boolean; replaceSchema?: boolean } = { persist: true },
   ) {
+    if (options.persist && options.replaceSchema) {
+      await columnRepository.deleteByFolder(folderId);
+    }
+
     let columns = await columnRepository.findByFolderIdOrdered(folderId);
     const activeHeaders = sheet.headers.filter((header) => {
       return this.resolveMappedFolderColumnKey(header, columns, config) !== null;
@@ -879,12 +922,19 @@ export class CatalogImportService {
       }
 
       if (columnsToCreate.length > 0) {
-        await columnRepository.createMany(columnsToCreate);
-        columns = await columnRepository.findByFolderIdOrdered(folderId);
+        if (options.persist) {
+          await columnRepository.createMany(columnsToCreate);
+          columns = await columnRepository.findByFolderIdOrdered(folderId);
+        } else {
+          columns = [
+            ...columns,
+            ...columnsToCreate.map((column) => this.toPreviewFolderColumn(column)),
+          ];
+        }
       }
 
       if (config.useGeneratedPrimaryCodes) {
-        columns = await this.syncGeneratedPrimaryCodeColumn(folderId, columns);
+        columns = await this.syncGeneratedPrimaryCodeColumn(folderId, columns, options.persist);
       }
 
       return columns;
@@ -932,8 +982,15 @@ export class CatalogImportService {
     }
 
     if (columnsToCreate.length > 0) {
-      await columnRepository.createMany(columnsToCreate);
-      columns = await columnRepository.findByFolderIdOrdered(folderId);
+      if (options.persist) {
+        await columnRepository.createMany(columnsToCreate);
+        columns = await columnRepository.findByFolderIdOrdered(folderId);
+      } else {
+        columns = [
+          ...columns,
+          ...columnsToCreate.map((column) => this.toPreviewFolderColumn(column)),
+        ];
+      }
     }
 
     if (config.primaryCodeColumnKey || config.descriptionColumnKey) {
@@ -947,27 +1004,78 @@ export class CatalogImportService {
           column.isPrimaryCode !== nextPrimary ||
           column.isDescription !== nextDescription
         ) {
-          await columnRepository.update(column.id, {
-            isPrimaryCode: nextPrimary,
-            isDescription: nextDescription,
-            isSearchable: nextPrimary || nextDescription || column.isSearchable,
-          });
+          if (options.persist) {
+            await columnRepository.update(column.id, {
+              isPrimaryCode: nextPrimary,
+              isDescription: nextDescription,
+              isSearchable: nextPrimary || nextDescription || column.isSearchable,
+            });
+          } else {
+            column.isPrimaryCode = nextPrimary;
+            column.isDescription = nextDescription;
+            column.isSearchable = nextPrimary || nextDescription || column.isSearchable;
+          }
         }
       }
 
-      columns = await columnRepository.findByFolderIdOrdered(folderId);
+      if (options.persist) {
+        columns = await columnRepository.findByFolderIdOrdered(folderId);
+      }
     }
 
     if (config.useGeneratedPrimaryCodes) {
-      columns = await this.syncGeneratedPrimaryCodeColumn(folderId, columns);
+      columns = await this.syncGeneratedPrimaryCodeColumn(folderId, columns, options.persist);
     }
 
     return columns;
   }
 
+  private toPreviewFolderColumn(
+    data: Parameters<typeof columnRepository.create>[0],
+  ): Awaited<ReturnType<typeof columnRepository.findByFolderIdOrdered>>[number] {
+    const now = new Date(0);
+
+    return {
+      id: `preview:${data.internalKey}`,
+      folderId: data.folderId,
+      originalName: data.originalName,
+      displayName: data.displayName,
+      internalKey: data.internalKey,
+      dataType: data.dataType ?? "UNKNOWN",
+      order: data.order ?? 0,
+      visibleToNormalUser: data.visibleToNormalUser ?? true,
+      isSearchable: data.isSearchable ?? false,
+      isGloballySearchable: data.isGloballySearchable ?? false,
+      isFilterable: data.isFilterable ?? false,
+      isGloballyFilterable: data.isGloballyFilterable ?? false,
+      isAdminEditable: data.isAdminEditable ?? true,
+      isPrimaryCode: data.isPrimaryCode ?? false,
+      isEquivalence: data.isEquivalence ?? false,
+      isDescription: data.isDescription ?? false,
+      isImageCode: data.isImageCode ?? false,
+      isRequired: data.isRequired ?? false,
+      isReadOnly: data.isReadOnly ?? false,
+      width: data.width ?? null,
+      format: data.format ?? null,
+      unit: data.unit ?? null,
+      label: data.label ?? null,
+      globalFieldKey: data.globalFieldKey ?? null,
+      helpText: data.helpText ?? null,
+      helpImageAltText: data.helpImageAltText ?? null,
+      helpImagePath: data.helpImagePath ?? null,
+      helpImageThumbnailPath: data.helpImageThumbnailPath ?? null,
+      helpImageMimeType: data.helpImageMimeType ?? null,
+      helpImageSizeBytes: data.helpImageSizeBytes ?? null,
+      helpImageOriginalName: data.helpImageOriginalName ?? null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   private async syncGeneratedPrimaryCodeColumn(
     folderId: string,
     columns: Awaited<ReturnType<typeof columnRepository.findByFolderIdOrdered>>,
+    persist = true,
   ) {
     const hasGeneratedColumn = columns.some(
       (column) => column.internalKey === GENERATED_PRIMARY_CODE_COLUMN_KEY,
@@ -979,40 +1087,73 @@ export class CatalogImportService {
           continue;
         }
 
-        await columnRepository.update(column.id, {
-          isPrimaryCode: false,
-          isSearchable: column.isDescription || column.isSearchable,
-        });
+        if (persist) {
+          await columnRepository.update(column.id, {
+            isPrimaryCode: false,
+            isSearchable: column.isDescription || column.isSearchable,
+          });
+        } else {
+          column.isPrimaryCode = false;
+          column.isSearchable = column.isDescription || column.isSearchable;
+        }
       }
 
-      await columnRepository.create({
-        folderId,
-        originalName: GENERATED_PRIMARY_CODE_DISPLAY_NAME,
-        displayName: GENERATED_PRIMARY_CODE_DISPLAY_NAME,
-        internalKey: GENERATED_PRIMARY_CODE_COLUMN_KEY,
-        dataType: "TEXT",
-        order: columns.length,
-        isPrimaryCode: true,
-        isDescription: false,
-        isImageCode: false,
-        isSearchable: true,
-        isFilterable: false,
-      });
-      columns = await columnRepository.findByFolderIdOrdered(folderId);
+      if (persist) {
+        await columnRepository.create({
+          folderId,
+          originalName: GENERATED_PRIMARY_CODE_DISPLAY_NAME,
+          displayName: GENERATED_PRIMARY_CODE_DISPLAY_NAME,
+          internalKey: GENERATED_PRIMARY_CODE_COLUMN_KEY,
+          dataType: "TEXT",
+          order: columns.length,
+          isPrimaryCode: true,
+          isDescription: false,
+          isImageCode: false,
+          isSearchable: true,
+          isFilterable: false,
+        });
+        columns = await columnRepository.findByFolderIdOrdered(folderId);
+      } else {
+        columns = [
+          ...columns,
+          this.toPreviewFolderColumn({
+            folderId,
+            originalName: GENERATED_PRIMARY_CODE_DISPLAY_NAME,
+            displayName: GENERATED_PRIMARY_CODE_DISPLAY_NAME,
+            internalKey: GENERATED_PRIMARY_CODE_COLUMN_KEY,
+            dataType: "TEXT",
+            order: columns.length,
+            isPrimaryCode: true,
+            isDescription: false,
+            isImageCode: false,
+            isSearchable: true,
+            isFilterable: false,
+          }),
+        ];
+      }
     }
 
     for (const column of columns) {
       const nextPrimary = column.internalKey === GENERATED_PRIMARY_CODE_COLUMN_KEY;
 
       if (column.isPrimaryCode !== nextPrimary) {
-        await columnRepository.update(column.id, {
-          isPrimaryCode: nextPrimary,
-          isSearchable: nextPrimary || column.isDescription || column.isSearchable,
-        });
+        if (persist) {
+          await columnRepository.update(column.id, {
+            isPrimaryCode: nextPrimary,
+            isSearchable: nextPrimary || column.isDescription || column.isSearchable,
+          });
+        } else {
+          column.isPrimaryCode = nextPrimary;
+          column.isSearchable = nextPrimary || column.isDescription || column.isSearchable;
+        }
       }
     }
 
-    return columnRepository.findByFolderIdOrdered(folderId);
+    if (persist) {
+      return columnRepository.findByFolderIdOrdered(folderId);
+    }
+
+    return columns;
   }
 
   async buildPreview(jobId: string, configOverride?: ImportJobConfig) {
@@ -1037,9 +1178,10 @@ export class CatalogImportService {
       throw new ImportError("Debe seleccionar carpeta destino.", "VALIDATION_ERROR");
     }
 
-    await this.pruneOrphanAutoGeneratedColumns(job.folderId, sheet);
     const columnsBeforeSync = await columnRepository.findByFolderIdOrdered(job.folderId);
-    const columns = await this.syncColumnsFromSheet(job.folderId, sheet, config);
+    const columns = await this.syncColumnsFromSheet(job.folderId, sheet, config, {
+      persist: false,
+    });
     const repeatedColumns = findRepeatedColumnNames(sheet.headers, columnsBeforeSync, config);
 
     const mappedProducts = mapSheetToProducts(sheet, columns, config);
@@ -1231,7 +1373,11 @@ export class CatalogImportService {
 
     const config = (job.config as ImportJobConfig | null) ?? {};
     const sheet = await this.loadTargetSheet(job);
-    const columns = await columnRepository.findByFolderIdOrdered(job.folderId);
+    await this.pruneOrphanAutoGeneratedColumns(job.folderId, sheet);
+    const columns = await this.syncColumnsFromSheet(job.folderId, sheet, config, {
+      persist: true,
+      replaceSchema: input.actionType === "REEMPLAZAR_LISTA",
+    });
     const mappedProducts = mapSheetToProducts(sheet, columns, config);
 
     let productsToInsert = mappedProducts;

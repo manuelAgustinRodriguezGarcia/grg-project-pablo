@@ -130,6 +130,13 @@ export class PriceColumnRepository {
     return (result._max.order ?? -1) + 1;
   }
 
+  async deleteByPriceList(priceListId: string): Promise<number> {
+    const result = await prisma.priceColumn.deleteMany({
+      where: { priceListId },
+    });
+    return result.count;
+  }
+
   async createMany(data: CreatePriceColumnData[]): Promise<number> {
     if (data.length === 0) {
       return 0;

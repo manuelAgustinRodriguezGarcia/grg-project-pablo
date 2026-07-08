@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
+import { useDelayedFlag } from "@/shared/hooks/useDelayedFlag";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ChevronLeft, ChevronRight, File, ICON_STROKE, Pencil } from "@/shared/icons";
 import type {
@@ -11,6 +12,7 @@ import type {
   ProductFieldAnnotation,
 } from "@/features/catalog/types/product-table.types";
 import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPills";
+import { FolderTableSearch } from "@/features/catalog/components/FolderTableSearch";
 import { ColumnHeaderCell } from "@/features/catalog/components/ColumnHeaderCell";
 import { ProductImagePreviewModal } from "./ProductImagePreviewModal";
 import { getProductTableColumns } from "@/features/catalog/utils/product-table-columns";
@@ -32,7 +34,12 @@ type ProductTableProps = {
   ) => void;
   onClearColumnFilters?: () => void;
   isAdmin?: boolean;
+  onColumnsChanged?: () => void;
   onEditProduct?: (product: ProductTableItem) => void;
+  folderName?: string;
+  folderSearchQuery?: string;
+  onFolderSearchChange?: (value: string) => void;
+  folderSearchResetKey?: number;
 };
 
 function formatTableHeaderLines(displayName: string): string[] {
@@ -153,7 +160,12 @@ export function ProductTable({
   onColumnFilterChange,
   onClearColumnFilters,
   isAdmin = false,
+  onColumnsChanged,
   onEditProduct,
+  folderName,
+  folderSearchQuery = "",
+  onFolderSearchChange,
+  folderSearchResetKey = 0,
 }: ProductTableProps) {
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [previewImage, setPreviewImage] = useState<{
@@ -199,15 +211,47 @@ export function ProductTable({
 
   const activeFilterCount = activeFilterPills.length;
 
-  if (isLoading && !data) {
+  const showDelayedSkeleton = useDelayedFlag(isLoading && Boolean(data), 500);
+
+  const showFolderSearch = Boolean(onFolderSearchChange && folderName);
+  const hasActiveFilters = enableColumnFilters && activeFilterPills.length > 0;
+  const tableToolbar =
+    showFolderSearch || hasActiveFilters ? (
+      <div className={styles.tableToolbar}>
+        <div className={styles.tableToolbarFilters}>
+          {hasActiveFilters ? (
+            <ActiveFilterPills
+              filters={activeFilterPills}
+              onRemove={handleRemoveFilter}
+              onClearAll={onClearColumnFilters}
+            />
+          ) : null}
+        </div>
+        {showFolderSearch ? (
+          <FolderTableSearch
+            folderName={folderName ?? ""}
+            onDebouncedSearchChange={onFolderSearchChange!}
+            resetKey={folderSearchResetKey}
+          />
+        ) : null}
+      </div>
+    ) : null;
+
+  if ((isLoading && !data) || showDelayedSkeleton) {
     return (
       <section
         className={styles.tablePanel}
         aria-label="Tabla de productos"
         aria-busy="true"
       >
-        <div className={styles.tableWrap}>
-          <AdminTableSkeleton variant="catalog" label="Cargando productos" />
+        {tableToolbar}
+        <div className={`${styles.tableWrap} ${styles.tableWrapLoading}`}>
+          <AdminTableSkeleton
+            variant="catalog"
+            label="Cargando productos"
+            rowCount={12}
+            fillHeight
+          />
         </div>
       </section>
     );
@@ -216,6 +260,7 @@ export function ProductTable({
   if (error) {
     return (
       <section className={styles.tablePanel} aria-label="Tabla de productos">
+        {tableToolbar}
         <p className={styles.tableStateError}>{error}</p>
       </section>
     );
@@ -224,6 +269,7 @@ export function ProductTable({
   if (!data) {
     return (
       <section className={styles.tablePanel} aria-label="Tabla de productos">
+        {tableToolbar}
         <p className={styles.tableState}>Seleccioná un catálogo y una carpeta.</p>
       </section>
     );
@@ -231,6 +277,7 @@ export function ProductTable({
 
   const { from, to } = getPaginationRange(data.pagination);
   const { pagination } = data;
+  const trimmedFolderSearch = folderSearchQuery.trim();
 
   return (
     <section
@@ -238,13 +285,7 @@ export function ProductTable({
       aria-label="Tabla de productos"
       aria-busy={isLoading || undefined}
     >
-      {enableColumnFilters && activeFilterPills.length > 0 ? (
-        <ActiveFilterPills
-          filters={activeFilterPills}
-          onRemove={handleRemoveFilter}
-          onClearAll={onClearColumnFilters}
-        />
-      ) : null}
+      {tableToolbar}
       <div
         ref={tableWrapRef}
         className={`${styles.tableWrap} ${data.products.length === 0 ? styles.tableWrapEmpty : ""}`}
@@ -256,7 +297,11 @@ export function ProductTable({
               strokeWidth={ICON_STROKE}
               aria-hidden
             />
-            <p className={styles.tableEmptyText}>No hay productos en esta carpeta.</p>
+            <p className={styles.tableEmptyText}>
+              {trimmedFolderSearch
+                ? `Sin resultados para «${trimmedFolderSearch}» en esta carpeta.`
+                : "No hay productos en esta carpeta."}
+            </p>
           </div>
         ) : (
         <table className={styles.productTable}>
@@ -283,6 +328,8 @@ export function ProductTable({
                       ? (filter) => onColumnFilterChange?.(column.internalKey, filter)
                       : undefined
                   }
+                  isAdmin={isAdmin}
+                  onColumnsChanged={onColumnsChanged}
                 />
               ))}
               {isAdmin && onEditProduct ? (
@@ -363,15 +410,19 @@ export function ProductTable({
                     const annotationThumb =
                       fieldAnnotation?.thumbnailUrl ?? fieldAnnotation?.fullUrl ?? null;
                     const showAnnotation = hasFieldAnnotation(fieldAnnotation);
+                    const isHiddenColumn = isAdmin && !column.visibleToNormalUser;
+                    const mediaClass =
+                      previewImages.length > 0 || showAnnotation
+                        ? ` ${styles.tableCellWithMedia}`
+                        : "";
+                    const hiddenClass = isHiddenColumn
+                      ? ` ${styles.tableColumnHidden}`
+                      : "";
 
                     return (
                       <td
                         key={`${product.id}-${column.id}`}
-                        className={
-                          previewImages.length > 0 || showAnnotation
-                            ? `${styles.tableDataCell} ${styles.tableCellWithMedia}`
-                            : styles.tableDataCell
-                        }
+                        className={`${styles.tableDataCell}${mediaClass}${hiddenClass}`}
                       >
                         {previewImages.length > 0 ? (
                           <div className={styles.tableCellImages}>

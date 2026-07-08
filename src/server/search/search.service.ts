@@ -19,7 +19,6 @@ import { visibilityService } from "@/server/services/visibility.service";
 import { SearchError } from "./search.errors";
 import { resolveSearchableKeys } from "./search-config.resolver";
 import {
-  isCodeLikeQuery,
   normalizeSearchTerm,
   normalizeTextContains,
 } from "./search-normalizer";
@@ -122,7 +121,11 @@ export function buildProductSearchWhere(
     orConditions.push(...buildCodeSearchConditions(normalizedQuery));
   }
 
-  if (!isCodeLikeQuery(trimmed) || textTerm.length > normalizedQuery.length) {
+  // Siempre buscamos también en el texto indexado (código, descripción y
+  // valores de columnas). Antes se omitía para consultas de una sola palabra
+  // sin separadores (p. ej. "INDIEL"), lo que impedía encontrar coincidencias
+  // en descripción o columnas cuando el término no era el código primario.
+  if (textTerm) {
     orConditions.push(...buildTextSearchConditions(textTerm));
   }
 

@@ -131,7 +131,9 @@ export function CatalogGlobalSearchResults({
 
   return (
     <section className={styles.tablePanel} aria-label="Resultados de búsqueda global">
-      <div className={!hasAnyResults ? styles.tableWrapEmpty : styles.tableWrap}>
+      <div
+        className={`${styles.tableWrap}${!hasAnyResults ? ` ${styles.tableWrapEmpty}` : ""}`}
+      >
         {!hasAnyResults ? (
           <div className={styles.tableEmpty}>
             <Search className={styles.tableEmptyIcon} strokeWidth={ICON_STROKE} aria-hidden />

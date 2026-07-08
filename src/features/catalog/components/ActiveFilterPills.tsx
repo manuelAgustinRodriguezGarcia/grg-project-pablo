@@ -31,7 +31,10 @@ export function ActiveFilterPills({
                 type="button"
                 className={styles.activeFilterPillRemove}
                 aria-label={`Quitar filtro ${filter.label}`}
-                onClick={() => onRemove(filter.columnInternalKey)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRemove(filter.columnInternalKey);
+                }}
               >
                 <X strokeWidth={ICON_STROKE} aria-hidden />
               </button>

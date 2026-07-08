@@ -9,6 +9,7 @@ type PriceSupplierBannerProps = {
   supplierDate: string | null;
   isAdmin: boolean;
   onEdit?: () => void;
+  placeholder?: boolean;
 };
 
 export function PriceSupplierBanner({
@@ -16,7 +17,18 @@ export function PriceSupplierBanner({
   supplierDate,
   isAdmin,
   onEdit,
+  placeholder = false,
 }: PriceSupplierBannerProps) {
+  if (placeholder) {
+    return (
+      <div className={styles.supplierBanner}>
+        <p className={`${styles.supplierBannerText} ${styles.supplierBannerPlaceholder}`}>
+          Aquí verá el nombre del proveedor y la fecha de la lista.
+        </p>
+      </div>
+    );
+  }
+
   if (!supplierName && !supplierDate) {
     return null;
   }
