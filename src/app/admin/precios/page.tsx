@@ -7,13 +7,31 @@ export const metadata: Metadata = {
   title: "Precios | Admin Rothamel Repuestos",
 };
 
-export default async function AdminPreciosPage() {
+type AdminPreciosPageProps = {
+  searchParams: Promise<{
+    list?: string | string[];
+  }>;
+};
+
+function firstParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value ?? "";
+}
+
+export default async function AdminPreciosPage({
+  searchParams,
+}: AdminPreciosPageProps) {
   const auth = await requireAuthOrRedirect("/admin");
+  const params = await searchParams;
   const listsResult = await listPriceListsAction();
 
   return (
     <PriceNavigator
       initialPriceLists={listsResult.success ? listsResult.data : []}
+      initialListId={firstParam(params.list)}
       isAdmin={auth.profile.role === "ADMIN"}
       loadError={listsResult.success ? null : listsResult.error}
     />
