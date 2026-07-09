@@ -14,6 +14,11 @@ import {
   deleteProductFieldHelpImage,
   uploadProductFieldHelpImage,
 } from "@/features/catalog/utils/product-field-annotation.client";
+import {
+  deleteProductLinkedImage,
+  replaceProductLinkedImage,
+  uploadProductLinkedImage,
+} from "@/features/catalog/utils/product-linked-image.client";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import { Image, X, ICON_STROKE } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
@@ -32,6 +37,15 @@ type FieldImageDraft = {
   pendingFile: File | null;
   removeImage: boolean;
 };
+
+type LinkedProductImageDraft = {
+  imageId: string | null;
+  previewUrl: string | null;
+  pendingFile: File | null;
+  removeImage: boolean;
+};
+
+const LINKED_PRODUCT_IMAGE_KEY = "__linked_product_image__";
 
 function getEditableColumns(columns: ColumnListItem[]): ColumnListItem[] {
   return columns.filter(
@@ -104,6 +118,24 @@ function buildInitialImageDrafts(
   return drafts;
 }
 
+function getLinkedProductImagePreviewUrl(
+  product: ProductTableItem | null | undefined,
+): string | null {
+  const primaryImage = product?.primaryImage;
+  return primaryImage?.thumbnailUrl ?? primaryImage?.fullUrl ?? null;
+}
+
+function buildInitialLinkedImageDraft(
+  product?: ProductTableItem | null,
+): LinkedProductImageDraft {
+  return {
+    imageId: product?.primaryImage?.id ?? null,
+    previewUrl: getLinkedProductImagePreviewUrl(product),
+    pendingFile: null,
+    removeImage: false,
+  };
+}
+
 function buildInitialHadImage(
   editableColumns: ColumnListItem[],
   product?: ProductTableItem | null,
@@ -117,6 +149,44 @@ function buildInitialHadImage(
   }
 
   return initialHadImage;
+}
+
+function hasValueChanges(
+  editableColumns: ColumnListItem[],
+  values: Record<string, string>,
+  product: ProductTableItem | null | undefined,
+): boolean {
+  if (!product) {
+    return Object.values(values).some((value) => value.trim() !== "");
+  }
+
+  for (const column of editableColumns) {
+    const current = values[column.internalKey] ?? "";
+    const initial = getFieldValue(product, column);
+    if (current !== initial) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function hasFieldImageDraftChanges(
+  editableColumns: ColumnListItem[],
+  imageDrafts: Record<string, FieldImageDraft>,
+): boolean {
+  for (const column of editableColumns) {
+    const draft = imageDrafts[column.internalKey];
+    if (draft?.pendingFile || draft?.removeImage) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function hasLinkedImageDraftChanges(draft: LinkedProductImageDraft): boolean {
+  return Boolean(draft.pendingFile || draft.removeImage);
 }
 
 function autoResizeTextarea(element: HTMLTextAreaElement) {
@@ -135,16 +205,31 @@ export function ProductFormModal({
   const isEditMode = product !== null && product !== undefined;
   const editableColumns = useMemo(() => getEditableColumns(columns), [columns]);
   const showFieldImages = useMemo(() => !folderHasLinkedImages(columns), [columns]);
+  const showLinkedProductImage = useMemo(
+    () => folderHasLinkedImages(columns),
+    [columns],
+  );
+  const linkedImageTitle = useMemo(
+    () => formatProductFormColumnTitle(0, "IMAGEN"),
+    [],
+  );
   const [values, setValues] = useState<Record<string, string>>(() =>
     buildInitialValues(editableColumns, product),
   );
   const [imageDrafts, setImageDrafts] = useState<Record<string, FieldImageDraft>>(() =>
     buildInitialImageDrafts(editableColumns, product),
   );
+  const [linkedImageDraft, setLinkedImageDraft] = useState<LinkedProductImageDraft>(() =>
+    buildInitialLinkedImageDraft(product),
+  );
   const [imageRemovalTarget, setImageRemovalTarget] = useState<string | null>(null);
   const initialHadImage = useMemo(
     () => buildInitialHadImage(editableColumns, product),
     [editableColumns, product],
+  );
+  const initialHadLinkedImage = useMemo(
+    () => Boolean(getLinkedProductImagePreviewUrl(product)),
+    [product],
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,6 +247,7 @@ export function ProductFormModal({
   useEffect(() => {
     setValues(buildInitialValues(editableColumns, product));
     setImageDrafts(buildInitialImageDrafts(editableColumns, product));
+    setLinkedImageDraft(buildInitialLinkedImageDraft(product));
   }, [editableColumns, product]);
 
   useEffect(() => {
@@ -214,6 +300,40 @@ export function ProductFormModal({
   }, [editableColumns, isEditMode, product?.id, showFieldImages]);
 
   useEffect(() => {
+    if (!isEditMode || !product?.id || !showLinkedProductImage) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetch(`/api/admin/products/${product.id}`)
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        return (await response.json()) as ProductTableItem;
+      })
+      .then((detail) => {
+        if (!detail || cancelled) {
+          return;
+        }
+
+        setLinkedImageDraft((current) => {
+          if (current.pendingFile || current.removeImage) {
+            return current;
+          }
+
+          return buildInitialLinkedImageDraft(detail);
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditMode, product?.id, showLinkedProductImage]);
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !isSaving) {
         onClose();
@@ -249,6 +369,20 @@ export function ProductFormModal({
     }));
   }
 
+  function handleSelectLinkedImage(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setLinkedImageDraft((current) => ({
+      ...current,
+      pendingFile: file,
+      previewUrl,
+      removeImage: false,
+    }));
+  }
+
   function handleRemoveImage(internalKey: string) {
     setImageDrafts((current) => ({
       ...current,
@@ -261,7 +395,24 @@ export function ProductFormModal({
     }));
   }
 
+  function handleRemoveLinkedImage() {
+    setLinkedImageDraft((current) => ({
+      ...current,
+      pendingFile: null,
+      previewUrl: null,
+      removeImage: true,
+    }));
+  }
+
   function shouldConfirmImageRemoval(internalKey: string): boolean {
+    if (internalKey === LINKED_PRODUCT_IMAGE_KEY) {
+      if (!linkedImageDraft.previewUrl || linkedImageDraft.pendingFile) {
+        return false;
+      }
+
+      return initialHadLinkedImage;
+    }
+
     const draft = imageDrafts[internalKey];
     if (!draft?.previewUrl) {
       return false;
@@ -288,8 +439,56 @@ export function ProductFormModal({
       return;
     }
 
-    handleRemoveImage(imageRemovalTarget);
+    if (imageRemovalTarget === LINKED_PRODUCT_IMAGE_KEY) {
+      handleRemoveLinkedImage();
+    } else {
+      handleRemoveImage(imageRemovalTarget);
+    }
+
     setImageRemovalTarget(null);
+  }
+
+  async function persistLinkedProductImage(productId: string): Promise<string | null> {
+    if (!showLinkedProductImage) {
+      return null;
+    }
+
+    if (
+      linkedImageDraft.removeImage &&
+      !linkedImageDraft.pendingFile &&
+      linkedImageDraft.imageId
+    ) {
+      const result = await deleteProductLinkedImage(
+        productId,
+        linkedImageDraft.imageId,
+      );
+      if (!result.success) {
+        return result.error;
+      }
+    }
+
+    if (linkedImageDraft.pendingFile) {
+      if (linkedImageDraft.imageId) {
+        const result = await replaceProductLinkedImage(
+          productId,
+          linkedImageDraft.imageId,
+          linkedImageDraft.pendingFile,
+        );
+        if (!result.success) {
+          return result.error;
+        }
+      } else {
+        const result = await uploadProductLinkedImage(
+          productId,
+          linkedImageDraft.pendingFile,
+        );
+        if (!result.success) {
+          return result.error;
+        }
+      }
+    }
+
+    return null;
   }
 
   async function persistFieldImages(productId: string): Promise<string | null> {
@@ -353,27 +552,50 @@ export function ProductFormModal({
       }
     }
 
+    const needsProductPatch =
+      !isEditMode ||
+      hasValueChanges(editableColumns, values, product) ||
+      Object.keys(fieldAnnotations).length > 0;
+    const needsLinkedImagePersist =
+      showLinkedProductImage && hasLinkedImageDraftChanges(linkedImageDraft);
+    const needsFieldImagePersist =
+      showFieldImages && hasFieldImageDraftChanges(editableColumns, imageDrafts);
+
+    if (
+      isEditMode &&
+      !needsProductPatch &&
+      !needsLinkedImagePersist &&
+      !needsFieldImagePersist
+    ) {
+      onSaved();
+      onClose();
+      setIsSaving(false);
+      return;
+    }
+
     try {
       let productId = product?.id;
 
       if (isEditMode && productId) {
-        const response = await fetch(`/api/admin/products/${productId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            values: payloadValues,
-            fieldAnnotations:
-              Object.keys(fieldAnnotations).length > 0 ? fieldAnnotations : undefined,
-          }),
-        });
+        if (needsProductPatch) {
+          const response = await fetch(`/api/admin/products/${productId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              values: payloadValues,
+              fieldAnnotations:
+                Object.keys(fieldAnnotations).length > 0 ? fieldAnnotations : undefined,
+            }),
+          });
 
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
+          const payload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
 
-        if (!response.ok) {
-          setError(payload?.error ?? "No se pudo actualizar el producto.");
-          return;
+          if (!response.ok) {
+            setError(payload?.error ?? "No se pudo actualizar el producto.");
+            return;
+          }
         }
       } else {
         const response = await fetch(`/api/admin/folders/${folderId}/products`, {
@@ -399,7 +621,17 @@ export function ProductFormModal({
         productId = payload.id;
       }
 
-      const imageError = await persistFieldImages(productId);
+      const linkedImageError = needsLinkedImagePersist
+        ? await persistLinkedProductImage(productId)
+        : null;
+      if (linkedImageError) {
+        setError(linkedImageError);
+        return;
+      }
+
+      const imageError = needsFieldImagePersist
+        ? await persistFieldImages(productId)
+        : null;
       if (imageError) {
         setError(imageError);
         return;
@@ -461,6 +693,78 @@ export function ProductFormModal({
             onSubmit={(event) => void handleSubmit(event)}
           >
             <div className={styles.productFormGrid}>
+              {showLinkedProductImage ? (
+                <div className={styles.productFormFieldCard}>
+                  <div className={styles.productFormColumnTitle}>{linkedImageTitle}</div>
+                  <div className={styles.productFormFieldBody}>
+                    <div className={styles.productFormImageWrap}>
+                      {linkedImageDraft.previewUrl ? (
+                        <div
+                          className={`${styles.productFormImageDropzone} ${styles.productFormImageDropzoneFilled}`}
+                        >
+                          <button
+                            type="button"
+                            className={styles.productFormImagePreviewButton}
+                            onClick={() =>
+                              fileInputRefs.current[LINKED_PRODUCT_IMAGE_KEY]?.click()
+                            }
+                            disabled={isSaving}
+                            aria-label={`Reemplazar ${linkedImageTitle}`}
+                          >
+                            <img
+                              src={linkedImageDraft.previewUrl}
+                              alt=""
+                              className={styles.productFormImagePreviewImg}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.productFormImageRemove}
+                            onClick={() =>
+                              requestRemoveImage(LINKED_PRODUCT_IMAGE_KEY)
+                            }
+                            disabled={isSaving}
+                            aria-label={`Quitar ${linkedImageTitle}`}
+                          >
+                            <X strokeWidth={ICON_STROKE} aria-hidden />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.productFormImageDropzone}
+                          onClick={() =>
+                            fileInputRefs.current[LINKED_PRODUCT_IMAGE_KEY]?.click()
+                          }
+                          disabled={isSaving}
+                          aria-label={`Agregar ${linkedImageTitle}`}
+                        >
+                          <Image
+                            className={styles.productFormImageDropzoneIcon}
+                            strokeWidth={ICON_STROKE}
+                            aria-hidden
+                          />
+                          <span className={styles.productFormImageDropzoneLabel}>
+                            Imagen
+                          </span>
+                        </button>
+                      )}
+                      <input
+                        ref={(element) => {
+                          fileInputRefs.current[LINKED_PRODUCT_IMAGE_KEY] = element;
+                        }}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className={styles.columnEditHiddenInput}
+                        onChange={(event) =>
+                          handleSelectLinkedImage(event.target.files?.[0] ?? null)
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               {editableColumns.map((column, columnIndex) => {
                 const imageDraft = imageDrafts[column.internalKey];
                 const hasPreview = Boolean(imageDraft?.previewUrl);
@@ -598,7 +902,11 @@ export function ProductFormModal({
       {imageRemovalTarget ? (
         <ConfirmDialog
           title="Eliminar imagen"
-          message="La imagen eliminada no podrá recuperarse. ¿Desea quitarla de esta columna?"
+          message={
+            imageRemovalTarget === LINKED_PRODUCT_IMAGE_KEY
+              ? "La imagen eliminada no podrá recuperarse. ¿Desea quitarla del producto?"
+              : "La imagen eliminada no podrá recuperarse. ¿Desea quitarla de esta columna?"
+          }
           confirmLabel="Eliminar imagen"
           variant="danger"
           onConfirm={confirmRemoveImage}

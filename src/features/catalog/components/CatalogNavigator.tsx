@@ -854,8 +854,11 @@ export function CatalogNavigator({
             setEditingProduct(null);
           }}
           onSaved={() => {
+            const wasCreating = editingProduct === null;
             setReloadToken((token) => token + 1);
-            setPage(1);
+            if (wasCreating) {
+              setPage(1);
+            }
             router.refresh();
           }}
         />
