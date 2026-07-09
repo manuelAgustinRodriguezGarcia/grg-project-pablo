@@ -991,7 +991,7 @@ $table-image-size: 6.25rem;
     border-bottom: 1px solid rgba($navy, 0.08);
     border-right: 1px solid rgba($navy, 0.08);
     text-align: center;
-    vertical-align: middle;
+    vertical-align: top;
 
     &:last-child {
       border-right: none;
@@ -1058,7 +1058,7 @@ $table-image-size: 6.25rem;
   min-width: calc(#{$table-image-size} + 1.3rem);
   max-width: calc(#{$table-image-size} + 1.3rem);
   padding: 0.5rem 0.45rem 0.5rem 0.85rem !important;
-  vertical-align: middle;
+  vertical-align: top;
   text-align: center;
 }
 
@@ -1217,7 +1217,7 @@ $table-image-size: 6.25rem;
 .tableCellWithMedia {
   min-width: calc(#{$table-image-size} + 1rem);
   max-width: 32rem;
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 .tableCellImages {
