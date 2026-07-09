@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createCatalogAction,
@@ -12,7 +12,6 @@ import { createFolderAction, deleteFolderAction, updateFolderAction } from "@/fe
 import { CatalogFolderSelectors } from "@/features/catalog/components/CatalogFolderSelectors";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import { CatalogPageIntro } from "@/features/catalog/components/CatalogPageChrome";
-import { LazyCatalogGlobalSearchResults } from "@/features/catalog/components/LazyCatalogGlobalSearchResults";
 import { ProductFormModal } from "@/features/catalog/components/ProductFormModal";
 import { ProductTable } from "@/features/catalog/components/ProductTable";
 import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
@@ -30,12 +29,14 @@ import { serializeColumnFilters, upsertColumnFilter } from "@/features/catalog/u
 import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
 import type { CatalogListItem } from "@/features/catalog/types/catalog.types";
 import type { FolderListItem } from "@/features/catalog/types/folder.types";
+import { resolveFolderSearchSeed } from "@/features/catalog/utils/resolve-folder-search-seed";
 import { sortByName } from "@/features/catalog/utils/sortByName";
+import { useReplaceSearchParams } from "@/shared/hooks/useReplaceSearchParams";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 50;
 const MIN_GLOBAL_SEARCH_CHARS = 2;
-const GLOBAL_SEARCH_PAGE_SIZE = 25;
+const GLOBAL_SEARCH_DROPDOWN_PAGE_SIZE = 8;
 
 type CatalogTarget = {
   id: string;
@@ -69,6 +70,8 @@ function toNavigationFolderItem(folder: FolderListItem): CatalogNavigationFolder
 
 type CatalogNavigatorProps = {
   catalogs: DirectoryCatalogItem[];
+  initialCatalogId?: string;
+  initialFolderId?: string;
   isAdmin?: boolean;
   enableColumnFilters?: boolean;
 };
@@ -93,22 +96,37 @@ function resolveCatalogId(
 function resolveFolderId(
   folders: CatalogNavigationFolderItem[],
   selectedFolderId: string,
+  options?: { allowFallback?: boolean },
 ): string {
+  const allowFallback = options?.allowFallback ?? true;
+
   if (folders.length === 0) {
-    return "";
+    // Keep a pending deep-link / global-search target while folders load.
+    return selectedFolderId;
   }
 
   const exists = folders.some((folder) => folder.id === selectedFolderId);
-  return exists ? selectedFolderId : sortByName(folders)[0]?.id ?? "";
+  if (exists) {
+    return selectedFolderId;
+  }
+
+  if (!allowFallback) {
+    return selectedFolderId;
+  }
+
+  return sortByName(folders)[0]?.id ?? "";
 }
 
 export function CatalogNavigator({
   catalogs,
+  initialCatalogId = "",
+  initialFolderId = "",
   isAdmin = false,
   enableColumnFilters = false,
 }: CatalogNavigatorProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const replaceParams = useReplaceSearchParams();
   const stableTableFolderIdRef = useRef<string | null>(null);
   const stableTableDataRef = useRef<ProductTableResponse | null>(null);
   const [catalogList, setCatalogList] = useState(catalogs);
@@ -122,24 +140,26 @@ export function CatalogNavigator({
   const sortedCatalogs = useMemo(() => sortByName(catalogList), [catalogList]);
 
   const [selectedCatalogId, setSelectedCatalogId] = useState(() =>
-    getInitialCatalogId(catalogs),
+    resolveCatalogId(catalogs, initialCatalogId),
   );
-  const [selectedFolderId, setSelectedFolderId] = useState("");
+  const [selectedFolderId, setSelectedFolderId] = useState(() =>
+    initialCatalogId &&
+    catalogs.some((catalog) => catalog.id === initialCatalogId)
+      ? initialFolderId
+      : "",
+  );
   const [page, setPage] = useState(1);
   const [columnFilters, setColumnFilters] = useState<ColumnFilterInput[]>([]);
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [searchPage, setSearchPage] = useState(1);
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [folderSearch, setFolderSearch] = useState("");
+  const [folderSearchSeedValue, setFolderSearchSeedValue] = useState("");
   const [folderSearchResetKey, setFolderSearchResetKey] = useState(0);
 
   const isSearchActive = debouncedSearch.length >= MIN_GLOBAL_SEARCH_CHARS;
-  const isSearchPending =
-    debouncedSearch.length > 0 && debouncedSearch.length < MIN_GLOBAL_SEARCH_CHARS;
 
   const handleDebouncedSearchChange = useCallback((query: string) => {
     setDebouncedSearch(query);
-    setSearchPage(1);
   }, []);
 
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -196,14 +216,60 @@ export function CatalogNavigator({
   });
 
   const folders = useMemo(() => navigationQuery.data ?? [], [navigationQuery.data]);
-  const isLoadingFolders = navigationQuery.isFetching && folders.length === 0;
+  const isNavigationReady =
+    Boolean(activeCatalogId) &&
+    navigationQuery.isFetched &&
+    !navigationQuery.isPlaceholderData;
+  const isLoadingFolders =
+    Boolean(activeCatalogId) &&
+    (!isNavigationReady || (navigationQuery.isFetching && folders.length === 0));
   const foldersError =
     navigationQuery.error instanceof Error ? navigationQuery.error.message : null;
 
   const activeFolderId = useMemo(
-    () => resolveFolderId(folders, selectedFolderId),
-    [folders, selectedFolderId],
+    () =>
+      resolveFolderId(folders, selectedFolderId, {
+        // While folders for the target catalog are still loading (or showing
+        // keepPreviousData from another catalog), never fall back to the first
+        // folder — that would wipe a global-search handoff mid-flight.
+        allowFallback: isNavigationReady,
+      }),
+    [folders, isNavigationReady, selectedFolderId],
   );
+
+  const canLoadFolderProducts =
+    Boolean(activeFolderId) &&
+    isNavigationReady &&
+    folders.some((folder) => folder.id === activeFolderId);
+
+  useEffect(() => {
+    if (!activeCatalogId) {
+      replaceParams({ catalog: null, folder: null });
+      return;
+    }
+
+    // Preserve deep-linked folder while this catalog's folders load;
+    // avoid writing a stale folder from keepPreviousData of another catalog.
+    if (!navigationQuery.isFetched || navigationQuery.isPlaceholderData) {
+      replaceParams({
+        catalog: activeCatalogId,
+        folder: selectedFolderId || null,
+      });
+      return;
+    }
+
+    replaceParams({
+      catalog: activeCatalogId,
+      folder: activeFolderId || null,
+    });
+  }, [
+    activeCatalogId,
+    activeFolderId,
+    navigationQuery.isFetched,
+    navigationQuery.isPlaceholderData,
+    replaceParams,
+    selectedFolderId,
+  ]);
 
   const serializedColumnFilters = useMemo(
     () => serializeColumnFilters(columnFilters),
@@ -248,17 +314,17 @@ export function CatalogNavigator({
 
       return (await response.json()) as ProductTableResponse;
     },
-    enabled: Boolean(activeFolderId) && debouncedSearch.length === 0,
+    enabled: canLoadFolderProducts,
     placeholderData: keepPreviousData,
   });
 
   const globalSearchQuery = useQuery({
-    queryKey: ["admin", "global-search", debouncedSearch, searchPage],
+    queryKey: ["admin", "global-search", debouncedSearch, GLOBAL_SEARCH_DROPDOWN_PAGE_SIZE],
     queryFn: async ({ signal }): Promise<GlobalSearchResponse> => {
       const params = new URLSearchParams({
         q: debouncedSearch,
-        page: String(searchPage),
-        pageSize: String(GLOBAL_SEARCH_PAGE_SIZE),
+        page: "1",
+        pageSize: String(GLOBAL_SEARCH_DROPDOWN_PAGE_SIZE),
       });
 
       const response = await fetch(`/api/admin/search/global?${params.toString()}`, {
@@ -279,23 +345,26 @@ export function CatalogNavigator({
     staleTime: 0,
   });
 
-  const productTable = activeFolderId ? (productsQuery.data ?? null) : null;
-  const isLoadingProducts = productsQuery.isFetching;
+  const productTable = canLoadFolderProducts ? (productsQuery.data ?? null) : null;
+  const isLoadingProducts =
+    productsQuery.isFetching || (Boolean(activeFolderId) && !canLoadFolderProducts);
   const productsError =
     productsQuery.error instanceof Error ? productsQuery.error.message : null;
 
-  if (activeFolderId && productTable) {
+  if (canLoadFolderProducts && productTable) {
     stableTableFolderIdRef.current = activeFolderId;
     stableTableDataRef.current = productTable;
-  } else if (!activeFolderId) {
+  } else if (!canLoadFolderProducts) {
+    // Drop stale table snapshots while navigating to another catalog/folder
+    // (e.g. global-search handoff) so we never filter the wrong rubro.
     stableTableFolderIdRef.current = null;
     stableTableDataRef.current = null;
   }
 
   const tableData =
-    activeFolderId && productTable
+    canLoadFolderProducts && productTable
       ? productTable
-      : activeFolderId &&
+      : canLoadFolderProducts &&
           stableTableFolderIdRef.current === activeFolderId &&
           stableTableDataRef.current
         ? stableTableDataRef.current
@@ -327,27 +396,31 @@ export function CatalogNavigator({
   const globalSearchError =
     globalSearchQuery.error instanceof Error ? globalSearchQuery.error.message : null;
 
-  const handleSelectSearchResult = useCallback((item: SearchResultItem) => {
-    setSelectedCatalogId(item.catalog.id);
-    setSelectedFolderId(item.folder.id);
-    setPage(1);
-    setSearchPage(1);
-    setColumnFilters([]);
-    setDebouncedSearch("");
-    setSearchResetKey((token) => token + 1);
-    setFolderSearch("");
-    setFolderSearchResetKey((token) => token + 1);
-  }, []);
+  const handleSelectSearchResult = useCallback(
+    (item: SearchResultItem) => {
+      const seed = resolveFolderSearchSeed(item, debouncedSearch);
+      setSelectedCatalogId(item.catalog.id);
+      setSelectedFolderId(item.folder.id);
+      setPage(1);
+      setColumnFilters([]);
+      setDebouncedSearch("");
+      setSearchResetKey((token) => token + 1);
+      setFolderSearch(seed);
+      setFolderSearchSeedValue(seed);
+      setFolderSearchResetKey((token) => token + 1);
+    },
+    [debouncedSearch],
+  );
 
   const handleSelectCatalogSearchResult = useCallback((catalogId: string) => {
     setSelectedCatalogId(catalogId);
     setSelectedFolderId("");
     setPage(1);
-    setSearchPage(1);
     setColumnFilters([]);
     setDebouncedSearch("");
     setSearchResetKey((token) => token + 1);
     setFolderSearch("");
+    setFolderSearchSeedValue("");
     setFolderSearchResetKey((token) => token + 1);
   }, []);
 
@@ -356,22 +429,19 @@ export function CatalogNavigator({
       setSelectedCatalogId(catalogId);
       setSelectedFolderId(folderId);
       setPage(1);
-      setSearchPage(1);
       setColumnFilters([]);
       setDebouncedSearch("");
       setSearchResetKey((token) => token + 1);
       setFolderSearch("");
+      setFolderSearchSeedValue("");
       setFolderSearchResetKey((token) => token + 1);
     },
     [],
   );
 
-  const handleSearchPageChange = useCallback((nextPage: number) => {
-    setSearchPage(nextPage);
-  }, []);
-
   const resetFolderSearch = useCallback(() => {
     setFolderSearch("");
+    setFolderSearchSeedValue("");
     setFolderSearchResetKey((token) => token + 1);
   }, []);
 
@@ -771,6 +841,12 @@ export function CatalogNavigator({
           <CatalogPageIntro
             onDebouncedSearchChange={handleDebouncedSearchChange}
             searchResetKey={searchResetKey}
+            searchResults={globalSearchQuery.data ?? null}
+            isSearchLoading={globalSearchQuery.isFetching}
+            searchError={globalSearchError}
+            onSelectSearchProduct={handleSelectSearchResult}
+            onSelectSearchCatalog={handleSelectCatalogSearchResult}
+            onSelectSearchFolder={handleSelectFolderSearchResult}
             onImportExcelClick={handleImportExcelClick}
             onAddProductClick={isAdmin ? handleAddProductClick : undefined}
           >
@@ -802,23 +878,6 @@ export function CatalogNavigator({
           <p className={styles.inlineError}>{productActionError}</p>
         ) : null}
 
-        {isSearchActive ? (
-          <LazyCatalogGlobalSearchResults
-            data={globalSearchQuery.data ?? null}
-            searchQuery={debouncedSearch}
-            isLoading={globalSearchQuery.isFetching}
-            error={globalSearchError}
-            onPageChange={handleSearchPageChange}
-            onSelectCatalog={handleSelectCatalogSearchResult}
-            onSelectFolder={handleSelectFolderSearchResult}
-            onSelectResult={handleSelectSearchResult}
-          />
-        ) : isSearchPending ? (
-          <p className={styles.searchHint} role="status">
-            Escribí al menos {MIN_GLOBAL_SEARCH_CHARS} caracteres para buscar en todos los
-            catálogos.
-          </p>
-        ) : (
           <ProductTable
             data={tableData}
             isLoading={isLoadingProducts || isLoadingFolders}
@@ -837,8 +896,8 @@ export function CatalogNavigator({
               activeFolderId ? handleFolderSearchChange : undefined
             }
             folderSearchResetKey={folderSearchResetKey}
+            folderSearchSeedValue={folderSearchSeedValue}
           />
-        )}
       </div>
       </div>
       {importWizard}

@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
@@ -33,12 +33,14 @@ import type { PriceListListItem } from "@/features/prices/types/price-list.types
 import { sortByName } from "@/features/catalog/utils/sortByName";
 import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
 import { FloatingToast } from "@/shared/components/FloatingToast";
+import { useReplaceSearchParams } from "@/shared/hooks/useReplaceSearchParams";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 50;
 
 type PriceNavigatorProps = {
   initialPriceLists: PriceListListItem[];
+  initialListId?: string;
   isAdmin: boolean;
   loadError: string | null;
 };
@@ -59,10 +61,12 @@ function resolveListId(lists: PriceListListItem[], selectedId: string): string {
 
 export function PriceNavigator({
   initialPriceLists,
+  initialListId = "",
   isAdmin,
   loadError,
 }: PriceNavigatorProps) {
   const router = useRouter();
+  const replaceParams = useReplaceSearchParams();
   const [priceLists, setPriceLists] = useState(initialPriceLists);
   const [prevInitialLists, setPrevInitialLists] = useState(initialPriceLists);
 
@@ -73,13 +77,19 @@ export function PriceNavigator({
 
   const sortedLists = useMemo(() => sortByName(priceLists), [priceLists]);
   const [selectedListId, setSelectedListId] = useState(() =>
-    getInitialListId(initialPriceLists),
+    resolveListId(initialPriceLists, initialListId),
   );
 
   const activeListId = useMemo(
     () => resolveListId(sortedLists, selectedListId),
     [sortedLists, selectedListId],
   );
+
+  useEffect(() => {
+    replaceParams({
+      list: activeListId || null,
+    });
+  }, [activeListId, replaceParams]);
 
   const [page, setPage] = useState(1);
   const [listSearchQuery, setListSearchQuery] = useState("");

@@ -38,6 +38,148 @@ type UploadedFilesListProps = {
   busyFileId?: string | null;
 };
 
+function catalogHref(catalogId: string, folderId?: string): string {
+  const params = new URLSearchParams({ catalog: catalogId });
+  if (folderId) {
+    params.set("folder", folderId);
+  }
+  return `/admin/catalogos?${params.toString()}`;
+}
+
+function priceListHref(listId: string): string {
+  return `/admin/precios?list=${encodeURIComponent(listId)}`;
+}
+
+function DestinationCell({
+  latestJob,
+}: {
+  latestJob: UploadedFileListItem["latestJob"];
+}) {
+  const destination = formatDestinationSummary(latestJob);
+
+  if (!latestJob) {
+    return (
+      <td className={styles.destinationCell}>
+        <span className={styles.destinationPrimary}>{destination.primary}</span>
+        <span className={styles.destinationSecondary}>{destination.secondary}</span>
+      </td>
+    );
+  }
+
+  if (latestJob.destinationType === "PRICE_LIST") {
+    const list = latestJob.priceList;
+
+    return (
+      <td className={styles.destinationCell}>
+        {list ? (
+          <Link
+            href={priceListHref(list.id)}
+            className={`${styles.destinationPrimary} ${styles.destinationLink}`}
+          >
+            {list.name}
+          </Link>
+        ) : (
+          <span className={styles.destinationPrimary}>{destination.primary}</span>
+        )}
+        <span className={styles.destinationSecondary}>{destination.secondary}</span>
+      </td>
+    );
+  }
+
+  const catalog = latestJob.catalog;
+  const folder = latestJob.folder;
+
+  return (
+    <td className={styles.destinationCell}>
+      {catalog ? (
+        <Link
+          href={catalogHref(catalog.id)}
+          className={`${styles.destinationPrimary} ${styles.destinationLink}`}
+        >
+          {catalog.name}
+        </Link>
+      ) : (
+        <span className={styles.destinationPrimary}>{destination.primary}</span>
+      )}
+      {folder && catalog ? (
+        <span className={styles.destinationSecondary}>
+          Carpeta:{" "}
+          <Link
+            href={catalogHref(catalog.id, folder.id)}
+            className={styles.destinationLink}
+          >
+            {folder.name}
+          </Link>
+        </span>
+      ) : (
+        <span className={styles.destinationSecondary}>{destination.secondary}</span>
+      )}
+    </td>
+  );
+}
+
+function DestinationInline({
+  latestJob,
+}: {
+  latestJob: UploadedFileListItem["latestJob"];
+}) {
+  const destination = formatDestinationSummary(latestJob);
+
+  if (!latestJob) {
+    return (
+      <>
+        {destination.primary} · {destination.secondary}
+      </>
+    );
+  }
+
+  if (latestJob.destinationType === "PRICE_LIST") {
+    const list = latestJob.priceList;
+
+    return (
+      <>
+        {list ? (
+          <Link href={priceListHref(list.id)} className={styles.destinationLink}>
+            {list.name}
+          </Link>
+        ) : (
+          destination.primary
+        )}{" "}
+        · {destination.secondary}
+      </>
+    );
+  }
+
+  const catalog = latestJob.catalog;
+  const folder = latestJob.folder;
+
+  return (
+    <>
+      {catalog ? (
+        <Link href={catalogHref(catalog.id)} className={styles.destinationLink}>
+          {catalog.name}
+        </Link>
+      ) : (
+        destination.primary
+      )}
+      {" · "}
+      {folder && catalog ? (
+        <>
+          Carpeta:{" "}
+          <Link
+            href={catalogHref(catalog.id, folder.id)}
+            className={styles.destinationLink}
+          >
+            {folder.name}
+          </Link>
+        </>
+      ) : (
+        destination.secondary
+      )}
+    </>
+  );
+}
+
 function getPaginationRange(pagination: UploadedFileListResponse["pagination"]): {
   from: number;
   to: number;
@@ -149,7 +291,6 @@ export function UploadedFilesList({
                 </thead>
                 <tbody>
                   {data.items.map((item) => {
-                    const destination = formatDestinationSummary(item.latestJob);
                     const isBusy = isActionBusy && busyFileId === item.id;
 
                     return (
@@ -170,12 +311,7 @@ export function UploadedFilesList({
                         <td>{formatAdminDateTime(item.uploadedAt)}</td>
                         <td className={styles.hideTablet}>{item.uploadedBy.name}</td>
                         <td>{formatDestinationTypeLabel(item.destinationType)}</td>
-                        <td className={styles.destinationCell}>
-                          <span className={styles.destinationPrimary}>{destination.primary}</span>
-                          <span className={styles.destinationSecondary}>
-                            {destination.secondary}
-                          </span>
-                        </td>
+                        <DestinationCell latestJob={item.latestJob} />
                         <td>
                           {item.latestJob ? (
                             <ImportJobStatusBadge status={item.latestJob.status} />
@@ -241,7 +377,6 @@ export function UploadedFilesList({
           ) : (
             <div className={styles.cardList}>
               {data.items.map((item) => {
-                const destination = formatDestinationSummary(item.latestJob);
                 const isBusy = isActionBusy && busyFileId === item.id;
 
                 return (
@@ -287,7 +422,7 @@ export function UploadedFilesList({
                     <div className={styles.fileCardImportBlock}>
                       <p className={styles.fileCardImportTitle}>Última importación</p>
                       <p className={styles.fileCardImportText}>
-                        {destination.primary} · {destination.secondary}
+                        <DestinationInline latestJob={item.latestJob} />
                         <br />
                         {formatImportMetrics(item.latestJob)}
                       </p>

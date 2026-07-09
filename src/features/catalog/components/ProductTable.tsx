@@ -39,6 +39,7 @@ type ProductTableProps = {
   folderSearchQuery?: string;
   onFolderSearchChange?: (value: string) => void;
   folderSearchResetKey?: number;
+  folderSearchSeedValue?: string;
 };
 
 function formatTableHeaderLines(displayName: string): string[] {
@@ -165,6 +166,7 @@ export function ProductTable({
   folderSearchQuery = "",
   onFolderSearchChange,
   folderSearchResetKey = 0,
+  folderSearchSeedValue = "",
 }: ProductTableProps) {
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [previewImage, setPreviewImage] = useState<{
@@ -235,6 +237,7 @@ export function ProductTable({
             folderName={folderName ?? ""}
             onDebouncedSearchChange={onFolderSearchChange!}
             resetKey={folderSearchResetKey}
+            seedValue={folderSearchSeedValue}
           />
         ) : null}
       </div>

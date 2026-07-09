@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ICON_STROKE, Search, X } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
@@ -10,6 +10,7 @@ type FolderTableSearchProps = {
   folderName: string;
   onDebouncedSearchChange: (value: string) => void;
   resetKey?: number;
+  seedValue?: string;
   disabled?: boolean;
 };
 
@@ -17,15 +18,28 @@ export function FolderTableSearch({
   folderName,
   onDebouncedSearchChange,
   resetKey = 0,
+  seedValue = "",
   disabled = false,
 }: FolderTableSearchProps) {
-  const [searchInput, setSearchInput] = useState("");
+  const [searchInput, setSearchInput] = useState(seedValue);
+  const skipDebounceRef = useRef(false);
 
   useEffect(() => {
-    setSearchInput("");
+    skipDebounceRef.current = true;
+    setSearchInput(seedValue);
+    // Sync parent immediately on handoff/reset so a pending debounce from the
+    // previous input cannot overwrite the seeded query.
+    onDebouncedSearchChange(seedValue.trim());
+    // Re-seed only when the parent bumps resetKey (manual clear or global handoff).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seedValue is paired with resetKey
   }, [resetKey]);
 
   useEffect(() => {
+    if (skipDebounceRef.current) {
+      skipDebounceRef.current = false;
+      return;
+    }
+
     const timeout = window.setTimeout(() => {
       onDebouncedSearchChange(searchInput.trim());
     }, SEARCH_DEBOUNCE_MS);
