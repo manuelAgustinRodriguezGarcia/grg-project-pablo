@@ -112,6 +112,32 @@
   transition: justify-content 0.3s ease;
 }
 
+.userRowLink {
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  margin: -0.45rem -0.5rem;
+  border-radius: $radius-sm;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.userRowLinkActive {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
 .roleIcon {
   width: 2.35rem;
   height: 2.35rem;
@@ -193,6 +219,10 @@
   align-items: stretch;
   width: 100%;
   margin: 0 auto;
+}
+
+.mobileDock[data-admin-extra="true"] .mobileDockInner {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .mobileDockList {

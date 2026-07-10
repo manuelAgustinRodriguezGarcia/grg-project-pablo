@@ -144,7 +144,7 @@ describe("searchService.searchInCatalog", () => {
       }),
     ]);
 
-    vi.mocked(productRepository.findPaginated).mockResolvedValue({
+    vi.mocked(productRepository.findSearchPaginated).mockResolvedValue({
       items: [
         {
           id: "prod-1",
@@ -153,24 +153,20 @@ describe("searchService.searchInCatalog", () => {
           normalizedCode: "MAIN",
           description: "Disco",
           dynamicData: { equivalencias: "2902=1408" },
-          originalText: null,
           indexedText: "MAIN 2902 1408",
-          createdAt: new Date("2026-06-24T00:00:00.000Z"),
-          updatedAt: new Date("2026-06-24T00:00:00.000Z"),
           equivalentCodes: [
             {
-              id: "eq-1",
-              productId: "prod-1",
               originalCode: "2902",
               normalizedCode: "2902",
-              sourceColumnKey: "equivalencias",
-              createdAt: new Date(),
-              updatedAt: new Date(),
             },
           ],
           folder: {
-            ...folder,
-            catalog,
+            id: folder.id,
+            name: folder.name,
+            catalog: {
+              id: catalog.id,
+              name: catalog.name,
+            },
           },
         },
       ],

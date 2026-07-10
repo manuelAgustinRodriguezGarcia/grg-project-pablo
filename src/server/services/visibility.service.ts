@@ -23,7 +23,7 @@ type VisiblePriceListEntity = VisibleEntity & {
 
 export class VisibilityService {
   shouldFilterForRole(role: UserRole): boolean {
-    return role === "CONSULTA";
+    return role === "USUARIO";
   }
 
   catalogWhereForRole(role: UserRole): Prisma.CatalogWhereInput {

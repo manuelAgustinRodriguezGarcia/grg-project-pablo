@@ -66,6 +66,18 @@ export class EquivalentCodeRepository {
     return result.count;
   }
 
+  async deleteByProductIds(productIds: string[]): Promise<number> {
+    if (productIds.length === 0) {
+      return 0;
+    }
+
+    const result = await prisma.equivalentCode.deleteMany({
+      where: { productId: { in: productIds } },
+    });
+
+    return result.count;
+  }
+
   async findProductIdsMatchingNormalizedCode(
     normalizedCode: string,
     folderIds?: string[],

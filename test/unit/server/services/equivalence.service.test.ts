@@ -20,6 +20,7 @@ vi.mock("@/server/repositories/equivalent-code.repository", () => ({
   equivalentCodeRepository: {
     findByProductId: vi.fn(),
     deleteByProductId: vi.fn(),
+    deleteByProductIds: vi.fn(),
     createMany: vi.fn(),
     findByIdAndProduct: vi.fn(),
     deleteById: vi.fn(),
@@ -74,6 +75,30 @@ describe("EquivalenceService", () => {
     expect(equivalentCodeRepository.deleteByProductId).toHaveBeenCalledWith(PRODUCT_ID);
     expect(equivalentCodeRepository.createMany).toHaveBeenCalled();
     expect(result).toHaveLength(2);
+  });
+
+  it("sincroniza equivalencias en lote con deleteMany + createMany", async () => {
+    vi.mocked(equivalentCodeRepository.deleteByProductIds).mockResolvedValue(2);
+    vi.mocked(equivalentCodeRepository.createMany).mockResolvedValue(3);
+
+    await equivalenceService.syncManyFromProducts(
+      [
+        { id: "prod-a", dynamicData: { equivalencias: "2902" } },
+        { id: "prod-b", dynamicData: { equivalencias: "1408=0193" } },
+      ],
+      columns,
+    );
+
+    expect(equivalentCodeRepository.deleteByProductIds).toHaveBeenCalledWith([
+      "prod-a",
+      "prod-b",
+    ]);
+    expect(equivalentCodeRepository.createMany).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ productId: "prod-a", normalizedCode: "2902" }),
+        expect.objectContaining({ productId: "prod-b" }),
+      ]),
+    );
   });
 
   it("agrega una equivalencia manual", async () => {

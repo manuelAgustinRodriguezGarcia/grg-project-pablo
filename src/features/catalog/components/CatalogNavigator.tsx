@@ -3,6 +3,7 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { adminQueryKeys } from "@/features/admin/query-keys";
 import {
   createCatalogAction,
   deleteCatalogAction,
@@ -12,7 +13,7 @@ import { createFolderAction, deleteFolderAction, updateFolderAction } from "@/fe
 import { CatalogFolderSelectors } from "@/features/catalog/components/CatalogFolderSelectors";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import { CatalogPageIntro } from "@/features/catalog/components/CatalogPageChrome";
-import { ProductFormModal } from "@/features/catalog/components/ProductFormModal";
+import { LazyProductFormModal } from "@/features/catalog/components/LazyProductFormModal";
 import { ProductTable } from "@/features/catalog/components/ProductTable";
 import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
 import type {
@@ -165,7 +166,6 @@ export function CatalogNavigator({
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductTableItem | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
   const [productActionError, setProductActionError] = useState<string | null>(null);
 
   const [deleteCatalogTarget, setDeleteCatalogTarget] = useState<CatalogTarget | null>(
@@ -194,8 +194,13 @@ export function CatalogNavigator({
     [sortedCatalogs, selectedCatalogId],
   );
 
+  const invalidateCatalogQueries = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: adminQueryKeys.navigation(activeCatalogId) });
+    void queryClient.invalidateQueries({ queryKey: adminQueryKeys.products() });
+  }, [activeCatalogId, queryClient]);
+
   const navigationQuery = useQuery({
-    queryKey: ["admin", "navigation", activeCatalogId, reloadToken],
+    queryKey: adminQueryKeys.navigation(activeCatalogId),
     queryFn: async (): Promise<CatalogNavigationFolderItem[]> => {
       const response = await fetch(
         `/api/admin/catalogs/${activeCatalogId}/navigation`,
@@ -277,15 +282,12 @@ export function CatalogNavigator({
   );
 
   const productsQuery = useQuery({
-    queryKey: [
-      "admin",
-      "products",
+    queryKey: adminQueryKeys.products(
       activeFolderId,
       page,
       serializedColumnFilters,
       folderSearch,
-      reloadToken,
-    ],
+    ),
     queryFn: async (): Promise<ProductTableResponse> => {
       const params = new URLSearchParams({
         page: String(page),
@@ -319,7 +321,10 @@ export function CatalogNavigator({
   });
 
   const globalSearchQuery = useQuery({
-    queryKey: ["admin", "global-search", debouncedSearch, GLOBAL_SEARCH_DROPDOWN_PAGE_SIZE],
+    queryKey: adminQueryKeys.globalSearch(
+      debouncedSearch,
+      GLOBAL_SEARCH_DROPDOWN_PAGE_SIZE,
+    ),
     queryFn: async ({ signal }): Promise<GlobalSearchResponse> => {
       const params = new URLSearchParams({
         q: debouncedSearch,
@@ -376,22 +381,9 @@ export function CatalogNavigator({
     }
 
     void queryClient.invalidateQueries({
-      queryKey: [
-        "admin",
-        "products",
-        activeFolderId,
-        page,
-        serializedColumnFilters,
-        folderSearch,
-      ],
+      queryKey: adminQueryKeys.products(activeFolderId),
     });
-  }, [
-    activeFolderId,
-    folderSearch,
-    page,
-    queryClient,
-    serializedColumnFilters,
-  ]);
+  }, [activeFolderId, queryClient]);
 
   const globalSearchError =
     globalSearchQuery.error instanceof Error ? globalSearchQuery.error.message : null;
@@ -523,8 +515,8 @@ export function CatalogNavigator({
   }, []);
 
   const handleImportPublished = useCallback(() => {
-    setReloadToken((token) => token + 1);
-  }, []);
+    invalidateCatalogQueries();
+  }, [invalidateCatalogQueries]);
 
   const handleAddCatalog = useCallback(() => {
     setCatalogActionError(null);
@@ -597,12 +589,12 @@ export function CatalogNavigator({
       setPage(1);
       setIsCreateFolderOpen(false);
       setCreateFolderNameDraft("");
-      setReloadToken((token) => token + 1);
+      invalidateCatalogQueries();
       router.refresh();
     } finally {
       setIsFolderActionBusy(false);
     }
-  }, [activeCatalogId, createFolderNameDraft, router]);
+  }, [activeCatalogId, createFolderNameDraft, invalidateCatalogQueries, router]);
 
   const handleEditCatalog = useCallback(
     (catalogId: string) => {
@@ -691,7 +683,7 @@ export function CatalogNavigator({
       }
 
       setDeleteFolderTarget(null);
-      setReloadToken((token) => token + 1);
+      invalidateCatalogQueries();
       router.refresh();
     } finally {
       setIsFolderActionBusy(false);
@@ -700,6 +692,7 @@ export function CatalogNavigator({
     activeCatalogId,
     deleteFolderTarget,
     folders,
+    invalidateCatalogQueries,
     router,
     selectedFolderId,
   ]);
@@ -730,12 +723,12 @@ export function CatalogNavigator({
 
       setEditFolderTarget(null);
       setEditFolderNameDraft("");
-      setReloadToken((token) => token + 1);
+      invalidateCatalogQueries();
       router.refresh();
     } finally {
       setIsFolderActionBusy(false);
     }
-  }, [editFolderNameDraft, editFolderTarget, router]);
+  }, [editFolderNameDraft, editFolderTarget, invalidateCatalogQueries, router]);
 
   const handleConfirmDeleteCatalog = useCallback(async () => {
     if (!deleteCatalogTarget) {
@@ -902,7 +895,7 @@ export function CatalogNavigator({
       </div>
       {importWizard}
       {isProductFormOpen && productTable ? (
-        <ProductFormModal
+        <LazyProductFormModal
           key={editingProduct?.id ?? "create"}
           folderId={productTable.folder.id}
           folderName={productTable.folder.name}
@@ -914,7 +907,7 @@ export function CatalogNavigator({
           }}
           onSaved={() => {
             const wasCreating = editingProduct === null;
-            setReloadToken((token) => token + 1);
+            invalidateCatalogQueries();
             if (wasCreating) {
               setPage(1);
             }

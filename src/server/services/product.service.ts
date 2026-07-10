@@ -127,7 +127,7 @@ function parseDynamicData(value: unknown): Record<string, unknown> {
 function toProductTableItem(
   product: PaginatedProducts["items"][number],
   visibleColumnKeys: Iterable<string>,
-  role: "ADMIN" | "CONSULTA",
+  role: "ADMIN" | "USUARIO",
   primaryImage: ProductTableItem["primaryImage"],
   imagesByColumnKey: ProductTableItem["imagesByColumnKey"],
   fieldAnnotationsByColumnKey: ProductTableItem["fieldAnnotationsByColumnKey"],
@@ -307,24 +307,23 @@ export class ProductService {
       const visibleColumnKeys = columnItems.map((column) => column.internalKey);
       const productIds = paginated.items.map((product) => product.id);
       const includeFullUrls = input.includeFullUrls !== false;
-      const primaryImages =
-        await productImageService.resolvePrimaryImagesForProducts(
+      const [primaryImages, columnImages, fieldAnnotations] = await Promise.all([
+        productImageService.resolvePrimaryImagesForProducts(productIds, {
+          includeFullUrls,
+        }),
+        productImageService.resolveColumnImagesForProducts(
           productIds,
+          columnItems.map((column) => ({
+            internalKey: column.internalKey,
+            originalName: column.originalName,
+            displayName: column.displayName,
+          })),
           { includeFullUrls },
-        );
-      const columnImages = await productImageService.resolveColumnImagesForProducts(
-        productIds,
-        columnItems.map((column) => ({
-          internalKey: column.internalKey,
-          originalName: column.originalName,
-          displayName: column.displayName,
-        })),
-        { includeFullUrls },
-      );
-      const fieldAnnotations = await productFieldAnnotationService.resolveForProducts(
-        productIds,
-        { includeFullUrls },
-      );
+        ),
+        productFieldAnnotationService.resolveForProducts(productIds, {
+          includeFullUrls,
+        }),
+      ]);
 
       return {
         folder: {
@@ -460,21 +459,20 @@ export class ProductService {
 
     const { folder } = await assertFolderForAdmin(product.folderId);
     const columns = await columnRepository.findByFolderIdOrdered(folder.id);
-    const primaryImages = await productImageService.resolvePrimaryImagesForProducts([
-      product.id,
-    ]);
-    const columnImages = await productImageService.resolveColumnImagesForProducts(
-      [product.id],
-      columns.map((column) => ({
-        internalKey: column.internalKey,
-        originalName: column.originalName,
-        displayName: column.displayName,
-      })),
-    );
-    const fieldAnnotationsMap = await productFieldAnnotationService.resolveForProducts(
-      [product.id],
-    );
-    const equivalences = await equivalenceService.listByProduct(product.id);
+    const [primaryImages, columnImages, fieldAnnotationsMap, equivalences] =
+      await Promise.all([
+        productImageService.resolvePrimaryImagesForProducts([product.id]),
+        productImageService.resolveColumnImagesForProducts(
+          [product.id],
+          columns.map((column) => ({
+            internalKey: column.internalKey,
+            originalName: column.originalName,
+            displayName: column.displayName,
+          })),
+        ),
+        productFieldAnnotationService.resolveForProducts([product.id]),
+        equivalenceService.listByProduct(product.id),
+      ]);
 
     const item = toProductTableItem(
       product,
@@ -683,10 +681,13 @@ export class ProductService {
     const columns = await getEditableColumns(folderId);
     const products = await productRepository.findByFolderId(folderId);
 
-    for (const product of products) {
-      const dynamicData = parseDynamicData(product.dynamicData);
-      await equivalenceService.syncFromProduct(product.id, columns, dynamicData);
-    }
+    await equivalenceService.syncManyFromProducts(
+      products.map((product) => ({
+        id: product.id,
+        dynamicData: parseDynamicData(product.dynamicData),
+      })),
+      columns,
+    );
   }
 }
 

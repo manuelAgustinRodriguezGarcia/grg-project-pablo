@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminSignOutButton } from "@/features/auth/components/AdminSignOutButton";
 import { ADMIN_NAV_ITEMS } from "@/features/admin/data/adminNav";
@@ -11,6 +12,7 @@ import { AdminNavItem } from "./AdminNavItem";
 import styles from "./AdminSidebar.module.scss";
 
 const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed";
+const PERMISOS_HREF = "/admin/permisos";
 
 type AdminSidebarProps = {
   userEmail: string;
@@ -56,6 +58,7 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
   const isAdmin = userRole === "ADMIN";
   const RoleIcon = isAdmin ? ShieldUser : UserRound;
   const roleLabel = isAdmin ? "Administrador" : "Usuario";
+  const isPermisosActive = isNavItemActive(pathname, PERMISOS_HREF);
   const isCollapsed = useSyncExternalStore(
     subscribeSidebarCollapse,
     getSidebarCollapseSnapshot,
@@ -68,9 +71,33 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
     emitSidebarCollapseChange();
   }
 
+  const roleBlock = (
+    <>
+      <RoleIcon
+        className={`${styles.roleIcon} ${isAdmin ? styles.roleIconAdmin : styles.roleIconUser}`}
+        strokeWidth={ICON_STROKE}
+        aria-hidden
+      />
+      <div className={styles.userMeta}>
+        <span
+          className={`${styles.userRole} ${isAdmin ? styles.userRoleAdmin : styles.userRoleUser}`}
+        >
+          {roleLabel}
+        </span>
+        <span className={styles.userEmail} title={userEmail}>
+          {userEmail}
+        </span>
+      </div>
+    </>
+  );
+
   return (
     <>
-      <nav className={styles.mobileDock} aria-label="Panel de administración">
+      <nav
+        className={styles.mobileDock}
+        aria-label="Panel de administración"
+        data-admin-extra={isAdmin ? "true" : "false"}
+      >
         <div className={styles.mobileDockInner}>
           <ul className={styles.mobileDockList}>
             {ADMIN_NAV_ITEMS.map((item) => (
@@ -84,6 +111,17 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
                 />
               </li>
             ))}
+            {isAdmin ? (
+              <li>
+                <AdminNavItem
+                  href={PERMISOS_HREF}
+                  label="Permisos"
+                  icon={ShieldUser}
+                  isActive={isPermisosActive}
+                  variant="dock"
+                />
+              </li>
+            ) : null}
           </ul>
           <AdminSignOutButton variant="dock" />
         </div>
@@ -117,23 +155,19 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
           </div>
 
           <div className={styles.userArea}>
-            <div className={styles.userRow}>
-              <RoleIcon
-                className={`${styles.roleIcon} ${isAdmin ? styles.roleIconAdmin : styles.roleIconUser}`}
-                strokeWidth={ICON_STROKE}
-                aria-hidden
-              />
-              <div className={styles.userMeta}>
-                <span
-                  className={`${styles.userRole} ${isAdmin ? styles.userRoleAdmin : styles.userRoleUser}`}
-                >
-                  {roleLabel}
-                </span>
-                <span className={styles.userEmail} title={userEmail}>
-                  {userEmail}
-                </span>
-              </div>
-            </div>
+            {isAdmin ? (
+              <Link
+                href={PERMISOS_HREF}
+                className={`${styles.userRow} ${styles.userRowLink} ${isPermisosActive ? styles.userRowLinkActive : ""}`}
+                aria-label="Configurar permisos del rol Usuario"
+                aria-current={isPermisosActive ? "page" : undefined}
+                title={isCollapsed ? "Permisos del rol Usuario" : undefined}
+              >
+                {roleBlock}
+              </Link>
+            ) : (
+              <div className={styles.userRow}>{roleBlock}</div>
+            )}
             <AdminSignOutButton variant="sidebar" isCollapsed={isCollapsed} />
           </div>
         </aside>

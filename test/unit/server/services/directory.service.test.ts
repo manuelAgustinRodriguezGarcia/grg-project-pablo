@@ -8,7 +8,7 @@ import { directoryService } from "@/server/services/directory.service";
 import { offlineSyncService } from "@/server/services/offline-sync.service";
 import {
   adminUserFixture,
-  consultaUserFixture,
+  usuarioUserFixture,
   mockRequireAuth,
   mockRequireAuthUnauthenticated,
 } from "../../../helpers/mocks/auth";
@@ -40,7 +40,7 @@ vi.mock("@/server/storage", () => ({
 describe("DirectoryService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRequireAuth(consultaUserFixture);
+    mockRequireAuth(usuarioUserFixture);
     vi.mocked(createSignedDownloadUrl).mockResolvedValue({
       signedUrl: "https://example.com/signed-url",
       bucket: "product-images",
@@ -85,7 +85,7 @@ describe("DirectoryService", () => {
     expect(result.generatedAt).toEqual(expect.any(String));
   });
 
-  it("CONSULTA excluye catálogos ocultos", async () => {
+  it("USUARIO excluye catálogos ocultos", async () => {
     const visibleCatalog = createCatalogFixture({ visibleToNormalUser: true });
     const hiddenCatalog = createCatalogFixture({
       id: "hidden-catalog",

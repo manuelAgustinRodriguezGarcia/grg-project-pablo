@@ -38,7 +38,7 @@ export class UserRepository {
         id,
         email,
         name,
-        role: role ?? "CONSULTA",
+        role: role ?? "USUARIO",
         status: status ?? "ACTIVE",
       },
       update: {
@@ -60,22 +60,28 @@ export class UserRepository {
   async touchLastAccessIfStale(
     id: string,
     minIntervalMs = 10 * 60 * 1000,
+    knownLastAccessAt?: Date | null,
   ): Promise<void> {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: { lastAccessAt: true },
+    if (knownLastAccessAt !== undefined) {
+      const lastAccessAt = knownLastAccessAt?.getTime() ?? 0;
+      if (Date.now() - lastAccessAt < minIntervalMs) {
+        return;
+      }
+
+      await this.touchLastAccess(id);
+      return;
+    }
+
+    const threshold = new Date(Date.now() - minIntervalMs);
+
+    // Single conditional update — no prior findUnique round-trip.
+    await prisma.user.updateMany({
+      where: {
+        id,
+        OR: [{ lastAccessAt: null }, { lastAccessAt: { lt: threshold } }],
+      },
+      data: { lastAccessAt: new Date() },
     });
-
-    if (!user) {
-      return;
-    }
-
-    const lastAccessAt = user.lastAccessAt?.getTime() ?? 0;
-    if (Date.now() - lastAccessAt < minIntervalMs) {
-      return;
-    }
-
-    await this.touchLastAccess(id);
   }
 
   async setStatus(id: string, status: UserStatus): Promise<User> {

@@ -7,7 +7,7 @@ import { createSignedDownloadUrl } from "@/server/storage";
 import { navigationService } from "@/server/services/navigation.service";
 import {
   adminUserFixture,
-  consultaUserFixture,
+  usuarioUserFixture,
   mockRequireAuth,
   mockRequireAuthUnauthenticated,
 } from "../../../helpers/mocks/auth";
@@ -35,7 +35,7 @@ vi.mock("@/server/storage", () => ({
 describe("NavigationService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRequireAuth(consultaUserFixture);
+    mockRequireAuth(usuarioUserFixture);
     vi.mocked(catalogRepository.findById).mockResolvedValue(
       createCatalogFixture({ coverImagePath: "catalogs/test/cover.jpg" }),
     );
@@ -80,7 +80,7 @@ describe("NavigationService", () => {
     expect(folderRepository.findByCatalogIdOrdered).toHaveBeenCalledWith(CATALOG_ID, {});
   });
 
-  it("CONSULTA no accede a catálogo oculto", async () => {
+  it("USUARIO no accede a catálogo oculto", async () => {
     vi.mocked(catalogRepository.findById).mockResolvedValue(
       createCatalogFixture({ visibleToNormalUser: false }),
     );

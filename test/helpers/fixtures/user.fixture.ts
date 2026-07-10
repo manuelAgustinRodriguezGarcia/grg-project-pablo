@@ -1,7 +1,7 @@
 import type { User } from "@/generated/prisma/client";
 
 export const ADMIN_USER_ID = "550e8400-e29b-41d4-a716-446655440001";
-export const CONSULTA_USER_ID = "550e8400-e29b-41d4-a716-446655440002";
+export const USUARIO_USER_ID = "550e8400-e29b-41d4-a716-446655440002";
 export const TARGET_USER_ID = "550e8400-e29b-41d4-a716-446655440003";
 
 const baseDate = new Date("2026-06-19T12:00:00.000Z");
@@ -11,7 +11,7 @@ export function createUserFixture(overrides: Partial<User> = {}): User {
     id: TARGET_USER_ID,
     email: "usuario@example.com",
     name: "Usuario Test",
-    role: "CONSULTA",
+    role: "USUARIO",
     status: "ACTIVE",
     lastAccessAt: baseDate,
     createdAt: baseDate,
@@ -27,9 +27,9 @@ export const adminUserFixture = createUserFixture({
   role: "ADMIN",
 });
 
-export const consultaUserFixture = createUserFixture({
-  id: CONSULTA_USER_ID,
-  email: "consulta@example.com",
-  name: "Consulta Test",
-  role: "CONSULTA",
+export const usuarioUserFixture = createUserFixture({
+  id: USUARIO_USER_ID,
+  email: "usuario@example.com",
+  name: "Usuario Test",
+  role: "USUARIO",
 });

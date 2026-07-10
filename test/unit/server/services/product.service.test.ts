@@ -7,7 +7,7 @@ import { productService } from "@/server/services/product.service";
 import { equivalenceService } from "@/server/services/equivalence.service";
 import {
   adminUserFixture,
-  consultaUserFixture,
+  usuarioUserFixture,
   mockRequireAuth,
   mockRequireRole,
 } from "../../../helpers/mocks/auth";
@@ -174,8 +174,8 @@ describe("ProductService", () => {
     expect(result.activeFilters).toEqual([]);
   });
 
-  it("CONSULTA no recibe columnas ocultas ni claves ocultas en dynamicData", async () => {
-    mockRequireAuth(consultaUserFixture);
+  it("USUARIO no recibe columnas ocultas ni claves ocultas en dynamicData", async () => {
+    mockRequireAuth(usuarioUserFixture);
     vi.mocked(columnRepository.findByFolderIdOrdered).mockResolvedValue([
       createColumnFixture({ internalKey: "marca", visibleToNormalUser: true }),
     ]);
@@ -197,8 +197,8 @@ describe("ProductService", () => {
     );
   });
 
-  it("CONSULTA no accede a carpeta oculta", async () => {
-    mockRequireAuth(consultaUserFixture);
+  it("USUARIO no accede a carpeta oculta", async () => {
+    mockRequireAuth(usuarioUserFixture);
     vi.mocked(folderRepository.findById).mockResolvedValue(
       createFolderFixture({ visibleToNormalUser: false }),
     );

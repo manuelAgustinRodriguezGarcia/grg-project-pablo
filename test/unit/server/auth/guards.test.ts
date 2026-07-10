@@ -21,7 +21,7 @@ describe("guards auto-provision", () => {
     vi.clearAllMocks();
   });
 
-  it("asigna CONSULTA al auto-provisionar aunque metadata diga ADMIN", async () => {
+  it("asigna USUARIO al auto-provisionar aunque metadata diga ADMIN", async () => {
     const supabaseUser = {
       id: "new-user-id",
       email: "attacker@example.com",
@@ -51,8 +51,8 @@ describe("guards auto-provision", () => {
     const auth = await requireAuth();
 
     expect(userRepository.upsertFromAuth).toHaveBeenCalledWith(
-      expect.objectContaining({ role: "CONSULTA" }),
+      expect.objectContaining({ role: "USUARIO" }),
     );
-    expect(auth.profile.role).toBe("CONSULTA");
+    expect(auth.profile.role).toBe("USUARIO");
   });
 });

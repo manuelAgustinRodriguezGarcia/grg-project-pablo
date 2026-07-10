@@ -9,7 +9,7 @@ import { columnHelpService } from "@/server/services/column-help.service";
 import { hasContextualHelp } from "@/server/services/column-help.utils";
 import {
   adminUserFixture,
-  consultaUserFixture,
+  usuarioUserFixture,
   mockRequireAuth,
   mockRequireRole,
   mockRequireRoleForbidden,
@@ -164,8 +164,8 @@ describe("ColumnHelpService", () => {
     ).rejects.toBeInstanceOf(AuthForbiddenError);
   });
 
-  it("CONSULTA no accede a ayuda de columna oculta", async () => {
-    mockRequireAuth(consultaUserFixture);
+  it("USUARIO no accede a ayuda de columna oculta", async () => {
+    mockRequireAuth(usuarioUserFixture);
     vi.mocked(columnRepository.findById).mockResolvedValue(
       createColumnFixture({
         visibleToNormalUser: false,
@@ -179,7 +179,7 @@ describe("ColumnHelpService", () => {
     });
   });
 
-  it("CONSULTA recibe ayuda solo en columnas visibles al resolver lista", async () => {
+  it("USUARIO recibe ayuda solo en columnas visibles al resolver lista", async () => {
     const visible = createColumnFixture({
       id: "visible-col",
       helpText: "Visible",
@@ -194,7 +194,7 @@ describe("ColumnHelpService", () => {
 
     const items = await columnHelpService.resolveHelpForColumns(
       [visible, hidden],
-      "CONSULTA",
+      "USUARIO",
     );
 
     expect(items[0]?.hasContextualHelp).toBe(true);
