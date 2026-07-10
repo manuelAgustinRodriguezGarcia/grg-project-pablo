@@ -34,7 +34,7 @@ async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
       id: user.id,
       email: user.email ?? "",
       name: resolveDisplayName(user.user_metadata, user.email ?? "Usuario"),
-      role: "CONSULTA",
+      role: "USUARIO",
     });
   }
 
@@ -46,7 +46,11 @@ async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
     );
   }
 
-  await userRepository.touchLastAccessIfStale(user.id);
+  await userRepository.touchLastAccessIfStale(
+    user.id,
+    10 * 60 * 1000,
+    profile.lastAccessAt,
+  );
 
   return { supabaseUser: user, profile };
 }

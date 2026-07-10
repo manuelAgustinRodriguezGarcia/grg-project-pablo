@@ -4,9 +4,9 @@ import { vi } from "vitest";
 import { requireAuth, requireRole } from "@/server/auth";
 import { AuthError, AuthForbiddenError } from "@/server/auth/errors";
 import type { AuthenticatedUser } from "@/server/auth/types";
-import { adminUserFixture, consultaUserFixture } from "../fixtures/user.fixture";
+import { adminUserFixture, usuarioUserFixture } from "../fixtures/user.fixture";
 
-export { adminUserFixture, consultaUserFixture };
+export { adminUserFixture, usuarioUserFixture };
 
 function createSupabaseUser(profile: User): SupabaseUser {
   return {

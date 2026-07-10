@@ -93,9 +93,3 @@ export const updatePriceColumnSchema = z.object({
   isPrice: z.boolean().optional(),
   helpText: z.string().max(2000).nullable().optional(),
 });
-
-export const setPriceImportDestinationSchema = z.object({
-  destinationType: z.literal("PRICE_LIST"),
-  priceListId: z.string().min(1),
-  sheetName: z.string().min(1),
-});

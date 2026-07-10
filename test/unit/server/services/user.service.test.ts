@@ -63,7 +63,7 @@ describe("UserService", () => {
           email: "nuevo@example.com",
           password: "password123",
           name: "Nuevo",
-          role: "CONSULTA",
+          role: "USUARIO",
         }),
       ).rejects.toMatchObject({ code: "EMAIL_ALREADY_EXISTS" });
     });
@@ -75,7 +75,7 @@ describe("UserService", () => {
         email: "nuevo@example.com",
         password: "password123",
         name: "Nuevo Usuario",
-        role: "CONSULTA",
+        role: "USUARIO",
       });
 
       expect(getSupabaseAdminClient).toHaveBeenCalled();

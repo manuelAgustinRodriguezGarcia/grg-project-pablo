@@ -143,7 +143,7 @@ function toTableColumn(column: PriceColumn): PriceItemTableColumn {
 function toTableRow(
   item: Awaited<ReturnType<typeof priceItemRepository.findById>>,
   visibleColumnKeys: Set<string>,
-  role: "ADMIN" | "CONSULTA",
+  role: "ADMIN" | "USUARIO",
 ): PriceItemTableRow {
   const dynamicData =
     typeof item?.dynamicData === "object" &&

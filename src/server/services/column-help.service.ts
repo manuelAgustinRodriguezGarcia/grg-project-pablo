@@ -134,7 +134,7 @@ export class ColumnHelpService {
       }),
     );
 
-    if (role === "CONSULTA") {
+    if (role === "USUARIO") {
       return resolved.map((item) => ({
         ...item,
         helpText: item.visibleToNormalUser ? item.helpText : null,

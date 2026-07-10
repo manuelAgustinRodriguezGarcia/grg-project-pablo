@@ -18,7 +18,12 @@ function createPrismaClient(): PrismaClient {
 }
 
 function isPrismaClientCurrent(client: PrismaClient): boolean {
-  return typeof client.offlineSyncManifest?.aggregate === "function";
+  // Probe the newest delegates so a HMR-cached client from a previous generate
+  // is discarded instead of serving stale model accessors as undefined.
+  return (
+    typeof client.offlineSyncManifest?.aggregate === "function" &&
+    typeof client.rolePermission?.findMany === "function"
+  );
 }
 
 function resolvePrismaClient(): PrismaClient {
@@ -33,10 +38,9 @@ function resolvePrismaClient(): PrismaClient {
   }
 
   const client = createPrismaClient();
-
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
-  }
+  // Always cache on globalThis so serverless/prod warm invocations reuse the
+  // same PrismaClient + pg pool instead of opening a new connection set.
+  globalForPrisma.prisma = client;
 
   return client;
 }

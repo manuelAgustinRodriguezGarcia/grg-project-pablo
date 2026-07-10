@@ -1422,16 +1422,19 @@ export class CatalogImportService {
         });
 
         const folderProducts = await productRepository.findByFolderId(job.folderId!);
-        for (const product of folderProducts) {
-          const dynamicData =
-            typeof product.dynamicData === "object" &&
-            product.dynamicData !== null &&
-            !Array.isArray(product.dynamicData)
-              ? (product.dynamicData as Record<string, unknown>)
-              : {};
+        await equivalenceService.syncManyFromProducts(
+          folderProducts.map((product) => {
+            const dynamicData =
+              typeof product.dynamicData === "object" &&
+              product.dynamicData !== null &&
+              !Array.isArray(product.dynamicData)
+                ? (product.dynamicData as Record<string, unknown>)
+                : {};
 
-          await equivalenceService.syncFromProduct(product.id, columns, dynamicData);
-        }
+            return { id: product.id, dynamicData };
+          }),
+          columns,
+        );
       }
 
       reachedImageProcessing = true;

@@ -1,8 +1,9 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { adminQueryKeys } from "@/features/admin/query-keys";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 import {
@@ -14,17 +15,17 @@ import {
   deletePriceListAction,
   updatePriceListAction,
 } from "@/features/prices/actions/price-list.actions";
-import { PriceItemFormModal } from "@/features/prices/components/PriceItemFormModal";
+import {
+  LazyPriceItemFormModal,
+  LazyPriceListFormModal,
+  LazyPriceSupplierEditModal,
+} from "@/features/prices/components/LazyPriceModals";
 import { PriceItemTable } from "@/features/prices/components/PriceItemTable";
-import { PriceListFormModal } from "@/features/prices/components/PriceListFormModal";
 import type { PriceListFormValues } from "@/features/prices/components/PriceListFormModal";
 import { PriceListSelectorPanel } from "@/features/prices/components/PriceListSelectorPanel";
 import { PricePageChrome } from "@/features/prices/components/PricePageChrome";
 import { PriceSupplierBanner } from "@/features/prices/components/PriceSupplierBanner";
-import {
-  PriceSupplierEditModal,
-  type PriceSupplierEditValues,
-} from "@/features/prices/components/PriceSupplierEditModal";
+import type { PriceSupplierEditValues } from "@/features/prices/components/PriceSupplierEditModal";
 import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
 import type { PriceColumnListItem } from "@/features/prices/types/price-column.types";
 import type { PriceItemTableResponse } from "@/features/prices/types/price-item-table.types";
@@ -94,7 +95,6 @@ export function PriceNavigator({
   const [page, setPage] = useState(1);
   const [listSearchQuery, setListSearchQuery] = useState("");
   const [columnFilters, setColumnFilters] = useState<ColumnFilterInput[]>([]);
-  const [reloadToken, setReloadToken] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [successToastKey, setSuccessToastKey] = useState(0);
 
@@ -114,6 +114,13 @@ export function PriceNavigator({
   const [itemsActionError, setItemsActionError] = useState<string | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSupplierEditOpen, setIsSupplierEditOpen] = useState(false);
+
+  const queryClient = useQueryClient();
+
+  const invalidatePriceQueries = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: adminQueryKeys.priceColumns() });
+    void queryClient.invalidateQueries({ queryKey: adminQueryKeys.priceItems() });
+  }, [queryClient]);
 
   const notifySuccess = useCallback((message: string) => {
     setSuccessToastKey((current) => current + 1);
@@ -189,7 +196,7 @@ export function PriceNavigator({
   }, []);
 
   const columnsQuery = useQuery({
-    queryKey: ["admin", "price-columns", activeListId, reloadToken],
+    queryKey: adminQueryKeys.priceColumns(activeListId),
     queryFn: async (): Promise<PriceColumnListItem[]> => {
       const response = await fetch(`/api/admin/price-lists/${activeListId}/columns`);
 
@@ -211,15 +218,12 @@ export function PriceNavigator({
   });
 
   const itemsQuery = useQuery({
-    queryKey: [
-      "admin",
-      "price-items",
+    queryKey: adminQueryKeys.priceItems(
       activeListId,
       page,
       listSearchQuery,
       serializedColumnFilters,
-      reloadToken,
-    ],
+    ),
     queryFn: async ({ signal }): Promise<PriceItemTableResponse> => {
       const params = new URLSearchParams({
         page: String(page),
@@ -323,13 +327,13 @@ export function PriceNavigator({
       }
 
       setDeleteItemTarget(null);
-      setReloadToken((token) => token + 1);
+      invalidatePriceQueries();
       notifySuccess("Ítem eliminado correctamente.");
       void refreshListsFromServer();
     } finally {
       setIsItemActionBusy(false);
     }
-  }, [activeListId, deleteItemTarget, refreshListsFromServer]);
+  }, [activeListId, deleteItemTarget, invalidatePriceQueries, notifySuccess, refreshListsFromServer]);
 
   const handleImportExcelClick = useCallback(() => {
     setIsImportOpen(true);
@@ -337,7 +341,7 @@ export function PriceNavigator({
 
   const handleImportPublished = useCallback(
     async (context?: { priceListId?: string }) => {
-      setReloadToken((token) => token + 1);
+      invalidatePriceQueries();
       notifySuccess("Importación de precios completada.");
 
       const response = await fetch("/api/admin/price-lists");
@@ -354,7 +358,7 @@ export function PriceNavigator({
 
       router.refresh();
     },
-    [activeListId, router],
+    [activeListId, invalidatePriceQueries, notifySuccess, router],
   );
 
   const handleSubmitListForm = useCallback(
@@ -386,13 +390,13 @@ export function PriceNavigator({
         setEditingList(null);
         setListFormMode(null);
         notifySuccess("Lista actualizada correctamente.");
-        setReloadToken((token) => token + 1);
+        invalidatePriceQueries();
         router.refresh();
       } finally {
         setIsListActionBusy(false);
       }
     },
-    [editingList, router],
+    [editingList, invalidatePriceQueries, notifySuccess, router],
   );
 
   const handleConfirmCreateList = useCallback(async () => {
@@ -417,12 +421,12 @@ export function PriceNavigator({
       setIsCreateListOpen(false);
       setCreateListNameDraft("");
       notifySuccess("Lista de precios creada correctamente.");
-      setReloadToken((token) => token + 1);
+      invalidatePriceQueries();
       router.refresh();
     } finally {
       setIsListActionBusy(false);
     }
-  }, [createListNameDraft, router]);
+  }, [createListNameDraft, invalidatePriceQueries, notifySuccess, router]);
 
   const handleConfirmDeleteList = useCallback(async () => {
     if (!deleteListTarget) {
@@ -550,7 +554,7 @@ export function PriceNavigator({
             columnFilters={columnFilters}
             onColumnFilterChange={handleColumnFilterChange}
             onClearColumnFilters={handleClearColumnFilters}
-            onColumnsChanged={() => setReloadToken((token) => token + 1)}
+            onColumnsChanged={invalidatePriceQueries}
             hasSelectedList={Boolean(activeListId)}
             hasAnyLists={sortedLists.length > 0}
             onPageChange={handlePageChange}
@@ -570,7 +574,7 @@ export function PriceNavigator({
       </div>
 
       {isSupplierEditOpen && activeList ? (
-        <PriceSupplierEditModal
+        <LazyPriceSupplierEditModal
           initialSupplierName={activeList.supplierName}
           initialSupplierDate={activeList.supplierDate}
           isBusy={isListActionBusy}
@@ -586,7 +590,7 @@ export function PriceNavigator({
       ) : null}
 
       {listFormMode === "edit" ? (
-        <PriceListFormModal
+        <LazyPriceListFormModal
           mode="edit"
           initialList={editingList}
           isBusy={isListActionBusy}
@@ -641,7 +645,7 @@ export function PriceNavigator({
       ) : null}
 
       {isItemFormOpen && activeListId ? (
-        <PriceItemFormModal
+        <LazyPriceItemFormModal
           key={editingItem?.id ?? "create"}
           priceListId={activeListId}
           columns={columnDetails}
@@ -651,7 +655,7 @@ export function PriceNavigator({
             setEditingItem(null);
           }}
           onSaved={() => {
-            setReloadToken((token) => token + 1);
+            invalidatePriceQueries();
             notifySuccess(
               editingItem ? "Ítem actualizado correctamente." : "Ítem creado correctamente.",
             );

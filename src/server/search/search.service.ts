@@ -362,15 +362,12 @@ export class SearchService {
       columns: columnsByFolder.flatMap((entry) => entry.columns),
     });
 
-    const paginated = await productRepository.findPaginated(where, pagination);
+    const paginated = await productRepository.findSearchPaginated(where, pagination);
 
     return {
       catalog: { id: catalog.id, name: catalog.name },
       search: buildSearchQueryMeta(query),
-      items: await mapSearchItems(
-        paginated.items as ProductWithRelations[],
-        query,
-      ),
+      items: await mapSearchItems(paginated.items, query),
       pagination: {
         page: paginated.page,
         pageSize: paginated.pageSize,

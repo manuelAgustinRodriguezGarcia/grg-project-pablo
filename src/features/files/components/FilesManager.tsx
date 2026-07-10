@@ -1,6 +1,8 @@
 "use client";
 
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
+import { adminQueryKeys } from "@/features/admin/query-keys";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 import { FilesPageIntro } from "@/features/files/components/FilesPageIntro";
@@ -46,13 +48,10 @@ function readErrorMessage(payload: unknown, fallback: string): string {
 }
 
 export function FilesManager({ catalogs, isAdmin }: FilesManagerProps) {
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<UploadedFileListResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
 
   const [detailFileId, setDetailFileId] = useState<string | null>(null);
   const [detail, setDetail] = useState<UploadedFileDetail | null>(null);
@@ -88,61 +87,43 @@ export function FilesManager({ catalogs, isAdmin }: FilesManagerProps) {
     };
   }, [query]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const filesQuery = useQuery({
+    queryKey: adminQueryKeys.files(page, debouncedQuery),
+    queryFn: async ({ signal }): Promise<UploadedFileListResponse> => {
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+      });
 
-    async function loadFiles() {
-      setIsLoading(true);
-      setListError(null);
-
-      try {
-        const params = new URLSearchParams({
-          page: String(page),
-          pageSize: String(PAGE_SIZE),
-        });
-
-        if (debouncedQuery) {
-          params.set("q", debouncedQuery);
-        }
-
-        const response = await fetch(`/api/admin/files?${params.toString()}`);
-
-        if (!response.ok) {
-          const payload = await response.json().catch(() => null);
-          throw new Error(readErrorMessage(payload, "No se pudieron cargar los archivos."));
-        }
-
-        const payload = (await response.json()) as UploadedFileListResponse;
-
-        if (!cancelled) {
-          setData(payload);
-        }
-      } catch (caught) {
-        if (!cancelled) {
-          setData(null);
-          setListError(
-            caught instanceof Error
-              ? caught.message
-              : "No se pudieron cargar los archivos.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+      if (debouncedQuery) {
+        params.set("q", debouncedQuery);
       }
-    }
 
-    void loadFiles();
+      const response = await fetch(`/api/admin/files?${params.toString()}`, {
+        signal,
+      });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedQuery, page, reloadToken]);
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(
+          readErrorMessage(payload, "No se pudieron cargar los archivos."),
+        );
+      }
+
+      return (await response.json()) as UploadedFileListResponse;
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+
+  const data = filesQuery.data ?? null;
+  const isLoading = filesQuery.isFetching && !filesQuery.data;
+  const listError =
+    filesQuery.error instanceof Error ? filesQuery.error.message : null;
 
   const refreshList = useCallback(() => {
-    setReloadToken((current) => current + 1);
-  }, []);
+    void queryClient.invalidateQueries({ queryKey: adminQueryKeys.files() });
+  }, [queryClient]);
 
   const loadDetail = useCallback(async (fileId: string) => {
     setIsDetailLoading(true);

@@ -6,7 +6,7 @@ import { auditService } from "@/server/services/audit.service";
 import { priceListService } from "@/server/services/price-list.service";
 import {
   adminUserFixture,
-  consultaUserFixture,
+  usuarioUserFixture,
   mockRequireAuth,
   mockRequireRole,
   mockRequireRoleForbidden,
@@ -48,7 +48,7 @@ describe("PriceListService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequireRole(adminUserFixture);
-    mockRequireAuth(consultaUserFixture);
+    mockRequireAuth(usuarioUserFixture);
     vi.mocked(priceListRepository.findByIdWithItemCount).mockResolvedValue(listFixture);
     vi.mocked(priceListRepository.findAllOrdered).mockResolvedValue([listFixture]);
     vi.mocked(priceListRepository.countByName).mockResolvedValue(0);
@@ -86,7 +86,7 @@ describe("PriceListService", () => {
     );
   });
 
-  it("CONSULTA no ve listas ocultas en listado", async () => {
+  it("USUARIO no ve listas ocultas en listado", async () => {
     const visible = createPriceListWithItemCountFixture({ visibleToNormalUser: true });
     vi.mocked(priceListRepository.findAllOrdered).mockResolvedValue([visible]);
 

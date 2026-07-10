@@ -72,35 +72,10 @@ export class ProductRepository {
     where: Prisma.ProductWhereInput,
     options: ProductPaginationOptions,
   ): Promise<PaginatedProducts> {
-    const page = Math.max(1, options.page);
-    const pageSize = Math.min(Math.max(1, options.pageSize), 200);
-    const skip = (page - 1) * pageSize;
-
-    const [items, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
-        skip,
-        take: pageSize,
-        include: {
-          equivalentCodes: true,
-          folder: {
-            include: {
-              catalog: true,
-            },
-          },
-        },
-      }),
-      prisma.product.count({ where }),
-    ]);
-
-    return {
-      items,
-      total,
-      page,
-      pageSize,
-      totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
-    };
+    // Prefer findSearchPaginated / findPaginatedBasic for new call sites.
+    // Kept for catalog search which only needs product scalars (relations
+    // are loaded via findSearchPaginated elsewhere).
+    return this.findPaginatedBasic(where, options);
   }
 
   async findSearchPaginated(
@@ -265,6 +240,25 @@ export class ProductRepository {
     return prisma.product.findMany({
       where: { folderId },
       select: { id: true, primaryCode: true, normalizedCode: true },
+    });
+  }
+
+  async findForMatchingByFolder(folderId: string): Promise<
+    Array<{
+      id: string;
+      primaryCode: string | null;
+      normalizedCode: string | null;
+      dynamicData: Prisma.JsonValue;
+    }>
+  > {
+    return prisma.product.findMany({
+      where: { folderId },
+      select: {
+        id: true,
+        primaryCode: true,
+        normalizedCode: true,
+        dynamicData: true,
+      },
     });
   }
 

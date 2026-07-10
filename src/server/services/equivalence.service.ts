@@ -72,13 +72,20 @@ function resolveSourceColumnKey(
 }
 
 export class EquivalenceService {
-  async syncFromProduct(
+  /**
+   * Builds the unique equivalence rows for one product without touching the DB.
+   * Used by both single-product sync and bulk folder/import sync.
+   */
+  buildRowsForProduct(
     productId: string,
     columns: FolderColumn[],
     dynamicData: Record<string, unknown>,
-  ): Promise<EquivalenceListItem[]> {
-    await equivalentCodeRepository.deleteByProductId(productId);
-
+  ): Array<{
+    productId: string;
+    originalCode: string;
+    normalizedCode: string;
+    sourceColumnKey: string | null;
+  }> {
     const equivalenceColumns = columns.filter((column) => column.isEquivalence);
     const tokens = collectEquivalenceTokensFromColumns(equivalenceColumns, dynamicData);
 
@@ -107,16 +114,57 @@ export class EquivalenceService {
       });
     }
 
-    await equivalentCodeRepository.createMany(
-      [...uniqueByNormalized.values()].map((token) => ({
-        productId,
-        originalCode: token.originalCode,
-        normalizedCode: token.normalizedCode,
-        sourceColumnKey: token.sourceColumnKey,
-      })),
-    );
+    return [...uniqueByNormalized.values()].map((token) => ({
+      productId,
+      originalCode: token.originalCode,
+      normalizedCode: token.normalizedCode,
+      sourceColumnKey: token.sourceColumnKey,
+    }));
+  }
+
+  async syncFromProduct(
+    productId: string,
+    columns: FolderColumn[],
+    dynamicData: Record<string, unknown>,
+  ): Promise<EquivalenceListItem[]> {
+    await equivalentCodeRepository.deleteByProductId(productId);
+
+    const rows = this.buildRowsForProduct(productId, columns, dynamicData);
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    await equivalentCodeRepository.createMany(rows);
 
     return (await equivalentCodeRepository.findByProductId(productId)).map(toListItem);
+  }
+
+  /**
+   * Replaces all equivalence codes for the given products in two queries
+   * (deleteMany + createMany) instead of 3×N per-product round-trips.
+   */
+  async syncManyFromProducts(
+    products: Array<{
+      id: string;
+      dynamicData: Record<string, unknown>;
+    }>,
+    columns: FolderColumn[],
+  ): Promise<void> {
+    if (products.length === 0) {
+      return;
+    }
+
+    const productIds = products.map((product) => product.id);
+    const rows = products.flatMap((product) =>
+      this.buildRowsForProduct(product.id, columns, product.dynamicData),
+    );
+
+    await equivalentCodeRepository.deleteByProductIds(productIds);
+
+    if (rows.length > 0) {
+      await equivalentCodeRepository.createMany(rows);
+    }
   }
 
   async listByProduct(productId: string): Promise<EquivalenceListItem[]> {

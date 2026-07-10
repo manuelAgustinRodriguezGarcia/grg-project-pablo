@@ -5,7 +5,7 @@ import { offlineSyncManifestRepository } from "@/server/repositories/offline-syn
 import { priceListRepository } from "@/server/repositories/price-list.repository";
 import {
   adminUserFixture,
-  consultaUserFixture,
+  usuarioUserFixture,
   mockRequireAuth,
 } from "../../../helpers/mocks/auth";
 import { createCatalogFixture } from "../../../helpers/fixtures/catalog.fixture";
@@ -86,13 +86,13 @@ import { offlineSyncService } from "@/server/services/offline-sync.service";
 describe("OfflineSyncService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRequireAuth(consultaUserFixture);
+    mockRequireAuth(usuarioUserFixture);
     vi.mocked(catalogRepository.findActiveOrdered).mockResolvedValue([]);
     vi.mocked(priceListRepository.findAllOrdered).mockResolvedValue([]);
     vi.mocked(offlineSyncManifestRepository.getMaxVersionForUser).mockResolvedValue(0);
     vi.mocked(offlineSyncManifestRepository.upsert).mockResolvedValue({
       id: "manifest-1",
-      userId: consultaUserFixture.id,
+      userId: usuarioUserFixture.id,
       deviceId: "00000000-0000-4000-8000-000000000001",
       version: 1,
       catalogIds: [],
@@ -105,7 +105,7 @@ describe("OfflineSyncService", () => {
     });
   });
 
-  it("manifest solo incluye catálogos visibles para CONSULTA", async () => {
+  it("manifest solo incluye catálogos visibles para USUARIO", async () => {
     const visible = createCatalogFixture({ visibleToNormalUser: true });
     const hidden = createCatalogFixture({
       id: "hidden",

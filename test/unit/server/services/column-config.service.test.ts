@@ -8,7 +8,7 @@ import { columnConfigService } from "@/server/services/column-config.service";
 import { columnHelpService } from "@/server/services/column-help.service";
 import {
   adminUserFixture,
-  consultaUserFixture,
+  usuarioUserFixture,
   mockRequireAuth,
   mockRequireRole,
   mockRequireRoleForbidden,
@@ -127,8 +127,8 @@ describe("ColumnConfigService", () => {
     ).rejects.toMatchObject({ code: "COLUMN_PRIMARY_CODE_CONFLICT" });
   });
 
-  it("lista columnas visibles para CONSULTA", async () => {
-    mockRequireAuth(consultaUserFixture);
+  it("lista columnas visibles para USUARIO", async () => {
+    mockRequireAuth(usuarioUserFixture);
     vi.mocked(columnRepository.findByFolderIdOrdered).mockResolvedValue([
       createColumnFixture({ visibleToNormalUser: true }),
     ]);

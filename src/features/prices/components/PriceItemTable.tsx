@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPills";
@@ -105,7 +105,7 @@ function getColumnColClass(column: PriceItemTableColumn): string {
   return styles.colDynamic;
 }
 
-export function PriceItemTable({
+export const PriceItemTable = memo(function PriceItemTable({
   data,
   isLoading,
   error,
@@ -439,4 +439,4 @@ export function PriceItemTable({
       ) : null}
     </section>
   );
-}
+});

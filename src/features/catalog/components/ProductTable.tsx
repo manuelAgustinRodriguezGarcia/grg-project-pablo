@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ChevronLeft, ChevronRight, File, ICON_STROKE, Pencil } from "@/shared/icons";
@@ -150,7 +150,7 @@ function hasFieldAnnotation(annotation: ProductFieldAnnotation | undefined): boo
   return Boolean(annotation.helpText) || Boolean(annotation.thumbnailUrl ?? annotation.fullUrl);
 }
 
-export function ProductTable({
+export const ProductTable = memo(function ProductTable({
   data,
   isLoading,
   error,
@@ -597,4 +597,4 @@ export function ProductTable({
       ) : null}
     </section>
   );
-}
+});

@@ -256,21 +256,19 @@ export class ProductImageService {
   async processExternalImages(
     input: ProcessExternalImagesInput,
   ): Promise<ProcessExternalImagesResult> {
-    const products = await productRepository.findPrimaryCodesByFolder(
-      input.folderId,
-    );
+    const products = await productRepository.findForMatchingByFolder(input.folderId);
 
-    const fullProducts: ProductForMatching[] = await Promise.all(
-      products.map(async (product) => {
-        const full = await productRepository.findById(product.id);
-        return {
-          id: product.id,
-          primaryCode: product.primaryCode,
-          normalizedCode: product.normalizedCode,
-          dynamicData: (full?.dynamicData as Record<string, unknown>) ?? {},
-        };
-      }),
-    );
+    const fullProducts: ProductForMatching[] = products.map((product) => ({
+      id: product.id,
+      primaryCode: product.primaryCode,
+      normalizedCode: product.normalizedCode,
+      dynamicData:
+        typeof product.dynamicData === "object" &&
+        product.dynamicData !== null &&
+        !Array.isArray(product.dynamicData)
+          ? (product.dynamicData as Record<string, unknown>)
+          : {},
+    }));
 
     const index = buildProductMatchIndex(fullProducts, input.imageCodeColumnKeys, {
       includePrimaryCode: input.includePrimaryCodeInMatch ?? true,
