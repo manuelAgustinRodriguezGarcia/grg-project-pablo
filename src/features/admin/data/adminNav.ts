@@ -1,10 +1,12 @@
 import type { LucideIcon } from "lucide-react";
-import { Archive, Receipt, TableProperties } from "@/shared/icons";
+import { Archive, Receipt, TableProperties, Users } from "@/shared/icons";
 
 export type AdminNavItemConfig = {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Visible only when session role is ADMIN. */
+  adminOnly?: boolean;
 };
 
 export const ADMIN_NAV_ITEMS: AdminNavItemConfig[] = [
@@ -22,6 +24,12 @@ export const ADMIN_NAV_ITEMS: AdminNavItemConfig[] = [
     href: "/admin/archivos",
     label: "Archivos",
     icon: Archive,
+  },
+  {
+    href: "/admin/usuarios",
+    label: "Usuarios",
+    icon: Users,
+    adminOnly: true,
   },
 ];
 

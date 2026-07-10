@@ -1,4 +1,4 @@
-import type { User } from "@/generated/prisma/client";
+import type { User, UserRole } from "@/generated/prisma/client";
 
 export type UserActionResult<T = void> =
   | { success: true; data: T }
@@ -8,6 +8,12 @@ export type UserListItem = Pick<
   User,
   "id" | "name" | "email" | "role" | "status" | "lastAccessAt" | "createdAt"
 >;
+
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: "Administrador",
+  USUARIO: "Usuario",
+  VISUALIZACION: "Visualización",
+};
 
 export function toUserListItem(user: User): UserListItem {
   return {

@@ -16,6 +16,8 @@ import { PRICE_LIST_ID } from "../../../helpers/fixtures/price-list.fixture";
 vi.mock("@/server/auth", () => ({
   requireAuth: vi.fn(),
   requireRole: vi.fn(),
+  requireAdmin: vi.fn(),
+  requireEditor: vi.fn(),
 }));
 vi.mock("@/server/repositories/price-item.repository", () => ({
   priceItemRepository: {

@@ -16,7 +16,7 @@ describe("VisibilityService", () => {
     expect(visibilityService.filterColumns([hiddenColumn], "ADMIN")).toHaveLength(1);
   });
 
-  it("USUARIO excluye entidades ocultas", () => {
+  it("USUARIO y VISUALIZACION excluyen entidades ocultas", () => {
     const visibleCatalog = createCatalogFixture({ visibleToNormalUser: true });
     const hiddenCatalog = createCatalogFixture({ visibleToNormalUser: false });
     const visibleFolder = createFolderFixture({ visibleToNormalUser: true, status: "ACTIVE" });
@@ -25,26 +25,30 @@ describe("VisibilityService", () => {
     const visibleColumn = createColumnFixture({ visibleToNormalUser: true });
     const hiddenColumn = createColumnFixture({ visibleToNormalUser: false });
 
-    expect(
-      visibilityService.filterCatalogs([visibleCatalog, hiddenCatalog], "USUARIO"),
-    ).toEqual([visibleCatalog]);
-    expect(
-      visibilityService.filterFolders(
-        [visibleFolder, hiddenFolder, inactiveFolder],
-        "USUARIO",
-      ),
-    ).toEqual([visibleFolder]);
-    expect(
-      visibilityService.filterColumns([visibleColumn, hiddenColumn], "USUARIO"),
-    ).toEqual([visibleColumn]);
+    for (const role of ["USUARIO", "VISUALIZACION"] as const) {
+      expect(
+        visibilityService.filterCatalogs([visibleCatalog, hiddenCatalog], role),
+      ).toEqual([visibleCatalog]);
+      expect(
+        visibilityService.filterFolders(
+          [visibleFolder, hiddenFolder, inactiveFolder],
+          role,
+        ),
+      ).toEqual([visibleFolder]);
+      expect(
+        visibilityService.filterColumns([visibleColumn, hiddenColumn], role),
+      ).toEqual([visibleColumn]);
+    }
   });
 
-  it("assertCatalogVisibleForRole lanza error para USUARIO en catálogo oculto", () => {
+  it("assertCatalogVisibleForRole lanza error para roles no admin en catálogo oculto", () => {
     const hiddenCatalog = createCatalogFixture({ visibleToNormalUser: false });
 
-    expect(() =>
-      visibilityService.assertCatalogVisibleForRole(hiddenCatalog, "USUARIO"),
-    ).toThrow(VisibilityError);
+    for (const role of ["USUARIO", "VISUALIZACION"] as const) {
+      expect(() =>
+        visibilityService.assertCatalogVisibleForRole(hiddenCatalog, role),
+      ).toThrow(VisibilityError);
+    }
 
     expect(() =>
       visibilityService.assertCatalogVisibleForRole(hiddenCatalog, "ADMIN"),
@@ -55,28 +59,32 @@ describe("VisibilityService", () => {
     const hiddenFolder = createFolderFixture({ visibleToNormalUser: false });
     const inactiveFolder = createFolderFixture({ status: "INACTIVE" });
 
-    expect(() =>
-      visibilityService.assertFolderVisibleForRole(hiddenFolder, "USUARIO"),
-    ).toThrow(VisibilityError);
-    expect(() =>
-      visibilityService.assertFolderVisibleForRole(inactiveFolder, "USUARIO"),
-    ).toThrow(VisibilityError);
+    for (const role of ["USUARIO", "VISUALIZACION"] as const) {
+      expect(() =>
+        visibilityService.assertFolderVisibleForRole(hiddenFolder, role),
+      ).toThrow(VisibilityError);
+      expect(() =>
+        visibilityService.assertFolderVisibleForRole(inactiveFolder, role),
+      ).toThrow(VisibilityError);
+    }
   });
 
-  it("stripHiddenDynamicData elimina claves ocultas para USUARIO", () => {
+  it("stripHiddenDynamicData elimina claves ocultas para USUARIO y VISUALIZACION", () => {
     const dynamicData = {
       codigo: "ABC",
       marca: "SKF",
       nota_interna: "solo admin",
     };
 
-    const result = visibilityService.stripHiddenDynamicData(
-      dynamicData,
-      ["codigo", "marca"],
-      "USUARIO",
-    );
+    for (const role of ["USUARIO", "VISUALIZACION"] as const) {
+      const result = visibilityService.stripHiddenDynamicData(
+        dynamicData,
+        ["codigo", "marca"],
+        role,
+      );
 
-    expect(result).toEqual({ codigo: "ABC", marca: "SKF" });
+      expect(result).toEqual({ codigo: "ABC", marca: "SKF" });
+    }
   });
 
   it("stripHiddenDynamicData conserva todo para ADMIN", () => {

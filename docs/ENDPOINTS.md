@@ -210,9 +210,9 @@ Formulario tras callback de recuperación (sesión activa).
 
 ---
 
-### `/admin/users` ❌
+### `/admin/usuarios` ✅
 
-Gestión de usuarios (solo `ADMIN`).
+Gestión de usuarios (solo `ADMIN`). UI en `src/features/users/components/UsersManager.tsx`.
 
 **Actions disponibles:**
 

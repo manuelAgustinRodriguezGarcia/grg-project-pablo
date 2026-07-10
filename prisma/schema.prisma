@@ -13,6 +13,7 @@ datasource db {
 enum UserRole {
   ADMIN
   USUARIO
+  VISUALIZACION
 }
 
 enum UserStatus {
@@ -108,7 +109,7 @@ model User {
   id           String     @id @db.Uuid
   name         String
   email        String     @unique
-  role         UserRole   @default(USUARIO)
+  role         UserRole   @default(VISUALIZACION)
   status       UserStatus @default(ACTIVE)
   lastAccessAt DateTime?
   createdAt    DateTime   @default(now())
@@ -525,31 +526,4 @@ model AuditLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
-}
-
-/// Acción configurable del sistema (catálogo de permisos; keys se definen en fases posteriores).
-model Permission {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  label       String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  rolePermissions RolePermission[]
-}
-
-/// Flag global por rol: el ADMIN puede habilitar/deshabilitar cada Permission para un UserRole.
-model RolePermission {
-  id           String     @id @default(cuid())
-  role         UserRole
-  permissionId String
-  enabled      Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@unique([role, permissionId])
-  @@index([role])
 }

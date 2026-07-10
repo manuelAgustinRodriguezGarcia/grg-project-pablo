@@ -1,6 +1,6 @@
-import type { PriceColumn } from "@/generated/prisma/client";
+import type { PriceColumn, UserRole } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
-import { requireAuth, requireRole } from "@/server/auth";
+import { requireAuth, requireEditor } from "@/server/auth";
 import {
   priceItemRepository,
   type PaginatedPriceItems,
@@ -143,7 +143,7 @@ function toTableColumn(column: PriceColumn): PriceItemTableColumn {
 function toTableRow(
   item: Awaited<ReturnType<typeof priceItemRepository.findById>>,
   visibleColumnKeys: Set<string>,
-  role: "ADMIN" | "USUARIO",
+  role: UserRole,
 ): PriceItemTableRow {
   const dynamicData =
     typeof item?.dynamicData === "object" &&
@@ -295,7 +295,7 @@ export class PriceItemService {
     priceListId: string,
     values: Record<string, unknown>,
   ): Promise<PriceItemTableRow> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireEditor();
     await priceListService.requirePriceListForAdmin(priceListId);
 
     const columns = await priceColumnRepository.findByPriceListIdOrdered(priceListId);
@@ -321,7 +321,7 @@ export class PriceItemService {
     itemId: string,
     values: Record<string, unknown>,
   ): Promise<PriceItemTableRow> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireEditor();
     const existing = await priceItemRepository.findById(itemId);
     if (!existing) {
       throw new PriceItemError("Ítem no encontrado.", "PRICE_ITEM_NOT_FOUND");
@@ -348,7 +348,7 @@ export class PriceItemService {
   }
 
   async deleteItem(id: string): Promise<void> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireEditor();
     const item = await priceItemRepository.findById(id);
     if (!item) {
       throw new PriceItemError("Ítem no encontrado.", "PRICE_ITEM_NOT_FOUND");

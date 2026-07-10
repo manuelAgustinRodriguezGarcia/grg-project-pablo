@@ -1,12 +1,21 @@
 import type { User } from "@/generated/prisma/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { vi } from "vitest";
-import { requireAuth, requireRole } from "@/server/auth";
+import {
+  requireAdmin,
+  requireAuth,
+  requireEditor,
+  requireRole,
+} from "@/server/auth";
 import { AuthError, AuthForbiddenError } from "@/server/auth/errors";
 import type { AuthenticatedUser } from "@/server/auth/types";
-import { adminUserFixture, usuarioUserFixture } from "../fixtures/user.fixture";
+import {
+  adminUserFixture,
+  usuarioUserFixture,
+  visualizacionUserFixture,
+} from "../fixtures/user.fixture";
 
-export { adminUserFixture, usuarioUserFixture };
+export { adminUserFixture, usuarioUserFixture, visualizacionUserFixture };
 
 function createSupabaseUser(profile: User): SupabaseUser {
   return {
@@ -31,11 +40,33 @@ export function mockRequireAuth(profile: User = adminUserFixture): void {
 }
 
 export function mockRequireRole(profile: User = adminUserFixture): void {
-  vi.mocked(requireRole).mockResolvedValue(createAuthenticatedUser(profile));
+  const auth = createAuthenticatedUser(profile);
+  vi.mocked(requireRole).mockResolvedValue(auth);
+  vi.mocked(requireAdmin).mockResolvedValue(auth);
+  vi.mocked(requireEditor).mockResolvedValue(auth);
+}
+
+export function mockRequireAdmin(profile: User = adminUserFixture): void {
+  vi.mocked(requireAdmin).mockResolvedValue(createAuthenticatedUser(profile));
+}
+
+export function mockRequireEditor(profile: User = adminUserFixture): void {
+  vi.mocked(requireEditor).mockResolvedValue(createAuthenticatedUser(profile));
 }
 
 export function mockRequireRoleForbidden(): void {
-  vi.mocked(requireRole).mockRejectedValue(new AuthForbiddenError());
+  const error = new AuthForbiddenError();
+  vi.mocked(requireRole).mockRejectedValue(error);
+  vi.mocked(requireAdmin).mockRejectedValue(error);
+  vi.mocked(requireEditor).mockRejectedValue(error);
+}
+
+export function mockRequireAdminForbidden(): void {
+  vi.mocked(requireAdmin).mockRejectedValue(new AuthForbiddenError());
+}
+
+export function mockRequireEditorForbidden(): void {
+  vi.mocked(requireEditor).mockRejectedValue(new AuthForbiddenError());
 }
 
 export function mockRequireAuthUnauthenticated(): void {

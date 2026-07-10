@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const userRoleSchema = z.enum(["ADMIN", "USUARIO"]);
+export const userRoleSchema = z.enum(["ADMIN", "USUARIO", "VISUALIZACION"]);
 
 export const createUserSchema = z.object({
   email: z
@@ -29,12 +29,30 @@ export const updateUserSchema = z
       .min(1, "El nombre no puede estar vacío.")
       .max(120, "El nombre no puede superar 120 caracteres.")
       .optional(),
+    email: z
+      .string()
+      .trim()
+      .min(1, "El correo es obligatorio.")
+      .email("Introduce un correo válido.")
+      .optional(),
     role: userRoleSchema.optional(),
+    password: z
+      .string()
+      .min(8, "La contraseña debe tener al menos 8 caracteres.")
+      .max(72, "La contraseña no puede superar 72 caracteres.")
+      .optional(),
   })
-  .refine((data) => data.name !== undefined || data.role !== undefined, {
-    message: "Debes indicar al menos el nombre o el rol.",
-    path: ["name"],
-  });
+  .refine(
+    (data) =>
+      data.name !== undefined ||
+      data.email !== undefined ||
+      data.role !== undefined ||
+      data.password !== undefined,
+    {
+      message: "Debes indicar al menos un campo para actualizar.",
+      path: ["name"],
+    },
+  );
 
 export const userIdSchema = z.object({
   userId: z.string().uuid("Identificador de usuario inválido."),

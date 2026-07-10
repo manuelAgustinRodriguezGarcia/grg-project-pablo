@@ -3,10 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
-const SEED_EMAIL = process.env.SEED_USUARIO_EMAIL ?? "grgusuario@gmail.com";
-const SEED_PASSWORD = process.env.SEED_USUARIO_PASSWORD ?? "grgsolutions";
-const SEED_NAME = process.env.SEED_USUARIO_NAME ?? "usuarioGRG";
-const SEED_ROLE = "USUARIO" as const;
+const SEED_EMAIL =
+  process.env.SEED_VISUALIZACION_EMAIL ?? "grgvisualizacion@gmail.com";
+const SEED_PASSWORD =
+  process.env.SEED_VISUALIZACION_PASSWORD ?? "grgsolutions";
+const SEED_NAME = process.env.SEED_VISUALIZACION_NAME ?? "visualizacionGRG";
+const SEED_ROLE = "VISUALIZACION" as const;
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -125,13 +127,13 @@ async function main(): Promise<void> {
     });
 
     console.log(`✓ Perfil local sincronizado: ${profile.name} (${profile.role})`);
-    console.log("\nUsuario editor (USUARIO) listo para login en /auth/login");
+    console.log("\nUsuario VISUALIZACION listo para login en /auth/login");
   } finally {
     await prisma.$disconnect();
   }
 }
 
 main().catch((error: unknown) => {
-  console.error("✗ Seed de usuario USUARIO fallido:", error);
+  console.error("✗ Seed de usuario VISUALIZACION fallido:", error);
   process.exit(1);
 });

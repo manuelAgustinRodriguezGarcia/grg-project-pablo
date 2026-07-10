@@ -16,6 +16,9 @@ export {
   requireAuthOrRedirect,
   requireRole,
   requireRoleOrRedirect,
+  requireAdmin,
+  requireAdminOrRedirect,
+  requireEditor,
 } from "./guards";
 export { authService, AuthService } from "./auth.service";
 export type {

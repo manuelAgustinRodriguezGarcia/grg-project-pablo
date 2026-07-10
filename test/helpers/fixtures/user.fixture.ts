@@ -2,6 +2,7 @@ import type { User } from "@/generated/prisma/client";
 
 export const ADMIN_USER_ID = "550e8400-e29b-41d4-a716-446655440001";
 export const USUARIO_USER_ID = "550e8400-e29b-41d4-a716-446655440002";
+export const VISUALIZACION_USER_ID = "550e8400-e29b-41d4-a716-446655440004";
 export const TARGET_USER_ID = "550e8400-e29b-41d4-a716-446655440003";
 
 const baseDate = new Date("2026-06-19T12:00:00.000Z");
@@ -32,4 +33,11 @@ export const usuarioUserFixture = createUserFixture({
   email: "usuario@example.com",
   name: "Usuario Test",
   role: "USUARIO",
+});
+
+export const visualizacionUserFixture = createUserFixture({
+  id: VISUALIZACION_USER_ID,
+  email: "visualizacion@example.com",
+  name: "Visualización Test",
+  role: "VISUALIZACION",
 });

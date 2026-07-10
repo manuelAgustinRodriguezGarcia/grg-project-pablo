@@ -34,7 +34,7 @@ async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
       id: user.id,
       email: user.email ?? "",
       name: resolveDisplayName(user.user_metadata, user.email ?? "Usuario"),
-      role: "USUARIO",
+      role: "VISUALIZACION",
     });
   }
 
@@ -71,6 +71,32 @@ export async function requireRole(role: UserRole): Promise<AuthenticatedUser> {
   return auth;
 }
 
+function hasOneOfRoles(role: UserRole, allowed: readonly UserRole[]): boolean {
+  return allowed.includes(role);
+}
+
+/** Exige rol ADMIN (gestión de usuarios, estructura, imports). */
+export async function requireAdmin(): Promise<AuthenticatedUser> {
+  const auth = await requireAuth();
+
+  if (!hasOneOfRoles(auth.profile.role, ["ADMIN"])) {
+    throw new AuthForbiddenError();
+  }
+
+  return auth;
+}
+
+/** Exige rol ADMIN o USUARIO (mutaciones de contenido: productos, precios, imágenes). */
+export async function requireEditor(): Promise<AuthenticatedUser> {
+  const auth = await requireAuth();
+
+  if (!hasOneOfRoles(auth.profile.role, ["ADMIN", "USUARIO"])) {
+    throw new AuthForbiddenError();
+  }
+
+  return auth;
+}
+
 /** Redirige al login si no hay sesión válida (para layouts/páginas). */
 export async function requireAuthOrRedirect(
   redirectTo?: string,
@@ -99,6 +125,19 @@ export async function requireRoleOrRedirect(
 
   if (auth.profile.role !== role) {
     throw new AuthForbiddenError();
+  }
+
+  return auth;
+}
+
+/** Redirige a catálogos si el usuario no es ADMIN (páginas solo-admin). */
+export async function requireAdminOrRedirect(
+  redirectTo?: string,
+): Promise<AuthenticatedUser> {
+  const auth = await requireAuthOrRedirect(redirectTo);
+
+  if (auth.profile.role !== "ADMIN") {
+    redirect("/admin/catalogos");
   }
 
   return auth;

@@ -32,6 +32,7 @@ type ProductTableProps = {
     filter: ColumnFilterInput | null,
   ) => void;
   onClearColumnFilters?: () => void;
+  canEdit?: boolean;
   isAdmin?: boolean;
   onColumnsChanged?: () => void;
   onEditProduct?: (product: ProductTableItem) => void;
@@ -159,6 +160,7 @@ export const ProductTable = memo(function ProductTable({
   columnFilters = [],
   onColumnFilterChange,
   onClearColumnFilters,
+  canEdit = false,
   isAdmin = false,
   onColumnsChanged,
   onEditProduct,
@@ -349,7 +351,7 @@ export const ProductTable = memo(function ProductTable({
                   onColumnsChanged={onColumnsChanged}
                 />
               ))}
-              {isAdmin && onEditProduct ? (
+              {canEdit && onEditProduct ? (
                 <th scope="col" className={styles.actionsColumn}>
                   Acciones
                 </th>
@@ -529,7 +531,7 @@ export const ProductTable = memo(function ProductTable({
                       </td>
                     );
                   })}
-                  {isAdmin && onEditProduct ? (
+                  {canEdit && onEditProduct ? (
                     <td className={styles.actionsColumn}>
                       <div className={styles.rowActions}>
                         <button

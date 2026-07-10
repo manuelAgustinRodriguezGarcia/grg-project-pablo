@@ -1,5 +1,5 @@
 import type { ImportJobStatus } from "@/generated/prisma/client";
-import { requireAuth, requireRole } from "@/server/auth";
+import { requireAuth, requireAdmin } from "@/server/auth";
 import { importJobRepository } from "@/server/repositories/import-job.repository";
 import { uploadedFileRepository } from "@/server/repositories/uploaded-file.repository";
 import { catalogImportService } from "@/server/services/catalog-import.service";
@@ -60,7 +60,7 @@ export class UploadedFileService {
   }
 
   async getFileDetail(fileId: string) {
-    await requireRole("ADMIN");
+    await requireAdmin();
     const file = await this.requireRetainedFile(fileId);
     return toUploadedFileDetail(file);
   }
@@ -87,7 +87,7 @@ export class UploadedFileService {
     fileId: string,
     jobId?: string,
   ): Promise<UploadedFileReportResponse> {
-    await requireRole("ADMIN");
+    await requireAdmin();
     const file = await this.requireRetainedFile(fileId);
 
     const targetJob = jobId
@@ -128,7 +128,7 @@ export class UploadedFileService {
   }
 
   async reprocess(fileId: string) {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
     const file = await this.requireRetainedFile(fileId);
 
     const active = await importJobRepository.findActiveByUploadedFileId(fileId);
@@ -152,7 +152,7 @@ export class UploadedFileService {
   }
 
   async deleteFile(fileId: string, input: { confirmed: boolean }) {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
     const file = await this.requireRetainedFile(fileId);
 
     await importJobRepository.cancelAllActiveByUploadedFileId(fileId);
@@ -181,7 +181,7 @@ export class UploadedFileService {
   }
 
   async cleanupOrphanFiles(input?: { dryRun?: boolean }) {
-    await requireRole("ADMIN");
+    await requireAdmin();
     const dryRun = input?.dryRun ?? false;
 
     const files = await uploadedFileRepository.findAllWithHistory();

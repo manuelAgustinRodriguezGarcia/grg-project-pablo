@@ -1,6 +1,6 @@
-import type { FolderColumn } from "@/generated/prisma/client";
+import type { FolderColumn, UserRole } from "@/generated/prisma/client";
 import type { ColumnListItem } from "@/features/catalog/types/column.types";
-import { requireAuth, requireRole } from "@/server/auth";
+import { requireAuth, requireEditor } from "@/server/auth";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
 import { columnRepository } from "@/server/repositories/column.repository";
 import { folderRepository } from "@/server/repositories/folder.repository";
@@ -127,7 +127,7 @@ function parseDynamicData(value: unknown): Record<string, unknown> {
 function toProductTableItem(
   product: PaginatedProducts["items"][number],
   visibleColumnKeys: Iterable<string>,
-  role: "ADMIN" | "USUARIO",
+  role: UserRole,
   primaryImage: ProductTableItem["primaryImage"],
   imagesByColumnKey: ProductTableItem["imagesByColumnKey"],
   fieldAnnotationsByColumnKey: ProductTableItem["fieldAnnotationsByColumnKey"],
@@ -450,7 +450,7 @@ export class ProductService {
   }
 
   async getProduct(productId: string): Promise<ProductDetail> {
-    const { profile } = await requireRole("ADMIN");
+    const { profile } = await requireEditor();
 
     const product = await productRepository.findById(productId);
     if (!product) {
@@ -491,7 +491,7 @@ export class ProductService {
   }
 
   async createProduct(input: CreateProductInput): Promise<ProductDetail> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireEditor();
     await assertFolderForAdmin(input.folderId);
 
     const columns = await getEditableColumns(input.folderId);
@@ -538,7 +538,7 @@ export class ProductService {
   }
 
   async updateProduct(input: UpdateProductInput): Promise<ProductDetail> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireEditor();
 
     const existing = await productRepository.findById(input.productId);
     if (!existing) {
@@ -593,7 +593,7 @@ export class ProductService {
   }
 
   async deleteProduct(productId: string): Promise<void> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireEditor();
 
     const product = await productRepository.findById(productId);
     if (!product) {
@@ -614,7 +614,7 @@ export class ProductService {
   }
 
   async duplicateProduct(productId: string): Promise<ProductDetail> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireEditor();
 
     const source = await productRepository.findById(productId);
     if (!source) {

@@ -19,6 +19,7 @@
     "auth:verify": "pnpm dlx tsx scripts/verify-auth.ts",
     "seed:admin": "pnpm dlx tsx scripts/seed-admin-user.ts",
     "seed:usuario": "pnpm dlx tsx scripts/seed-usuario-user.ts",
+    "seed:visualizacion": "pnpm dlx tsx scripts/seed-visualizacion-user.ts",
     "files:cleanup-orphans": "pnpm dlx tsx scripts/cleanup-orphan-uploaded-files.ts",
     "postinstall": "prisma generate"
   },

@@ -18,6 +18,17 @@ describe("createUserSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("acepta rol VISUALIZACION", () => {
+    const result = createUserSchema.safeParse({
+      email: "visor@example.com",
+      password: "password123",
+      name: "Solo lectura",
+      role: "VISUALIZACION",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("rechaza correo inválido", () => {
     const result = createUserSchema.safeParse({
       email: "correo-invalido",
@@ -62,7 +73,17 @@ describe("updateUserSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rechaza actualización sin nombre ni rol", () => {
+  it("acepta actualización de email y contraseña", () => {
+    const result = updateUserSchema.safeParse({
+      id: ADMIN_USER_ID,
+      email: "nuevo@example.com",
+      password: "nuevaclave123",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rechaza actualización sin campos", () => {
     const result = updateUserSchema.safeParse({
       id: ADMIN_USER_ID,
     });

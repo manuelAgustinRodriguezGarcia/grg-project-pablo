@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { toAdminUiAuth } from "@/features/auth/types/admin-ui-auth";
 import { CatalogNavigator } from "@/features/catalog/components/CatalogNavigator";
 import { requireAuthOrRedirect } from "@/server/auth";
 import { directoryService } from "@/server/services/directory.service";
@@ -26,6 +27,7 @@ export default async function AdminCatalogosPage({
   searchParams,
 }: AdminCatalogosPageProps) {
   const auth = await requireAuthOrRedirect("/admin");
+  const adminAuth = toAdminUiAuth(auth.profile);
   const params = await searchParams;
   const directory = await directoryService.getDirectory();
 
@@ -34,7 +36,8 @@ export default async function AdminCatalogosPage({
       catalogs={directory.catalogs}
       initialCatalogId={firstParam(params.catalog)}
       initialFolderId={firstParam(params.folder)}
-      isAdmin={auth.profile.role === "ADMIN"}
+      canEdit={adminAuth.canEdit}
+      isAdmin={adminAuth.isAdmin}
       enableColumnFilters
     />
   );

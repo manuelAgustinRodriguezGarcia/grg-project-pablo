@@ -34,7 +34,6 @@ type UploadedFileDetailModalProps = {
   actionError: string | null;
   onClose: () => void;
   onDownload: () => void;
-  onReprocess: () => void;
   onDelete: () => void;
   onViewReport: (jobId?: string) => void;
 };
@@ -48,7 +47,6 @@ export function UploadedFileDetailModal({
   actionError,
   onClose,
   onDownload,
-  onReprocess,
   onDelete,
   onViewReport,
 }: UploadedFileDetailModalProps) {
@@ -261,21 +259,12 @@ export function UploadedFileDetailModal({
           <footer className={styles.modalFooter}>
             <button
               type="button"
-              className={styles.modalButtonSecondary}
+              className={styles.modalButton}
               onClick={onDownload}
               disabled={isBusy || isLoading}
             >
               <FileDown strokeWidth={ICON_STROKE} aria-hidden />
               Descargar original
-            </button>
-            <button
-              type="button"
-              className={styles.modalButton}
-              onClick={onReprocess}
-              disabled={isBusy || isLoading}
-            >
-              <RefreshCcw strokeWidth={ICON_STROKE} aria-hidden />
-              Reprocesar
             </button>
             <button
               type="button"

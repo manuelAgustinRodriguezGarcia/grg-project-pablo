@@ -1,6 +1,6 @@
 import type { FolderColumn } from "@/generated/prisma/client";
 import { normalizeCodeForMatch } from "@/server/importers/match-detector";
-import { requireRole } from "@/server/auth";
+import { requireAdmin } from "@/server/auth";
 import { equivalentCodeRepository } from "@/server/repositories/equivalent-code.repository";
 import { productRepository } from "@/server/repositories/product.repository";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
@@ -168,7 +168,7 @@ export class EquivalenceService {
   }
 
   async listByProduct(productId: string): Promise<EquivalenceListItem[]> {
-    await requireRole("ADMIN");
+    await requireAdmin();
     await assertProductExists(productId);
 
     const codes = await equivalentCodeRepository.findByProductId(productId);
@@ -176,7 +176,7 @@ export class EquivalenceService {
   }
 
   async addManual(productId: string, originalCode: string): Promise<EquivalenceListItem> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
     await assertProductExists(productId);
 
     const trimmed = originalCode.trim();
@@ -218,7 +218,7 @@ export class EquivalenceService {
   }
 
   async remove(equivalenceId: string, productId: string): Promise<void> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
     await assertProductExists(productId);
 
     const code = await equivalentCodeRepository.findByIdAndProduct(
