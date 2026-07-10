@@ -17,6 +17,8 @@ import {
 vi.mock("@/server/auth", () => ({
   requireAuth: vi.fn(),
   requireRole: vi.fn(),
+  requireAdmin: vi.fn(),
+  requireEditor: vi.fn(),
 }));
 vi.mock("@/server/repositories/price-column.repository", () => ({
   priceColumnRepository: {

@@ -21,6 +21,7 @@ type PriceItemTableProps = {
   data: PriceItemTableResponse | null;
   isLoading: boolean;
   error: string | null;
+  canEdit: boolean;
   isAdmin: boolean;
   priceListId: string;
   searchQuery: string;
@@ -109,6 +110,7 @@ export const PriceItemTable = memo(function PriceItemTable({
   data,
   isLoading,
   error,
+  canEdit,
   isAdmin,
   priceListId,
   searchQuery,
@@ -270,7 +272,7 @@ export const PriceItemTable = memo(function PriceItemTable({
     );
   }
 
-  const showActionsColumn = isAdmin;
+  const showActionsColumn = canEdit && Boolean(onEditItem ?? onDeleteItem);
   const { pagination, items } = data;
   const { from, to } = getPaginationRange(pagination);
   const trimmedSearchQuery = searchQuery.trim();

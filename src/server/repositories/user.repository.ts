@@ -11,6 +11,7 @@ export type UpsertUserFromAuthInput = {
 
 export type UpdateUserProfileInput = {
   name?: string;
+  email?: string;
   role?: UserRole;
 };
 
@@ -38,7 +39,7 @@ export class UserRepository {
         id,
         email,
         name,
-        role: role ?? "USUARIO",
+        role: role ?? "VISUALIZACION",
         status: status ?? "ACTIVE",
       },
       update: {
@@ -96,6 +97,7 @@ export class UserRepository {
       where: { id },
       data: {
         ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.email !== undefined ? { email: input.email } : {}),
         ...(input.role !== undefined ? { role: input.role } : {}),
       },
     });

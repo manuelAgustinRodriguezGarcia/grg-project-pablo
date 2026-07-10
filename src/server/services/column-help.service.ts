@@ -1,5 +1,5 @@
 import type { FolderColumn, UserRole } from "@/generated/prisma/client";
-import { requireAuth, requireRole } from "@/server/auth";
+import { requireAuth, requireAdmin } from "@/server/auth";
 import {
   buildColumnHelpImageStoragePaths,
   generateThumbnail,
@@ -134,7 +134,7 @@ export class ColumnHelpService {
       }),
     );
 
-    if (role === "USUARIO") {
+    if (role !== "ADMIN") {
       return resolved.map((item) => ({
         ...item,
         helpText: item.visibleToNormalUser ? item.helpText : null,
@@ -180,7 +180,7 @@ export class ColumnHelpService {
     originalFilename: string;
     altText?: string | null;
   }): Promise<ColumnListItem> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
     const column = await requireColumn(input.columnId);
 
     const maxSize = BUCKET_CONFIGS[STORAGE_BUCKETS.COLUMN_HELP_IMAGES].maxSizeBytes;
@@ -261,7 +261,7 @@ export class ColumnHelpService {
   }
 
   async deleteHelpImage(columnId: string): Promise<ColumnListItem> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
     const column = await requireColumn(columnId);
 
     if (!column.helpImagePath) {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { toAdminUiAuth } from "@/features/auth/types/admin-ui-auth";
 import { PriceNavigator } from "@/features/prices/components/PriceNavigator";
 import { listPriceListsAction } from "@/features/prices/actions/price-list.actions";
 import { requireAuthOrRedirect } from "@/server/auth";
@@ -25,6 +26,7 @@ export default async function AdminPreciosPage({
   searchParams,
 }: AdminPreciosPageProps) {
   const auth = await requireAuthOrRedirect("/admin");
+  const adminAuth = toAdminUiAuth(auth.profile);
   const params = await searchParams;
   const listsResult = await listPriceListsAction();
 
@@ -32,7 +34,8 @@ export default async function AdminPreciosPage({
     <PriceNavigator
       initialPriceLists={listsResult.success ? listsResult.data : []}
       initialListId={firstParam(params.list)}
-      isAdmin={auth.profile.role === "ADMIN"}
+      canEdit={adminAuth.canEdit}
+      isAdmin={adminAuth.isAdmin}
       loadError={listsResult.success ? null : listsResult.error}
     />
   );

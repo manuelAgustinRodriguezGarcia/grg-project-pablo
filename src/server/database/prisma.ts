@@ -20,10 +20,7 @@ function createPrismaClient(): PrismaClient {
 function isPrismaClientCurrent(client: PrismaClient): boolean {
   // Probe the newest delegates so a HMR-cached client from a previous generate
   // is discarded instead of serving stale model accessors as undefined.
-  return (
-    typeof client.offlineSyncManifest?.aggregate === "function" &&
-    typeof client.rolePermission?.findMany === "function"
-  );
+  return typeof client.offlineSyncManifest?.aggregate === "function";
 }
 
 function resolvePrismaClient(): PrismaClient {

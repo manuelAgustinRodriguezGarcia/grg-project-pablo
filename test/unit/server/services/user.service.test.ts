@@ -6,7 +6,7 @@ import { auditService } from "@/server/services/audit.service";
 import { userService } from "@/server/services/user.service";
 import {
   adminUserFixture,
-  mockRequireRole,
+  mockRequireAdmin,
 } from "../../../helpers/mocks/auth";
 import { setupUserRepositoryMocks } from "../../../helpers/mocks/user.repository";
 import {
@@ -22,6 +22,8 @@ import {
 vi.mock("@/server/auth", () => ({
   requireAuth: vi.fn(),
   requireRole: vi.fn(),
+  requireAdmin: vi.fn(),
+  requireEditor: vi.fn(),
 }));
 vi.mock("@/server/repositories/user.repository", () => ({
   userRepository: {
@@ -47,7 +49,7 @@ vi.mock("@/server/services/audit.service", () => ({
 describe("UserService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRequireRole(adminUserFixture);
+    mockRequireAdmin(adminUserFixture);
     setupUserRepositoryMocks();
     setupSupabaseAdminMock();
   });
@@ -79,7 +81,12 @@ describe("UserService", () => {
       });
 
       expect(getSupabaseAdminClient).toHaveBeenCalled();
-      expect(supabase.auth.admin.createUser).toHaveBeenCalled();
+      expect(supabase.auth.admin.createUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: "nuevo@example.com",
+          email_confirm: true,
+        }),
+      );
       expect(userRepository.upsertFromAuth).toHaveBeenCalled();
       expect(auditService.logOperationSafe).toHaveBeenCalledWith({
         userId: adminUserFixture.id,
@@ -97,6 +104,63 @@ describe("UserService", () => {
       await expect(
         userService.updateUser({ id: TARGET_USER_ID, name: "Nuevo nombre" }),
       ).rejects.toMatchObject({ code: "USER_NOT_FOUND" });
+    });
+
+    it("impide que el admin degrade su propio rol", async () => {
+      vi.mocked(userRepository.findById).mockResolvedValue(adminUserFixture);
+
+      await expect(
+        userService.updateUser({ id: ADMIN_USER_ID, role: "USUARIO" }),
+      ).rejects.toMatchObject({ code: "CANNOT_CHANGE_OWN_ROLE" });
+    });
+
+    it("actualiza email y contraseña en Supabase y perfil local", async () => {
+      const target = createUserFixture({
+        id: TARGET_USER_ID,
+        email: "viejo@example.com",
+      });
+      vi.mocked(userRepository.findById).mockResolvedValue(target);
+      vi.mocked(userRepository.findByEmail).mockResolvedValue(null);
+      const supabase = setupSupabaseAdminMock();
+
+      await userService.updateUser({
+        id: TARGET_USER_ID,
+        email: "nuevo@example.com",
+        password: "nuevaclave123",
+        name: "Nombre nuevo",
+      });
+
+      expect(supabase.auth.admin.updateUserById).toHaveBeenCalledWith(
+        TARGET_USER_ID,
+        expect.objectContaining({
+          email: "nuevo@example.com",
+          email_confirm: true,
+          password: "nuevaclave123",
+        }),
+      );
+      expect(userRepository.updateProfile).toHaveBeenCalledWith(TARGET_USER_ID, {
+        name: "Nombre nuevo",
+        email: "nuevo@example.com",
+      });
+      expect(supabase.auth.admin.signOut).toHaveBeenCalledWith(
+        TARGET_USER_ID,
+        "global",
+      );
+    });
+
+    it("rechaza email duplicado de otro usuario", async () => {
+      const target = createUserFixture({ id: TARGET_USER_ID });
+      vi.mocked(userRepository.findById).mockResolvedValue(target);
+      vi.mocked(userRepository.findByEmail).mockResolvedValue(
+        createUserFixture({ id: "otro-id", email: "ocupado@example.com" }),
+      );
+
+      await expect(
+        userService.updateUser({
+          id: TARGET_USER_ID,
+          email: "ocupado@example.com",
+        }),
+      ).rejects.toMatchObject({ code: "EMAIL_ALREADY_EXISTS" });
     });
   });
 

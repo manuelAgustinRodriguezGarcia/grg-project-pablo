@@ -143,7 +143,7 @@ export class AuthService {
         authUser.user_metadata,
         authUser.email ?? input.email,
       ),
-      role: existing?.role ?? "USUARIO",
+      role: existing?.role ?? "VISUALIZACION",
       status: existing?.status ?? "ACTIVE",
     });
 

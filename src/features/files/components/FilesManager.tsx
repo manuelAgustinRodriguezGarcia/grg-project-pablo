@@ -14,7 +14,6 @@ import {
   getUploadedFileDetailAction,
   getUploadedFileDownloadUrlAction,
   getUploadedFileReportAction,
-  reprocessUploadedFileAction,
 } from "@/features/files/actions/uploaded-file.actions";
 import type {
   UploadedFileDetail,
@@ -212,30 +211,6 @@ export function FilesManager({ catalogs, isAdmin }: FilesManagerProps) {
     setReportError(null);
   }, [isReportLoading]);
 
-  const handleReprocess = useCallback(async () => {
-    if (!detail) {
-      return;
-    }
-
-    setIsActionBusy(true);
-    setDetailActionError(null);
-
-    const result = await reprocessUploadedFileAction({ fileId: detail.id });
-
-    setIsActionBusy(false);
-
-    if (!result.success) {
-      setDetailActionError(result.error);
-      return;
-    }
-
-    setDetailFileId(null);
-    setDetail(null);
-    setWizardJobId(result.data.jobId);
-    setIsImportOpen(true);
-    refreshList();
-  }, [detail, refreshList]);
-
   const handleDeleteRequest = useCallback(() => {
     if (!detail) {
       return;
@@ -331,7 +306,6 @@ export function FilesManager({ catalogs, isAdmin }: FilesManagerProps) {
                 void handleDownload(detail.id);
               }
             }}
-            onReprocess={() => void handleReprocess()}
             onDelete={handleDeleteRequest}
             onViewReport={(jobId) => {
               if (detail) {

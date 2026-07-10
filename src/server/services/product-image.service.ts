@@ -5,7 +5,7 @@ import type {
 } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import type { ExternalImageRef } from "@/server/importers/types";
-import { requireAuth, requireRole } from "@/server/auth";
+import { requireAuth, requireAdmin, requireEditor } from "@/server/auth";
 import {
   buildImportExternalImagePath,
   buildProductImageStoragePaths,
@@ -213,7 +213,7 @@ export class ProductImageService {
     contentType: string;
     source: ExternalImageRef["source"];
   }): Promise<ExternalImageRef> {
-    await requireRole("ADMIN");
+    await requireAdmin();
 
     if (!isAllowedImageExtension(input.originalFilename)) {
       throw new ProductImageError(
@@ -404,7 +404,7 @@ export class ProductImageService {
     items: ProductImageReviewItem[];
     pagination: { page: number; pageSize: number; total: number; totalPages: number };
   }> {
-    await requireRole("ADMIN");
+    await requireAdmin();
 
     const page = options.page ?? 1;
     const pageSize = options.pageSize ?? 50;
@@ -457,7 +457,7 @@ export class ProductImageService {
     productId: string;
     folderId: string;
   }): Promise<ProductImageReviewItem> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     const image = await productImageRepository.findByIdAndJob(
       input.imageId,
@@ -579,7 +579,7 @@ export class ProductImageService {
     sortOrder?: number;
     label?: string | null;
   }): Promise<ProductImageReviewItem> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     const image = await productImageRepository.findByIdAndJob(
       input.imageId,
@@ -632,7 +632,7 @@ export class ProductImageService {
   }
 
   async softDeleteImage(importJobId: string, imageId: string): Promise<void> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     const image = await productImageRepository.findByIdAndJob(imageId, importJobId);
     if (!image) {
@@ -813,13 +813,13 @@ export class ProductImageService {
     return result;
   }
 
-  private async assertProductForAdmin(productId: string) {
+  private async assertProductForEditor(productId: string) {
     const product = await productRepository.findById(productId);
     if (!product) {
       throw new ProductImageError("Producto no encontrado.", "PRODUCT_NOT_FOUND");
     }
 
-    await requireRole("ADMIN");
+    await requireEditor();
     return product;
   }
 
@@ -909,8 +909,8 @@ export class ProductImageService {
     sortOrder?: number;
     label?: string | null;
   }): Promise<ProductImageReviewItem> {
-    const { profile: admin } = await requireRole("ADMIN");
-    const product = await this.assertProductForAdmin(input.productId);
+    const { profile: editor } = await requireEditor();
+    const product = await this.assertProductForEditor(input.productId);
 
     const maxSize = BUCKET_CONFIGS[STORAGE_BUCKETS.PRODUCT_IMAGES].maxSizeBytes;
     if (input.buffer.byteLength > maxSize) {
@@ -937,7 +937,7 @@ export class ProductImageService {
     });
 
     auditService.logOperationSafe({
-      userId: admin.id,
+      userId: editor.id,
       action: AUDIT_ACTIONS.PRODUCT_IMAGE_ASSOCIATED,
       entityType: AUDIT_ENTITY_TYPES.PRODUCT_IMAGE,
       entityId: image.id,
@@ -952,8 +952,8 @@ export class ProductImageService {
     buffer: Buffer;
     originalFilename: string;
   }): Promise<ProductImageReviewItem> {
-    const { profile: admin } = await requireRole("ADMIN");
-    const product = await this.assertProductForAdmin(input.productId);
+    const { profile: editor } = await requireEditor();
+    const product = await this.assertProductForEditor(input.productId);
 
     const image = await productImageRepository.findById(input.imageId);
     if (!image || image.productId !== product.id || image.status === "DELETED") {
@@ -1025,7 +1025,7 @@ export class ProductImageService {
     }
 
     auditService.logOperationSafe({
-      userId: admin.id,
+      userId: editor.id,
       action: AUDIT_ACTIONS.PRODUCT_IMAGE_UPDATED,
       entityType: AUDIT_ENTITY_TYPES.PRODUCT_IMAGE,
       entityId: updated.id,
@@ -1041,8 +1041,8 @@ export class ProductImageService {
     sortOrder?: number;
     label?: string | null;
   }): Promise<ProductImageReviewItem> {
-    const { profile: admin } = await requireRole("ADMIN");
-    await this.assertProductForAdmin(input.productId);
+    const { profile: editor } = await requireEditor();
+    await this.assertProductForEditor(input.productId);
 
     const image = await productImageRepository.findById(input.imageId);
     if (!image || image.productId !== input.productId || image.status === "DELETED") {
@@ -1060,7 +1060,7 @@ export class ProductImageService {
     });
 
     auditService.logOperationSafe({
-      userId: admin.id,
+      userId: editor.id,
       action: AUDIT_ACTIONS.PRODUCT_IMAGE_UPDATED,
       entityType: AUDIT_ENTITY_TYPES.PRODUCT_IMAGE,
       entityId: updated.id,
@@ -1070,8 +1070,8 @@ export class ProductImageService {
   }
 
   async deleteProductImage(productId: string, imageId: string): Promise<void> {
-    const { profile: admin } = await requireRole("ADMIN");
-    await this.assertProductForAdmin(productId);
+    const { profile: editor } = await requireEditor();
+    await this.assertProductForEditor(productId);
 
     const image = await productImageRepository.findById(imageId);
     if (!image || image.productId !== productId || image.status === "DELETED") {
@@ -1081,7 +1081,7 @@ export class ProductImageService {
     await productImageRepository.update(image.id, { status: "DELETED" });
 
     auditService.logOperationSafe({
-      userId: admin.id,
+      userId: editor.id,
       action: AUDIT_ACTIONS.PRODUCT_IMAGE_DELETED,
       entityType: AUDIT_ENTITY_TYPES.PRODUCT_IMAGE,
       entityId: image.id,

@@ -73,6 +73,7 @@ type CatalogNavigatorProps = {
   catalogs: DirectoryCatalogItem[];
   initialCatalogId?: string;
   initialFolderId?: string;
+  canEdit?: boolean;
   isAdmin?: boolean;
   enableColumnFilters?: boolean;
 };
@@ -122,6 +123,7 @@ export function CatalogNavigator({
   catalogs,
   initialCatalogId = "",
   initialFolderId = "",
+  canEdit = false,
   isAdmin = false,
   enableColumnFilters = false,
 }: CatalogNavigatorProps) {
@@ -840,8 +842,8 @@ export function CatalogNavigator({
             onSelectSearchProduct={handleSelectSearchResult}
             onSelectSearchCatalog={handleSelectCatalogSearchResult}
             onSelectSearchFolder={handleSelectFolderSearchResult}
-            onImportExcelClick={handleImportExcelClick}
-            onAddProductClick={isAdmin ? handleAddProductClick : undefined}
+            onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
+            onAddProductClick={canEdit ? handleAddProductClick : undefined}
           >
             <CatalogFolderSelectors
               catalogs={sortedCatalogs}
@@ -851,12 +853,12 @@ export function CatalogNavigator({
               isLoadingFolders={isLoadingFolders}
               onSelectCatalog={handleSelectCatalog}
               onSelectFolder={handleSelectFolder}
-              onEditCatalog={handleEditCatalog}
-              onDeleteCatalog={handleDeleteCatalog}
-              onEditFolder={handleEditFolder}
-              onDeleteFolder={handleDeleteFolder}
-              onAddCatalog={handleAddCatalog}
-              onAddFolder={handleAddFolder}
+              onEditCatalog={isAdmin ? handleEditCatalog : undefined}
+              onDeleteCatalog={isAdmin ? handleDeleteCatalog : undefined}
+              onEditFolder={isAdmin ? handleEditFolder : undefined}
+              onDeleteFolder={isAdmin ? handleDeleteFolder : undefined}
+              onAddCatalog={isAdmin ? handleAddCatalog : undefined}
+              onAddFolder={isAdmin ? handleAddFolder : undefined}
             />
           </CatalogPageIntro>
 
@@ -881,8 +883,9 @@ export function CatalogNavigator({
             onColumnFilterChange={handleColumnFilterChange}
             onClearColumnFilters={handleClearColumnFilters}
             isAdmin={isAdmin}
+            canEdit={canEdit}
             onColumnsChanged={isAdmin ? handleColumnsChanged : undefined}
-            onEditProduct={isAdmin ? handleEditProduct : undefined}
+            onEditProduct={canEdit ? handleEditProduct : undefined}
             folderName={activeFolderName}
             folderSearchQuery={folderSearch}
             onFolderSearchChange={

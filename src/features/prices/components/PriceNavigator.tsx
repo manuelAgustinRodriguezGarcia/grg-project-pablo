@@ -42,6 +42,7 @@ const PAGE_SIZE = 50;
 type PriceNavigatorProps = {
   initialPriceLists: PriceListListItem[];
   initialListId?: string;
+  canEdit: boolean;
   isAdmin: boolean;
   loadError: string | null;
 };
@@ -63,6 +64,7 @@ function resolveListId(lists: PriceListListItem[], selectedId: string): string {
 export function PriceNavigator({
   initialPriceLists,
   initialListId = "",
+  canEdit,
   isAdmin,
   loadError,
 }: PriceNavigatorProps) {
@@ -545,6 +547,7 @@ export function PriceNavigator({
             isLoading={isLoadingItems}
             error={itemsError ?? itemsActionError}
             isAdmin={isAdmin}
+            canEdit={canEdit}
             priceListId={activeListId}
             searchQuery={listSearchQuery}
             listName={activeList?.name ?? ""}
@@ -560,14 +563,14 @@ export function PriceNavigator({
             onPageChange={handlePageChange}
             onImportExcel={isAdmin ? handleImportExcelClick : undefined}
             onEditItem={
-              isAdmin
+              canEdit
                 ? (item) => {
                     setEditingItem(item);
                     setIsItemFormOpen(true);
                   }
                 : undefined
             }
-            onDeleteItem={isAdmin ? setDeleteItemTarget : undefined}
+            onDeleteItem={canEdit ? setDeleteItemTarget : undefined}
             columnDetails={columnDetails}
           />
         </div>

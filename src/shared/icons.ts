@@ -43,7 +43,9 @@ export {
   Trash2,
   Upload,
   User,
+  Users,
   UserRound,
+  UserX,
   ShieldUser,
   X,
 } from "lucide-react";

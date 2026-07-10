@@ -12,6 +12,8 @@ import { createColumnFixture } from "../../../helpers/fixtures/column.fixture";
 
 vi.mock("@/server/auth", () => ({
   requireRole: vi.fn(),
+  requireAdmin: vi.fn(),
+  requireEditor: vi.fn(),
 }));
 vi.mock("@/server/repositories/product.repository", () => ({
   productRepository: { findById: vi.fn() },

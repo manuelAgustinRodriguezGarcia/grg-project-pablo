@@ -1,5 +1,5 @@
 import type { User, UserRole } from "@/generated/prisma/client";
-import { requireRole } from "@/server/auth";
+import { requireAdmin } from "@/server/auth";
 import { userRepository } from "@/server/repositories/user.repository";
 import { getSupabaseAdminClient } from "@/server/storage/supabase-admin";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
@@ -16,7 +16,9 @@ export type CreateUserInput = {
 export type UpdateUserInput = {
   id: string;
   name?: string;
+  email?: string;
   role?: UserRole;
+  password?: string;
 };
 
 function mapAuthProviderError(message: string): UserError {
@@ -41,12 +43,12 @@ function mapAuthProviderError(message: string): UserError {
 
 export class UserService {
   async listUsers(): Promise<User[]> {
-    await requireRole("ADMIN");
+    await requireAdmin();
     return userRepository.findAll();
   }
 
   async createUser(input: CreateUserInput): Promise<User> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     const existing = await userRepository.findByEmail(input.email);
     if (existing) {
@@ -98,18 +100,43 @@ export class UserService {
   }
 
   async updateUser(input: UpdateUserInput): Promise<User> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     const target = await userRepository.findById(input.id);
     if (!target) {
       throw new UserError("Usuario no encontrado.", "USER_NOT_FOUND");
     }
 
+    if (
+      admin.id === input.id &&
+      input.role !== undefined &&
+      input.role !== "ADMIN"
+    ) {
+      throw new UserError(
+        "No puedes cambiar tu propio rol de administrador.",
+        "CANNOT_CHANGE_OWN_ROLE",
+      );
+    }
+
     const nextName = input.name ?? target.name;
     const nextRole = input.role ?? target.role;
 
+    if (input.email !== undefined && input.email !== target.email) {
+      const emailOwner = await userRepository.findByEmail(input.email);
+      if (emailOwner && emailOwner.id !== target.id) {
+        throw new UserError(
+          "Ya existe un usuario con ese correo.",
+          "EMAIL_ALREADY_EXISTS",
+        );
+      }
+    }
+
     const supabase = getSupabaseAdminClient();
     const { error } = await supabase.auth.admin.updateUserById(input.id, {
+      ...(input.email !== undefined
+        ? { email: input.email, email_confirm: true }
+        : {}),
+      ...(input.password !== undefined ? { password: input.password } : {}),
       user_metadata: {
         name: nextName,
         role: nextRole,
@@ -122,8 +149,25 @@ export class UserService {
 
     const user = await userRepository.updateProfile(input.id, {
       ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.email !== undefined ? { email: input.email } : {}),
       ...(input.role !== undefined ? { role: input.role } : {}),
     });
+
+    const shouldInvalidateSessions =
+      (input.role !== undefined && input.role !== target.role) ||
+      (input.email !== undefined && input.email !== target.email) ||
+      input.password !== undefined;
+
+    if (shouldInvalidateSessions) {
+      const { error: signOutError } = await supabase.auth.admin.signOut(
+        input.id,
+        "global",
+      );
+
+      if (signOutError) {
+        throw mapAuthProviderError(signOutError.message);
+      }
+    }
 
     auditService.logOperationSafe({
       userId: admin.id,
@@ -136,7 +180,7 @@ export class UserService {
   }
 
   async deactivateUser(userId: string): Promise<User> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     if (admin.id === userId) {
       throw new UserError(
@@ -174,7 +218,7 @@ export class UserService {
   }
 
   async activateUser(userId: string): Promise<User> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     const target = await userRepository.findById(userId);
     if (!target) {

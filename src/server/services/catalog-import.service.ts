@@ -6,7 +6,7 @@ import type {
   ProductImageStatus,
 } from "@/generated/prisma/client";
 import ExcelJS from "exceljs";
-import { requireRole } from "@/server/auth";
+import { requireAdmin } from "@/server/auth";
 import {
   buildExistingCodeIndex,
   detectSemanticFlags,
@@ -250,7 +250,7 @@ function countFormulas(products: MappedProductRow[]): {
 
 export class CatalogImportService {
   async uploadAndCreateJob(input: UploadImportFileInput) {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     let uploaded;
     try {
@@ -286,7 +286,7 @@ export class CatalogImportService {
   }
 
   async createJobFromUploadedFile(uploadedFileId: string) {
-    await requireRole("ADMIN");
+    await requireAdmin();
 
     const file = await uploadedFileRepository.findById(uploadedFileId);
     if (!file) {
@@ -310,7 +310,7 @@ export class CatalogImportService {
   }
 
   async getJob(jobId: string) {
-    await requireRole("ADMIN");
+    await requireAdmin();
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -321,7 +321,7 @@ export class CatalogImportService {
   }
 
   async analyzeJob(jobId: string) {
-    await requireRole("ADMIN");
+    await requireAdmin();
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -389,7 +389,7 @@ export class CatalogImportService {
   }
 
   async setDestination(jobId: string, input: SetImportDestinationInput) {
-    await requireRole("ADMIN");
+    await requireAdmin();
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -447,7 +447,7 @@ export class CatalogImportService {
   }
 
   async setConfig(jobId: string, input: SetImportConfigInput) {
-    await requireRole("ADMIN");
+    await requireAdmin();
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -654,7 +654,7 @@ export class CatalogImportService {
   }
 
   async uploadImportImages(jobId: string, files: UploadImportImageInput[]) {
-    await requireRole("ADMIN");
+    await requireAdmin();
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -715,7 +715,7 @@ export class CatalogImportService {
   }
 
   async completeImageReview(jobId: string) {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -1157,7 +1157,7 @@ export class CatalogImportService {
   }
 
   async buildPreview(jobId: string, configOverride?: ImportJobConfig) {
-    await requireRole("ADMIN");
+    await requireAdmin();
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -1293,7 +1293,7 @@ export class CatalogImportService {
   }
 
   async apply(jobId: string, input: ApplyImportInput) {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -1568,7 +1568,7 @@ export class CatalogImportService {
   }
 
   async cancel(jobId: string) {
-    await requireRole("ADMIN");
+    await requireAdmin();
     const job = await importJobRepository.findById(jobId);
 
     if (!job) {

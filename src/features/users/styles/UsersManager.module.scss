@@ -1,0 +1,396 @@
+@use "../../admin/styles/variables" as *;
+
+$users-accent: #2f6fad;
+$users-surface: rgba($users-accent, 0.02);
+$users-panel-bg: rgba($white, 0.94);
+$users-shadow:
+  0 2px 8px rgba($users-accent, 0.035),
+  0 12px 36px rgba($users-accent, 0.07),
+  0 24px 56px rgba($users-accent, 0.035);
+
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: clamp(0.75rem, 2vw, 1.25rem);
+  overflow: hidden;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.85rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  overflow: hidden;
+  border: 1px solid rgba($users-accent, 0.06);
+  border-radius: $radius-lg;
+  background: linear-gradient(
+    165deg,
+    rgba($users-accent, 0.03) 0%,
+    $users-surface 42%,
+    rgba($users-accent, 0.018) 100%
+  );
+  box-shadow: $users-shadow;
+}
+
+.sectionIntro {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: $navy;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.headerSearchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 12rem;
+  max-width: 22rem;
+  flex: 1;
+}
+
+.headerSearchIcon {
+  position: absolute;
+  left: 1rem;
+  width: 1rem;
+  height: 1rem;
+  color: $blue;
+  pointer-events: none;
+}
+
+.headerSearch {
+  width: 100%;
+  padding: 0.65rem 1rem 0.65rem 2.5rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  color: $navy;
+  background: $users-panel-bg;
+
+  &:focus {
+    outline: 2px solid rgba($users-accent, 0.35);
+    outline-offset: 1px;
+  }
+}
+
+.filterSelect {
+  min-width: 9rem;
+}
+
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: $radius-md;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $white;
+  background: linear-gradient(135deg, $users-accent 0%, #255f96 100%);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.inlineError {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: $radius-md;
+  font-size: 0.875rem;
+  color: #8b1e1e;
+  background: rgba(220, 53, 69, 0.08);
+}
+
+.tablePanel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tableWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $users-panel-bg;
+}
+
+.tableWrapEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tableEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+.tableEmptyIcon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: rgba($navy, 0.35);
+}
+
+.tableEmptyText {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba($navy, 0.65);
+}
+
+.usersTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th,
+  td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba($navy, 0.08);
+    vertical-align: middle;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-weight: 600;
+    color: rgba($navy, 0.75);
+    background: rgba($users-accent, 0.045);
+  }
+}
+
+.nameCell {
+  font-weight: 600;
+  color: $navy;
+}
+
+.emailCell {
+  color: rgba($navy, 0.8);
+  word-break: break-word;
+}
+
+.metaCell {
+  color: rgba($navy, 0.65);
+  white-space: nowrap;
+}
+
+.actionsCell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.actionsGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-sm;
+  color: $navy;
+  background: $white;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.iconButtonDanger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba(166, 27, 27, 0.2);
+  border-radius: $radius-sm;
+  color: #a61b1b;
+  background: $white;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.roleBadge,
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.roleBadgeAdmin {
+  color: #1f4f8a;
+  background: rgba(47, 111, 173, 0.12);
+}
+
+.roleBadgeEditor {
+  color: #1f5c45;
+  background: rgba(46, 125, 90, 0.12);
+}
+
+.roleBadgeViewer {
+  color: rgba($navy, 0.75);
+  background: rgba($navy, 0.08);
+}
+
+.statusBadgeActive {
+  color: #1f5c45;
+  background: rgba(46, 125, 90, 0.12);
+}
+
+.statusBadgeInactive {
+  color: #8b1e1e;
+  background: rgba(220, 53, 69, 0.1);
+}
+
+.mobileList {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .desktopTable {
+    display: none;
+  }
+
+  .mobileList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .userCard {
+    padding: 1rem;
+    border: 1px solid rgba($navy, 0.08);
+    border-radius: $radius-md;
+    background: $white;
+  }
+
+  .userCardHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .userCardName {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: $navy;
+  }
+
+  .userCardEmail {
+    margin: 0.2rem 0 0;
+    font-size: 0.85rem;
+    color: rgba($navy, 0.7);
+    word-break: break-word;
+  }
+
+  .userCardMeta {
+    display: grid;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: rgba($navy, 0.7);
+  }
+
+  .userCardActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .cardActionButton {
+    padding: 0.45rem 0.75rem;
+    border: 1px solid rgba($navy, 0.12);
+    border-radius: $radius-sm;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: $navy;
+    background: $white;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+
+  .cardActionButtonDanger {
+    padding: 0.45rem 0.75rem;
+    border: 1px solid rgba(166, 27, 27, 0.2);
+    border-radius: $radius-sm;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #a61b1b;
+    background: $white;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+}

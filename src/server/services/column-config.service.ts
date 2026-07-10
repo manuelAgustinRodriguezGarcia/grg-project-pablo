@@ -1,5 +1,5 @@
 import type { ColumnDataType, FolderColumn, UserRole } from "@/generated/prisma/client";
-import { requireAuth, requireRole } from "@/server/auth";
+import { requireAuth, requireAdmin } from "@/server/auth";
 import {
   columnRepository,
   type CreateColumnData,
@@ -97,7 +97,7 @@ async function handleColumnWrite<T>(operation: () => Promise<T>): Promise<T> {
 export class ColumnConfigService {
   async listColumns(folderId: string, role?: UserRole): Promise<FolderColumn[]> {
     if (role === undefined) {
-      await requireRole("ADMIN");
+      await requireAdmin();
       return columnRepository.findByFolderIdOrdered(folderId);
     }
 
@@ -116,7 +116,7 @@ export class ColumnConfigService {
   }
 
   async createColumn(input: CreateColumnInput): Promise<FolderColumn> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     await requireFolderExists(input.folderId);
 
@@ -164,7 +164,7 @@ export class ColumnConfigService {
   }
 
   async updateColumn(input: UpdateColumnInput): Promise<FolderColumn> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     const existing = await requireColumn(input.id);
 
@@ -229,7 +229,7 @@ export class ColumnConfigService {
   }
 
   async reorderColumns(input: ReorderColumnsInput): Promise<FolderColumn[]> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     await requireFolderExists(input.folderId);
 
@@ -273,7 +273,7 @@ export class ColumnConfigService {
   }
 
   async setColumnVisibility(id: string, visible: boolean): Promise<FolderColumn> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     const existing = await requireColumn(id);
 
@@ -296,7 +296,7 @@ export class ColumnConfigService {
   }
 
   async deleteColumn(id: string): Promise<void> {
-    const { profile: admin } = await requireRole("ADMIN");
+    const { profile: admin } = await requireAdmin();
 
     const existing = await requireColumn(id);
     await columnHelpService.deleteHelpImageBestEffort(existing);

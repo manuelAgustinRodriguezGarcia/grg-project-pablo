@@ -2,7 +2,7 @@
 
 import styles from "@/features/admin/styles/AdminTableSkeleton.module.scss";
 
-type AdminTableSkeletonVariant = "catalog" | "files" | "prices";
+type AdminTableSkeletonVariant = "catalog" | "files" | "prices" | "users";
 
 type AdminTableSkeletonProps = {
   variant: AdminTableSkeletonVariant;
@@ -14,6 +14,7 @@ type AdminTableSkeletonProps = {
 const CATALOG_COLUMN_COUNT = 5;
 const FILES_COLUMN_COUNT = 8;
 const PRICES_COLUMN_COUNT = 7;
+const USERS_COLUMN_COUNT = 6;
 
 function ShimmerBar({
   className,
@@ -207,6 +208,56 @@ function PricesSkeleton({
   );
 }
 
+function UsersSkeleton({
+  label,
+  rowCount,
+  fillHeight = false,
+}: {
+  label: string;
+  rowCount: number;
+  fillHeight?: boolean;
+}) {
+  return (
+    <div
+      className={`${styles.filesSkeleton} ${fillHeight ? styles.filesSkeletonFill : ""}`}
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    >
+      <span className={styles.visuallyHidden}>{label}</span>
+
+      <div className={styles.filesDesktop} aria-hidden>
+        <div className={styles.filesHeaderRow}>
+          {Array.from({ length: USERS_COLUMN_COUNT }).map((_, index) => (
+            <div key={`users-header-${index}`} className={styles.filesHeaderCell}>
+              <ShimmerBar width={index === 0 ? "medium" : "short"} />
+            </div>
+          ))}
+        </div>
+
+        <div className={styles.filesSkeletonBody}>
+          {Array.from({ length: rowCount }).map((_, rowIndex) => (
+            <div key={`users-row-${rowIndex}`} className={styles.filesDataRow}>
+              {Array.from({ length: USERS_COLUMN_COUNT }).map((_, columnIndex) => (
+                <div
+                  key={`users-cell-${rowIndex}-${columnIndex}`}
+                  className={styles.filesDataCell}
+                >
+                  <ShimmerBar
+                    width={
+                      columnIndex === 0 ? "full" : columnIndex % 2 === 0 ? "medium" : "short"
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AdminTableSkeleton({
   variant,
   label,
@@ -233,6 +284,14 @@ export function AdminTableSkeleton({
     case "prices":
       return (
         <PricesSkeleton
+          label={label}
+          rowCount={rowCount}
+          fillHeight={fillHeight}
+        />
+      );
+    case "users":
+      return (
+        <UsersSkeleton
           label={label}
           rowCount={rowCount}
           fillHeight={fillHeight}
