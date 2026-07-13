@@ -98,33 +98,43 @@ export function UsersTable({
                     </td>
                     <td className={styles.actionsCell}>
                       <div className={styles.actionsGroup}>
-                        <button
-                          type="button"
-                          className={styles.iconButton}
-                          onClick={() => onEdit(user)}
-                          aria-label={`Editar ${user.name}`}
-                          disabled={isBusy}
-                        >
-                          <Pencil strokeWidth={ICON_STROKE} aria-hidden />
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.iconButtonDanger}
-                          onClick={() => onToggleStatus(user)}
-                          aria-label={
-                            user.status === "ACTIVE"
-                              ? `Desactivar ${user.name}`
-                              : `Activar ${user.name}`
-                          }
-                          disabled={isBusy || (user.status === "ACTIVE" && isSelf)}
-                          title={
-                            isSelf && user.status === "ACTIVE"
+                        <span className={styles.actionWrap}>
+                          <button
+                            type="button"
+                            className={styles.iconButton}
+                            onClick={() => onEdit(user)}
+                            aria-label={`Editar ${user.name}`}
+                            disabled={isBusy}
+                          >
+                            <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+                          </button>
+                          <span className={styles.actionTooltip} role="tooltip">
+                            Editar
+                          </span>
+                        </span>
+                        <span className={styles.actionWrap}>
+                          <button
+                            type="button"
+                            className={styles.iconButtonDanger}
+                            onClick={() => onToggleStatus(user)}
+                            aria-label={
+                              user.status === "ACTIVE"
+                                ? `Desactivar ${user.name}`
+                                : `Activar ${user.name}`
+                            }
+                            disabled={isBusy || (user.status === "ACTIVE" && isSelf)}
+                          >
+                            <UserX strokeWidth={ICON_STROKE} aria-hidden />
+                          </button>
+                          <span
+                            className={`${styles.actionTooltip} ${styles.actionTooltipDanger}`}
+                            role="tooltip"
+                          >
+                            {isSelf && user.status === "ACTIVE"
                               ? "No podés desactivar tu propia cuenta"
-                              : undefined
-                          }
-                        >
-                          <UserX strokeWidth={ICON_STROKE} aria-hidden />
-                        </button>
+                              : "Eliminar"}
+                          </span>
+                        </span>
                       </div>
                     </td>
                   </tr>

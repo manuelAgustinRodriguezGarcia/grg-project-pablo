@@ -35,7 +35,7 @@ import { sortByName } from "@/features/catalog/utils/sortByName";
 import { useReplaceSearchParams } from "@/shared/hooks/useReplaceSearchParams";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 100;
 const MIN_GLOBAL_SEARCH_CHARS = 2;
 const GLOBAL_SEARCH_DROPDOWN_PAGE_SIZE = 8;
 
@@ -914,7 +914,6 @@ export function CatalogNavigator({
             if (wasCreating) {
               setPage(1);
             }
-            router.refresh();
           }}
         />
       ) : null}

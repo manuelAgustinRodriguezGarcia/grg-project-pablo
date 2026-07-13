@@ -219,14 +219,77 @@ $users-shadow:
 }
 
 .actionsCell {
-  width: 1%;
+  vertical-align: middle;
+  text-align: center;
   white-space: nowrap;
+  overflow: visible;
 }
 
 .actionsGroup {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.actionWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.actionTooltip {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  left: auto;
+  z-index: 30;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba($blue, 0.2);
+  border-radius: $radius-sm;
+  background: $blue;
+  box-shadow: 0 4px 12px rgba($blue, 0.22);
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: $white;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    right: 0.65rem;
+    left: auto;
+    width: 0;
+    height: 0;
+    border-left: 0.35rem solid transparent;
+    border-right: 0.35rem solid transparent;
+    border-bottom: 0.35rem solid $blue;
+    transform: none;
+  }
+}
+
+.actionTooltipDanger {
+  border-color: rgba(#c0392b, 0.2);
+  background: #c0392b;
+  box-shadow: 0 4px 12px rgba(#c0392b, 0.22);
+
+  &::after {
+    border-bottom-color: #c0392b;
+  }
+}
+
+.actionWrap:hover .actionTooltip,
+.actionWrap:focus-within .actionTooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .iconButton {
@@ -237,10 +300,30 @@ $users-shadow:
   height: 2rem;
   padding: 0;
   border: 1px solid rgba($navy, 0.12);
-  border-radius: $radius-sm;
-  color: $navy;
+  border-radius: $radius-md;
   background: $white;
+  color: $navy;
   cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.04);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
 
   &:disabled {
     opacity: 0.45;
@@ -255,11 +338,31 @@ $users-shadow:
   width: 2rem;
   height: 2rem;
   padding: 0;
-  border: 1px solid rgba(166, 27, 27, 0.2);
-  border-radius: $radius-sm;
-  color: #a61b1b;
-  background: $white;
+  border: 1px solid rgba(#c0392b, 0.22);
+  border-radius: $radius-md;
+  background: rgba(#c0392b, 0.06);
+  color: #c0392b;
   cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba(#c0392b, 0.45);
+    background: rgba(#c0392b, 0.12);
+    color: #9b2c2c;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #c0392b;
+    outline-offset: 2px;
+  }
 
   &:disabled {
     opacity: 0.45;
@@ -363,14 +466,34 @@ $users-shadow:
   }
 
   .cardActionButton {
-    padding: 0.45rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.4rem;
+    padding: 0.55rem 0.75rem;
     border: 1px solid rgba($navy, 0.12);
-    border-radius: $radius-sm;
-    font-size: 0.8rem;
+    border-radius: $radius-md;
+    font-family: $font-sans;
+    font-size: 0.84rem;
     font-weight: 600;
     color: $navy;
     background: $white;
     cursor: pointer;
+    transition:
+      border-color 0.18s ease,
+      background-color 0.18s ease,
+      color 0.18s ease;
+
+    &:hover:not(:disabled) {
+      border-color: rgba($blue, 0.35);
+      background: rgba($blue, 0.04);
+      color: $blue;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $blue;
+      outline-offset: 2px;
+    }
 
     &:disabled {
       opacity: 0.45;
@@ -379,14 +502,34 @@ $users-shadow:
   }
 
   .cardActionButtonDanger {
-    padding: 0.45rem 0.75rem;
-    border: 1px solid rgba(166, 27, 27, 0.2);
-    border-radius: $radius-sm;
-    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.4rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid rgba(#c0392b, 0.22);
+    border-radius: $radius-md;
+    font-family: $font-sans;
+    font-size: 0.84rem;
     font-weight: 600;
-    color: #a61b1b;
-    background: $white;
+    color: #c0392b;
+    background: rgba(#c0392b, 0.06);
     cursor: pointer;
+    transition:
+      border-color 0.18s ease,
+      background-color 0.18s ease,
+      color 0.18s ease;
+
+    &:hover:not(:disabled) {
+      border-color: rgba(#c0392b, 0.45);
+      background: rgba(#c0392b, 0.12);
+      color: #9b2c2c;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #c0392b;
+      outline-offset: 2px;
+    }
 
     &:disabled {
       opacity: 0.45;
