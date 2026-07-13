@@ -326,33 +326,54 @@ export function UploadedFilesList({
                           <div className={styles.actionsGroup}>
                             {isAdmin ? (
                               <>
-                                <button
-                                  type="button"
-                                  className={styles.iconButton}
-                                  onClick={() => onViewDetail(item.id)}
-                                  aria-label={`Ver detalle de ${item.originalName}`}
-                                  disabled={isBusy}
-                                >
-                                  <Eye strokeWidth={ICON_STROKE} aria-hidden />
-                                </button>
-                                <button
-                                  type="button"
-                                  className={styles.iconButtonSuccess}
-                                  onClick={() => onDownload(item.id)}
-                                  aria-label={`Descargar ${item.originalName}`}
-                                  disabled={isBusy}
-                                >
-                                  <FileDown strokeWidth={ICON_STROKE} aria-hidden />
-                                </button>
-                                <button
-                                  type="button"
-                                  className={styles.iconButtonDanger}
-                                  onClick={() => onDelete(item)}
-                                  aria-label={`Eliminar ${item.originalName}`}
-                                  disabled={isBusy}
-                                >
-                                  <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
-                                </button>
+                                <span className={styles.actionWrap}>
+                                  <button
+                                    type="button"
+                                    className={styles.iconButton}
+                                    onClick={() => onViewDetail(item.id)}
+                                    aria-label={`Ver detalle de ${item.originalName}`}
+                                    disabled={isBusy}
+                                  >
+                                    <Eye strokeWidth={ICON_STROKE} aria-hidden />
+                                  </button>
+                                  <span className={styles.actionTooltip} role="tooltip">
+                                    Detalles
+                                  </span>
+                                </span>
+                                <span className={styles.actionWrap}>
+                                  <button
+                                    type="button"
+                                    className={styles.iconButtonSuccess}
+                                    onClick={() => onDownload(item.id)}
+                                    aria-label={`Descargar ${item.originalName}`}
+                                    disabled={isBusy}
+                                  >
+                                    <FileDown strokeWidth={ICON_STROKE} aria-hidden />
+                                  </button>
+                                  <span
+                                    className={`${styles.actionTooltip} ${styles.actionTooltipSuccess}`}
+                                    role="tooltip"
+                                  >
+                                    Descargar
+                                  </span>
+                                </span>
+                                <span className={styles.actionWrap}>
+                                  <button
+                                    type="button"
+                                    className={styles.iconButtonDanger}
+                                    onClick={() => onDelete(item)}
+                                    aria-label={`Eliminar ${item.originalName}`}
+                                    disabled={isBusy}
+                                  >
+                                    <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+                                  </button>
+                                  <span
+                                    className={`${styles.actionTooltip} ${styles.actionTooltipDanger}`}
+                                    role="tooltip"
+                                  >
+                                    Eliminar
+                                  </span>
+                                </span>
                               </>
                             ) : (
                               <button

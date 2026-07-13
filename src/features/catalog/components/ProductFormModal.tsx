@@ -533,10 +533,12 @@ export function ProductFormModal({
     const payloadValues: Record<string, unknown> = {};
     for (const column of editableColumns) {
       const raw = values[column.internalKey] ?? "";
-      if (raw.trim() === "") {
+      // En edición hay que enviar vacíos para poder limpiar el campo en BD.
+      // En alta, omitimos vacíos (opcionales quedan sin valor).
+      if (!isEditMode && raw.trim() === "") {
         continue;
       }
-      payloadValues[column.internalKey] = raw;
+      payloadValues[column.internalKey] = raw.trim() === "" ? "" : raw;
     }
 
     const fieldAnnotations: Record<string, { removeImage?: boolean }> = {};

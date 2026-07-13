@@ -562,6 +562,11 @@ $price-shadow:
     }
   }
 
+  th.actionsColumn,
+  td.actionsColumn {
+    overflow: visible;
+  }
+
   th {
     position: sticky;
     top: 0;
@@ -833,7 +838,7 @@ $price-shadow:
 }
 
 .colActions {
-  width: 6.75rem;
+  width: 5.5rem;
 }
 
 .descriptionCell {
@@ -842,7 +847,9 @@ $price-shadow:
 }
 
 .actionsColumn {
-  width: 6.75rem;
+  width: 5.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
   text-align: center;
   white-space: nowrap;
 }
@@ -854,6 +861,66 @@ $price-shadow:
   gap: 0.35rem;
 }
 
+.rowActionWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.rowActionTooltip {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  left: auto;
+  z-index: 30;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-sm;
+  background: $navy;
+  box-shadow: 0 4px 12px rgba($navy, 0.18);
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: $white;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    right: 0.65rem;
+    left: auto;
+    width: 0;
+    height: 0;
+    border-left: 0.35rem solid transparent;
+    border-right: 0.35rem solid transparent;
+    border-bottom: 0.35rem solid $navy;
+    transform: none;
+  }
+}
+
+.rowActionTooltipDanger {
+  border-color: rgba(#c0392b, 0.2);
+  background: #c0392b;
+  box-shadow: 0 4px 12px rgba(#c0392b, 0.22);
+
+  &::after {
+    border-bottom-color: #c0392b;
+  }
+}
+
+.rowActionWrap:hover .rowActionTooltip,
+.rowActionWrap:focus-within .rowActionTooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
 .rowActionButton {
   display: inline-flex;
   align-items: center;
@@ -862,10 +929,14 @@ $price-shadow:
   min-height: 2rem;
   padding: 0.4rem;
   border: 1px solid rgba($navy, 0.12);
-  border-radius: 0.35rem;
+  border-radius: $radius-md;
   background: rgba($white, 0.9);
   color: $navy;
   cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
 
   svg {
     width: 0.95rem;
@@ -878,6 +949,27 @@ $price-shadow:
     background: rgba($blue, 0.06);
     color: $blue;
   }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.rowActionButtonDanger {
+  border-color: rgba(#c0392b, 0.22);
+  background: rgba(#c0392b, 0.06);
+  color: #c0392b;
+
+  &:hover {
+    border-color: rgba(#c0392b, 0.45);
+    background: rgba(#c0392b, 0.12);
+    color: #9b2c2c;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #c0392b;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -886,6 +978,11 @@ $price-shadow:
   }
 
   .priceTable tbody tr {
+    transition: none;
+  }
+
+  .rowActionButton,
+  .rowActionTooltip {
     transition: none;
   }
 }

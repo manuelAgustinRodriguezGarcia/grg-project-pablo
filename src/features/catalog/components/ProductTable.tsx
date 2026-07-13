@@ -534,14 +534,19 @@ export const ProductTable = memo(function ProductTable({
                   {canEdit && onEditProduct ? (
                     <td className={styles.actionsColumn}>
                       <div className={styles.rowActions}>
-                        <button
-                          type="button"
-                          className={styles.rowActionButton}
-                          onClick={() => onEditProduct(product)}
-                          aria-label="Editar producto"
-                        >
-                          <Pencil strokeWidth={ICON_STROKE} aria-hidden />
-                        </button>
+                        <span className={styles.rowActionWrap}>
+                          <button
+                            type="button"
+                            className={styles.rowActionButton}
+                            onClick={() => onEditProduct(product)}
+                            aria-label="Editar producto"
+                          >
+                            <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+                          </button>
+                          <span className={styles.rowActionTooltip} role="tooltip">
+                            Editar
+                          </span>
+                        </span>
                       </div>
                     </td>
                   ) : null}

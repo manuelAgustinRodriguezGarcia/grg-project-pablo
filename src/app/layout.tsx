@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: "Rothamel Repuestos | Repuestos para vehículos pesados",
   description:
     "Soluciones en repuestos para camiones y vehículos pesados con servicio profesional e información actualizada en Resistencia, Chaco.",
+  icons: {
+    icon: [{ url: "/logos/alt-logo-white.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function RootLayout({

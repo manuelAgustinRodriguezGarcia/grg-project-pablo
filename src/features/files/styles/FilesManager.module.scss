@@ -238,6 +238,7 @@ $files-shadow:
   vertical-align: middle;
   text-align: center;
   white-space: nowrap;
+  overflow: visible;
 }
 
 .actionsGroup {
@@ -245,6 +246,76 @@ $files-shadow:
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+}
+
+.actionWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.actionTooltip {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  left: auto;
+  z-index: 30;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba($blue, 0.2);
+  border-radius: $radius-sm;
+  background: $blue;
+  box-shadow: 0 4px 12px rgba($blue, 0.22);
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: $white;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    right: 0.65rem;
+    left: auto;
+    width: 0;
+    height: 0;
+    border-left: 0.35rem solid transparent;
+    border-right: 0.35rem solid transparent;
+    border-bottom: 0.35rem solid $blue;
+    transform: none;
+  }
+}
+
+.actionTooltipSuccess {
+  border-color: rgba($green, 0.2);
+  background: $green;
+  box-shadow: 0 4px 12px rgba($green, 0.22);
+
+  &::after {
+    border-bottom-color: $green;
+  }
+}
+
+.actionTooltipDanger {
+  border-color: rgba(#c0392b, 0.2);
+  background: #c0392b;
+  box-shadow: 0 4px 12px rgba(#c0392b, 0.22);
+
+  &::after {
+    border-bottom-color: #c0392b;
+  }
+}
+
+.actionWrap:hover .actionTooltip,
+.actionWrap:focus-within .actionTooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .downloadActionButton {
@@ -1312,7 +1383,8 @@ $files-shadow:
   .modalButton,
   .modalButtonDanger,
   .modalButtonSecondary,
-  .modalLoadingIcon {
+  .modalLoadingIcon,
+  .actionTooltip {
     transition: none;
     animation: none;
   }

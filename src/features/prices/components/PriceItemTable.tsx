@@ -373,24 +373,37 @@ export const PriceItemTable = memo(function PriceItemTable({
                     <td className={styles.actionsColumn}>
                       <div className={styles.rowActions}>
                         {onEditItem ? (
-                          <button
-                            type="button"
-                            className={styles.rowActionButton}
-                            onClick={() => onEditItem(item)}
-                            aria-label="Editar ítem"
-                          >
-                            <Pencil strokeWidth={ICON_STROKE} aria-hidden />
-                          </button>
+                          <span className={styles.rowActionWrap}>
+                            <button
+                              type="button"
+                              className={styles.rowActionButton}
+                              onClick={() => onEditItem(item)}
+                              aria-label="Editar"
+                            >
+                              <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+                            </button>
+                            <span className={styles.rowActionTooltip} role="tooltip">
+                              Editar
+                            </span>
+                          </span>
                         ) : null}
                         {onDeleteItem ? (
-                          <button
-                            type="button"
-                            className={styles.rowActionButton}
-                            onClick={() => onDeleteItem(item)}
-                            aria-label="Eliminar ítem"
-                          >
-                            <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
-                          </button>
+                          <span className={styles.rowActionWrap}>
+                            <button
+                              type="button"
+                              className={`${styles.rowActionButton} ${styles.rowActionButtonDanger}`}
+                              onClick={() => onDeleteItem(item)}
+                              aria-label="Eliminar"
+                            >
+                              <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+                            </button>
+                            <span
+                              className={`${styles.rowActionTooltip} ${styles.rowActionTooltipDanger}`}
+                              role="tooltip"
+                            >
+                              Eliminar
+                            </span>
+                          </span>
                         ) : null}
                       </div>
                     </td>
