@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+  type ReactNode,
+  type TransitionEvent,
+} from "react";
 import { ICON_STROKE, Pencil, Trash2 } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
@@ -31,6 +40,118 @@ type CustomDropdownProps = {
   placeholder?: string;
   preferPlaceholderWithoutOptions?: boolean;
 };
+
+function DropdownRevealText({
+  text,
+  className,
+  active,
+}: {
+  text: string;
+  className: string;
+  active: boolean;
+}) {
+  const clipRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [distance, setDistance] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const [shifted, setShifted] = useState(false);
+
+  useEffect(() => {
+    const clip = clipRef.current;
+    const node = textRef.current;
+    if (!clip || !node) {
+      return;
+    }
+
+    function measure() {
+      if (!clip || !node) {
+        return;
+      }
+
+      let fullWidth: number;
+
+      if (getComputedStyle(node).maxWidth === "none") {
+        fullWidth = node.scrollWidth;
+      } else {
+        const previousMaxWidth = node.style.maxWidth;
+        const previousOverflow = node.style.overflow;
+        const previousTextOverflow = node.style.textOverflow;
+        node.style.maxWidth = "none";
+        node.style.overflow = "visible";
+        node.style.textOverflow = "clip";
+        fullWidth = node.scrollWidth;
+        node.style.maxWidth = previousMaxWidth;
+        node.style.overflow = previousOverflow;
+        node.style.textOverflow = previousTextOverflow;
+      }
+
+      const nextDistance = Math.max(0, Math.ceil(fullWidth - clip.clientWidth));
+      setDistance((current) => (current === nextDistance ? current : nextDistance));
+    }
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(clip);
+    return () => observer.disconnect();
+  }, [text]);
+
+  useEffect(() => {
+    if (active && distance > 0) {
+      setExpanded(true);
+      setShifted(true);
+      return;
+    }
+
+    setShifted(false);
+
+    if (distance <= 0) {
+      setExpanded(false);
+      return;
+    }
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setExpanded(false);
+    }
+  }, [active, distance]);
+
+  function handleTransitionEnd(event: TransitionEvent<HTMLSpanElement>) {
+    if (event.propertyName !== "transform" || active) {
+      return;
+    }
+
+    setExpanded(false);
+  }
+
+  const duration =
+    distance <= 0 ? 0 : Math.min(2.4, Math.max(0.45, distance / 85));
+  const revealStyle = {
+    "--reveal-distance": `${distance}px`,
+    "--reveal-duration": `${duration}s`,
+  } as CSSProperties;
+
+  return (
+    <span
+      ref={clipRef}
+      className={`${styles.dropdownOptionTextClip} ${className}`}
+      title={distance > 0 ? text : undefined}
+    >
+      <span
+        ref={textRef}
+        className={[
+          styles.dropdownOptionTextReveal,
+          expanded ? styles.dropdownOptionTextExpanded : "",
+          shifted ? styles.dropdownOptionTextShifted : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={revealStyle}
+        onTransitionEnd={handleTransitionEnd}
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
 
 function DropdownIconAction({
   label,
@@ -66,6 +187,106 @@ function DropdownIconAction({
         {label}
       </span>
     </span>
+  );
+}
+
+function DropdownOptionRow({
+  option,
+  isSelected,
+  hasOptionActions,
+  onSelect,
+  onOptionEdit,
+  onOptionDelete,
+  onRequestClose,
+}: {
+  option: DropdownOption;
+  isSelected: boolean;
+  hasOptionActions: boolean;
+  onSelect: (id: string) => void;
+  onOptionEdit?: (id: string) => void;
+  onOptionDelete?: (id: string) => void;
+  onRequestClose: () => void;
+}) {
+  const [isActive, setIsActive] = useState(false);
+
+  return (
+    <li
+      role="option"
+      aria-selected={isSelected}
+      tabIndex={0}
+      className={`${styles.dropdownOption} ${isSelected ? styles.dropdownOptionSelected : ""}`}
+      onMouseEnter={() => setIsActive(true)}
+      onMouseLeave={() => setIsActive(false)}
+      onFocus={() => setIsActive(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsActive(false);
+        }
+      }}
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest("button")) {
+          return;
+        }
+        onSelect(option.id);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect(option.id);
+        }
+      }}
+    >
+      <span className={styles.dropdownOptionContent}>
+        <DropdownRevealText
+          text={option.label}
+          className={styles.dropdownOptionLabel}
+          active={isActive}
+        />
+        {option.description ? (
+          <DropdownRevealText
+            text={option.description}
+            className={styles.dropdownOptionDescription}
+            active={isActive}
+          />
+        ) : null}
+        {option.meta ? (
+          <DropdownRevealText
+            text={option.meta}
+            className={styles.dropdownOptionMeta}
+            active={isActive}
+          />
+        ) : null}
+      </span>
+      {hasOptionActions ? (
+        <span className={styles.dropdownOptionActions}>
+          {onOptionEdit ? (
+            <DropdownIconAction
+              label="Editar"
+              onClick={(event) => {
+                event.stopPropagation();
+                onRequestClose();
+                onOptionEdit(option.id);
+              }}
+            >
+              <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+            </DropdownIconAction>
+          ) : null}
+          {onOptionDelete ? (
+            <DropdownIconAction
+              label="Eliminar"
+              variant="danger"
+              onClick={(event) => {
+                event.stopPropagation();
+                onRequestClose();
+                onOptionDelete(option.id);
+              }}
+            >
+              <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+            </DropdownIconAction>
+          ) : null}
+        </span>
+      ) : null}
+    </li>
   );
 }
 
@@ -224,66 +445,16 @@ export function CustomDropdown({
             const isSelected = selectedId !== "" && option.id === selectedId;
 
             return (
-              <li
+              <DropdownOptionRow
                 key={option.id}
-                role="option"
-                aria-selected={isSelected}
-                tabIndex={0}
-                className={`${styles.dropdownOption} ${isSelected ? styles.dropdownOptionSelected : ""}`}
-                onClick={(event) => {
-                  if ((event.target as HTMLElement).closest("button")) {
-                    return;
-                  }
-                  handleSelect(option.id);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    handleSelect(option.id);
-                  }
-                }}
-              >
-                <span className={styles.dropdownOptionContent}>
-                  <span className={styles.dropdownOptionLabel}>{option.label}</span>
-                  {option.description ? (
-                    <span className={styles.dropdownOptionDescription}>
-                      {option.description}
-                    </span>
-                  ) : null}
-                  {option.meta ? (
-                    <span className={styles.dropdownOptionMeta}>{option.meta}</span>
-                  ) : null}
-                </span>
-                {hasOptionActions ? (
-                  <span className={styles.dropdownOptionActions}>
-                    {onOptionEdit ? (
-                      <DropdownIconAction
-                        label="Editar"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setIsOpen(false);
-                          onOptionEdit(option.id);
-                        }}
-                      >
-                        <Pencil strokeWidth={ICON_STROKE} aria-hidden />
-                      </DropdownIconAction>
-                    ) : null}
-                    {onOptionDelete ? (
-                      <DropdownIconAction
-                        label="Eliminar"
-                        variant="danger"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setIsOpen(false);
-                          onOptionDelete(option.id);
-                        }}
-                      >
-                        <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
-                      </DropdownIconAction>
-                    ) : null}
-                  </span>
-                ) : null}
-              </li>
+                option={option}
+                isSelected={isSelected}
+                hasOptionActions={hasOptionActions}
+                onSelect={handleSelect}
+                onOptionEdit={onOptionEdit}
+                onOptionDelete={onOptionDelete}
+                onRequestClose={() => setIsOpen(false)}
+              />
             );
           })}
         </ul>
