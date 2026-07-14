@@ -1,5 +1,6 @@
 import type { User, UserRole } from "@/generated/prisma/client";
 import { requireAdmin } from "@/server/auth";
+import { invalidateUserSessions } from "@/server/auth/invalidate-user-sessions";
 import { userRepository } from "@/server/repositories/user.repository";
 import { getSupabaseAdminClient } from "@/server/storage/supabase-admin";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
@@ -159,13 +160,11 @@ export class UserService {
       input.password !== undefined;
 
     if (shouldInvalidateSessions) {
-      const { error: signOutError } = await supabase.auth.admin.signOut(
-        input.id,
-        "global",
-      );
-
-      if (signOutError) {
-        throw mapAuthProviderError(signOutError.message);
+      try {
+        await invalidateUserSessions(input.id);
+      } catch {
+        // Best-effort: el perfil ya está actualizado. Los guards leen rol/estado
+        // desde la DB local en cada request.
       }
     }
 
@@ -200,11 +199,10 @@ export class UserService {
 
     const profile = await userRepository.setStatus(userId, "INACTIVE");
 
-    const supabase = getSupabaseAdminClient();
-    const { error } = await supabase.auth.admin.signOut(userId, "global");
-
-    if (error) {
-      throw mapAuthProviderError(error.message);
+    try {
+      await invalidateUserSessions(userId);
+    } catch {
+      // Best-effort: el status INACTIVE ya se persistió y se aplica en guards.
     }
 
     auditService.logOperationSafe({

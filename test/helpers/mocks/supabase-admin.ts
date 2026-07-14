@@ -15,7 +15,6 @@ export function createSupabaseAdminMock() {
           error: null,
         }),
         updateUserById: vi.fn().mockResolvedValue({ error: null }),
-        signOut: vi.fn().mockResolvedValue({ error: null }),
       },
     },
   };
