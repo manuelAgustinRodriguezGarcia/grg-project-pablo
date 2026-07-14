@@ -858,13 +858,21 @@ $table-image-size: 6.25rem;
   gap: 0.2rem;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .dropdownOptionActions {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
+  align-self: stretch;
   gap: 0.35rem;
   flex-shrink: 0;
+  margin-left: 0.15rem;
+  padding-left: 0.5rem;
+  background: $white;
+  box-shadow: -0.65rem 0 0.55rem -0.15rem $white;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s ease;
@@ -954,9 +962,21 @@ $table-image-size: 6.25rem;
     }
   }
 
-  &:hover {
+  &:hover,
+  &:focus-within {
     border-color: rgba($blue, 0.2);
     background: rgba($blue, 0.04);
+
+    .dropdownOptionActions {
+      background: #f7f9fc;
+      box-shadow: -0.65rem 0 0.55rem -0.15rem #f7f9fc;
+    }
+  }
+
+  &.dropdownOptionSelected:hover .dropdownOptionActions,
+  &.dropdownOptionSelected:focus-within .dropdownOptionActions {
+    background: #f2f6fb;
+    box-shadow: -0.65rem 0 0.55rem -0.15rem #f2f6fb;
   }
 
   &:focus-visible {
@@ -991,6 +1011,35 @@ $table-image-size: 6.25rem;
   font-weight: 600;
   line-height: 1.3;
   color: $blue;
+}
+
+.dropdownOptionTextClip {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dropdownOptionTextReveal {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  transform: translate3d(0, 0, 0);
+  transition: transform var(--reveal-duration, 0.45s) cubic-bezier(0.33, 1, 0.68, 1);
+  will-change: transform;
+}
+
+.dropdownOptionTextExpanded {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.dropdownOptionTextShifted {
+  transform: translate3d(calc(-1 * var(--reveal-distance, 0px)), 0, 0);
 }
 
 .emptyState {
@@ -2908,6 +2957,7 @@ $table-image-size: 6.25rem;
   .dropdownOption,
   .dropdownOptionActions,
   .dropdownOptionActionTooltip,
+  .dropdownOptionTextReveal,
   .rowActionTooltip,
   .actionCard,
   .actionCardIcon,
