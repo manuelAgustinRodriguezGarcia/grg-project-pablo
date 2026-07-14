@@ -35,6 +35,7 @@ export type ProductSearchResult = Pick<
   | "description"
   | "dynamicData"
   | "indexedText"
+  | "normalizedIndexedText"
 > & {
   equivalentCodes: Array<Pick<EquivalentCode, "originalCode" | "normalizedCode">>;
   folder: Pick<CatalogFolder, "id" | "name"> & {
@@ -54,6 +55,7 @@ export type CreateProductData = {
   dynamicData?: Record<string, unknown>;
   originalText?: string | null;
   indexedText?: string | null;
+  normalizedIndexedText?: string | null;
 };
 
 export class ProductRepository {
@@ -100,6 +102,7 @@ export class ProductRepository {
           description: true,
           dynamicData: true,
           indexedText: true,
+          normalizedIndexedText: true,
           equivalentCodes: {
             select: {
               originalCode: true,
@@ -210,10 +213,14 @@ export class ProductRepository {
     });
   }
 
-  async updateIndexedText(id: string, indexedText: string | null): Promise<void> {
+  async updateIndexedText(
+    id: string,
+    indexedText: string | null,
+    normalizedIndexedText: string | null = null,
+  ): Promise<void> {
     await prisma.product.update({
       where: { id },
-      data: { indexedText },
+      data: { indexedText, normalizedIndexedText },
     });
   }
 
@@ -279,6 +286,7 @@ export class ProductRepository {
         dynamicData: (data.dynamicData ?? {}) as Prisma.InputJsonValue,
         originalText: data.originalText ?? null,
         indexedText: data.indexedText ?? null,
+        normalizedIndexedText: data.normalizedIndexedText ?? null,
       },
     });
   }
@@ -300,6 +308,9 @@ export class ProductRepository {
           : {}),
         ...(data.originalText !== undefined ? { originalText: data.originalText } : {}),
         ...(data.indexedText !== undefined ? { indexedText: data.indexedText } : {}),
+        ...(data.normalizedIndexedText !== undefined
+          ? { normalizedIndexedText: data.normalizedIndexedText }
+          : {}),
       },
     });
   }
@@ -322,6 +333,7 @@ export class ProductRepository {
         dynamicData: (item.dynamicData ?? {}) as Prisma.InputJsonValue,
         originalText: item.originalText ?? null,
         indexedText: item.indexedText ?? null,
+        normalizedIndexedText: item.normalizedIndexedText ?? null,
       })),
     });
 

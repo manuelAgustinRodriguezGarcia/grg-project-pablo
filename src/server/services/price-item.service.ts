@@ -9,7 +9,12 @@ import { priceColumnRepository } from "@/server/repositories/price-column.reposi
 import { priceListService } from "./price-list.service";
 import { PriceItemError } from "./price-item.errors";
 import { visibilityService } from "./visibility.service";
-import { normalizeSearchTerm, normalizeTextContains } from "@/server/search/search-normalizer";
+import {
+  normalizeIndexedText,
+  normalizeSearchTerm,
+  normalizeTextContains,
+  splitSearchTokens,
+} from "@/server/search/search-normalizer";
 import { buildIndexedTextForMappedPriceItem } from "./price-field.builder";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
@@ -66,15 +71,46 @@ export type ListPriceItemsInput = {
 function buildPriceItemTextSearchWhere(query: string): Prisma.PriceItemWhereInput {
   const textTerm = normalizeTextContains(query);
   const normalizedQuery = normalizeSearchTerm(query);
+  const tokens = splitSearchTokens(textTerm);
+  const normalizedTokens = tokens
+    .map((token) => normalizeSearchTerm(token))
+    .filter((token) => token.length > 0);
 
-  return {
-    OR: [
-      { indexedText: { contains: textTerm, mode: "insensitive" } },
-      { primaryCode: { contains: textTerm, mode: "insensitive" } },
-      { description: { contains: textTerm, mode: "insensitive" } },
-      { normalizedCode: { contains: normalizedQuery, mode: "insensitive" } },
-    ],
-  };
+  const orConditions: Prisma.PriceItemWhereInput[] = [
+    { indexedText: { contains: textTerm, mode: "insensitive" } },
+    { primaryCode: { contains: textTerm, mode: "insensitive" } },
+    { description: { contains: textTerm, mode: "insensitive" } },
+    { normalizedCode: { contains: normalizedQuery, mode: "insensitive" } },
+  ];
+
+  if (normalizedQuery) {
+    orConditions.push({
+      normalizedIndexedText: {
+        contains: normalizedQuery,
+        mode: "insensitive",
+      },
+    });
+  }
+
+  if (normalizedTokens.length === 1) {
+    orConditions.push({
+      normalizedIndexedText: {
+        contains: normalizedTokens[0],
+        mode: "insensitive",
+      },
+    });
+  } else if (normalizedTokens.length > 1) {
+    orConditions.push({
+      AND: normalizedTokens.map((token) => ({
+        normalizedIndexedText: {
+          contains: token,
+          mode: "insensitive" as const,
+        },
+      })),
+    });
+  }
+
+  return { OR: orConditions };
 }
 
 async function listFilteredItems(
@@ -177,6 +213,7 @@ function mapItemValues(
   amount: Prisma.Decimal | null;
   dynamicData: Record<string, unknown>;
   indexedText: string | null;
+  normalizedIndexedText: string | null;
 } {
   const primaryColumn = columns.find((column) => column.isPrimaryCode);
   const descriptionColumn = columns.find((column) => column.isDescription);
@@ -226,6 +263,7 @@ function mapItemValues(
     amount,
     dynamicData,
     indexedText,
+    normalizedIndexedText: normalizeIndexedText(indexedText),
   };
 }
 

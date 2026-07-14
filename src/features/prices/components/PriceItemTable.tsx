@@ -272,7 +272,7 @@ export const PriceItemTable = memo(function PriceItemTable({
     );
   }
 
-  const showActionsColumn = canEdit && Boolean(onEditItem ?? onDeleteItem);
+  const showActionsColumn = isAdmin && Boolean(onEditItem ?? onDeleteItem);
   const { pagination, items } = data;
   const { from, to } = getPaginationRange(pagination);
   const trimmedSearchQuery = searchQuery.trim();

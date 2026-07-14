@@ -48,6 +48,9 @@ describe("buildProductFields", () => {
     expect(result.equivalenceTokens).toHaveLength(2);
     expect(result.indexedText).toContain("6205");
     expect(result.indexedText).toContain("2902");
+    expect(result.normalizedIndexedText).toContain("6205");
+    expect(result.normalizedIndexedText).toContain("2902");
+    expect(result.normalizedIndexedText).not.toContain("=");
   });
 
   it("incluye columnas no marcadas como buscables en indexedText", () => {

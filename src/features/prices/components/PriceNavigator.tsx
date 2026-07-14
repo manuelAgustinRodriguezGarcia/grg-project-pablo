@@ -563,14 +563,14 @@ export function PriceNavigator({
             onPageChange={handlePageChange}
             onImportExcel={isAdmin ? handleImportExcelClick : undefined}
             onEditItem={
-              canEdit
+              isAdmin
                 ? (item) => {
                     setEditingItem(item);
                     setIsItemFormOpen(true);
                   }
                 : undefined
             }
-            onDeleteItem={canEdit ? setDeleteItemTarget : undefined}
+            onDeleteItem={isAdmin ? setDeleteItemTarget : undefined}
             columnDetails={columnDetails}
           />
         </div>

@@ -9,6 +9,8 @@ describe("match-detector", () => {
   it("normaliza códigos para comparación", () => {
     expect(normalizeCodeForMatch(" 1-A ")).toBe("1A");
     expect(normalizeCodeForMatch("1_a")).toBe("1A");
+    expect(normalizeCodeForMatch("A=678")).toBe("A678");
+    expect(normalizeCodeForMatch("(A.678)")).toBe("A678");
   });
 
   it("detecta coincidencias por código principal", () => {

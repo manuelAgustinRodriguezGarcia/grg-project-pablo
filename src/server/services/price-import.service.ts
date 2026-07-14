@@ -17,6 +17,7 @@ import { priceColumnRepository } from "@/server/repositories/price-column.reposi
 import { priceItemRepository } from "@/server/repositories/price-item.repository";
 import { priceListRepository } from "@/server/repositories/price-list.repository";
 import { buildIndexedTextForMappedPriceItem } from "@/server/services/price-field.builder";
+import { normalizeIndexedText } from "@/server/search/search-normalizer";
 import { isoDateOnlyToDate } from "@/shared/utils/date-only";
 import { prisma } from "@/server/database/prisma";
 import { ImportError } from "./import.errors";
@@ -505,19 +506,23 @@ export class PriceImportService {
       for (let offset = 0; offset < itemsToInsert.length; offset += BATCH_SIZE) {
         const batch = itemsToInsert.slice(offset, offset + BATCH_SIZE);
         await priceItemRepository.createMany(
-          batch.map((item) => ({
-            priceListId,
-            primaryCode: item.primaryCode,
-            normalizedCode: item.normalizedCode,
-            description: item.description,
-            amount:
-              item.amount !== null && item.amount !== undefined
-                ? new Prisma.Decimal(item.amount)
-                : null,
-            dynamicData: item.dynamicData,
-            originalText: item.originalText,
-            indexedText: buildIndexedTextForMappedPriceItem(columns, item),
-          })),
+          batch.map((item) => {
+            const indexedText = buildIndexedTextForMappedPriceItem(columns, item);
+            return {
+              priceListId,
+              primaryCode: item.primaryCode,
+              normalizedCode: item.normalizedCode,
+              description: item.description,
+              amount:
+                item.amount !== null && item.amount !== undefined
+                  ? new Prisma.Decimal(item.amount)
+                  : null,
+              dynamicData: item.dynamicData,
+              originalText: item.originalText,
+              indexedText,
+              normalizedIndexedText: normalizeIndexedText(indexedText),
+            };
+          }),
         );
       }
     });

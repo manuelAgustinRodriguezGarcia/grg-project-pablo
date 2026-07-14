@@ -34,6 +34,7 @@ import { uploadedFileRepository } from "@/server/repositories/uploaded-file.repo
 import { catalogRepository } from "@/server/repositories/catalog.repository";
 import { folderRepository } from "@/server/repositories/folder.repository";
 import { buildIndexedTextForMappedProduct } from "@/server/services/product-field.builder";
+import { normalizeIndexedText } from "@/server/search/search-normalizer";
 import { prisma } from "@/server/database/prisma";
 import {
   buildStoragePath,
@@ -1408,15 +1409,22 @@ export class CatalogImportService {
           for (let offset = 0; offset < productsToInsert.length; offset += BATCH_SIZE) {
             const batch = productsToInsert.slice(offset, offset + BATCH_SIZE);
             await productRepository.createMany(
-              batch.map((product) => ({
-                folderId: job.folderId!,
-                primaryCode: product.primaryCode,
-                normalizedCode: product.normalizedCode,
-                description: product.description,
-                dynamicData: product.dynamicData,
-                originalText: product.originalText,
-                indexedText: buildIndexedTextForMappedProduct(columns, product),
-              })),
+              batch.map((product) => {
+                const indexedText = buildIndexedTextForMappedProduct(
+                  columns,
+                  product,
+                );
+                return {
+                  folderId: job.folderId!,
+                  primaryCode: product.primaryCode,
+                  normalizedCode: product.normalizedCode,
+                  description: product.description,
+                  dynamicData: product.dynamicData,
+                  originalText: product.originalText,
+                  indexedText,
+                  normalizedIndexedText: normalizeIndexedText(indexedText),
+                };
+              }),
             );
           }
         });

@@ -110,4 +110,11 @@ describe("CatalogPageIntro", () => {
 
     expect(input).toHaveValue("");
   });
+
+  it("hides action cards when handlers are not provided", () => {
+    render(<CatalogPageIntro onDebouncedSearchChange={vi.fn()} />);
+
+    expect(screen.queryByTestId("catalog-action-import-excel")).toBeNull();
+    expect(screen.queryByTestId("catalog-action-add-product")).toBeNull();
+  });
 });

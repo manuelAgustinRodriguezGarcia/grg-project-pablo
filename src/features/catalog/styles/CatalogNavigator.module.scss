@@ -15,7 +15,7 @@ $table-image-size: 6.25rem;
   flex: 1;
   min-height: 0;
   gap: 0;
-  padding: clamp(0.75rem, 2vw, 1.25rem);
+  padding: 0;
   overflow: hidden;
 }
 
@@ -124,7 +124,7 @@ $table-image-size: 6.25rem;
   overflow-y: auto;
   border: 1px solid rgba($blue, 0.18);
   border-radius: $radius-md;
-  background: $catalog-panel-bg;
+  background: $white;
   box-shadow: $catalog-shadow;
 }
 
@@ -135,6 +135,31 @@ $table-image-size: 6.25rem;
   font-size: 0.85rem;
   line-height: 1.4;
   color: rgba($navy, 0.62);
+}
+
+.globalSearchDropdownLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 5.5rem;
+  padding: 0.75rem 0.5rem;
+}
+
+.globalSearchDropdownSpinner {
+  width: 1.65rem;
+  height: 1.65rem;
+  border: 2.5px solid rgba($blue, 0.18);
+  border-top-color: $blue;
+  border-radius: 50%;
+  animation: globalSearchSpin 0.7s linear infinite;
+}
+
+@keyframes globalSearchSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .globalSearchDropdownSection {
@@ -228,6 +253,14 @@ $table-image-size: 6.25rem;
   gap: 0.12rem;
 }
 
+.globalSearchDropdownFolderLabel {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
 .globalSearchDropdownOptionPrimary {
   overflow: hidden;
   font-family: $font-sans;
@@ -251,12 +284,223 @@ $table-image-size: 6.25rem;
 
 .globalSearchDropdownOptionMeta {
   overflow: hidden;
+  flex-shrink: 1;
   font-family: $font-sans;
   font-size: 0.74rem;
   line-height: 1.3;
   color: rgba($navy, 0.52);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.globalSearchDropdownFolderLabel .globalSearchDropdownOptionPrimary {
+  flex-shrink: 0;
+  max-width: 60%;
+}
+
+.globalSearchProductFolderCard {
+  display: flex;
+  min-width: 0;
+  min-height: 3.4rem;
+  align-items: center;
+  gap: 0.35rem;
+
+  .globalSearchDropdownOptionButton {
+    min-width: 0;
+    flex: 1;
+    align-items: center;
+    min-height: 3.4rem;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .rowActionWrap {
+    flex-shrink: 0;
+    margin-right: 0.25rem;
+  }
+}
+
+.globalSearchPreviewButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: 0.35rem;
+  background: rgba($white, 0.9);
+  font-family: $font-sans;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: $navy;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.06);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.globalSearchProductFolderBody {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.globalSearchProductFolderCatalog {
+  overflow: hidden;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: $blue;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchPreviewCard {
+  position: relative;
+  display: flex;
+  width: min(56rem, calc(100vw - 2.5rem));
+  max-height: min(85vh, 40rem);
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem 1.25rem 1.1rem;
+  border-radius: $radius-lg;
+  background: $white;
+  box-shadow: 0 16px 48px rgba($navy, 0.3);
+}
+
+.searchPreviewClose {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba($navy, 0.08);
+  color: $navy;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($navy, 0.14);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($blue, 0.45);
+    outline-offset: 2px;
+  }
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.searchPreviewTitle {
+  margin: 0;
+  padding-right: 2.25rem;
+  font-family: $font-sans;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: $navy;
+}
+
+.searchPreviewTableWrap {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+}
+
+.searchPreviewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  color: $navy;
+
+  th,
+  td {
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid rgba($navy, 0.08);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background: rgba($navy, 0.04);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+.searchPreviewThumbCell {
+  width: 3rem;
+}
+
+.searchPreviewThumb {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-sm;
+  background: rgba($blue, 0.03);
+}
+
+.searchPreviewThumbEmpty {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-sm;
+  background: rgba($navy, 0.03);
+  color: rgba($navy, 0.35);
+  font-size: 0.75rem;
+}
+
+.searchPreviewActions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .globalSearchDropdownMatchRow {
@@ -591,9 +835,10 @@ $table-image-size: 6.25rem;
 
 .selectionPanel {
   display: flex;
-  flex: 1;
+  flex: 1 1 100%;
   flex-direction: column;
   gap: 0.85rem;
+  width: 100%;
   min-width: 0;
   padding: 1rem;
   border-radius: $radius-lg;
@@ -2599,6 +2844,16 @@ $table-image-size: 6.25rem;
   visibility: visible;
 }
 
+.rowActionTooltipDanger {
+  border-color: rgba(#c0392b, 0.2);
+  background: #c0392b;
+  box-shadow: 0 4px 12px rgba(#c0392b, 0.22);
+
+  &::after {
+    border-bottom-color: #c0392b;
+  }
+}
+
 .rowActionButton {
   display: inline-flex;
   align-items: center;
@@ -2812,7 +3067,6 @@ $table-image-size: 6.25rem;
   font-weight: 700;
   line-height: 1.35;
   color: $navy;
-  white-space: nowrap;
 }
 
 .confirmText {
@@ -2830,6 +3084,47 @@ $table-image-size: 6.25rem;
   color: $navy;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.confirmProductPreview {
+  margin: 0 0 1rem;
+  max-width: min(36rem, calc(100vw - 5rem));
+  overflow-x: auto;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+}
+
+.confirmProductPreviewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: $navy;
+
+  th,
+  td {
+    padding: 0.55rem 0.7rem;
+    border-right: 1px solid rgba($navy, 0.08);
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+
+    &:last-child {
+      border-right: 0;
+    }
+  }
+
+  th {
+    background: rgba($navy, 0.04);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  td {
+    background: $white;
+  }
 }
 
 .confirmInput {
@@ -2924,7 +3219,7 @@ $table-image-size: 6.25rem;
 @media (max-width: 768px) {
   .page {
     min-height: 100%;
-    padding: 0.65rem;
+    padding: 0;
     overflow: visible;
   }
 
@@ -2963,7 +3258,9 @@ $table-image-size: 6.25rem;
   .actionCardIcon,
   .actionCardTitle,
   .actionCardSubtitle,
-  .paginationButton {
+  .paginationButton,
+  .globalSearchPreviewButton,
+  .globalSearchDropdownSpinner {
     transition: none;
     animation: none;
   }
