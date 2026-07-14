@@ -221,10 +221,11 @@ model Product {
   normalizedCode   String?
   description      String?
   dynamicData      Json     @default("{}")
-  originalText     String?  @db.Text
-  indexedText      String?  @db.Text
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  originalText            String?  @db.Text
+  indexedText             String?  @db.Text
+  normalizedIndexedText   String?  @db.Text
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   folder            CatalogFolder            @relation(fields: [folderId], references: [id], onDelete: Cascade)
   images            ProductImage[]
@@ -397,10 +398,11 @@ model PriceItem {
   description    String?
   amount         Decimal? @db.Decimal(18, 4)
   dynamicData    Json     @default("{}")
-  originalText   String?  @db.Text
-  indexedText    String?  @db.Text
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  originalText          String?  @db.Text
+  indexedText           String?  @db.Text
+  normalizedIndexedText String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   priceList PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
 

@@ -577,6 +577,8 @@ $price-shadow:
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: $navy-light;
+    user-select: none;
+    -webkit-user-select: none;
     background:
       linear-gradient(
         180deg,

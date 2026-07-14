@@ -83,22 +83,72 @@ describe("buildProductSearchWhere", () => {
     );
   });
 
-  it("busca texto en indexedText y originalText sin depender de claves de columna", () => {
+  it("busca texto en indexedText y originalText por tokens (ignora separadores)", () => {
     const where = buildProductSearchWhere("bomba agua");
     const conditions = (where as { OR: unknown[] }).OR;
 
     expect(conditions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          indexedText: expect.objectContaining({ contains: "bomba agua" }),
+          AND: [
+            { indexedText: expect.objectContaining({ contains: "bomba" }) },
+            { indexedText: expect.objectContaining({ contains: "agua" }) },
+          ],
         }),
         expect.objectContaining({
-          originalText: expect.objectContaining({ contains: "bomba agua" }),
+          AND: [
+            { originalText: expect.objectContaining({ contains: "bomba" }) },
+            { originalText: expect.objectContaining({ contains: "agua" }) },
+          ],
+        }),
+        expect.objectContaining({
+          AND: [
+            {
+              normalizedIndexedText: expect.objectContaining({ contains: "BOMBA" }),
+            },
+            {
+              normalizedIndexedText: expect.objectContaining({ contains: "AGUA" }),
+            },
+          ],
+        }),
+        expect.objectContaining({
+          normalizedIndexedText: expect.objectContaining({ contains: "BOMBAAGUA" }),
         }),
       ]),
     );
     expect(conditions).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ dynamicData: expect.anything() })]),
+    );
+  });
+
+  it("busca en normalizedIndexedText compacto para P.FICH / PFICH", () => {
+    const where = buildProductSearchWhere("525 P.FICH");
+    const conditions = (where as { OR: unknown[] }).OR;
+
+    expect(conditions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          normalizedIndexedText: expect.objectContaining({ contains: "525PFICH" }),
+        }),
+      ]),
+    );
+
+    const gluedWhere = buildProductSearchWhere("525 PFICH");
+    const gluedConditions = (gluedWhere as { OR: unknown[] }).OR;
+    expect(gluedConditions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          normalizedIndexedText: expect.objectContaining({ contains: "525PFICH" }),
+        }),
+      ]),
+    );
+  });
+
+  it("normaliza A=678 igual que A-678 para búsqueda por código", () => {
+    const where = buildProductSearchWhere("A=678");
+    const conditions = (where as { OR: unknown[] }).OR;
+    expect(conditions).toEqual(
+      expect.arrayContaining([expect.objectContaining({ normalizedCode: "A678" })]),
     );
   });
 

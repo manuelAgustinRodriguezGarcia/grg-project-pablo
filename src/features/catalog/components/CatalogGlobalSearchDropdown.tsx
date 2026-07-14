@@ -2,25 +2,19 @@
 
 import { memo, useMemo } from "react";
 import type {
-  CatalogSearchHit,
   FolderSearchHit,
   GlobalSearchResponse,
-  SearchResultItem,
 } from "@/features/catalog/types/global-search.types";
 import {
-  formatSearchMatchType,
-  truncateMatchValue,
-} from "@/features/catalog/utils/format-search-match-type";
+  formatProductFolderResultCount,
+  formatProductFolderResultLabel,
+  groupSearchResultsByFolder,
+  type ProductFolderSearchGroup,
+} from "@/features/catalog/utils/group-search-results-by-folder";
+import { Eye, ICON_STROKE } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 export type GlobalSearchDropdownOption =
-  | {
-      kind: "catalog";
-      key: string;
-      catalogId: string;
-      label: string;
-      description: string | null;
-    }
   | {
       kind: "folder";
       key: string;
@@ -31,9 +25,10 @@ export type GlobalSearchDropdownOption =
       catalogName: string;
     }
   | {
-      kind: "product";
+      kind: "productFolder";
       key: string;
-      item: SearchResultItem;
+      group: ProductFolderSearchGroup;
+      label: string;
     };
 
 type CatalogGlobalSearchDropdownProps = {
@@ -44,9 +39,9 @@ type CatalogGlobalSearchDropdownProps = {
   minChars: number;
   queryLength: number;
   activeIndex: number;
-  onSelectCatalog: (catalogId: string) => void;
   onSelectFolder: (catalogId: string, folderId: string) => void;
-  onSelectProduct: (item: SearchResultItem) => void;
+  onSelectProductFolder: (group: ProductFolderSearchGroup) => void;
+  onPreviewProductFolder: (group: ProductFolderSearchGroup) => void;
 };
 
 export function buildGlobalSearchDropdownOptions(
@@ -55,16 +50,6 @@ export function buildGlobalSearchDropdownOptions(
   if (!data) {
     return [];
   }
-
-  const catalogs: GlobalSearchDropdownOption[] = data.catalogs.map(
-    (hit: CatalogSearchHit) => ({
-      kind: "catalog" as const,
-      key: `catalog:${hit.catalogId}`,
-      catalogId: hit.catalogId,
-      label: hit.name,
-      description: hit.description,
-    }),
-  );
 
   const folders: GlobalSearchDropdownOption[] = data.folders.map(
     (hit: FolderSearchHit) => ({
@@ -78,39 +63,34 @@ export function buildGlobalSearchDropdownOptions(
     }),
   );
 
-  const products: GlobalSearchDropdownOption[] = data.items.map((item) => ({
-    kind: "product" as const,
-    key: `product:${item.productId}`,
-    item,
-  }));
+  const productFolders: GlobalSearchDropdownOption[] =
+    groupSearchResultsByFolder(data.items).map((group) => ({
+      kind: "productFolder" as const,
+      key: `product-folder:${group.folderId}`,
+      group,
+      label: formatProductFolderResultLabel(
+        group.items.length,
+        group.folderName,
+        group.catalogName,
+      ),
+    }));
 
-  return [...catalogs, ...folders, ...products];
-}
-
-function formatCellValue(value: string | null): string {
-  if (!value?.trim()) {
-    return "—";
-  }
-
-  return value.trim();
+  return [...folders, ...productFolders];
 }
 
 function activateOption(
   option: GlobalSearchDropdownOption,
   handlers: Pick<
     CatalogGlobalSearchDropdownProps,
-    "onSelectCatalog" | "onSelectFolder" | "onSelectProduct"
+    "onSelectFolder" | "onSelectProductFolder"
   >,
 ): void {
   switch (option.kind) {
-    case "catalog":
-      handlers.onSelectCatalog(option.catalogId);
-      return;
     case "folder":
       handlers.onSelectFolder(option.catalogId, option.folderId);
       return;
-    case "product":
-      handlers.onSelectProduct(option.item);
+    case "productFolder":
+      handlers.onSelectProductFolder(option.group);
       return;
     default: {
       const exhaustive: never = option;
@@ -132,23 +112,16 @@ export const CatalogGlobalSearchDropdown = memo(function CatalogGlobalSearchDrop
   minChars,
   queryLength,
   activeIndex,
-  onSelectCatalog,
   onSelectFolder,
-  onSelectProduct,
+  onSelectProductFolder,
+  onPreviewProductFolder,
 }: CatalogGlobalSearchDropdownProps) {
   const options = useMemo(
     () => buildGlobalSearchDropdownOptions(data),
     [data],
   );
-  const handlers = { onSelectCatalog, onSelectFolder, onSelectProduct };
+  const handlers = { onSelectFolder, onSelectProductFolder };
 
-  const catalogOptions = useMemo(
-    () =>
-      options
-        .map((option, index): IndexedOption => ({ option, index }))
-        .filter((entry) => entry.option.kind === "catalog"),
-    [options],
-  );
   const folderOptions = useMemo(
     () =>
       options
@@ -156,11 +129,11 @@ export const CatalogGlobalSearchDropdown = memo(function CatalogGlobalSearchDrop
         .filter((entry) => entry.option.kind === "folder"),
     [options],
   );
-  const productOptions = useMemo(
+  const productFolderOptions = useMemo(
     () =>
       options
         .map((option, index): IndexedOption => ({ option, index }))
-        .filter((entry) => entry.option.kind === "product"),
+        .filter((entry) => entry.option.kind === "productFolder"),
     [options],
   );
 
@@ -190,15 +163,19 @@ export const CatalogGlobalSearchDropdown = memo(function CatalogGlobalSearchDrop
     );
   }
 
-  if (isLoading && !data) {
+  if (isLoading) {
     return (
       <div
         id={listboxId}
         className={styles.globalSearchDropdown}
         role="status"
         aria-busy="true"
+        aria-label="Buscando coincidencias"
       >
-        <p className={styles.globalSearchDropdownHint}>Buscando coincidencias…</p>
+        <div className={styles.globalSearchDropdownLoading}>
+          <span className={styles.globalSearchDropdownSpinner} aria-hidden />
+          <p className={styles.globalSearchDropdownHint}>Buscando coincidencias…</p>
+        </div>
       </div>
     );
   }
@@ -222,30 +199,6 @@ export const CatalogGlobalSearchDropdown = memo(function CatalogGlobalSearchDrop
       isActive ? styles.globalSearchDropdownOptionActive : ""
     }`;
 
-    if (option.kind === "catalog") {
-      return (
-        <li
-          key={option.key}
-          id={optionId}
-          role="option"
-          aria-selected={isActive}
-          className={optionClassName}
-        >
-          <button
-            type="button"
-            className={styles.globalSearchDropdownOptionButton}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => activateOption(option, handlers)}
-          >
-            <span className={styles.globalSearchDropdownOptionPrimary}>
-              {option.label}
-            </span>
-            <span className={styles.globalSearchDropdownOptionMeta}>Catálogo</span>
-          </button>
-        </li>
-      );
-    }
-
     if (option.kind === "folder") {
       return (
         <li
@@ -261,21 +214,18 @@ export const CatalogGlobalSearchDropdown = memo(function CatalogGlobalSearchDrop
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => activateOption(option, handlers)}
           >
-            <span className={styles.globalSearchDropdownOptionPrimary}>
-              {option.label}
-            </span>
-            <span className={styles.globalSearchDropdownOptionMeta}>
-              {option.catalogName}
+            <span className={styles.globalSearchDropdownFolderLabel}>
+              <span className={styles.globalSearchDropdownOptionPrimary}>
+                {option.label}
+              </span>
+              <span className={styles.globalSearchDropdownOptionMeta}>
+                | Catálogo: {option.catalogName}
+              </span>
             </span>
           </button>
         </li>
       );
     }
-
-    const thumbnailUrl =
-      option.item.primaryImage?.thumbnailUrl ?? option.item.primaryImage?.fullUrl;
-    const matchLabel = formatSearchMatchType(option.item.matchType);
-    const matchValue = truncateMatchValue(option.item.matchValue, 48);
 
     return (
       <li
@@ -285,45 +235,41 @@ export const CatalogGlobalSearchDropdown = memo(function CatalogGlobalSearchDrop
         aria-selected={isActive}
         className={optionClassName}
       >
-        <button
-          type="button"
-          className={styles.globalSearchDropdownOptionButton}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => activateOption(option, handlers)}
-        >
-          <span className={styles.globalSearchDropdownThumbWrap} aria-hidden>
-            {thumbnailUrl ? (
-              <img
-                src={thumbnailUrl}
-                alt=""
-                className={styles.globalSearchDropdownThumb}
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              <span className={styles.globalSearchDropdownThumbEmpty}>—</span>
-            )}
+        <div className={styles.globalSearchProductFolderCard}>
+          <button
+            type="button"
+            className={styles.globalSearchDropdownOptionButton}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => activateOption(option, handlers)}
+          >
+            <span className={styles.globalSearchProductFolderBody}>
+              <span className={styles.globalSearchDropdownOptionPrimary}>
+                {formatProductFolderResultCount(
+                  option.group.items.length,
+                  option.group.folderName,
+                )}
+              </span>
+              <span className={styles.globalSearchProductFolderCatalog}>
+                Catálogo: {option.group.catalogName}
+              </span>
+            </span>
+          </button>
+          <span className={styles.rowActionWrap}>
+            <button
+              type="button"
+              className={styles.globalSearchPreviewButton}
+              aria-label="Vista previa"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onPreviewProductFolder(option.group);
+              }}
+            >
+              <Eye strokeWidth={ICON_STROKE} aria-hidden />
+              <span>Vista previa</span>
+            </button>
           </span>
-          <span className={styles.globalSearchDropdownProductBody}>
-            <span className={styles.globalSearchDropdownOptionPrimary}>
-              {formatCellValue(option.item.primaryCode)}
-            </span>
-            <span className={styles.globalSearchDropdownOptionSecondary}>
-              {truncateMatchValue(formatCellValue(option.item.description), 72)}
-            </span>
-            <span className={styles.globalSearchDropdownOptionMeta}>
-              {option.item.catalog.name} · {option.item.folder.name}
-            </span>
-            <span className={styles.globalSearchDropdownMatchRow}>
-              <span className={styles.searchMatchBadge}>{matchLabel}</span>
-              {matchValue ? (
-                <span className={styles.globalSearchDropdownMatchValue}>
-                  {matchValue}
-                </span>
-              ) : null}
-            </span>
-          </span>
-        </button>
+        </div>
       </li>
     );
   };
@@ -335,27 +281,19 @@ export const CatalogGlobalSearchDropdown = memo(function CatalogGlobalSearchDrop
       role="listbox"
       aria-label="Coincidencias de búsqueda global"
     >
-      {catalogOptions.length > 0 ? (
-        <div className={styles.globalSearchDropdownSection}>
-          <p className={styles.globalSearchDropdownHeading}>Catálogos</p>
-          <ul className={styles.globalSearchDropdownList}>
-            {catalogOptions.map(renderOption)}
-          </ul>
-        </div>
-      ) : null}
       {folderOptions.length > 0 ? (
         <div className={styles.globalSearchDropdownSection}>
-          <p className={styles.globalSearchDropdownHeading}>Secciones</p>
+          <p className={styles.globalSearchDropdownHeading}>Carpetas</p>
           <ul className={styles.globalSearchDropdownList}>
             {folderOptions.map(renderOption)}
           </ul>
         </div>
       ) : null}
-      {productOptions.length > 0 ? (
+      {productFolderOptions.length > 0 ? (
         <div className={styles.globalSearchDropdownSection}>
           <p className={styles.globalSearchDropdownHeading}>Productos</p>
           <ul className={styles.globalSearchDropdownList}>
-            {productOptions.map(renderOption)}
+            {productFolderOptions.map(renderOption)}
           </ul>
         </div>
       ) : null}

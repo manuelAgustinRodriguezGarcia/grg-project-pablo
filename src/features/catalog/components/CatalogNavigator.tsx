@@ -16,33 +16,74 @@ import { CatalogPageIntro } from "@/features/catalog/components/CatalogPageChrom
 import { LazyProductFormModal } from "@/features/catalog/components/LazyProductFormModal";
 import { ProductTable } from "@/features/catalog/components/ProductTable";
 import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
+import { deleteProductAction } from "@/features/records/actions/product.actions";
 import type {
   CatalogNavigationFolderItem,
   DirectoryCatalogItem,
 } from "@/features/catalog/types/catalog-navigator.types";
 import type {
   GlobalSearchResponse,
-  SearchResultItem,
 } from "@/features/catalog/types/global-search.types";
 import type { CatalogNavigationResponse } from "@/features/catalog/types/navigation.types";
 import type { ProductTableItem, ProductTableResponse } from "@/features/catalog/types/product-table.types";
+import type { ColumnListItem } from "@/features/catalog/types/column.types";
 import { serializeColumnFilters, upsertColumnFilter } from "@/features/catalog/utils/column-filter-state";
+import {
+  getProductTableColumns,
+} from "@/features/catalog/utils/product-table-columns";
+import type { ProductFolderSearchGroup } from "@/features/catalog/utils/group-search-results-by-folder";
 import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
 import type { CatalogListItem } from "@/features/catalog/types/catalog.types";
 import type { FolderListItem } from "@/features/catalog/types/folder.types";
-import { resolveFolderSearchSeed } from "@/features/catalog/utils/resolve-folder-search-seed";
 import { sortByName } from "@/features/catalog/utils/sortByName";
 import { useReplaceSearchParams } from "@/shared/hooks/useReplaceSearchParams";
+import { normalizeMultilineText } from "@/shared/text/normalize-multiline-text";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 const PAGE_SIZE = 100;
 const MIN_GLOBAL_SEARCH_CHARS = 2;
 const GLOBAL_SEARCH_DROPDOWN_PAGE_SIZE = 8;
+const DELETE_PRODUCT_PREVIEW_COLUMN_COUNT = 3;
 
 type CatalogTarget = {
   id: string;
   name: string;
 };
+
+function getDeleteProductPreviewColumns(columns: ColumnListItem[]): ColumnListItem[] {
+  return getProductTableColumns(
+    [...columns].sort((left, right) => left.order - right.order),
+  ).slice(0, DELETE_PRODUCT_PREVIEW_COLUMN_COUNT);
+}
+
+function formatDeleteProductPreviewValue(
+  product: ProductTableItem,
+  column: ColumnListItem,
+): string {
+  let value: unknown;
+
+  if (column.isPrimaryCode) {
+    value = product.primaryCode;
+  } else if (column.isDescription) {
+    value = product.description;
+  } else {
+    value = product.dynamicData[column.internalKey];
+  }
+
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+
+  return normalizeMultilineText(String(value));
+}
+
+function formatDeleteProductPreviewHeader(displayName: string): string {
+  return displayName.replace(/\r\n/g, "\n").replace(/\n+/g, " ").trim();
+}
 
 function toDirectoryCatalogItem(catalog: CatalogListItem): DirectoryCatalogItem {
   return {
@@ -168,6 +209,10 @@ export function CatalogNavigator({
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductTableItem | null>(null);
+  const [deleteProductTarget, setDeleteProductTarget] = useState<ProductTableItem | null>(
+    null,
+  );
+  const [isProductActionBusy, setIsProductActionBusy] = useState(false);
   const [productActionError, setProductActionError] = useState<string | null>(null);
 
   const [deleteCatalogTarget, setDeleteCatalogTarget] = useState<CatalogTarget | null>(
@@ -348,11 +393,18 @@ export function CatalogNavigator({
       return (await response.json()) as GlobalSearchResponse;
     },
     enabled: isSearchActive,
-    placeholderData: keepPreviousData,
     staleTime: 0,
   });
 
   const productTable = canLoadFolderProducts ? (productsQuery.data ?? null) : null;
+
+  const deleteProductPreviewColumns = useMemo(
+    () =>
+      productTable && deleteProductTarget
+        ? getDeleteProductPreviewColumns(productTable.columns)
+        : [],
+    [deleteProductTarget, productTable],
+  );
   const isLoadingProducts =
     productsQuery.isFetching || (Boolean(activeFolderId) && !canLoadFolderProducts);
   const productsError =
@@ -390,11 +442,11 @@ export function CatalogNavigator({
   const globalSearchError =
     globalSearchQuery.error instanceof Error ? globalSearchQuery.error.message : null;
 
-  const handleSelectSearchResult = useCallback(
-    (item: SearchResultItem) => {
-      const seed = resolveFolderSearchSeed(item, debouncedSearch);
-      setSelectedCatalogId(item.catalog.id);
-      setSelectedFolderId(item.folder.id);
+  const handleSelectProductFolderSearchResult = useCallback(
+    (group: ProductFolderSearchGroup) => {
+      const seed = debouncedSearch.trim();
+      setSelectedCatalogId(group.catalogId);
+      setSelectedFolderId(group.folderId);
       setPage(1);
       setColumnFilters([]);
       setDebouncedSearch("");
@@ -405,18 +457,6 @@ export function CatalogNavigator({
     },
     [debouncedSearch],
   );
-
-  const handleSelectCatalogSearchResult = useCallback((catalogId: string) => {
-    setSelectedCatalogId(catalogId);
-    setSelectedFolderId("");
-    setPage(1);
-    setColumnFilters([]);
-    setDebouncedSearch("");
-    setSearchResetKey((token) => token + 1);
-    setFolderSearch("");
-    setFolderSearchSeedValue("");
-    setFolderSearchResetKey((token) => token + 1);
-  }, []);
 
   const handleSelectFolderSearchResult = useCallback(
     (catalogId: string, folderId: string) => {
@@ -515,6 +555,33 @@ export function CatalogNavigator({
     setEditingProduct(product);
     setIsProductFormOpen(true);
   }, []);
+
+  const handleDeleteProduct = useCallback((product: ProductTableItem) => {
+    setProductActionError(null);
+    setDeleteProductTarget(product);
+  }, []);
+
+  const handleConfirmDeleteProduct = useCallback(async () => {
+    if (!deleteProductTarget) {
+      return;
+    }
+
+    setIsProductActionBusy(true);
+    setProductActionError(null);
+
+    try {
+      const result = await deleteProductAction({ productId: deleteProductTarget.id });
+      if (!result.success) {
+        setProductActionError(result.error);
+        return;
+      }
+
+      setDeleteProductTarget(null);
+      invalidateCatalogQueries();
+    } finally {
+      setIsProductActionBusy(false);
+    }
+  }, [deleteProductTarget, invalidateCatalogQueries]);
 
   const handleImportPublished = useCallback(() => {
     invalidateCatalogQueries();
@@ -839,11 +906,10 @@ export function CatalogNavigator({
             searchResults={globalSearchQuery.data ?? null}
             isSearchLoading={globalSearchQuery.isFetching}
             searchError={globalSearchError}
-            onSelectSearchProduct={handleSelectSearchResult}
-            onSelectSearchCatalog={handleSelectCatalogSearchResult}
+            onSelectSearchProductFolder={handleSelectProductFolderSearchResult}
             onSelectSearchFolder={handleSelectFolderSearchResult}
             onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
-            onAddProductClick={canEdit ? handleAddProductClick : undefined}
+            onAddProductClick={isAdmin ? handleAddProductClick : undefined}
           >
             <CatalogFolderSelectors
               catalogs={sortedCatalogs}
@@ -886,6 +952,7 @@ export function CatalogNavigator({
             canEdit={canEdit}
             onColumnsChanged={isAdmin ? handleColumnsChanged : undefined}
             onEditProduct={canEdit ? handleEditProduct : undefined}
+            onDeleteProduct={canEdit ? handleDeleteProduct : undefined}
             folderName={activeFolderName}
             folderSearchQuery={folderSearch}
             onFolderSearchChange={
@@ -916,6 +983,44 @@ export function CatalogNavigator({
             }
           }}
         />
+      ) : null}
+      {deleteProductTarget && productTable ? (
+        <ConfirmDialog
+          title="¿Desea eliminar el siguiente producto?"
+          message="Esta acción no se puede deshacer."
+          confirmLabel="Eliminar"
+          variant="danger"
+          isBusy={isProductActionBusy}
+          onConfirm={() => void handleConfirmDeleteProduct()}
+          onCancel={() => {
+            if (!isProductActionBusy) {
+              setDeleteProductTarget(null);
+            }
+          }}
+        >
+          <div className={styles.confirmProductPreview}>
+            <table className={styles.confirmProductPreviewTable}>
+              <thead>
+                <tr>
+                  {deleteProductPreviewColumns.map((column) => (
+                    <th key={column.id} scope="col">
+                      {formatDeleteProductPreviewHeader(column.displayName)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {deleteProductPreviewColumns.map((column) => (
+                    <td key={column.id}>
+                      {formatDeleteProductPreviewValue(deleteProductTarget, column)}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ConfirmDialog>
       ) : null}
       {deleteCatalogTarget ? (
         <ConfirmDialog

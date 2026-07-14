@@ -513,6 +513,7 @@ export class ProductService {
       dynamicData: built.dynamicData,
       originalText: built.originalText,
       indexedText: built.indexedText,
+      normalizedIndexedText: built.normalizedIndexedText,
     });
 
     await equivalenceService.syncFromProduct(
@@ -568,6 +569,7 @@ export class ProductService {
       dynamicData: built.dynamicData,
       originalText: built.originalText,
       indexedText: built.indexedText,
+      normalizedIndexedText: built.normalizedIndexedText,
     });
 
     await equivalenceService.syncFromProduct(
@@ -658,6 +660,7 @@ export class ProductService {
       dynamicData: built.dynamicData,
       originalText: built.originalText,
       indexedText: built.indexedText,
+      normalizedIndexedText: built.normalizedIndexedText,
     });
 
     await equivalenceService.copyToProduct(source.id, duplicate.id);

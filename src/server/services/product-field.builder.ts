@@ -1,6 +1,7 @@
 import type { FolderColumn } from "@/generated/prisma/client";
 import type { MappedProductRow } from "@/server/importers/types";
 import { normalizeCodeForMatch } from "@/server/importers/match-detector";
+import { normalizeIndexedText } from "@/server/search/search-normalizer";
 import { ProductError } from "./product.errors";
 import {
   collectEquivalenceTokensFromColumns,
@@ -26,6 +27,7 @@ export type BuiltProductFields = {
   dynamicData: Record<string, unknown>;
   originalText: string | null;
   indexedText: string | null;
+  normalizedIndexedText: string | null;
   equivalenceTokens: ParsedEquivalenceToken[];
 };
 
@@ -251,6 +253,7 @@ export function buildProductFields(
     dynamicData,
     originalText,
     indexedText,
+    normalizedIndexedText: normalizeIndexedText(indexedText),
     equivalenceTokens,
   };
 }
@@ -293,6 +296,7 @@ export function buildProductFieldsForDuplicate(
     dynamicData: unknown;
     originalText: string | null;
     indexedText: string | null;
+    normalizedIndexedText?: string | null;
   },
   columns: FolderColumn[],
 ): BuiltProductFields {
@@ -312,6 +316,8 @@ export function buildProductFieldsForDuplicate(
     dynamicData: { ...dynamicData },
     originalText: product.originalText,
     indexedText: product.indexedText,
+    normalizedIndexedText:
+      product.normalizedIndexedText ?? normalizeIndexedText(product.indexedText),
     equivalenceTokens,
   };
 }

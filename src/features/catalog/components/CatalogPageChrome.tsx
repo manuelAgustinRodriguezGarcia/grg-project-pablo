@@ -14,15 +14,18 @@ import {
   buildGlobalSearchDropdownOptions,
   CatalogGlobalSearchDropdown,
 } from "@/features/catalog/components/CatalogGlobalSearchDropdown";
+import { GlobalSearchProductFolderPreviewModal } from "@/features/catalog/components/GlobalSearchProductFolderPreviewModal";
 import type {
   GlobalSearchResponse,
-  SearchResultItem,
 } from "@/features/catalog/types/global-search.types";
+import type { ProductFolderSearchGroup } from "@/features/catalog/utils/group-search-results-by-folder";
 import { FileSpreadsheet, ICON_STROKE, Plus, Search, X } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
+type ActionCardId = "add-product" | "import-excel";
+
 type ActionCardConfig = {
-  id: string;
+  id: ActionCardId;
   title: string;
   subtitle: string;
   icon: LucideIcon;
@@ -55,8 +58,7 @@ type CatalogPageIntroProps = {
   searchResults?: GlobalSearchResponse | null;
   isSearchLoading?: boolean;
   searchError?: string | null;
-  onSelectSearchProduct?: (item: SearchResultItem) => void;
-  onSelectSearchCatalog?: (catalogId: string) => void;
+  onSelectSearchProductFolder?: (group: ProductFolderSearchGroup) => void;
   onSelectSearchFolder?: (catalogId: string, folderId: string) => void;
   onImportExcelClick?: () => void;
   onAddProductClick?: () => void;
@@ -83,8 +85,7 @@ export function CatalogPageIntro({
   searchResults = null,
   isSearchLoading = false,
   searchError = null,
-  onSelectSearchProduct,
-  onSelectSearchCatalog,
+  onSelectSearchProductFolder,
   onSelectSearchFolder,
   onImportExcelClick,
   onAddProductClick,
@@ -96,6 +97,9 @@ export function CatalogPageIntro({
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [previewGroup, setPreviewGroup] = useState<ProductFolderSearchGroup | null>(
+    null,
+  );
 
   useEffect(() => {
     setSearchInput("");
@@ -113,27 +117,33 @@ export function CatalogPageIntro({
     return () => window.clearTimeout(timeout);
   }, [onDebouncedSearchChange, searchInput]);
 
-  const options = useMemo(
-    () => buildGlobalSearchDropdownOptions(searchResults),
-    [searchResults],
-  );
-
   const trimmedInput = searchInput.trim();
   const canQuery = debouncedQuery.length >= MIN_GLOBAL_SEARCH_CHARS;
+  const isSearchPending =
+    trimmedInput.length >= MIN_GLOBAL_SEARCH_CHARS &&
+    (trimmedInput !== debouncedQuery || isSearchLoading);
+  const options = useMemo(
+    () =>
+      isSearchPending
+        ? []
+        : buildGlobalSearchDropdownOptions(searchResults),
+    [isSearchPending, searchResults],
+  );
   const showDropdown =
     isFocused &&
     trimmedInput.length > 0 &&
     (trimmedInput.length < MIN_GLOBAL_SEARCH_CHARS ||
       canQuery ||
+      isSearchPending ||
       Boolean(searchError) ||
       isSearchLoading);
 
   useEffect(() => {
     setActiveIndex(-1);
-  }, [debouncedQuery, searchResults]);
+  }, [debouncedQuery, isSearchPending, searchResults]);
 
   useEffect(() => {
-    if (!showDropdown) {
+    if (!showDropdown || previewGroup) {
       return;
     }
 
@@ -146,7 +156,7 @@ export function CatalogPageIntro({
 
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [showDropdown]);
+  }, [previewGroup, showDropdown]);
 
   const activateActiveOption = () => {
     if (activeIndex < 0 || activeIndex >= options.length) {
@@ -155,14 +165,11 @@ export function CatalogPageIntro({
 
     const option = options[activeIndex];
     switch (option.kind) {
-      case "catalog":
-        onSelectSearchCatalog?.(option.catalogId);
-        return;
       case "folder":
         onSelectSearchFolder?.(option.catalogId, option.folderId);
         return;
-      case "product":
-        onSelectSearchProduct?.(option.item);
+      case "productFolder":
+        onSelectSearchProductFolder?.(option.group);
         return;
       default: {
         const exhaustive: never = option;
@@ -217,6 +224,19 @@ export function CatalogPageIntro({
       ? `${listboxId}-option-${activeIndex}`
       : undefined;
 
+  const visibleActionCards = ACTION_CARDS.filter((card) => {
+    switch (card.id) {
+      case "import-excel":
+        return Boolean(onImportExcelClick);
+      case "add-product":
+        return Boolean(onAddProductClick);
+      default: {
+        const exhaustive: never = card.id;
+        return exhaustive;
+      }
+    }
+  });
+
   return (
     <section className={styles.sectionIntro} aria-label="Acciones de catálogos">
       <div className={styles.sectionHeader}>
@@ -230,7 +250,7 @@ export function CatalogPageIntro({
           <input
             type="search"
             className={`${styles.headerSearch} ${searchInput ? styles.headerSearchWithClear : ""}`}
-            placeholder="Búsqueda global en catálogos, secciones o registros…"
+            placeholder="Búsqueda global en carpetas o productos…"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             onFocus={() => setIsFocused(true)}
@@ -258,67 +278,76 @@ export function CatalogPageIntro({
           {showDropdown ? (
             <CatalogGlobalSearchDropdown
               listboxId={listboxId}
-              data={canQuery ? searchResults : null}
-              isLoading={canQuery && isSearchLoading}
-              error={canQuery ? searchError : null}
+              data={canQuery && !isSearchPending ? searchResults : null}
+              isLoading={isSearchPending}
+              error={canQuery && !isSearchPending ? searchError : null}
               minChars={MIN_GLOBAL_SEARCH_CHARS}
               queryLength={trimmedInput.length}
               activeIndex={activeIndex}
-              onSelectCatalog={(catalogId) => onSelectSearchCatalog?.(catalogId)}
               onSelectFolder={(catalogId, folderId) =>
                 onSelectSearchFolder?.(catalogId, folderId)
               }
-              onSelectProduct={(item) => onSelectSearchProduct?.(item)}
+              onSelectProductFolder={(group) =>
+                onSelectSearchProductFolder?.(group)
+              }
+              onPreviewProductFolder={setPreviewGroup}
             />
           ) : null}
         </div>
       </div>
 
       <div className={styles.catalogToolbar}>
-        <div className={styles.actionCards}>
-          {ACTION_CARDS.map((card) => {
-            const Icon = card.icon;
-            const cardClassName =
-              card.variant === "green"
-                ? styles.actionCardGreen
-                : styles.actionCardBlue;
-            const iconClassName =
-              card.variant === "green"
-                ? styles.actionCardIconGreen
-                : styles.actionCardIconBlue;
+        {visibleActionCards.length > 0 ? (
+          <div className={styles.actionCards}>
+            {visibleActionCards.map((card) => {
+              const Icon = card.icon;
+              const cardClassName =
+                card.variant === "green"
+                  ? styles.actionCardGreen
+                  : styles.actionCardBlue;
+              const iconClassName =
+                card.variant === "green"
+                  ? styles.actionCardIconGreen
+                  : styles.actionCardIconBlue;
 
-            const isDisabled =
-              (card.id === "import-excel" && !onImportExcelClick) ||
-              (card.id === "add-product" && !onAddProductClick);
-
-            return (
-              <button
-                key={card.id}
-                type="button"
-                className={`${styles.actionCard} ${cardClassName}`}
-                aria-label={card.title}
-                data-testid={`catalog-action-${card.id}`}
-                disabled={isDisabled}
-                onClick={() =>
-                  handleActionCardClick(card.id, {
-                    onImportExcelClick,
-                    onAddProductClick,
-                  })
-                }
-              >
-                <span className={`${styles.actionCardIcon} ${iconClassName}`}>
-                  <Icon strokeWidth={ICON_STROKE} aria-hidden />
-                </span>
-                <span className={styles.actionCardText}>
-                  <span className={styles.actionCardTitle}>{card.title}</span>
-                  <span className={styles.actionCardSubtitle}>{card.subtitle}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  className={`${styles.actionCard} ${cardClassName}`}
+                  aria-label={card.title}
+                  data-testid={`catalog-action-${card.id}`}
+                  onClick={() =>
+                    handleActionCardClick(card.id, {
+                      onImportExcelClick,
+                      onAddProductClick,
+                    })
+                  }
+                >
+                  <span className={`${styles.actionCardIcon} ${iconClassName}`}>
+                    <Icon strokeWidth={ICON_STROKE} aria-hidden />
+                  </span>
+                  <span className={styles.actionCardText}>
+                    <span className={styles.actionCardTitle}>{card.title}</span>
+                    <span className={styles.actionCardSubtitle}>{card.subtitle}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         {children}
       </div>
+      {previewGroup ? (
+        <GlobalSearchProductFolderPreviewModal
+          group={previewGroup}
+          onClose={() => setPreviewGroup(null)}
+          onNavigate={() => {
+            onSelectSearchProductFolder?.(previewGroup);
+            setPreviewGroup(null);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

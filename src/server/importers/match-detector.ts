@@ -1,8 +1,16 @@
+/** Separadores que se ignoran al comparar códigos / términos de búsqueda. */
+const SEARCH_SEPARATORS_PATTERN = /[\s\-_./\\=*.,()]+/g;
+
 export function normalizeCodeForMatch(code: string): string {
-  return code
+  return code.trim().toUpperCase().replace(SEARCH_SEPARATORS_PATTERN, "");
+}
+
+export function splitSearchTokens(term: string): string[] {
+  return term
     .trim()
-    .toUpperCase()
-    .replace(/[\s\-_./\\]+/g, "");
+    .split(SEARCH_SEPARATORS_PATTERN)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
 }
 
 export function buildExistingCodeIndex(

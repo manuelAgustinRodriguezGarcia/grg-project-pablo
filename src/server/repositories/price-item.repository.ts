@@ -31,6 +31,7 @@ export type CreatePriceItemData = {
   dynamicData?: Record<string, unknown>;
   originalText?: string | null;
   indexedText?: string | null;
+  normalizedIndexedText?: string | null;
 };
 
 export class PriceItemRepository {
@@ -58,6 +59,7 @@ export class PriceItemRepository {
       "priceListId" = ${priceListId}
       AND (
         COALESCE("indexedText", '') ILIKE ${pattern}
+        OR COALESCE("normalizedIndexedText", '') ILIKE ${normalizedPattern}
         OR COALESCE("primaryCode", '') ILIKE ${pattern}
         OR COALESCE("description", '') ILIKE ${pattern}
         OR COALESCE("amount"::text, '') ILIKE ${pattern}
@@ -204,6 +206,7 @@ export class PriceItemRepository {
         dynamicData: (data.dynamicData ?? {}) as Prisma.InputJsonValue,
         originalText: data.originalText ?? null,
         indexedText: data.indexedText ?? null,
+        normalizedIndexedText: data.normalizedIndexedText ?? null,
       },
     });
   }
@@ -226,6 +229,9 @@ export class PriceItemRepository {
           : {}),
         ...(data.originalText !== undefined ? { originalText: data.originalText } : {}),
         ...(data.indexedText !== undefined ? { indexedText: data.indexedText } : {}),
+        ...(data.normalizedIndexedText !== undefined
+          ? { normalizedIndexedText: data.normalizedIndexedText }
+          : {}),
       },
     });
   }
@@ -249,6 +255,7 @@ export class PriceItemRepository {
         dynamicData: (item.dynamicData ?? {}) as Prisma.InputJsonValue,
         originalText: item.originalText ?? null,
         indexedText: item.indexedText ?? null,
+        normalizedIndexedText: item.normalizedIndexedText ?? null,
       })),
     });
 

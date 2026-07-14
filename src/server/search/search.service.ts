@@ -19,8 +19,10 @@ import { visibilityService } from "@/server/services/visibility.service";
 import { SearchError } from "./search.errors";
 import { resolveSearchableKeys } from "./search-config.resolver";
 import {
+  normalizeIndexedText,
   normalizeSearchTerm,
   normalizeTextContains,
+  splitSearchTokens,
 } from "./search-normalizer";
 import type {
   CatalogSearchResponse,
@@ -71,21 +73,61 @@ function buildSearchQueryMeta(query: string): SearchQueryMeta {
   };
 }
 
+function buildFieldTokenConditions(
+  field: "indexedText" | "originalText" | "normalizedIndexedText",
+  tokens: string[],
+): Prisma.ProductWhereInput {
+  if (tokens.length === 1) {
+    return {
+      [field]: {
+        contains: tokens[0],
+        mode: "insensitive",
+      },
+    };
+  }
+
+  return {
+    AND: tokens.map((token) => ({
+      [field]: {
+        contains: token,
+        mode: "insensitive" as const,
+      },
+    })),
+  };
+}
+
 function buildTextSearchConditions(textTerm: string): Prisma.ProductWhereInput[] {
-  return [
-    {
-      indexedText: {
-        contains: textTerm,
-        mode: "insensitive",
-      },
-    },
-    {
-      originalText: {
-        contains: textTerm,
-        mode: "insensitive",
-      },
-    },
+  const tokens = splitSearchTokens(textTerm);
+  if (tokens.length === 0) {
+    return [];
+  }
+
+  const conditions: Prisma.ProductWhereInput[] = [
+    buildFieldTokenConditions("indexedText", tokens),
+    buildFieldTokenConditions("originalText", tokens),
   ];
+
+  const normalizedTokens = tokens
+    .map((token) => normalizeSearchTerm(token))
+    .filter((token) => token.length > 0);
+
+  if (normalizedTokens.length > 0) {
+    conditions.push(
+      buildFieldTokenConditions("normalizedIndexedText", normalizedTokens),
+    );
+  }
+
+  const compactQuery = normalizeSearchTerm(textTerm);
+  if (compactQuery) {
+    conditions.push({
+      normalizedIndexedText: {
+        contains: compactQuery,
+        mode: "insensitive",
+      },
+    });
+  }
+
+  return conditions;
 }
 
 function buildCodeSearchConditions(normalizedQuery: string): Prisma.ProductWhereInput[] {
@@ -177,6 +219,53 @@ export function buildFolderProductWhere(
   return { AND: andConditions };
 }
 
+function textMatchesLoose(
+  haystack: string | null | undefined,
+  textTerm: string,
+  tokens: string[],
+): boolean {
+  if (!haystack) {
+    return false;
+  }
+
+  const lower = haystack.toLowerCase();
+  if (textTerm && lower.includes(textTerm)) {
+    return true;
+  }
+
+  if (tokens.length === 0) {
+    return false;
+  }
+
+  return tokens.every((token) => lower.includes(token));
+}
+
+function textMatchesNormalized(
+  haystack: string | null | undefined,
+  query: string,
+  tokens: string[],
+): boolean {
+  const normalizedHaystack =
+    normalizeIndexedText(haystack)?.toLowerCase() ?? null;
+  if (!normalizedHaystack) {
+    return false;
+  }
+
+  const compactQuery = normalizeSearchTerm(query).toLowerCase();
+  if (compactQuery && normalizedHaystack.includes(compactQuery)) {
+    return true;
+  }
+
+  const normalizedTokens = tokens
+    .map((token) => normalizeSearchTerm(token).toLowerCase())
+    .filter((token) => token.length > 0);
+
+  return (
+    normalizedTokens.length > 0 &&
+    normalizedTokens.every((token) => normalizedHaystack.includes(token))
+  );
+}
+
 function inferMatchType(
   product: ProductWithRelations | ProductSearchResult,
   query: string,
@@ -184,10 +273,17 @@ function inferMatchType(
   const trimmed = query.trim();
   const normalizedQuery = normalizeSearchTerm(trimmed);
   const textTerm = normalizeTextContains(trimmed).toLowerCase();
+  const tokens = splitSearchTokens(trimmed).map((token) => token.toLowerCase());
 
   if (
     product.normalizedCode === normalizedQuery ||
-    product.primaryCode?.toLowerCase().includes(textTerm)
+    (normalizedQuery.length > 0 &&
+      product.normalizedCode != null &&
+      product.normalizedCode.startsWith(normalizedQuery)) ||
+    textMatchesLoose(product.primaryCode, textTerm, tokens) ||
+    (normalizedQuery.length > 0 &&
+      product.primaryCode != null &&
+      normalizeSearchTerm(product.primaryCode).includes(normalizedQuery))
   ) {
     return {
       matchType: "primaryCode",
@@ -198,7 +294,8 @@ function inferMatchType(
   const equivalence = product.equivalentCodes?.find(
     (code) =>
       code.normalizedCode === normalizedQuery ||
-      code.normalizedCode.startsWith(normalizedQuery),
+      code.normalizedCode.startsWith(normalizedQuery) ||
+      textMatchesLoose(code.originalCode, textTerm, tokens),
   );
   if (equivalence) {
     return {
@@ -207,10 +304,10 @@ function inferMatchType(
     };
   }
 
-  if (product.description?.toLowerCase().includes(textTerm)) {
+  if (textMatchesLoose(product.description, textTerm, tokens)) {
     return {
       matchType: "description",
-      matchValue: product.description,
+      matchValue: product.description ?? textTerm,
     };
   }
 
@@ -224,13 +321,20 @@ function inferMatchType(
   for (const value of Object.values(dynamicData)) {
     if (value !== null && value !== undefined) {
       const text = String(value);
-      if (text.toLowerCase().includes(textTerm)) {
+      if (textMatchesLoose(text, textTerm, tokens)) {
         return { matchType: "column", matchValue: text };
       }
     }
   }
 
-  if (product.indexedText?.toLowerCase().includes(textTerm)) {
+  if (
+    textMatchesLoose(product.indexedText, textTerm, tokens) ||
+    textMatchesNormalized(
+      product.normalizedIndexedText ?? product.indexedText,
+      trimmed,
+      tokens,
+    )
+  ) {
     return {
       matchType: "indexedText",
       matchValue: trimmed,

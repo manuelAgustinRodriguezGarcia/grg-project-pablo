@@ -3,7 +3,7 @@
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
-import { ChevronLeft, ChevronRight, File, ICON_STROKE, Pencil } from "@/shared/icons";
+import { ChevronLeft, ChevronRight, File, ICON_STROKE, Pencil, Trash2 } from "@/shared/icons";
 import type {
   ProductTablePrimaryImage,
   ProductTableItem,
@@ -36,6 +36,7 @@ type ProductTableProps = {
   isAdmin?: boolean;
   onColumnsChanged?: () => void;
   onEditProduct?: (product: ProductTableItem) => void;
+  onDeleteProduct?: (product: ProductTableItem) => void;
   folderName?: string;
   folderSearchQuery?: string;
   onFolderSearchChange?: (value: string) => void;
@@ -164,12 +165,14 @@ export const ProductTable = memo(function ProductTable({
   isAdmin = false,
   onColumnsChanged,
   onEditProduct,
+  onDeleteProduct,
   folderName,
   folderSearchQuery = "",
   onFolderSearchChange,
   folderSearchResetKey = 0,
   folderSearchSeedValue = "",
 }: ProductTableProps) {
+  const showActionsColumn = canEdit && Boolean(onEditProduct || onDeleteProduct);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [previewImage, setPreviewImage] = useState<{
     url: string;
@@ -351,7 +354,7 @@ export const ProductTable = memo(function ProductTable({
                   onColumnsChanged={onColumnsChanged}
                 />
               ))}
-              {canEdit && onEditProduct ? (
+              {showActionsColumn ? (
                 <th scope="col" className={styles.actionsColumn}>
                   Acciones
                 </th>
@@ -531,22 +534,42 @@ export const ProductTable = memo(function ProductTable({
                       </td>
                     );
                   })}
-                  {canEdit && onEditProduct ? (
+                  {showActionsColumn ? (
                     <td className={styles.actionsColumn}>
                       <div className={styles.rowActions}>
-                        <span className={styles.rowActionWrap}>
-                          <button
-                            type="button"
-                            className={styles.rowActionButton}
-                            onClick={() => onEditProduct(product)}
-                            aria-label="Editar producto"
-                          >
-                            <Pencil strokeWidth={ICON_STROKE} aria-hidden />
-                          </button>
-                          <span className={styles.rowActionTooltip} role="tooltip">
-                            Editar
+                        {onEditProduct ? (
+                          <span className={styles.rowActionWrap}>
+                            <button
+                              type="button"
+                              className={styles.rowActionButton}
+                              onClick={() => onEditProduct(product)}
+                              aria-label="Editar producto"
+                            >
+                              <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+                            </button>
+                            <span className={styles.rowActionTooltip} role="tooltip">
+                              Editar
+                            </span>
                           </span>
-                        </span>
+                        ) : null}
+                        {onDeleteProduct ? (
+                          <span className={styles.rowActionWrap}>
+                            <button
+                              type="button"
+                              className={`${styles.rowActionButton} ${styles.rowActionButtonDanger}`}
+                              onClick={() => onDeleteProduct(product)}
+                              aria-label="Eliminar producto"
+                            >
+                              <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+                            </button>
+                            <span
+                              className={`${styles.rowActionTooltip} ${styles.rowActionTooltipDanger}`}
+                              role="tooltip"
+                            >
+                              Eliminar
+                            </span>
+                          </span>
+                        ) : null}
                       </div>
                     </td>
                   ) : null}

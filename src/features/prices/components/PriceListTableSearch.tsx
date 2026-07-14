@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ICON_STROKE, Search, X } from "@/shared/icons";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 type PriceListTableSearchProps = {
   listName: string;
@@ -18,19 +20,31 @@ export function PriceListTableSearch({
   disabled = false,
 }: PriceListTableSearchProps) {
   const [searchInput, setSearchInput] = useState("");
+  const skipDebounceRef = useRef(false);
 
   useEffect(() => {
+    skipDebounceRef.current = true;
     setSearchInput("");
     onSearchSubmit("");
-  }, [onSearchSubmit, resetKey]);
+    // Re-seed only when the parent bumps resetKey (list change).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paired with resetKey
+  }, [resetKey]);
 
-  function submitSearch() {
-    onSearchSubmit(searchInput.trim());
-  }
+  useEffect(() => {
+    if (skipDebounceRef.current) {
+      skipDebounceRef.current = false;
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      onSearchSubmit(searchInput.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [onSearchSubmit, searchInput]);
 
   function clearSearch() {
     setSearchInput("");
-    onSearchSubmit("");
   }
 
   return (
@@ -45,19 +59,8 @@ export function PriceListTableSearch({
         className={`${styles.listSearch} ${searchInput ? styles.listSearchWithClear : ""}`}
         placeholder={`Búsqueda en ${listName}`}
         value={searchInput}
-        onChange={(event) => {
-          const nextValue = event.target.value;
-          setSearchInput(nextValue);
-          if (nextValue === "") {
-            onSearchSubmit("");
-          }
-        }}
+        onChange={(event) => setSearchInput(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            submitSearch();
-          }
-
           if (event.key === "Escape") {
             clearSearch();
           }
