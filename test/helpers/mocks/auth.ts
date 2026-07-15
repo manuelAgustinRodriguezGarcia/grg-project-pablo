@@ -12,10 +12,9 @@ import type { AuthenticatedUser } from "@/server/auth/types";
 import {
   adminUserFixture,
   usuarioUserFixture,
-  visualizacionUserFixture,
 } from "../fixtures/user.fixture";
 
-export { adminUserFixture, usuarioUserFixture, visualizacionUserFixture };
+export { adminUserFixture, usuarioUserFixture };
 
 function createSupabaseUser(profile: User): SupabaseUser {
   return {

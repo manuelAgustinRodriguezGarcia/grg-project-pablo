@@ -15,7 +15,7 @@ $files-shadow:
   flex: 1;
   min-height: 0;
   gap: 0;
-  padding: clamp(0.75rem, 2vw, 1.25rem);
+  padding: 0;
   overflow: hidden;
 }
 
@@ -101,6 +101,47 @@ $files-shadow:
   &:focus-visible {
     outline: none;
     border-color: rgba($blue, 0.55);
+  }
+
+  &::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+
+  &::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  &::-ms-clear {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+.headerSearchWithClear {
+  padding-right: 2.5rem;
+}
+
+.headerSearchClear {
+  position: absolute;
+  right: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba($navy, 0.5);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($navy, 0.06);
+    color: $navy;
   }
 }
 
@@ -702,10 +743,11 @@ $files-shadow:
 
 .tableWrap {
   --header-scroll-progress: 0;
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: auto;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba($files-accent, 0.35) transparent;
 
@@ -723,6 +765,34 @@ $files-shadow:
       background: rgba($files-accent, 0.42);
     }
   }
+}
+
+.tableWrapRefreshing {
+  overflow: hidden;
+  scrollbar-gutter: auto;
+  overscroll-behavior: none;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.tableRefreshOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: all;
+}
+
+.tableRefreshOverlayTranslucent {
+  background: rgba($white, 0.55);
+  transition: none;
+}
+
+.tableRefreshOverlayVisible {
+  opacity: 1;
 }
 
 .filesTable {
@@ -775,6 +845,14 @@ $files-shadow:
         calc(var(--header-scroll-progress, 0) * 5px)
         rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
     white-space: nowrap;
+
+    &:first-child {
+      border-top-left-radius: $radius-lg;
+    }
+
+    &:last-child {
+      border-top-right-radius: $radius-lg;
+    }
   }
 
   tbody tr:hover {
@@ -1321,7 +1399,7 @@ $files-shadow:
 @media (max-width: 768px) {
   .page {
     min-height: 100%;
-    padding: 0.65rem;
+    padding: 0;
     overflow: visible;
   }
 

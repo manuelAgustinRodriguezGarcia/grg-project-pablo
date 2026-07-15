@@ -8,7 +8,7 @@ const SEED_EMAIL =
 const SEED_PASSWORD =
   process.env.SEED_VISUALIZACION_PASSWORD ?? "grgsolutions";
 const SEED_NAME = process.env.SEED_VISUALIZACION_NAME ?? "visualizacionGRG";
-const SEED_ROLE = "VISUALIZACION" as const;
+const SEED_ROLE = "USUARIO" as const;
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -127,13 +127,13 @@ async function main(): Promise<void> {
     });
 
     console.log(`✓ Perfil local sincronizado: ${profile.name} (${profile.role})`);
-    console.log("\nUsuario VISUALIZACION listo para login en /auth/login");
+    console.log("\nUsuario USUARIO (solo lectura) listo para login en /auth/login");
   } finally {
     await prisma.$disconnect();
   }
 }
 
 main().catch((error: unknown) => {
-  console.error("✗ Seed de usuario VISUALIZACION fallido:", error);
+  console.error("✗ Seed de usuario USUARIO fallido:", error);
   process.exit(1);
 });

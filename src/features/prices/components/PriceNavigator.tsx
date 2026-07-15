@@ -259,8 +259,13 @@ export function PriceNavigator({
     placeholderData: keepPreviousData,
   });
 
-  const itemTable = activeListId ? (itemsQuery.data ?? null) : null;
-  const isLoadingItems = itemsQuery.isFetching;
+  const itemTable =
+    activeListId && itemsQuery.data?.priceList.id === activeListId
+      ? itemsQuery.data
+      : null;
+  const isLoadingItems =
+    Boolean(activeListId) && itemTable === null && itemsQuery.isFetching;
+  const isFilterRefreshing = itemTable !== null && itemsQuery.isFetching;
   const itemsError =
     itemsQuery.error instanceof Error ? itemsQuery.error.message : null;
 
@@ -545,6 +550,7 @@ export function PriceNavigator({
           <PriceItemTable
             data={activeListId ? itemTable : null}
             isLoading={isLoadingItems}
+            isFilterRefreshing={isFilterRefreshing}
             error={itemsError ?? itemsActionError}
             isAdmin={isAdmin}
             canEdit={canEdit}

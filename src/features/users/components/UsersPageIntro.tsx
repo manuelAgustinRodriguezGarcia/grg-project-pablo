@@ -18,7 +18,7 @@ type UsersPageIntroProps = {
 
 const ROLE_FILTER_OPTIONS = [
   { value: "all", label: "Todos los roles" },
-  ...(["ADMIN", "USUARIO", "VISUALIZACION"] as const).map((role) => ({
+  ...(["ADMIN", "USUARIO"] as const).map((role) => ({
     value: role,
     label: USER_ROLE_LABELS[role as UserRole],
   })),

@@ -251,8 +251,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.75rem;
+    height: 2.75rem;
     padding: 0;
     border: 1px solid transparent;
     border-radius: 50%;
@@ -260,14 +260,27 @@
     color: $white;
     box-shadow: $shadow-active;
     cursor: pointer;
-    opacity: 1;
-    pointer-events: auto;
+    opacity: 0;
+    pointer-events: none;
     transform: translate(50%, -50%);
     appearance: none;
     -webkit-tap-highlight-color: transparent;
     transition: opacity 0.2s ease;
 
+    // Amplía el hit-target sin cambiar el círculo visual.
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 3.5rem;
+      height: 4.5rem;
+      transform: translate(-50%, -50%);
+    }
+
     svg {
+      position: relative;
+      z-index: 1;
       width: 1.45rem;
       height: 1.45rem;
     }
@@ -280,9 +293,16 @@
     }
 
     &:focus-visible {
+      opacity: 1;
+      pointer-events: auto;
       outline: 2px solid $white;
       outline-offset: 2px;
     }
+  }
+
+  .sidebarShell:hover .collapseToggle {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 

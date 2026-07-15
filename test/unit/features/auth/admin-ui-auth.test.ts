@@ -3,7 +3,6 @@ import { toAdminUiAuth } from "@/features/auth/types/admin-ui-auth";
 import {
   adminUserFixture,
   usuarioUserFixture,
-  visualizacionUserFixture,
 } from "../../../helpers/fixtures/user.fixture";
 
 describe("toAdminUiAuth", () => {
@@ -18,25 +17,14 @@ describe("toAdminUiAuth", () => {
     });
   });
 
-  it("marca USUARIO con canEdit y sin isAdmin", () => {
+  it("marca USUARIO sin canEdit ni isAdmin (solo lectura)", () => {
     const auth = toAdminUiAuth(usuarioUserFixture);
 
     expect(auth).toEqual({
       role: "USUARIO",
-      canEdit: true,
-      isAdmin: false,
-      currentUserId: usuarioUserFixture.id,
-    });
-  });
-
-  it("marca VISUALIZACION sin canEdit ni isAdmin", () => {
-    const auth = toAdminUiAuth(visualizacionUserFixture);
-
-    expect(auth).toEqual({
-      role: "VISUALIZACION",
       canEdit: false,
       isAdmin: false,
-      currentUserId: visualizacionUserFixture.id,
+      currentUserId: usuarioUserFixture.id,
     });
   });
 });

@@ -149,27 +149,27 @@ describe("UserService", () => {
     it("actualiza el rol e invalida sesiones", async () => {
       const target = createUserFixture({
         id: TARGET_USER_ID,
-        role: "VISUALIZACION",
+        role: "USUARIO",
       });
       vi.mocked(userRepository.findById).mockResolvedValue(target);
       setupSupabaseAdminMock();
       vi.mocked(userRepository.updateProfile).mockResolvedValue(
-        createUserFixture({ id: TARGET_USER_ID, role: "USUARIO" }),
+        createUserFixture({ id: TARGET_USER_ID, role: "ADMIN" }),
       );
 
       const user = await userService.updateUser({
         id: TARGET_USER_ID,
-        role: "USUARIO",
+        role: "ADMIN",
       });
 
-      expect(user.role).toBe("USUARIO");
+      expect(user.role).toBe("ADMIN");
       expect(invalidateUserSessions).toHaveBeenCalledWith(TARGET_USER_ID);
     });
 
     it("no falla si la invalidación de sesiones falla tras actualizar el rol", async () => {
       const target = createUserFixture({
         id: TARGET_USER_ID,
-        role: "VISUALIZACION",
+        role: "USUARIO",
       });
       vi.mocked(userRepository.findById).mockResolvedValue(target);
       setupSupabaseAdminMock();

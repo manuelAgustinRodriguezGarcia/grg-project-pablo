@@ -171,7 +171,6 @@ export function CatalogNavigator({
   const router = useRouter();
   const queryClient = useQueryClient();
   const replaceParams = useReplaceSearchParams();
-  const stableTableFolderIdRef = useRef<string | null>(null);
   const stableTableDataRef = useRef<ProductTableResponse | null>(null);
   const [catalogList, setCatalogList] = useState(catalogs);
   const [prevCatalogs, setPrevCatalogs] = useState(catalogs);
@@ -411,23 +410,37 @@ export function CatalogNavigator({
     productsQuery.error instanceof Error ? productsQuery.error.message : null;
 
   if (canLoadFolderProducts && productTable) {
-    stableTableFolderIdRef.current = activeFolderId;
     stableTableDataRef.current = productTable;
-  } else if (!canLoadFolderProducts) {
-    // Drop stale table snapshots while navigating to another catalog/folder
-    // (e.g. global-search handoff) so we never filter the wrong rubro.
-    stableTableFolderIdRef.current = null;
-    stableTableDataRef.current = null;
   }
 
+  // Keep the last table snapshot while catalog/folder navigation loads so we
+  // show a refresh overlay instead of the initial shimmer skeleton again.
   const tableData =
     canLoadFolderProducts && productTable
       ? productTable
-      : canLoadFolderProducts &&
-          stableTableFolderIdRef.current === activeFolderId &&
-          stableTableDataRef.current
-        ? stableTableDataRef.current
-        : null;
+      : (stableTableDataRef.current ?? null);
+
+  const isFolderContextLoading =
+    isLoadingFolders ||
+    (Boolean(activeFolderId) && !canLoadFolderProducts) ||
+    (Boolean(activeFolderId) &&
+      tableData !== null &&
+      tableData.folder.id !== activeFolderId);
+
+  const isInitialTableLoading =
+    tableData === null &&
+    (isLoadingFolders ||
+      productsQuery.isFetching ||
+      (Boolean(activeFolderId) && !canLoadFolderProducts));
+
+  const isTableRefreshing = tableData !== null && isFolderContextLoading;
+
+  const isFilterRefreshing =
+    tableData !== null &&
+    !isFolderContextLoading &&
+    productsQuery.isFetching &&
+    Boolean(activeFolderId) &&
+    tableData.folder.id === activeFolderId;
 
   const handleColumnsChanged = useCallback(() => {
     if (!activeFolderId) {
@@ -901,6 +914,7 @@ export function CatalogNavigator({
       <div className={styles.page}>
         <div className={styles.body}>
           <CatalogPageIntro
+            isAdmin={isAdmin}
             onDebouncedSearchChange={handleDebouncedSearchChange}
             searchResetKey={searchResetKey}
             searchResults={globalSearchQuery.data ?? null}
@@ -941,7 +955,9 @@ export function CatalogNavigator({
 
           <ProductTable
             data={tableData}
-            isLoading={isLoadingProducts || isLoadingFolders}
+            isLoading={isInitialTableLoading || isFolderContextLoading}
+            isRefreshing={isTableRefreshing}
+            isFilterRefreshing={isFilterRefreshing}
             error={productsError}
             onPageChange={handlePageChange}
             enableColumnFilters={enableColumnFilters}
@@ -951,8 +967,9 @@ export function CatalogNavigator({
             isAdmin={isAdmin}
             canEdit={canEdit}
             onColumnsChanged={isAdmin ? handleColumnsChanged : undefined}
-            onEditProduct={canEdit ? handleEditProduct : undefined}
-            onDeleteProduct={canEdit ? handleDeleteProduct : undefined}
+            onEditProduct={isAdmin ? handleEditProduct : undefined}
+            onDeleteProduct={isAdmin ? handleDeleteProduct : undefined}
+            folderId={activeFolderId || undefined}
             folderName={activeFolderName}
             folderSearchQuery={folderSearch}
             onFolderSearchChange={

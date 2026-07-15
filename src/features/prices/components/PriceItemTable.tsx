@@ -20,6 +20,7 @@ import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 type PriceItemTableProps = {
   data: PriceItemTableResponse | null;
   isLoading: boolean;
+  isFilterRefreshing?: boolean;
   error: string | null;
   canEdit: boolean;
   isAdmin: boolean;
@@ -109,6 +110,7 @@ function getColumnColClass(column: PriceItemTableColumn): string {
 export const PriceItemTable = memo(function PriceItemTable({
   data,
   isLoading,
+  isFilterRefreshing = false,
   error,
   canEdit,
   isAdmin,
@@ -132,6 +134,7 @@ export const PriceItemTable = memo(function PriceItemTable({
 }: PriceItemTableProps) {
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [openFilterColumnId, setOpenFilterColumnId] = useState<string | null>(null);
+  const [isSearchPending, setIsSearchPending] = useState(false);
 
   useTableHeaderScrollProgress(
     tableWrapRef,
@@ -175,6 +178,8 @@ export const PriceItemTable = memo(function PriceItemTable({
   const firstFilterableColumnId = sortedColumns[0]?.id ?? null;
   const hasActiveFilters = enableColumnFilters && activeFilterPills.length > 0;
   const showListSearch = Boolean(listName);
+  const showFilterOverlay =
+    (isFilterRefreshing || isSearchPending) && Boolean(data);
 
   const tableToolbar =
     showListSearch || hasActiveFilters ? (
@@ -191,7 +196,9 @@ export const PriceItemTable = memo(function PriceItemTable({
         {showListSearch ? (
           <PriceListTableSearch
             listName={listName}
+            committedQuery={searchQuery}
             onSearchSubmit={onSearchSubmit}
+            onPendingChange={setIsSearchPending}
             resetKey={listSearchResetKey}
           />
         ) : null}
@@ -282,18 +289,18 @@ export const PriceItemTable = memo(function PriceItemTable({
     <section
       className={styles.tablePanel}
       aria-label="Ítems de precios"
-      aria-busy={isLoading || undefined}
+      aria-busy={isLoading || showFilterOverlay || undefined}
     >
       {tableToolbar}
       <div
         ref={tableWrapRef}
-        className={`${styles.tableWrap} ${items.length === 0 ? styles.tableWrapEmpty : ""} ${isLoading ? filterStyles.tableWrapRefreshing : ""}`}
+        className={`${styles.tableWrap} ${items.length === 0 ? styles.tableWrapEmpty : ""} ${showFilterOverlay ? filterStyles.tableWrapRefreshing : ""}`}
       >
-        {isLoading ? (
+        {showFilterOverlay ? (
           <div
-            className={filterStyles.tableRefreshOverlay}
+            className={`${filterStyles.tableRefreshOverlay} ${filterStyles.tableRefreshOverlayTranslucent} ${filterStyles.tableRefreshOverlayVisible}`}
             role="status"
-            aria-label="Actualizando ítems de precios"
+            aria-label="Filtrando ítems de precios"
           />
         ) : null}
         {items.length === 0 ? (
@@ -429,7 +436,7 @@ export const PriceItemTable = memo(function PriceItemTable({
             <button
               type="button"
               className={styles.paginationButton}
-              disabled={pagination.page <= 1 || isLoading}
+              disabled={pagination.page <= 1 || isLoading || showFilterOverlay}
               onClick={() => onPageChange(pagination.page - 1)}
               aria-label="Página anterior"
             >
@@ -443,7 +450,7 @@ export const PriceItemTable = memo(function PriceItemTable({
             <button
               type="button"
               className={styles.paginationButton}
-              disabled={pagination.page >= pagination.totalPages || isLoading}
+              disabled={pagination.page >= pagination.totalPages || isLoading || showFilterOverlay}
               onClick={() => onPageChange(pagination.page + 1)}
               aria-label="Página siguiente"
             >

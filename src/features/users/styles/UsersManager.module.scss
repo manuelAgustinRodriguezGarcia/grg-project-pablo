@@ -113,13 +113,25 @@ $users-shadow:
   gap: 0.4rem;
   padding: 0.65rem 1rem;
   border: none;
-  border-radius: $radius-md;
+  border-radius: 999px;
   font-family: $font-sans;
   font-size: 0.9rem;
   font-weight: 600;
   color: $white;
-  background: linear-gradient(135deg, $users-accent 0%, #255f96 100%);
+  background: $blue;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $blue 92%, black);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
 
   &:disabled {
     opacity: 0.55;
@@ -386,12 +398,7 @@ $users-shadow:
   background: rgba(47, 111, 173, 0.12);
 }
 
-.roleBadgeEditor {
-  color: #9a5418;
-  background: rgba(210, 130, 55, 0.14);
-}
-
-.roleBadgeViewer {
+.roleBadgeUser {
   color: rgba($navy, 0.75);
   background: rgba($navy, 0.08);
 }

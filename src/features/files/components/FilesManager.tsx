@@ -117,6 +117,10 @@ export function FilesManager({ catalogs, isAdmin }: FilesManagerProps) {
 
   const data = filesQuery.data ?? null;
   const isLoading = filesQuery.isFetching && !filesQuery.data;
+  const isFilterRefreshing =
+    data !== null &&
+    !isLoading &&
+    (query.trim() !== debouncedQuery || filesQuery.isFetching);
   const listError =
     filesQuery.error instanceof Error ? filesQuery.error.message : null;
 
@@ -279,6 +283,7 @@ export function FilesManager({ catalogs, isAdmin }: FilesManagerProps) {
           <UploadedFilesList
             data={data}
             isLoading={isLoading}
+            isFilterRefreshing={isFilterRefreshing}
             error={listError}
             isAdmin={isAdmin}
             onPageChange={setPage}

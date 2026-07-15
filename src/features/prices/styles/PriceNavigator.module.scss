@@ -13,7 +13,7 @@ $price-shadow:
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: clamp(0.75rem, 2vw, 1.25rem);
+  padding: 0;
   overflow: hidden;
 }
 
@@ -991,7 +991,7 @@ $price-shadow:
 
 @media (max-width: 768px) {
   .page {
-    padding: 0.65rem;
+    padding: 0;
   }
 
   .body {

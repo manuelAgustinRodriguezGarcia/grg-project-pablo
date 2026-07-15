@@ -34,7 +34,7 @@ async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
       id: user.id,
       email: user.email ?? "",
       name: resolveDisplayName(user.user_metadata, user.email ?? "Usuario"),
-      role: "VISUALIZACION",
+      role: "USUARIO",
     });
   }
 
@@ -75,7 +75,7 @@ function hasOneOfRoles(role: UserRole, allowed: readonly UserRole[]): boolean {
   return allowed.includes(role);
 }
 
-/** Exige rol ADMIN (gestión de usuarios, estructura, imports). */
+/** Exige rol ADMIN (gestión de usuarios, estructura, imports y mutaciones). */
 export async function requireAdmin(): Promise<AuthenticatedUser> {
   const auth = await requireAuth();
 
@@ -86,15 +86,12 @@ export async function requireAdmin(): Promise<AuthenticatedUser> {
   return auth;
 }
 
-/** Exige rol ADMIN o USUARIO (mutaciones de contenido: productos, precios, imágenes). */
+/**
+ * Exige rol ADMIN para mutaciones de contenido (productos, precios, imágenes).
+ * USUARIO es solo lectura: ver, buscar, filtrar y navegar.
+ */
 export async function requireEditor(): Promise<AuthenticatedUser> {
-  const auth = await requireAuth();
-
-  if (!hasOneOfRoles(auth.profile.role, ["ADMIN", "USUARIO"])) {
-    throw new AuthForbiddenError();
-  }
-
-  return auth;
+  return requireAdmin();
 }
 
 /** Redirige al login si no hay sesión válida (para layouts/páginas). */

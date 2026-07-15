@@ -89,13 +89,47 @@ describe("ProductTable", () => {
     ]);
 
     const { container } = render(
-      <ProductTable data={data} isLoading error={null} onPageChange={vi.fn()} />,
+      <ProductTable
+        data={data}
+        isLoading={false}
+        isRefreshing
+        error={null}
+        onPageChange={vi.fn()}
+      />,
     );
 
     expect(screen.getByRole("status", { name: "Actualizando productos" })).toBeInTheDocument();
     expect(screen.getByText("6205")).toBeInTheDocument();
     expect(container.querySelector(".tableRefreshOverlay")).toBeInTheDocument();
     expect(container.querySelector(".tableWrapRefreshing")).toBeInTheDocument();
+  });
+
+  it("muestra overlay translúcido instantáneo al filtrar o buscar en la carpeta", () => {
+    const data = createTableData([
+      {
+        id: "product-1",
+        primaryCode: "6205",
+        description: "Ruleman",
+        dynamicData: { montadora: "John Deere" },
+        primaryImage: null,
+        imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
+      },
+    ]);
+
+    const { container } = render(
+      <ProductTable
+        data={data}
+        isLoading={false}
+        isFilterRefreshing
+        error={null}
+        onPageChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("status", { name: "Aplicando filtros" })).toBeInTheDocument();
+    expect(container.querySelector(".tableRefreshOverlayTranslucent")).toBeInTheDocument();
+    expect(container.querySelector(".tableRefreshSpinner")).toBeNull();
   });
 
   it("muestra el estado vacío centrado con icono", () => {

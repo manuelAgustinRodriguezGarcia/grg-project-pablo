@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, ICON_STROKE } from "@/shared/icons";
+import { Search, X, ICON_STROKE } from "@/shared/icons";
 import styles from "@/features/files/styles/FilesManager.module.scss";
 
 type FilesPageIntroProps = {
@@ -21,12 +21,22 @@ export function FilesPageIntro({ query, onQueryChange }: FilesPageIntroProps) {
           />
           <input
             type="search"
-            className={styles.headerSearch}
+            className={`${styles.headerSearch} ${query ? styles.headerSearchWithClear : ""}`}
             placeholder="Buscar por nombre de archivo…"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             aria-label="Buscar archivos por nombre"
           />
+          {query ? (
+            <button
+              type="button"
+              className={styles.headerSearchClear}
+              onClick={() => onQueryChange("")}
+              aria-label="Limpiar búsqueda"
+            >
+              <X strokeWidth={ICON_STROKE} aria-hidden />
+            </button>
+          ) : null}
         </div>
       </div>
     </section>

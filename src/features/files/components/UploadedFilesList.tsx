@@ -28,6 +28,7 @@ import styles from "@/features/files/styles/FilesManager.module.scss";
 type UploadedFilesListProps = {
   data: UploadedFileListResponse | null;
   isLoading: boolean;
+  isFilterRefreshing?: boolean;
   error: string | null;
   isAdmin: boolean;
   onPageChange: (page: number) => void;
@@ -197,6 +198,7 @@ function getPaginationRange(pagination: UploadedFileListResponse["pagination"]):
 export function UploadedFilesList({
   data,
   isLoading,
+  isFilterRefreshing = false,
   error,
   isAdmin,
   onPageChange,
@@ -252,11 +254,22 @@ export function UploadedFilesList({
   const { pagination } = data;
 
   return (
-    <section className={styles.tablePanel} aria-label="Listado de archivos">
+    <section
+      className={styles.tablePanel}
+      aria-label="Listado de archivos"
+      aria-busy={isFilterRefreshing}
+    >
       <div
         ref={tableWrapRef}
-        className={`${styles.tableWrap} ${data.items.length === 0 ? styles.tableWrapEmpty : ""}`}
+        className={`${styles.tableWrap} ${data.items.length === 0 ? styles.tableWrapEmpty : ""} ${isFilterRefreshing ? styles.tableWrapRefreshing : ""}`}
       >
+        {isFilterRefreshing ? (
+          <div
+            className={`${styles.tableRefreshOverlay} ${styles.tableRefreshOverlayTranslucent} ${styles.tableRefreshOverlayVisible}`}
+            role="status"
+            aria-label="Filtrando archivos"
+          />
+        ) : null}
         {data.items.length === 0 ? (
           <div className={styles.tableEmpty} role="status">
             <Archive
@@ -279,12 +292,14 @@ export function UploadedFilesList({
                   <tr>
                     <th scope="col">Archivo</th>
                     <th scope="col">Fecha</th>
-                    <th scope="col" className={styles.hideTablet}>
-                      Usuario
-                    </th>
+                    {isAdmin ? (
+                      <th scope="col" className={styles.hideTablet}>
+                        Usuario
+                      </th>
+                    ) : null}
                     <th scope="col">Destino</th>
                     <th scope="col">Catálogo / carpeta</th>
-                    <th scope="col">Estado</th>
+                    {isAdmin ? <th scope="col">Estado</th> : null}
                     <th scope="col">Productos</th>
                     <th scope="col">Acciones</th>
                   </tr>
@@ -309,16 +324,20 @@ export function UploadedFilesList({
                           </span>
                         </td>
                         <td>{formatAdminDateTime(item.uploadedAt)}</td>
-                        <td className={styles.hideTablet}>{item.uploadedBy.name}</td>
+                        {isAdmin ? (
+                          <td className={styles.hideTablet}>{item.uploadedBy.name}</td>
+                        ) : null}
                         <td>{formatDestinationTypeLabel(item.destinationType)}</td>
                         <DestinationCell latestJob={item.latestJob} />
-                        <td>
-                          {item.latestJob ? (
-                            <ImportJobStatusBadge status={item.latestJob.status} />
-                          ) : (
-                            <span>—</span>
-                          )}
-                        </td>
+                        {isAdmin ? (
+                          <td>
+                            {item.latestJob ? (
+                              <ImportJobStatusBadge status={item.latestJob.status} />
+                            ) : (
+                              <span>—</span>
+                            )}
+                          </td>
+                        ) : null}
                         <td className={styles.metricCell}>
                           {formatImportMetrics(item.latestJob)}
                         </td>
@@ -416,7 +435,7 @@ export function UploadedFilesList({
                           <span>{formatFileSize(item.sizeBytes)}</span>
                         </p>
                       </div>
-                      {item.latestJob ? (
+                      {isAdmin && item.latestJob ? (
                         <ImportJobStatusBadge status={item.latestJob.status} />
                       ) : null}
                     </div>
@@ -428,10 +447,12 @@ export function UploadedFilesList({
                           {formatAdminDateTime(item.uploadedAt)}
                         </dd>
                       </div>
-                      <div className={styles.fileCardMetaItem}>
-                        <dt className={styles.fileCardMetaLabel}>Usuario</dt>
-                        <dd className={styles.fileCardMetaValue}>{item.uploadedBy.name}</dd>
-                      </div>
+                      {isAdmin ? (
+                        <div className={styles.fileCardMetaItem}>
+                          <dt className={styles.fileCardMetaLabel}>Usuario</dt>
+                          <dd className={styles.fileCardMetaValue}>{item.uploadedBy.name}</dd>
+                        </div>
+                      ) : null}
                       <div className={styles.fileCardMetaItem}>
                         <dt className={styles.fileCardMetaLabel}>Destino</dt>
                         <dd className={styles.fileCardMetaValue}>
