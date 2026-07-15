@@ -8,24 +8,26 @@ import type { User, UserRole } from "@/generated/prisma/client";
  */
 export type AdminUiAuth = {
   role: UserRole;
-  /** ADMIN or USUARIO — aligns with `requireEditor()` on the backend. */
+  /**
+   * ADMIN only — content mutations and destructive actions.
+   * Aligns with `requireEditor()` / `requireAdmin()` on the backend.
+   * USUARIO is view-only (browse, search, filter).
+   */
   canEdit: boolean;
   /** ADMIN only — aligns with `requireAdmin()` on the backend. */
   isAdmin: boolean;
   currentUserId: string;
 };
 
-function hasEditorRole(role: UserRole): boolean {
-  return role === "ADMIN" || role === "USUARIO";
-}
-
 export function toAdminUiAuth(
   profile: Pick<User, "id" | "role">,
 ): AdminUiAuth {
+  const isAdmin = profile.role === "ADMIN";
+
   return {
     role: profile.role,
-    canEdit: hasEditorRole(profile.role),
-    isAdmin: profile.role === "ADMIN",
+    canEdit: isAdmin,
+    isAdmin,
     currentUserId: profile.id,
   };
 }

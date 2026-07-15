@@ -8,11 +8,7 @@ type UserRoleBadgeProps = {
 
 export function UserRoleBadge({ role }: UserRoleBadgeProps) {
   const toneClass =
-    role === "ADMIN"
-      ? styles.roleBadgeAdmin
-      : role === "USUARIO"
-        ? styles.roleBadgeEditor
-        : styles.roleBadgeViewer;
+    role === "ADMIN" ? styles.roleBadgeAdmin : styles.roleBadgeUser;
 
   return (
     <span className={`${styles.roleBadge} ${toneClass}`}>

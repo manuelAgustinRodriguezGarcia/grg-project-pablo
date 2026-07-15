@@ -11,7 +11,6 @@ import { AuthForbiddenError } from "@/server/auth/errors";
 import {
   adminUserFixture,
   usuarioUserFixture,
-  visualizacionUserFixture,
 } from "../../../helpers/fixtures/user.fixture";
 
 vi.mock("@/server/auth/supabase-server", () => ({
@@ -38,7 +37,7 @@ describe("guards auto-provision", () => {
     vi.clearAllMocks();
   });
 
-  it("asigna VISUALIZACION al auto-provisionar aunque metadata diga ADMIN", async () => {
+  it("asigna USUARIO al auto-provisionar aunque metadata diga ADMIN", async () => {
     const supabaseUser = {
       id: "new-user-id",
       email: "attacker@example.com",
@@ -57,7 +56,7 @@ describe("guards auto-provision", () => {
       id: input.id,
       email: input.email,
       name: input.name,
-      role: input.role ?? "VISUALIZACION",
+      role: input.role ?? "USUARIO",
       status: "ACTIVE",
       lastAccessAt: null,
       createdAt: new Date(),
@@ -68,9 +67,9 @@ describe("guards auto-provision", () => {
     const auth = await requireAuth();
 
     expect(userRepository.upsertFromAuth).toHaveBeenCalledWith(
-      expect.objectContaining({ role: "VISUALIZACION" }),
+      expect.objectContaining({ role: "USUARIO" }),
     );
-    expect(auth.profile.role).toBe("VISUALIZACION");
+    expect(auth.profile.role).toBe("USUARIO");
   });
 });
 
@@ -96,22 +95,22 @@ describe("requireAdmin", () => {
     expect(auth.profile.role).toBe("ADMIN");
   });
 
-  it("rechaza USUARIO y VISUALIZACION", async () => {
-    for (const profile of [usuarioUserFixture, visualizacionUserFixture]) {
-      vi.mocked(userRepository.findById).mockResolvedValue(profile);
-      vi.mocked(createSupabaseServerClient).mockResolvedValue({
-        auth: {
-          getUser: vi.fn().mockResolvedValue({
-            data: { user: { id: profile.id, email: profile.email } },
-            error: null,
-          }),
-          signOut: vi.fn(),
-        },
-      } as never);
-      vi.mocked(userRepository.touchLastAccessIfStale).mockResolvedValue(undefined);
+  it("rechaza USUARIO", async () => {
+    vi.mocked(userRepository.findById).mockResolvedValue(usuarioUserFixture);
+    vi.mocked(createSupabaseServerClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: {
+            user: { id: usuarioUserFixture.id, email: usuarioUserFixture.email },
+          },
+          error: null,
+        }),
+        signOut: vi.fn(),
+      },
+    } as never);
+    vi.mocked(userRepository.touchLastAccessIfStale).mockResolvedValue(undefined);
 
-      await expect(requireAdmin()).rejects.toBeInstanceOf(AuthForbiddenError);
-    }
+    await expect(requireAdmin()).rejects.toBeInstanceOf(AuthForbiddenError);
   });
 });
 
@@ -120,35 +119,30 @@ describe("requireEditor", () => {
     vi.clearAllMocks();
   });
 
-  it("permite ADMIN y USUARIO", async () => {
-    for (const profile of [adminUserFixture, usuarioUserFixture]) {
-      vi.mocked(userRepository.findById).mockResolvedValue(profile);
-      vi.mocked(createSupabaseServerClient).mockResolvedValue({
-        auth: {
-          getUser: vi.fn().mockResolvedValue({
-            data: { user: { id: profile.id, email: profile.email } },
-            error: null,
-          }),
-          signOut: vi.fn(),
-        },
-      } as never);
-      vi.mocked(userRepository.touchLastAccessIfStale).mockResolvedValue(undefined);
+  it("permite ADMIN", async () => {
+    vi.mocked(userRepository.findById).mockResolvedValue(adminUserFixture);
+    vi.mocked(createSupabaseServerClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: adminUserFixture.id, email: adminUserFixture.email } },
+          error: null,
+        }),
+        signOut: vi.fn(),
+      },
+    } as never);
+    vi.mocked(userRepository.touchLastAccessIfStale).mockResolvedValue(undefined);
 
-      const auth = await requireEditor();
-      expect(auth.profile.role).toBe(profile.role);
-    }
+    const auth = await requireEditor();
+    expect(auth.profile.role).toBe("ADMIN");
   });
 
-  it("rechaza VISUALIZACION", async () => {
-    vi.mocked(userRepository.findById).mockResolvedValue(visualizacionUserFixture);
+  it("rechaza USUARIO (solo lectura)", async () => {
+    vi.mocked(userRepository.findById).mockResolvedValue(usuarioUserFixture);
     vi.mocked(createSupabaseServerClient).mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
           data: {
-            user: {
-              id: visualizacionUserFixture.id,
-              email: visualizacionUserFixture.email,
-            },
+            user: { id: usuarioUserFixture.id, email: usuarioUserFixture.email },
           },
           error: null,
         }),

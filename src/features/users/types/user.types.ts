@@ -12,7 +12,6 @@ export type UserListItem = Pick<
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   ADMIN: "Administrador",
   USUARIO: "Usuario",
-  VISUALIZACION: "Visualización",
 };
 
 export function toUserListItem(user: User): UserListItem {

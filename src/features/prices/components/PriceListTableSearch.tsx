@@ -8,14 +8,18 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 type PriceListTableSearchProps = {
   listName: string;
+  committedQuery: string;
   onSearchSubmit: (value: string) => void;
+  onPendingChange?: (isPending: boolean) => void;
   resetKey?: string;
   disabled?: boolean;
 };
 
 export function PriceListTableSearch({
   listName,
+  committedQuery,
   onSearchSubmit,
+  onPendingChange,
   resetKey = "",
   disabled = false,
 }: PriceListTableSearchProps) {
@@ -42,6 +46,10 @@ export function PriceListTableSearch({
 
     return () => window.clearTimeout(timeout);
   }, [onSearchSubmit, searchInput]);
+
+  useEffect(() => {
+    onPendingChange?.(searchInput.trim() !== committedQuery);
+  }, [committedQuery, onPendingChange, searchInput]);
 
   function clearSearch() {
     setSearchInput("");

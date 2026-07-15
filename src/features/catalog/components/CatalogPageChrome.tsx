@@ -53,6 +53,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 const MIN_GLOBAL_SEARCH_CHARS = 2;
 
 type CatalogPageIntroProps = {
+  isAdmin?: boolean;
   onDebouncedSearchChange: (value: string) => void;
   searchResetKey?: number;
   searchResults?: GlobalSearchResponse | null;
@@ -80,6 +81,7 @@ function handleActionCardClick(
 }
 
 export function CatalogPageIntro({
+  isAdmin = false,
   onDebouncedSearchChange,
   searchResetKey = 0,
   searchResults = null,
@@ -237,63 +239,96 @@ export function CatalogPageIntro({
     }
   });
 
+  const searchField = (
+    <div ref={rootRef} className={styles.headerSearchWrap}>
+      <Search
+        className={styles.headerSearchIcon}
+        strokeWidth={ICON_STROKE}
+        aria-hidden
+      />
+      <input
+        type="search"
+        className={`${styles.headerSearch} ${searchInput ? styles.headerSearchWithClear : ""}`}
+        placeholder="Búsqueda global entre todos los catálogos…"
+        value={searchInput}
+        onChange={(event) => setSearchInput(event.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onKeyDown={handleSearchKeyDown}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={showDropdown}
+        aria-controls={listboxId}
+        aria-activedescendant={activeOptionId}
+        aria-label="Búsqueda global"
+      />
+      {searchInput ? (
+        <button
+          type="button"
+          className={styles.headerSearchClear}
+          onClick={() => {
+            setSearchInput("");
+            setActiveIndex(-1);
+          }}
+          aria-label="Limpiar búsqueda"
+        >
+          <X strokeWidth={ICON_STROKE} aria-hidden />
+        </button>
+      ) : null}
+      {showDropdown ? (
+        <CatalogGlobalSearchDropdown
+          listboxId={listboxId}
+          data={canQuery && !isSearchPending ? searchResults : null}
+          isLoading={isSearchPending}
+          error={canQuery && !isSearchPending ? searchError : null}
+          minChars={MIN_GLOBAL_SEARCH_CHARS}
+          queryLength={trimmedInput.length}
+          activeIndex={activeIndex}
+          onSelectFolder={(catalogId, folderId) =>
+            onSelectSearchFolder?.(catalogId, folderId)
+          }
+          onSelectProductFolder={(group) =>
+            onSelectSearchProductFolder?.(group)
+          }
+          onPreviewProductFolder={setPreviewGroup}
+        />
+      ) : null}
+    </div>
+  );
+
+  const previewModal = previewGroup ? (
+    <GlobalSearchProductFolderPreviewModal
+      group={previewGroup}
+      onClose={() => setPreviewGroup(null)}
+      onNavigate={() => {
+        onSelectSearchProductFolder?.(previewGroup);
+        setPreviewGroup(null);
+      }}
+    />
+  ) : null;
+
+  if (!isAdmin) {
+    return (
+      <section
+        className={`${styles.sectionIntro} ${styles.sectionIntroUser}`}
+        aria-label="Acciones de catálogos"
+      >
+        <div className={styles.introUserRow}>
+          <div className={styles.introUserLead}>
+            <h1 className={styles.sectionTitle}>Catálogos</h1>
+            {searchField}
+          </div>
+          <div className={styles.introUserSelectors}>{children}</div>
+        </div>
+        {previewModal}
+      </section>
+    );
+  }
+
   return (
     <section className={styles.sectionIntro} aria-label="Acciones de catálogos">
       <div className={styles.sectionHeader}>
         <h1 className={styles.sectionTitle}>Catálogos</h1>
-        <div ref={rootRef} className={styles.headerSearchWrap}>
-          <Search
-            className={styles.headerSearchIcon}
-            strokeWidth={ICON_STROKE}
-            aria-hidden
-          />
-          <input
-            type="search"
-            className={`${styles.headerSearch} ${searchInput ? styles.headerSearchWithClear : ""}`}
-            placeholder="Búsqueda global en carpetas o productos…"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            onFocus={() => setIsFocused(true)}
-            onKeyDown={handleSearchKeyDown}
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded={showDropdown}
-            aria-controls={listboxId}
-            aria-activedescendant={activeOptionId}
-            aria-label="Búsqueda global"
-          />
-          {searchInput ? (
-            <button
-              type="button"
-              className={styles.headerSearchClear}
-              onClick={() => {
-                setSearchInput("");
-                setActiveIndex(-1);
-              }}
-              aria-label="Limpiar búsqueda"
-            >
-              <X strokeWidth={ICON_STROKE} aria-hidden />
-            </button>
-          ) : null}
-          {showDropdown ? (
-            <CatalogGlobalSearchDropdown
-              listboxId={listboxId}
-              data={canQuery && !isSearchPending ? searchResults : null}
-              isLoading={isSearchPending}
-              error={canQuery && !isSearchPending ? searchError : null}
-              minChars={MIN_GLOBAL_SEARCH_CHARS}
-              queryLength={trimmedInput.length}
-              activeIndex={activeIndex}
-              onSelectFolder={(catalogId, folderId) =>
-                onSelectSearchFolder?.(catalogId, folderId)
-              }
-              onSelectProductFolder={(group) =>
-                onSelectSearchProductFolder?.(group)
-              }
-              onPreviewProductFolder={setPreviewGroup}
-            />
-          ) : null}
-        </div>
+        {searchField}
       </div>
 
       <div className={styles.catalogToolbar}>
@@ -338,16 +373,7 @@ export function CatalogPageIntro({
         ) : null}
         {children}
       </div>
-      {previewGroup ? (
-        <GlobalSearchProductFolderPreviewModal
-          group={previewGroup}
-          onClose={() => setPreviewGroup(null)}
-          onNavigate={() => {
-            onSelectSearchProductFolder?.(previewGroup);
-            setPreviewGroup(null);
-          }}
-        />
-      ) : null}
+      {previewModal}
     </section>
   );
 }

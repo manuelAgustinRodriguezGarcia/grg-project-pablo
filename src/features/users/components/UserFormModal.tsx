@@ -9,7 +9,7 @@ import type { UserRole } from "@/generated/prisma/client";
 import modalStyles from "@/features/prices/styles/PriceColumnEditModal.module.scss";
 
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = (
-  ["ADMIN", "USUARIO", "VISUALIZACION"] as const
+  ["ADMIN", "USUARIO"] as const
 ).map((role) => ({
   value: role,
   label: USER_ROLE_LABELS[role],
@@ -43,7 +43,7 @@ export function UserFormModal({
 }: UserFormModalProps) {
   const [name, setName] = useState(initialUser?.name ?? "");
   const [email, setEmail] = useState(initialUser?.email ?? "");
-  const [role, setRole] = useState<UserRole>(initialUser?.role ?? "VISUALIZACION");
+  const [role, setRole] = useState<UserRole>(initialUser?.role ?? "USUARIO");
   const [password, setPassword] = useState("");
 
   useEffect(() => {

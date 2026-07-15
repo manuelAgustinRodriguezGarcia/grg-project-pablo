@@ -18,7 +18,7 @@ describe("createUserSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("acepta rol VISUALIZACION", () => {
+  it("rechaza rol VISUALIZACION eliminado", () => {
     const result = createUserSchema.safeParse({
       email: "visor@example.com",
       password: "password123",
@@ -26,7 +26,7 @@ describe("createUserSchema", () => {
       role: "VISUALIZACION",
     });
 
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it("rechaza correo inválido", () => {

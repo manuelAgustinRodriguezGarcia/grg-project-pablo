@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ChevronLeft, ChevronRight, File, ICON_STROKE, Pencil, Trash2 } from "@/shared/icons";
@@ -20,9 +20,13 @@ import { normalizeMultilineText } from "@/shared/text/normalize-multiline-text";
 import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
+const TABLE_REFRESH_OVERLAY_FADE_MS = 220;
+
 type ProductTableProps = {
   data: ProductTableResponse | null;
   isLoading: boolean;
+  isRefreshing?: boolean;
+  isFilterRefreshing?: boolean;
   error: string | null;
   onPageChange: (page: number) => void;
   enableColumnFilters?: boolean;
@@ -37,6 +41,7 @@ type ProductTableProps = {
   onColumnsChanged?: () => void;
   onEditProduct?: (product: ProductTableItem) => void;
   onDeleteProduct?: (product: ProductTableItem) => void;
+  folderId?: string;
   folderName?: string;
   folderSearchQuery?: string;
   onFolderSearchChange?: (value: string) => void;
@@ -155,6 +160,8 @@ function hasFieldAnnotation(annotation: ProductFieldAnnotation | undefined): boo
 export const ProductTable = memo(function ProductTable({
   data,
   isLoading,
+  isRefreshing = false,
+  isFilterRefreshing = false,
   error,
   onPageChange,
   enableColumnFilters = false,
@@ -166,13 +173,14 @@ export const ProductTable = memo(function ProductTable({
   onColumnsChanged,
   onEditProduct,
   onDeleteProduct,
+  folderId,
   folderName,
   folderSearchQuery = "",
   onFolderSearchChange,
   folderSearchResetKey = 0,
   folderSearchSeedValue = "",
 }: ProductTableProps) {
-  const showActionsColumn = canEdit && Boolean(onEditProduct || onDeleteProduct);
+  const showActionsColumn = isAdmin && Boolean(onEditProduct || onDeleteProduct);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [previewImage, setPreviewImage] = useState<{
     url: string;
@@ -180,6 +188,38 @@ export const ProductTable = memo(function ProductTable({
     productId: string;
     imageId: string;
   } | null>(null);
+  const showNavRefreshOverlay = isRefreshing || Boolean(isLoading && data);
+  const wasNavRefreshingRef = useRef(false);
+  const [isNavRefreshOverlayExiting, setIsNavRefreshOverlayExiting] = useState(false);
+
+  useEffect(() => {
+    if (showNavRefreshOverlay) {
+      wasNavRefreshingRef.current = true;
+      setIsNavRefreshOverlayExiting(false);
+      return;
+    }
+
+    if (!wasNavRefreshingRef.current) {
+      return;
+    }
+
+    wasNavRefreshingRef.current = false;
+    setIsNavRefreshOverlayExiting(true);
+    const timeout = window.setTimeout(() => {
+      setIsNavRefreshOverlayExiting(false);
+    }, TABLE_REFRESH_OVERLAY_FADE_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [showNavRefreshOverlay]);
+
+  const navRefreshOverlayMounted =
+    showNavRefreshOverlay || isNavRefreshOverlayExiting;
+  const navRefreshOverlayVisible = showNavRefreshOverlay;
+  // Filter/search overlay is always instant — no fade enter/exit.
+  const filterRefreshOverlayVisible =
+    isFilterRefreshing && !showNavRefreshOverlay && !isNavRefreshOverlayExiting;
+  const lockTableScroll =
+    navRefreshOverlayMounted || filterRefreshOverlayVisible;
 
   useTableHeaderScrollProgress(
     tableWrapRef,
@@ -223,8 +263,16 @@ export const ProductTable = memo(function ProductTable({
 
   const activeFilterCount = activeFilterPills.length;
 
-  const showFolderSearch = Boolean(onFolderSearchChange && folderName);
-  const hasActiveFilters = enableColumnFilters && activeFilterPills.length > 0;
+  // Show toolbar only when table data matches the selected folder and is not
+  // still in the initial/nav loading state, so search + table appear together.
+  const isFolderTableReady = Boolean(
+    data && (!folderId || data.folder.id === folderId) && !isLoading,
+  );
+  const showFolderSearch = Boolean(
+    isFolderTableReady && onFolderSearchChange && folderName,
+  );
+  const hasActiveFilters =
+    isFolderTableReady && enableColumnFilters && activeFilterPills.length > 0;
   const tableToolbar =
     showFolderSearch || hasActiveFilters ? (
       <div className={styles.tableToolbar}>
@@ -255,7 +303,6 @@ export const ProductTable = memo(function ProductTable({
         aria-label="Tabla de productos"
         aria-busy="true"
       >
-        {tableToolbar}
         <div className={`${styles.tableWrap} ${styles.tableWrapLoading}`}>
           <AdminTableSkeleton
             variant="catalog"
@@ -271,7 +318,6 @@ export const ProductTable = memo(function ProductTable({
   if (error) {
     return (
       <section className={styles.tablePanel} aria-label="Tabla de productos">
-        {tableToolbar}
         <p className={styles.tableStateError}>{error}</p>
       </section>
     );
@@ -280,7 +326,6 @@ export const ProductTable = memo(function ProductTable({
   if (!data) {
     return (
       <section className={styles.tablePanel} aria-label="Tabla de productos">
-        {tableToolbar}
         <p className={styles.tableState}>Seleccioná un catálogo y una carpeta.</p>
       </section>
     );
@@ -294,18 +339,33 @@ export const ProductTable = memo(function ProductTable({
     <section
       className={styles.tablePanel}
       aria-label="Tabla de productos"
-      aria-busy={isLoading || undefined}
+      aria-busy={
+        isLoading || navRefreshOverlayMounted || filterRefreshOverlayVisible
+          ? true
+          : undefined
+      }
     >
       {tableToolbar}
       <div
         ref={tableWrapRef}
-        className={`${styles.tableWrap} ${data.products.length === 0 ? styles.tableWrapEmpty : ""} ${isLoading ? styles.tableWrapRefreshing : ""}`}
+        className={`${styles.tableWrap} ${data.products.length === 0 ? styles.tableWrapEmpty : ""} ${lockTableScroll ? styles.tableWrapRefreshing : ""}`}
       >
-        {isLoading ? (
+        {navRefreshOverlayMounted ? (
           <div
-            className={styles.tableRefreshOverlay}
+            className={`${styles.tableRefreshOverlay} ${styles.tableRefreshOverlaySolid} ${
+              navRefreshOverlayVisible ? styles.tableRefreshOverlayVisible : ""
+            }`}
             role="status"
             aria-label="Actualizando productos"
+          >
+            <span className={styles.tableRefreshSpinner} aria-hidden />
+          </div>
+        ) : null}
+        {filterRefreshOverlayVisible ? (
+          <div
+            className={`${styles.tableRefreshOverlay} ${styles.tableRefreshOverlayTranslucent} ${styles.tableRefreshOverlayVisible}`}
+            role="status"
+            aria-label="Aplicando filtros"
           />
         ) : null}
         {data.products.length === 0 ? (
@@ -593,7 +653,7 @@ export const ProductTable = memo(function ProductTable({
           <button
             type="button"
             className={styles.paginationButton}
-            disabled={pagination.page <= 1 || isLoading}
+            disabled={pagination.page <= 1 || isLoading || lockTableScroll}
             onClick={() => onPageChange(pagination.page - 1)}
             aria-label="Página anterior"
           >
@@ -607,7 +667,11 @@ export const ProductTable = memo(function ProductTable({
           <button
             type="button"
             className={styles.paginationButton}
-            disabled={pagination.page >= pagination.totalPages || isLoading}
+            disabled={
+              pagination.page >= pagination.totalPages ||
+              isLoading ||
+              lockTableScroll
+            }
             onClick={() => onPageChange(pagination.page + 1)}
             aria-label="Página siguiente"
           >

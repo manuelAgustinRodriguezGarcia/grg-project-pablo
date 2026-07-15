@@ -13,6 +13,7 @@ describe("CatalogPageIntro", () => {
 
     render(
       <CatalogPageIntro
+        isAdmin
         onDebouncedSearchChange={vi.fn()}
         onImportExcelClick={onImportExcelClick}
       />,
@@ -28,6 +29,7 @@ describe("CatalogPageIntro", () => {
 
     render(
       <CatalogPageIntro
+        isAdmin
         onDebouncedSearchChange={vi.fn()}
         onAddProductClick={onAddProductClick}
       />,
@@ -112,9 +114,24 @@ describe("CatalogPageIntro", () => {
   });
 
   it("hides action cards when handlers are not provided", () => {
-    render(<CatalogPageIntro onDebouncedSearchChange={vi.fn()} />);
+    render(<CatalogPageIntro isAdmin onDebouncedSearchChange={vi.fn()} />);
 
     expect(screen.queryByTestId("catalog-action-import-excel")).toBeNull();
     expect(screen.queryByTestId("catalog-action-add-product")).toBeNull();
+  });
+
+  it("places title and search beside selectors for non-admin layout", () => {
+    render(
+      <CatalogPageIntro onDebouncedSearchChange={vi.fn()}>
+        <section aria-label="Selección de catálogo y carpeta">Selectors</section>
+      </CatalogPageIntro>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Catálogos" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Búsqueda global")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Selección de catálogo y carpeta" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("catalog-action-import-excel")).toBeNull();
   });
 });
