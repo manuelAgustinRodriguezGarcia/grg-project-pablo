@@ -14,7 +14,7 @@ type AdminTableSkeletonProps = {
 const CATALOG_COLUMN_COUNT = 5;
 const FILES_COLUMN_COUNT = 8;
 const PRICES_COLUMN_COUNT = 7;
-const USERS_COLUMN_COUNT = 6;
+const USERS_COLUMN_COUNT = 5;
 
 function ShimmerBar({
   className,

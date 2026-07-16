@@ -3,6 +3,10 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  useAdminSectionTransition,
+  useReportAdminSectionReady,
+} from "@/features/admin/components/AdminSectionTransition";
 import { adminQueryKeys } from "@/features/admin/query-keys";
 import {
   createCatalogAction,
@@ -439,8 +443,23 @@ export function CatalogNavigator({
     tableData !== null &&
     !isFolderContextLoading &&
     productsQuery.isFetching &&
+    productsQuery.isPlaceholderData &&
     Boolean(activeFolderId) &&
     tableData.folder.id === activeFolderId;
+
+  const sectionTransition = useAdminSectionTransition();
+  const hideInternalLoaders = sectionTransition?.isCoveringContent ?? false;
+
+  const isSectionContentReady =
+    Boolean(foldersError || productsError) ||
+    !activeCatalogId ||
+    (isNavigationReady &&
+      (!activeFolderId ||
+        (tableData !== null &&
+          tableData.folder.id === activeFolderId &&
+          !isFolderContextLoading)));
+
+  useReportAdminSectionReady(isSectionContentReady);
 
   const handleColumnsChanged = useCallback(() => {
     if (!activeFolderId) {
@@ -955,9 +974,13 @@ export function CatalogNavigator({
 
           <ProductTable
             data={tableData}
-            isLoading={isInitialTableLoading || isFolderContextLoading}
-            isRefreshing={isTableRefreshing}
-            isFilterRefreshing={isFilterRefreshing}
+            isLoading={
+              hideInternalLoaders
+                ? false
+                : isInitialTableLoading || isFolderContextLoading
+            }
+            isRefreshing={hideInternalLoaders ? false : isTableRefreshing}
+            isFilterRefreshing={hideInternalLoaders ? false : isFilterRefreshing}
             error={productsError}
             onPageChange={handlePageChange}
             enableColumnFilters={enableColumnFilters}

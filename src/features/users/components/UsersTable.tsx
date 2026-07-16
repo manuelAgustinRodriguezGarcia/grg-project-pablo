@@ -2,7 +2,6 @@
 
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { UserRoleBadge } from "@/features/users/components/UserRoleBadge";
-import { UserStatusBadge } from "@/features/users/components/UserStatusBadge";
 import type { UserListItem } from "@/features/users/types/user.types";
 import { formatAdminDateTime } from "@/features/files/utils/format-admin-datetime";
 import { ICON_STROKE, Pencil, UserRound, UserX } from "@/shared/icons";
@@ -73,9 +72,10 @@ export function UsersTable({
                 <th scope="col">Nombre</th>
                 <th scope="col">Correo</th>
                 <th scope="col">Rol</th>
-                <th scope="col">Estado</th>
                 <th scope="col">Último acceso</th>
-                <th scope="col">Acciones</th>
+                <th scope="col" className={styles.actionsCell}>
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -89,9 +89,6 @@ export function UsersTable({
                     <td className={styles.emailCell}>{user.email}</td>
                     <td>
                       <UserRoleBadge role={user.role} />
-                    </td>
-                    <td>
-                      <UserStatusBadge status={user.status} />
                     </td>
                     <td className={styles.metaCell}>
                       {formatAdminDateTime(user.lastAccessAt)}
@@ -131,7 +128,7 @@ export function UsersTable({
                             role="tooltip"
                           >
                             {isSelf && user.status === "ACTIVE"
-                              ? "No podés desactivar tu propia cuenta"
+                              ? "No es posible desactivar su propia cuenta"
                               : "Eliminar"}
                           </span>
                         </span>
@@ -156,12 +153,9 @@ export function UsersTable({
                     <h2 className={styles.userCardName}>{user.name}</h2>
                     <p className={styles.userCardEmail}>{user.email}</p>
                   </div>
-                  <UserStatusBadge status={user.status} />
+                  <UserRoleBadge role={user.role} />
                 </div>
                 <div className={styles.userCardMeta}>
-                  <div>
-                    <UserRoleBadge role={user.role} />
-                  </div>
                   <div>Último acceso: {formatAdminDateTime(user.lastAccessAt)}</div>
                 </div>
                 <div className={styles.userCardActions}>

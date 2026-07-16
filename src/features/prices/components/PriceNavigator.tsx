@@ -3,6 +3,10 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  useAdminSectionTransition,
+  useReportAdminSectionReady,
+} from "@/features/admin/components/AdminSectionTransition";
 import { adminQueryKeys } from "@/features/admin/query-keys";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
@@ -265,9 +269,18 @@ export function PriceNavigator({
       : null;
   const isLoadingItems =
     Boolean(activeListId) && itemTable === null && itemsQuery.isFetching;
-  const isFilterRefreshing = itemTable !== null && itemsQuery.isFetching;
+  const isFilterRefreshing =
+    itemTable !== null && itemsQuery.isFetching && itemsQuery.isPlaceholderData;
   const itemsError =
     itemsQuery.error instanceof Error ? itemsQuery.error.message : null;
+
+  const sectionTransition = useAdminSectionTransition();
+  const hideInternalLoaders = sectionTransition?.isCoveringContent ?? false;
+  const isSectionContentReady =
+    Boolean(itemsError) ||
+    !activeListId ||
+    (itemTable !== null && !isLoadingItems);
+  useReportAdminSectionReady(isSectionContentReady);
 
   const columnDetails = useMemo(() => {
     if (isAdmin && columnsQuery.data) {
@@ -549,8 +562,8 @@ export function PriceNavigator({
 
           <PriceItemTable
             data={activeListId ? itemTable : null}
-            isLoading={isLoadingItems}
-            isFilterRefreshing={isFilterRefreshing}
+            isLoading={hideInternalLoaders ? false : isLoadingItems}
+            isFilterRefreshing={hideInternalLoaders ? false : isFilterRefreshing}
             error={itemsError ?? itemsActionError}
             isAdmin={isAdmin}
             canEdit={canEdit}

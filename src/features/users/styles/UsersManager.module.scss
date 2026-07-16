@@ -232,7 +232,7 @@ $users-shadow:
 
 .actionsCell {
   vertical-align: middle;
-  text-align: center;
+  text-align: right;
   white-space: nowrap;
   overflow: visible;
 }
@@ -240,7 +240,7 @@ $users-shadow:
 .actionsGroup {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 0.5rem;
 }
 
@@ -382,8 +382,7 @@ $users-shadow:
   }
 }
 
-.roleBadge,
-.statusBadge {
+.roleBadge {
   display: inline-flex;
   align-items: center;
   padding: 0.2rem 0.55rem;
@@ -394,23 +393,13 @@ $users-shadow:
 }
 
 .roleBadgeAdmin {
-  color: #1f4f8a;
-  background: rgba(47, 111, 173, 0.12);
+  color: $green;
+  background: rgba($green, 0.12);
 }
 
 .roleBadgeUser {
-  color: rgba($navy, 0.75);
-  background: rgba($navy, 0.08);
-}
-
-.statusBadgeActive {
-  color: #1f5c45;
-  background: rgba(46, 125, 90, 0.12);
-}
-
-.statusBadgeInactive {
-  color: #8b1e1e;
-  background: rgba(220, 53, 69, 0.1);
+  color: $blue;
+  background: rgba($blue, 0.12);
 }
 
 .mobileList {

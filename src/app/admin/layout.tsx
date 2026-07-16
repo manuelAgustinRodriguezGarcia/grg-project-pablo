@@ -1,3 +1,7 @@
+import {
+  AdminSectionLoadingOverlay,
+  AdminSectionTransitionProvider,
+} from "@/features/admin/components/AdminSectionTransition";
 import { AdminSidebar } from "@/features/admin/components/AdminSidebar";
 import { AdminQueryProvider } from "@/features/admin/providers/AdminQueryProvider";
 import { ADMIN_USER_EMAIL_FALLBACK } from "@/features/admin/data/adminNav";
@@ -17,10 +21,15 @@ export default async function AdminLayout({
 
   return (
     <AdminQueryProvider>
-      <div className={layoutStyles.shell}>
-        <AdminSidebar userEmail={userEmail} userRole={auth.profile.role} />
-        <main className={layoutStyles.content}>{children}</main>
-      </div>
+      <AdminSectionTransitionProvider>
+        <div className={layoutStyles.shell}>
+          <AdminSidebar userEmail={userEmail} userRole={auth.profile.role} />
+          <main className={layoutStyles.content} data-admin-content>
+            <div className={layoutStyles.contentBody}>{children}</div>
+            <AdminSectionLoadingOverlay />
+          </main>
+        </div>
+      </AdminSectionTransitionProvider>
     </AdminQueryProvider>
   );
 }

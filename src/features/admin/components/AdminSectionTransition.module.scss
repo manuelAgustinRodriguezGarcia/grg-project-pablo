@@ -1,0 +1,59 @@
+.overlay {
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  // Transparency only in rgba — never use the `opacity` property here.
+  background-color: rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(11px);
+  backdrop-filter: blur(11px);
+  transition:
+    background-color 380ms ease,
+    backdrop-filter 380ms ease,
+    -webkit-backdrop-filter 380ms ease;
+}
+
+.overlayExiting {
+  pointer-events: none;
+  background-color: rgba(255, 255, 255, 0);
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+
+  .logo {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.logo {
+  position: relative;
+  z-index: 1;
+  width: min(13.5rem, 42vw);
+  height: auto;
+  object-fit: contain;
+  transition: opacity 380ms ease;
+  animation: logoPulse 1.35s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%,
+  100% {
+    transform: scale(0.985);
+  }
+
+  50% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay {
+    transition-duration: 120ms;
+  }
+
+  .logo {
+    animation: none;
+    transition-duration: 120ms;
+  }
+}
