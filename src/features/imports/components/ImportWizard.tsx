@@ -55,6 +55,18 @@ import {
   uploadExternalImagesToJob,
 } from "@/features/imports/utils/upload-external-images";
 import { useNativeFilePickerOutsideClickGuard } from "@/features/imports/utils/native-file-picker-outside-click-guard";
+import {
+  ANALYSIS_FINISH_STALLS,
+  ANALYZE_STALLS,
+  IMPORT_APPLY_STALLS,
+  IMPORT_FINISH_STALLS,
+  IMPORT_REPORT_STALLS,
+  IMPORT_START_STALLS,
+  pickProgressStall,
+  SHEETS_STALLS,
+  UPLOAD_STALLS,
+  UPLOAD_WAIT_STALLS,
+} from "@/features/imports/utils/pick-progress-stall";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, FileSpreadsheet, ICON_STROKE, X } from "@/shared/icons";
 import { ImportExternalImagesPanel } from "./ImportExternalImagesPanel";
 import {
@@ -70,7 +82,10 @@ import {
 import { ImportStepPreview } from "./ImportStepPreview";
 import { ImportStepResult } from "./ImportStepResult";
 import { ImportStepUpload } from "./ImportStepUpload";
-import { ImportWizardLoading } from "./ImportWizardLoading";
+import {
+  ImportWizardLoading,
+  type ImportWizardLoadingVariant,
+} from "./ImportWizardLoading";
 import { ImportWizardStepContextHint } from "./ImportWizardStepContextHint";
 import { createPriceListAction } from "@/features/prices/actions/price-list.actions";
 import type { PriceListListItem } from "@/features/prices/types/price-list.types";
@@ -151,6 +166,7 @@ type LoadingOverlayState = {
   message: string;
   progressTarget: number;
   isComplete: boolean;
+  variant: ImportWizardLoadingVariant;
 };
 
 export function ImportWizard({
@@ -354,14 +370,30 @@ export function ImportWizard({
     resolve?.();
   }, []);
 
-  const startLoadingOverlay = useCallback((message: string, progressTarget: number) => {
-    setLoadingSession((session) => session + 1);
-    setLoadingOverlay({ message, progressTarget, isComplete: false });
-  }, []);
+  const startLoadingOverlay = useCallback(
+    (
+      message: string,
+      progressTarget: number,
+      variant: ImportWizardLoadingVariant = "progress",
+    ) => {
+      setLoadingSession((session) => session + 1);
+      setLoadingOverlay({ message, progressTarget, isComplete: false, variant });
+    },
+    [],
+  );
 
   const updateLoadingOverlay = useCallback(
-    (message: string, progressTarget: number) => {
-      setLoadingOverlay({ message, progressTarget, isComplete: false });
+    (
+      message: string,
+      progressTarget: number,
+      variant?: ImportWizardLoadingVariant,
+    ) => {
+      setLoadingOverlay((current) => ({
+        message,
+        progressTarget,
+        isComplete: false,
+        variant: variant ?? current?.variant ?? "progress",
+      }));
     },
     [],
   );
@@ -453,14 +485,20 @@ export function ImportWizard({
         setSelectedPriceListId(initialPriceListId);
       }
 
-      updateLoadingOverlay("Analizando el archivo…", 48);
+      updateLoadingOverlay(
+        "Analizando el archivo…",
+        pickProgressStall(ANALYZE_STALLS),
+      );
 
       const analyzeResult = await analyzeImportAction({ jobId: activeJobId });
       if (!analyzeResult.success) {
         throw new Error(analyzeResult.error);
       }
 
-      updateLoadingOverlay("Leyendo hojas del archivo…", 72);
+      updateLoadingOverlay(
+        "Leyendo hojas del archivo…",
+        pickProgressStall(SHEETS_STALLS),
+      );
 
       const sheetsResponse = await fetch(`/api/admin/imports/${activeJobId}/sheets`);
       if (!sheetsResponse.ok) {
@@ -494,7 +532,10 @@ export function ImportWizard({
       setExternalImages({ zipFile: null, imageFiles: [] });
       setStagedImageCount(imageCount);
 
-      updateLoadingOverlay("Finalizando análisis…", 92);
+      updateLoadingOverlay(
+        "Finalizando análisis…",
+        pickProgressStall(ANALYSIS_FINISH_STALLS),
+      );
       await completeLoadingOverlay();
       setStep("destination");
     },
@@ -507,7 +548,10 @@ export function ImportWizard({
     }
 
     initialJobResumeStarted.current = true;
-    startLoadingOverlay("Preparando reprocesamiento…", 18);
+    startLoadingOverlay(
+      "Preparando reprocesamiento…",
+      pickProgressStall(UPLOAD_WAIT_STALLS),
+    );
 
     void prepareJobForDestination(initialJobId).catch((caught) => {
       clearLoadingImmediate();
@@ -537,7 +581,7 @@ export function ImportWizard({
     if (isPriceMode) {
       setSelectedPriceListId(initialPriceListId);
     }
-    startLoadingOverlay("Subiendo archivo…", 12);
+    startLoadingOverlay("Subiendo archivo…", pickProgressStall(UPLOAD_STALLS));
 
     try {
       const formData = new FormData();
@@ -546,7 +590,10 @@ export function ImportWizard({
         appendExternalImagesToFormData(formData, externalImages);
       }
 
-      updateLoadingOverlay("Subiendo archivo…", 28);
+      updateLoadingOverlay(
+        "Subiendo archivo…",
+        pickProgressStall(UPLOAD_WAIT_STALLS),
+      );
 
       const uploadResponse = await fetch("/api/admin/imports/upload", {
         method: "POST",
@@ -775,10 +822,10 @@ export function ImportWizard({
       }
 
       setError(null);
-      startLoadingOverlay("Configurando destino…", 15);
+      startLoadingOverlay("Configurando destino…", 0, "spinner");
 
       try {
-        updateLoadingOverlay("Configurando destino…", 32);
+        updateLoadingOverlay("Configurando destino…", 0, "spinner");
 
         const destinationResult = await setPriceImportDestinationAction({
           jobId,
@@ -804,7 +851,7 @@ export function ImportWizard({
           ),
         );
 
-        updateLoadingOverlay("Preparando columnas…", 68);
+        updateLoadingOverlay("Preparando columnas…", 0, "spinner");
 
         const columns = await loadPriceListColumns(selectedPriceListId);
         const sheet = sheets.find((item) => item.sheetName === selectedSheetName);
@@ -814,7 +861,7 @@ export function ImportWizard({
         setPrimaryCodeHeaderKey(initialMapping.primaryCodeHeaderKey);
         setDescriptionHeaderKey(initialMapping.descriptionHeaderKey);
 
-        updateLoadingOverlay("Destino configurado…", 93);
+        updateLoadingOverlay("Destino configurado…", 0, "spinner");
         await completeLoadingOverlay();
         setStep("columns");
       } catch (caught) {
@@ -833,10 +880,10 @@ export function ImportWizard({
     }
 
     setError(null);
-    startLoadingOverlay("Configurando destino…", 15);
+    startLoadingOverlay("Configurando destino…", 0, "spinner");
 
     try {
-      updateLoadingOverlay("Configurando destino…", 32);
+      updateLoadingOverlay("Configurando destino…", 0, "spinner");
 
       const destinationResult = await setImportDestinationAction({
         jobId,
@@ -850,7 +897,7 @@ export function ImportWizard({
 
       await uploadPendingExternalImages({ clearAfter: true });
 
-      updateLoadingOverlay("Preparando columnas…", 68);
+      updateLoadingOverlay("Preparando columnas…", 0, "spinner");
 
       const columns = await loadFolderColumns(selectedFolderId);
       const sheet = sheets.find((item) => item.sheetName === selectedSheetName);
@@ -860,7 +907,7 @@ export function ImportWizard({
       setPrimaryCodeHeaderKey(initialMapping.primaryCodeHeaderKey);
       setDescriptionHeaderKey(initialMapping.descriptionHeaderKey);
 
-      updateLoadingOverlay("Destino configurado…", 93);
+      updateLoadingOverlay("Destino configurado…", 0, "spinner");
       await completeLoadingOverlay();
       setStep("columns");
     } catch (caught) {
@@ -879,12 +926,12 @@ export function ImportWizard({
     }
 
     setError(null);
-    startLoadingOverlay("Configurando columnas…", 15);
+    startLoadingOverlay("Configurando columnas…", 0, "spinner");
 
     try {
       await uploadPendingExternalImages({ clearAfter: true });
 
-      updateLoadingOverlay("Generando la vista previa…", 45);
+      updateLoadingOverlay("Generando la vista previa…", 0, "spinner");
 
       const columnMapping = buildImportColumnMapping(mappingRows);
       const primaryCodeColumnKey = isPriceMode
@@ -914,7 +961,7 @@ export function ImportWizard({
         throw new Error(configResult.error);
       }
 
-      updateLoadingOverlay("Generando la vista previa…", 78);
+      updateLoadingOverlay("Generando la vista previa…", 0, "spinner");
 
       const previewResponse = await fetch(
         `/api/admin/imports/${jobId}/preview?page=1&pageSize=50`,
@@ -933,7 +980,7 @@ export function ImportWizard({
         : previewData.summary.folderIsEmpty;
       setSelectedAction(destinationEmpty ? "IMPORTAR_LISTA" : null);
 
-      updateLoadingOverlay("Vista previa lista…", 93);
+      updateLoadingOverlay("Vista previa lista…", 0, "spinner");
       await completeLoadingOverlay();
       setStep("preview");
     } catch (caught) {
@@ -966,13 +1013,13 @@ export function ImportWizard({
     setError(null);
     startLoadingOverlay(
       isPriceMode ? "Importando ítems…" : "Importando productos…",
-      18,
+      pickProgressStall(IMPORT_START_STALLS),
     );
 
     try {
       updateLoadingOverlay(
         isPriceMode ? "Importando ítems…" : "Importando productos…",
-        45,
+        pickProgressStall(IMPORT_APPLY_STALLS),
       );
 
       const applyResult = await applyImportAction({
@@ -984,10 +1031,16 @@ export function ImportWizard({
         throw new Error(applyResult.error);
       }
 
-      updateLoadingOverlay("Generando informe…", 78);
+      updateLoadingOverlay(
+        "Generando informe…",
+        pickProgressStall(IMPORT_REPORT_STALLS),
+      );
 
       if (applyResult.data.status === "PENDING_REVIEW") {
-        updateLoadingOverlay("Preparando revisión de imágenes…", 94);
+        updateLoadingOverlay(
+          "Preparando revisión de imágenes…",
+          pickProgressStall(IMPORT_FINISH_STALLS),
+        );
         await completeLoadingOverlay();
         setStep("imageReview");
         return;
@@ -995,7 +1048,10 @@ export function ImportWizard({
 
       await loadImportReport(jobId);
 
-      updateLoadingOverlay("Importación completa…", 94);
+      updateLoadingOverlay(
+        "Importación completa…",
+        pickProgressStall(IMPORT_FINISH_STALLS),
+      );
       await completeLoadingOverlay();
       setStep("result");
     } catch (caught) {
@@ -1014,10 +1070,16 @@ export function ImportWizard({
     }
 
     setError(null);
-    startLoadingOverlay("Finalizando importación…", 40);
+    startLoadingOverlay(
+      "Finalizando importación…",
+      pickProgressStall(IMPORT_APPLY_STALLS),
+    );
     try {
       await loadImportReport(jobId);
-      updateLoadingOverlay("Importación completa…", 92);
+      updateLoadingOverlay(
+        "Importación completa…",
+        pickProgressStall(IMPORT_FINISH_STALLS),
+      );
       await completeLoadingOverlay();
       setStep("result");
     } catch (caught) {
@@ -1126,6 +1188,7 @@ export function ImportWizard({
               message={loadingOverlay.message}
               progressTarget={loadingOverlay.progressTarget}
               isComplete={loadingOverlay.isComplete}
+              variant={loadingOverlay.variant}
               onExitComplete={handleLoadingExitComplete}
             />
           ) : (
