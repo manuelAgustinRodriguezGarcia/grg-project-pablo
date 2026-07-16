@@ -66,11 +66,11 @@ export const adminQueryKeys = {
     return ["admin", "files", page, query] as const;
   },
 
-  users: (roleFilter?: string, statusFilter?: string, query?: string) => {
-    if (roleFilter === undefined && statusFilter === undefined && query === undefined) {
+  users: (roleFilter?: string, query?: string) => {
+    if (roleFilter === undefined && query === undefined) {
       return ["admin", "users"] as const;
     }
 
-    return ["admin", "users", roleFilter, statusFilter, query] as const;
+    return ["admin", "users", roleFilter, query] as const;
   },
 } as const;

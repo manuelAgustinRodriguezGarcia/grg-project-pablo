@@ -2,6 +2,10 @@
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
+import {
+  useAdminSectionTransition,
+  useReportAdminSectionReady,
+} from "@/features/admin/components/AdminSectionTransition";
 import { adminQueryKeys } from "@/features/admin/query-keys";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
@@ -120,9 +124,15 @@ export function FilesManager({ catalogs, isAdmin }: FilesManagerProps) {
   const isFilterRefreshing =
     data !== null &&
     !isLoading &&
-    (query.trim() !== debouncedQuery || filesQuery.isFetching);
+    (query.trim() !== debouncedQuery ||
+      (filesQuery.isFetching && filesQuery.isPlaceholderData));
   const listError =
     filesQuery.error instanceof Error ? filesQuery.error.message : null;
+
+  const sectionTransition = useAdminSectionTransition();
+  const hideInternalLoaders = sectionTransition?.isCoveringContent ?? false;
+  const isSectionContentReady = !isLoading || Boolean(listError);
+  useReportAdminSectionReady(isSectionContentReady);
 
   const refreshList = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: adminQueryKeys.files() });
@@ -282,8 +292,8 @@ export function FilesManager({ catalogs, isAdmin }: FilesManagerProps) {
           <FilesPageIntro query={query} onQueryChange={setQuery} />
           <UploadedFilesList
             data={data}
-            isLoading={isLoading}
-            isFilterRefreshing={isFilterRefreshing}
+            isLoading={hideInternalLoaders ? false : isLoading}
+            isFilterRefreshing={hideInternalLoaders ? false : isFilterRefreshing}
             error={listError}
             isAdmin={isAdmin}
             onPageChange={setPage}

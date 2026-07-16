@@ -9,10 +9,8 @@ import styles from "@/features/users/styles/UsersManager.module.scss";
 type UsersPageIntroProps = {
   query: string;
   roleFilter: string;
-  statusFilter: string;
   onQueryChange: (value: string) => void;
   onRoleFilterChange: (value: string) => void;
-  onStatusFilterChange: (value: string) => void;
   onCreateClick: () => void;
 };
 
@@ -24,19 +22,11 @@ const ROLE_FILTER_OPTIONS = [
   })),
 ];
 
-const STATUS_FILTER_OPTIONS = [
-  { value: "all", label: "Todos los estados" },
-  { value: "ACTIVE", label: "Activos" },
-  { value: "INACTIVE", label: "Inactivos" },
-];
-
 export function UsersPageIntro({
   query,
   roleFilter,
-  statusFilter,
   onQueryChange,
   onRoleFilterChange,
-  onStatusFilterChange,
   onCreateClick,
 }: UsersPageIntroProps) {
   return (
@@ -65,14 +55,6 @@ export function UsersPageIntro({
               onChange={onRoleFilterChange}
               ariaLabel="Filtrar por rol"
               options={ROLE_FILTER_OPTIONS}
-            />
-          </div>
-          <div className={styles.filterSelect}>
-            <CustomSelect
-              value={statusFilter}
-              onChange={onStatusFilterChange}
-              ariaLabel="Filtrar por estado"
-              options={STATUS_FILTER_OPTIONS}
             />
           </div>
           <button type="button" className={styles.primaryButton} onClick={onCreateClick}>

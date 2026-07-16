@@ -2,6 +2,10 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+import {
+  useAdminSectionTransition,
+  useReportAdminSectionReady,
+} from "@/features/admin/components/AdminSectionTransition";
 import { adminQueryKeys } from "@/features/admin/query-keys";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import {
@@ -28,7 +32,6 @@ export function UsersManager({ initialUsers, currentUserId }: UsersManagerProps)
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
 
   const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   const [editingUser, setEditingUser] = useState<UserListItem | null>(null);
@@ -40,7 +43,7 @@ export function UsersManager({ initialUsers, currentUserId }: UsersManagerProps)
   const [actionError, setActionError] = useState<string | null>(null);
 
   const usersQuery = useQuery({
-    queryKey: adminQueryKeys.users(roleFilter, statusFilter, query),
+    queryKey: adminQueryKeys.users(roleFilter, query),
     queryFn: async (): Promise<UserListItem[]> => {
       const result = await listUsersAction();
       if (!result.success) {
@@ -59,10 +62,6 @@ export function UsersManager({ initialUsers, currentUserId }: UsersManagerProps)
         return false;
       }
 
-      if (statusFilter !== "all" && user.status !== statusFilter) {
-        return false;
-      }
-
       if (!normalizedQuery) {
         return true;
       }
@@ -72,7 +71,7 @@ export function UsersManager({ initialUsers, currentUserId }: UsersManagerProps)
         user.email.toLocaleLowerCase("es-AR").includes(normalizedQuery)
       );
     });
-  }, [usersQuery.data, query, roleFilter, statusFilter]);
+  }, [usersQuery.data, query, roleFilter]);
 
   const invalidateUsers = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: adminQueryKeys.users() });
@@ -178,6 +177,11 @@ export function UsersManager({ initialUsers, currentUserId }: UsersManagerProps)
     usersQuery.error instanceof Error ? usersQuery.error.message : null;
   const isLoading = usersQuery.isFetching && !usersQuery.data;
 
+  const sectionTransition = useAdminSectionTransition();
+  const hideInternalLoaders = sectionTransition?.isCoveringContent ?? false;
+  const isSectionContentReady = !isLoading || Boolean(listError);
+  useReportAdminSectionReady(isSectionContentReady);
+
   return (
     <>
       <div className={styles.page}>
@@ -185,10 +189,8 @@ export function UsersManager({ initialUsers, currentUserId }: UsersManagerProps)
           <UsersPageIntro
             query={query}
             roleFilter={roleFilter}
-            statusFilter={statusFilter}
             onQueryChange={setQuery}
             onRoleFilterChange={setRoleFilter}
-            onStatusFilterChange={setStatusFilter}
             onCreateClick={handleOpenCreate}
           />
 
@@ -196,7 +198,7 @@ export function UsersManager({ initialUsers, currentUserId }: UsersManagerProps)
 
           <UsersTable
             users={filteredUsers}
-            isLoading={isLoading}
+            isLoading={hideInternalLoaders ? false : isLoading}
             error={listError}
             currentUserId={currentUserId}
             busyUserId={busyUserId}
