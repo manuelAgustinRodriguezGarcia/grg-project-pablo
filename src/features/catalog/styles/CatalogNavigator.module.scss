@@ -1663,7 +1663,7 @@ $table-image-size: 6.25rem;
 .imagePreviewOverlay {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 1300;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1864,9 +1864,80 @@ $table-image-size: 6.25rem;
   min-height: 1.5rem;
 }
 
-.tableHeaderFilterable {
-  cursor: default;
+.tableHeaderInfoWrap {
+  position: absolute;
+  top: 0.12rem;
+  right: 0.12rem;
+  z-index: 3;
+  display: inline-flex;
+  pointer-events: auto;
+  cursor: pointer;
+}
 
+.tableHeaderInfoIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.78rem;
+  height: 0.78rem;
+  color: $blue;
+  cursor: pointer;
+
+  svg {
+    width: 0.72rem;
+    height: 0.72rem;
+    stroke-width: 2.5;
+  }
+}
+
+.tableHeaderInfoTooltip {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 40;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba($navy-light, 0.2);
+  border-radius: $radius-sm;
+  background: $navy-light;
+  box-shadow: 0 4px 12px rgba($navy-light, 0.22);
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: $white;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    right: 0.35rem;
+    width: 0;
+    height: 0;
+    border-left: 0.35rem solid transparent;
+    border-right: 0.35rem solid transparent;
+    border-bottom: 0.35rem solid $navy-light;
+  }
+}
+
+.tableHeaderInfoWrap:hover .tableHeaderInfoTooltip,
+.tableHeaderInfoWrap:focus-within .tableHeaderInfoTooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tableHeaderFilterable {
+  cursor: pointer;
+  user-select: none;
+}
+
+// Compound with `th` so these beat `.productTable th` background.
+.productTable th.tableHeaderFilterable {
   @media (hover: hover) and (pointer: fine) {
     &:hover:not(.tableHeaderFiltered):not(.tableHeaderFilterOpen) {
       background:
@@ -1885,11 +1956,28 @@ $table-image-size: 6.25rem;
   }
 }
 
-.tableHeaderFilterOpen {
+.productTable th.tableHeaderFilterOpen {
   z-index: 12;
+  background:
+    linear-gradient(
+      180deg,
+      rgba($white, var(--header-scroll-progress, 0)) 0%,
+      rgba($white, var(--header-scroll-progress, 0)) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba($blue, 0.22) 0%,
+      rgba($blue, 0.16) 100%
+    ),
+    $white;
+  box-shadow:
+    inset 0 -2px 0 rgba($blue, 0.32),
+    0 calc(var(--header-scroll-progress, 0) * 1px)
+      calc(var(--header-scroll-progress, 0) * 5px)
+      rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
 }
 
-.tableHeaderFiltered {
+.productTable th.tableHeaderFiltered {
   background:
     linear-gradient(
       180deg,
@@ -1900,9 +1988,30 @@ $table-image-size: 6.25rem;
       180deg,
       rgba($blue, 0.12) 0%,
       rgba($blue, 0.08) 100%
-    );
+    ),
+    $white;
   box-shadow:
     inset 0 -2px 0 rgba($blue, 0.22),
+    0 calc(var(--header-scroll-progress, 0) * 1px)
+      calc(var(--header-scroll-progress, 0) * 5px)
+      rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
+}
+
+.productTable th.tableHeaderFiltered.tableHeaderFilterOpen {
+  background:
+    linear-gradient(
+      180deg,
+      rgba($white, calc(var(--header-scroll-progress, 0) * 0.88)) 0%,
+      rgba($white, calc(var(--header-scroll-progress, 0) * 0.88)) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba($blue, 0.24) 0%,
+      rgba($blue, 0.17) 100%
+    ),
+    $white;
+  box-shadow:
+    inset 0 -2px 0 rgba($blue, 0.34),
     0 calc(var(--header-scroll-progress, 0) * 1px)
       calc(var(--header-scroll-progress, 0) * 5px)
       rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
@@ -1914,10 +2023,19 @@ $table-image-size: 6.25rem;
   gap: 0.45rem;
   width: min(14rem, 70vw);
   padding: 0.55rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgba($navy, 0.1);
   border-radius: $radius-md;
   background: $white;
   box-shadow: 0 10px 32px rgba($navy, 0.14);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .columnFilterPopoverHeader {
@@ -2020,6 +2138,78 @@ $table-image-size: 6.25rem;
     border-color: rgba($blue, 0.45);
     box-shadow: 0 0 0 2px rgba($blue, 0.12);
   }
+}
+
+.columnHelpSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+  padding-top: 0.35rem;
+  margin-top: 0.15rem;
+  border-top: 1px solid rgba($navy, 0.1);
+}
+
+.columnHelpSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.columnHelpPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+  max-height: min(50vh, 18rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.columnHelpImageButton {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: $radius-sm;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+
+  &:hover .columnHelpImage,
+  &:focus-visible .columnHelpImage {
+    box-shadow: 0 0 0 2px rgba($blue, 0.35);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 1px;
+  }
+}
+
+.columnHelpImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-sm;
+  object-fit: contain;
+  background: rgba($navy, 0.04);
+}
+
+.columnHelpText {
+  margin: 0;
+  color: rgba($navy, 0.82);
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .columnMenuActions {
@@ -3381,7 +3571,8 @@ $table-image-size: 6.25rem;
   .globalSearchPreviewButton,
   .globalSearchDropdownSpinner,
   .tableRefreshOverlay,
-  .tableRefreshSpinner {
+  .tableRefreshSpinner,
+  .tableHeaderInfoTooltip {
     transition: none;
     animation: none;
   }

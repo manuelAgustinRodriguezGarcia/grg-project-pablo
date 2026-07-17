@@ -8,11 +8,13 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent,
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 import { Eye, EyeOff, ICON_STROKE, Pencil, X } from "@/shared/icons";
 import { ColumnEditModal } from "@/features/catalog/components/ColumnEditModal";
+import { ProductImagePreviewModal } from "@/features/catalog/components/ProductImagePreviewModal";
 import { setColumnVisibilityAction } from "@/features/catalog/actions/column.actions";
 import type { ColumnListItem } from "@/features/catalog/types/column.types";
 import type {
@@ -38,7 +40,8 @@ type ColumnFilterMenuProps = {
   alignPopover?: "center" | "start";
   mode?: "filter" | "visibility-only";
   isAdmin?: boolean;
-  onColumnsChanged?: () => void;
+  onColumnsChanged?: () => void | Promise<void>;
+  onBlockHeaderInteractionChange?: (blocked: boolean) => void;
 };
 
 function defaultOperator(column: ColumnListItem): ColumnFilterOperator {
@@ -103,6 +106,11 @@ function getPopoverPosition(
 ): CSSProperties {
   const rect = anchor.getBoundingClientRect();
   const popoverWidth = Math.min(POPOVER_WIDTH_PX, window.innerWidth * 0.7);
+  const top = rect.bottom + POPOVER_TOP_OFFSET_PX;
+  const maxHeight = Math.max(
+    160,
+    window.innerHeight - top - VIEWPORT_PADDING_PX,
+  );
 
   let left =
     alignPopover === "start"
@@ -116,9 +124,10 @@ function getPopoverPosition(
 
   return {
     position: "fixed",
-    top: rect.bottom + POPOVER_TOP_OFFSET_PX,
+    top,
     left,
     width: popoverWidth,
+    maxHeight,
     zIndex: POPOVER_Z_INDEX,
   };
 }
@@ -134,6 +143,7 @@ export function ColumnFilterMenu({
   mode = "filter",
   isAdmin = false,
   onColumnsChanged,
+  onBlockHeaderInteractionChange,
 }: ColumnFilterMenuProps) {
   const isVisibilityOnly = mode === "visibility-only";
   const menuId = useId();
@@ -143,9 +153,16 @@ export function ColumnFilterMenu({
   const externalClearRef = useRef(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
+  const [isHelpImagePreviewOpen, setIsHelpImagePreviewOpen] = useState(false);
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({
     visibility: "hidden",
   });
+
+  const helpImageUrl = column.helpImagePreviewUrl ?? column.helpImageFullUrl;
+  const helpText = column.helpText?.trim() || null;
+  const hasColumnDescription =
+    column.hasContextualHelp || Boolean(helpText) || Boolean(helpImageUrl);
+  const helpPreviewUrl = column.helpImageFullUrl ?? helpImageUrl;
 
   const [draftValue, setDraftValue] = useState(activeFilter?.value ?? "");
   const [draftOperator, setDraftOperator] = useState<ColumnFilterOperator>(
@@ -225,14 +242,28 @@ export function ColumnFilterMenu({
     }
 
     updatePopoverPosition();
-  }, [isOpen, updatePopoverPosition]);
+  }, [hasColumnDescription, isOpen, updatePopoverPosition]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      return;
+    }
+
+    setIsHelpImagePreviewOpen(false);
+  }, [isOpen]);
+
+  useEffect(() => {
+    // While the edit modal is open the popover is hidden, but `isOpen` may still
+    // be true briefly — never steal clicks from the modal (e.g. Guardar).
+    if (!isOpen || isEditModalOpen) {
       return;
     }
 
     function handlePointerDown(event: MouseEvent) {
+      if (isHelpImagePreviewOpen) {
+        return;
+      }
+
       const target = event.target as Node;
 
       if (
@@ -246,9 +277,15 @@ export function ColumnFilterMenu({
     }
 
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        closeMenu();
+      if (event.key !== "Escape") {
+        return;
       }
+
+      if (isHelpImagePreviewOpen) {
+        return;
+      }
+
+      closeMenu();
     }
 
     document.addEventListener("mousedown", handlePointerDown, true);
@@ -262,7 +299,14 @@ export function ColumnFilterMenu({
       window.removeEventListener("resize", updatePopoverPosition);
       window.removeEventListener("scroll", updatePopoverPosition, true);
     };
-  }, [anchorRef, closeMenu, isOpen, updatePopoverPosition]);
+  }, [
+    anchorRef,
+    closeMenu,
+    isEditModalOpen,
+    isHelpImagePreviewOpen,
+    isOpen,
+    updatePopoverPosition,
+  ]);
 
   useEffect(() => {
     if (isVisibilityOnly) {
@@ -312,10 +356,31 @@ export function ColumnFilterMenu({
     [clearDebounce],
   );
 
-  const handleOpenEdit = useCallback(() => {
-    closeMenu();
-    setIsEditModalOpen(true);
-  }, [closeMenu]);
+  useEffect(() => {
+    onBlockHeaderInteractionChange?.(isEditModalOpen);
+    return () => {
+      onBlockHeaderInteractionChange?.(false);
+    };
+  }, [isEditModalOpen, onBlockHeaderInteractionChange]);
+
+  useEffect(() => {
+    if (isEditModalOpen && isOpen) {
+      closeMenu();
+    }
+  }, [closeMenu, isEditModalOpen, isOpen]);
+
+  const handleOpenEdit = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      // Prevent the click from falling through to the header after the popover
+      // unmounts — that was reopening the filter (with autoFocus) under the modal.
+      event.preventDefault();
+      event.stopPropagation();
+      onBlockHeaderInteractionChange?.(true);
+      setIsEditModalOpen(true);
+      closeMenu();
+    },
+    [closeMenu, onBlockHeaderInteractionChange],
+  );
 
   const handleToggleVisibility = useCallback(async () => {
     if (isTogglingVisibility) {
@@ -339,7 +404,7 @@ export function ColumnFilterMenu({
   }, [closeMenu, column.id, column.visibleToNormalUser, isTogglingVisibility, onColumnsChanged]);
 
   const popover =
-    isOpen && typeof document !== "undefined" ? (
+    isOpen && !isEditModalOpen && typeof document !== "undefined" ? (
       <div
         ref={popoverRef}
         id={menuId}
@@ -403,7 +468,7 @@ export function ColumnFilterMenu({
               }
             }}
             placeholder={formatColumnFilterPlaceholder(column.displayName)}
-            autoFocus
+            autoFocus={!isEditModalOpen}
             aria-label={`Valor de filtro para ${column.displayName}`}
           />
         ) : null}
@@ -414,6 +479,10 @@ export function ColumnFilterMenu({
               <button
                 type="button"
                 className={styles.columnMenuAction}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
                 onClick={handleOpenEdit}
               >
                 <Pencil strokeWidth={ICON_STROKE} aria-hidden />
@@ -437,6 +506,48 @@ export function ColumnFilterMenu({
             </button>
           </div>
         ) : null}
+
+        {!isVisibilityOnly && hasColumnDescription ? (
+          <div className={styles.columnHelpSection}>
+            <div className={styles.columnHelpSectionHeader}>
+              <span className={styles.columnFilterPopoverTitle}>
+                {isAdmin ? "Descripción para usuarios" : "Descripción"}
+              </span>
+            </div>
+            <div className={styles.columnHelpPanel}>
+              {helpImageUrl ? (
+                <button
+                  type="button"
+                  className={styles.columnHelpImageButton}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setIsHelpImagePreviewOpen(true);
+                  }}
+                  aria-label={
+                    column.helpImageAltText?.trim() ||
+                    `Ampliar descripción visual de ${column.displayName}`
+                  }
+                >
+                  <img
+                    src={helpImageUrl}
+                    alt={column.helpImageAltText?.trim() || ""}
+                    className={styles.columnHelpImage}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </button>
+              ) : null}
+              {helpText ? (
+                <p className={styles.columnHelpText}>{helpText}</p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </div>
     ) : null;
 
@@ -447,10 +558,23 @@ export function ColumnFilterMenu({
         <ColumnEditModal
           column={column}
           onClose={() => setIsEditModalOpen(false)}
-          onSaved={() => {
+          onSaved={async () => {
+            await onColumnsChanged?.();
             setIsEditModalOpen(false);
-            onColumnsChanged?.();
           }}
+          onNativeFilePickerOpen={() => {
+            onBlockHeaderInteractionChange?.(true);
+          }}
+        />
+      ) : null}
+      {isHelpImagePreviewOpen && helpPreviewUrl ? (
+        <ProductImagePreviewModal
+          imageUrl={helpPreviewUrl}
+          imageAlt={
+            column.helpImageAltText?.trim() ||
+            `Descripción visual de ${column.displayName}`
+          }
+          onClose={() => setIsHelpImagePreviewOpen(false)}
         />
       ) : null}
     </>

@@ -140,11 +140,20 @@ describe("ColumnHelpService", () => {
       createColumnFixture({
         helpImagePath: `${FOLDER_ID}/${COLUMN_ID}/img.jpg`,
         helpImageThumbnailPath: `${FOLDER_ID}/${COLUMN_ID}/img-thumb.webp`,
+        helpImageAltText: "Referencia",
       }),
     );
 
     const item = await columnHelpService.deleteHelpImage(COLUMN_ID);
 
+    expect(columnRepository.update).toHaveBeenCalledWith(
+      COLUMN_ID,
+      expect.objectContaining({
+        helpImagePath: null,
+        helpImageThumbnailPath: null,
+        helpImageAltText: null,
+      }),
+    );
     expect(item.helpImageFullUrl).toBeNull();
     expect(auditService.logOperationSafe).toHaveBeenCalledWith({
       userId: adminUserFixture.id,

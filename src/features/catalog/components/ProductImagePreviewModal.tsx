@@ -92,9 +92,13 @@ export function ProductImagePreviewModal({
       className={styles.imagePreviewOverlay}
       role="presentation"
       onMouseDown={(event) => {
+        event.stopPropagation();
         if (event.target === event.currentTarget) {
           onClose();
         }
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
       }}
     >
       <div
@@ -103,6 +107,12 @@ export function ProductImagePreviewModal({
         aria-modal="true"
         aria-label={imageAlt || "Vista previa de imagen"}
         aria-busy={isLoading}
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
       >
         <button
           type="button"

@@ -1,21 +1,49 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import { createPortal } from "react-dom";
 import { updateColumnAction } from "@/features/catalog/actions/column.actions";
-import { deleteColumnHelpImageAction } from "@/features/catalog/actions/column-help.actions";
-import { uploadColumnHelpImage } from "@/features/catalog/utils/column-help.client";
+import {
+  deleteColumnHelpImage,
+  uploadColumnHelpImage,
+} from "@/features/catalog/utils/column-help.client";
 import type { ColumnListItem } from "@/features/catalog/types/column.types";
 import { Image, X, ICON_STROKE } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
+const ACCEPTED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
 type ColumnEditModalProps = {
   column: ColumnListItem;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
+  onNativeFilePickerOpen?: () => void;
 };
 
-export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalProps) {
+function isAcceptedImageFile(file: File): boolean {
+  if (ACCEPTED_IMAGE_TYPES.has(file.type)) {
+    return true;
+  }
+
+  const lower = file.name.toLowerCase();
+  return (
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg") ||
+    lower.endsWith(".png") ||
+    lower.endsWith(".webp")
+  );
+}
+
+export function ColumnEditModal({
+  column,
+  onClose,
+  onSaved,
+  onNativeFilePickerOpen,
+}: ColumnEditModalProps) {
   const [displayName, setDisplayName] = useState(column.displayName);
   const [helpText, setHelpText] = useState(column.helpText ?? "");
   const [previewUrl, setPreviewUrl] = useState<string | null>(
@@ -24,9 +52,15 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const ignoreOverlayCloseRef = useRef(false);
+  const dragDepthRef = useRef(0);
+  const hadPersistedImageRef = useRef(
+    Boolean(column.helpImagePreviewUrl ?? column.helpImageFullUrl),
+  );
 
   useEffect(() => {
     const element = titleTextareaRef.current;
@@ -36,28 +70,62 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
     }
   }, [displayName]);
 
-  const hadImage = Boolean(column.helpImagePreviewUrl ?? column.helpImageFullUrl);
+  const nextDisplayName = displayName.trim();
+  const nextHelpText = helpText.trim();
+  const displayNameChanged = nextDisplayName !== column.displayName;
+  const helpTextChanged = nextHelpText !== (column.helpText ?? "").trim();
+  const hasChanges =
+    displayNameChanged ||
+    helpTextChanged ||
+    pendingFile !== null ||
+    removeImage;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !isSaving) {
+      if (event.key === "Escape" && !isSaving && !ignoreOverlayCloseRef.current) {
         onClose();
       }
     }
 
+    function handleWindowFocus() {
+      window.setTimeout(() => {
+        ignoreOverlayCloseRef.current = false;
+      }, 400);
+    }
+
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("focus", handleWindowFocus);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
   }, [isSaving, onClose]);
 
-  if (typeof document === "undefined") {
-    return null;
+  function openFilePicker() {
+    const input = fileInputRef.current;
+    if (!input || isSaving) {
+      return;
+    }
+
+    ignoreOverlayCloseRef.current = true;
+    onNativeFilePickerOpen?.();
+    input.value = "";
+    input.click();
   }
 
   function handleSelectImage(file: File | null) {
+    ignoreOverlayCloseRef.current = false;
+
     if (!file) {
       return;
     }
 
+    if (!isAcceptedImageFile(file)) {
+      setError("La imagen debe ser JPG, PNG o WebP.");
+      return;
+    }
+
+    setError(null);
     setPreviewUrl(URL.createObjectURL(file));
     setPendingFile(file);
     setRemoveImage(false);
@@ -66,27 +134,65 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
   function handleRemoveImage() {
     setPreviewUrl(null);
     setPendingFile(null);
-    setRemoveImage(true);
+    setRemoveImage(hadPersistedImageRef.current);
   }
 
-  async function handleSubmit(event: React.FormEvent) {
+  function handleDragEnter(event: DragEvent<HTMLElement>) {
     event.preventDefault();
+    event.stopPropagation();
+    if (isSaving) {
+      return;
+    }
+
+    dragDepthRef.current += 1;
+    setIsDragging(true);
+  }
+
+  function handleDragOver(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isSaving) {
+      event.dataTransfer.dropEffect = "copy";
+    }
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setIsDragging(false);
+    }
+  }
+
+  function handleDrop(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current = 0;
+    setIsDragging(false);
+
+    if (isSaving) {
+      return;
+    }
+
+    handleSelectImage(event.dataTransfer.files?.[0] ?? null);
+  }
+
+  async function handleSave() {
+    if (!hasChanges || isSaving) {
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
 
-    const nextDisplayName = displayName.trim();
     if (!nextDisplayName) {
       setError("El título de la columna no puede estar vacío.");
       setIsSaving(false);
       return;
     }
 
-    const nextHelpText = helpText.trim();
-
     try {
-      const displayNameChanged = nextDisplayName !== column.displayName;
-      const helpTextChanged = nextHelpText !== (column.helpText ?? "");
-
       if (displayNameChanged || helpTextChanged) {
         const result = await updateColumnAction({
           id: column.id,
@@ -106,15 +212,15 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
           setError(result.error);
           return;
         }
-      } else if (removeImage && hadImage) {
-        const result = await deleteColumnHelpImageAction({ columnId: column.id });
-        if (!result.success) {
+      } else if (removeImage && hadPersistedImageRef.current) {
+        const result = await deleteColumnHelpImage(column.id);
+        if (!result.success && result.code !== "HELP_IMAGE_NOT_FOUND") {
           setError(result.error);
           return;
         }
       }
 
-      onSaved();
+      await onSaved();
       onClose();
     } catch {
       setError("No se pudo guardar la columna.");
@@ -123,12 +229,20 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
     }
   }
 
+  if (typeof document === "undefined") {
+    return null;
+  }
+
   return createPortal(
     <div
       className={styles.columnEditOverlay}
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !isSaving) {
+        if (
+          event.target === event.currentTarget &&
+          !isSaving &&
+          !ignoreOverlayCloseRef.current
+        ) {
           onClose();
         }
       }}
@@ -138,6 +252,12 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
         role="dialog"
         aria-modal="true"
         aria-labelledby="column-edit-title"
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
       >
         <div className={styles.columnEditHeader}>
           <div>
@@ -159,7 +279,13 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
           </button>
         </div>
 
-        <form className={styles.columnEditForm} onSubmit={(event) => void handleSubmit(event)}>
+        <form
+          className={styles.columnEditForm}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSave();
+          }}
+        >
           <label className={styles.columnEditField}>
             <span className={styles.columnEditLabel}>Título de la columna</span>
             <textarea
@@ -176,6 +302,19 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
 
           <div className={styles.columnEditField}>
             <span className={styles.columnEditLabel}>Imagen descriptiva</span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+              className={styles.columnEditHiddenInput}
+              tabIndex={-1}
+              disabled={isSaving}
+              aria-hidden
+              onChange={(event) => {
+                handleSelectImage(event.target.files?.[0] ?? null);
+                event.target.value = "";
+              }}
+            />
             {previewUrl ? (
               <div className={styles.columnEditImagePreview}>
                 <img
@@ -187,7 +326,15 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
                   <button
                     type="button"
                     className={styles.columnEditImageReplace}
-                    onClick={() => fileInputRef.current?.click()}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      openFilePicker();
+                    }}
                     disabled={isSaving}
                   >
                     Reemplazar
@@ -205,26 +352,36 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
             ) : (
               <button
                 type="button"
-                className={styles.columnEditDropzone}
-                onClick={() => fileInputRef.current?.click()}
+                className={`${styles.columnEditDropzone} ${
+                  isDragging ? styles.columnEditDropzoneActive : ""
+                }`}
                 disabled={isSaving}
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  openFilePicker();
+                }}
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
                 <Image
                   className={styles.columnEditDropzoneIcon}
                   strokeWidth={ICON_STROKE}
                   aria-hidden
                 />
-                <span className={styles.columnEditDropzoneTitle}>Agregar imagen</span>
+                <span className={styles.columnEditDropzoneTitle}>
+                  {isDragging
+                    ? "Soltá la imagen aquí"
+                    : "Arrastrá una imagen o hacé clic para buscarla"}
+                </span>
                 <span className={styles.columnEditDropzoneHint}>JPG, PNG o WebP</span>
               </button>
             )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className={styles.columnEditHiddenInput}
-              onChange={(event) => handleSelectImage(event.target.files?.[0] ?? null)}
-            />
           </div>
 
           <label className={styles.columnEditField}>
@@ -256,9 +413,12 @@ export function ColumnEditModal({ column, onClose, onSaved }: ColumnEditModalPro
               Cancelar
             </button>
             <button
-              type="submit"
+              type="button"
               className={styles.confirmPrimaryButton}
-              disabled={isSaving}
+              disabled={isSaving || !hasChanges}
+              onClick={() => {
+                void handleSave();
+              }}
             >
               {isSaving ? "Guardando…" : "Guardar cambios"}
             </button>

@@ -279,6 +279,7 @@ export class ColumnHelpService {
       helpImageMimeType: null,
       helpImageSizeBytes: null,
       helpImageOriginalName: null,
+      helpImageAltText: null,
     });
 
     auditService.logOperationSafe({

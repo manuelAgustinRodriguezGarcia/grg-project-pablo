@@ -461,13 +461,14 @@ export function CatalogNavigator({
 
   useReportAdminSectionReady(isSectionContentReady);
 
-  const handleColumnsChanged = useCallback(() => {
+  const handleColumnsChanged = useCallback(async () => {
     if (!activeFolderId) {
       return;
     }
 
-    void queryClient.invalidateQueries({
+    await queryClient.invalidateQueries({
       queryKey: adminQueryKeys.products(activeFolderId),
+      refetchType: "active",
     });
   }, [activeFolderId, queryClient]);
 
