@@ -20,13 +20,19 @@ export const adminQueryKeys = {
       return ["admin", "products"] as const;
     }
 
+    // Prefix-only key so invalidateQueries({ queryKey: products(folderId) })
+    // matches every page/filter/search variant for that folder.
+    if (page === undefined) {
+      return ["admin", "products", folderId] as const;
+    }
+
     return [
       "admin",
       "products",
       folderId,
       page,
-      serializedFilters,
-      search,
+      serializedFilters ?? "",
+      search ?? "",
     ] as const;
   },
 

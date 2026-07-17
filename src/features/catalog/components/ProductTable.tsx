@@ -38,7 +38,7 @@ type ProductTableProps = {
   onClearColumnFilters?: () => void;
   canEdit?: boolean;
   isAdmin?: boolean;
-  onColumnsChanged?: () => void;
+  onColumnsChanged?: () => void | Promise<void>;
   onEditProduct?: (product: ProductTableItem) => void;
   onDeleteProduct?: (product: ProductTableItem) => void;
   folderId?: string;

@@ -294,4 +294,40 @@ describe("ColumnFilterMenu", () => {
 
     expect(onFilterChange).not.toHaveBeenCalled();
   });
+
+  it("no muestra Descripción si la columna no tiene ayuda contextual", () => {
+    renderOpenMenu();
+
+    expect(screen.queryByText("Descripción")).not.toBeInTheDocument();
+  });
+
+  it("muestra la descripción expandida al abrir el menú", () => {
+    const anchorRef = createRef<HTMLTableCellElement>();
+
+    render(
+      <>
+        <table>
+          <thead>
+            <tr>
+              <th ref={anchorRef}>TIPO DE ALTERNADOR</th>
+            </tr>
+          </thead>
+        </table>
+        <ColumnFilterMenu
+          column={createColumn({
+            displayName: "TIPO DE ALTERNADOR",
+            helpText: "Explica el tipo de alternador.",
+            hasContextualHelp: true,
+          })}
+          onFilterChange={vi.fn()}
+          isOpen
+          onOpenChange={vi.fn()}
+          anchorRef={anchorRef}
+        />
+      </>,
+    );
+
+    expect(screen.getByText("Descripción")).toBeInTheDocument();
+    expect(screen.getByText("Explica el tipo de alternador.")).toBeInTheDocument();
+  });
 });
