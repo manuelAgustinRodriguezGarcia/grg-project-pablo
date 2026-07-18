@@ -61,6 +61,19 @@ export function ImportStepColumns({
     );
   }
 
+  function updateAllRows(createColumn: boolean) {
+    onMappingRowsChange(
+      mappingRows.map((row) => ({
+        ...row,
+        targetValue: createColumn ? CREATE_COLUMN_VALUE : IGNORE_COLUMN_VALUE,
+      })),
+    );
+  }
+
+  const allColumnsSelected =
+    mappingRows.length > 0 &&
+    mappingRows.every((row) => isCreateColumnTarget(row.targetValue));
+
   if (headers.length === 0) {
     return (
       <p className={styles.stepIntro}>
@@ -89,6 +102,16 @@ export function ImportStepColumns({
           </div>
         </div>
       ) : null}
+
+      <div className={styles.columnMappingSelectAllCard}>
+        <span className={styles.columnMappingSelectAllLabel}>SELECCIONAR TODAS</span>
+        <ImportYesNoRadio
+          name="create-column-select-all"
+          value={allColumnsSelected}
+          onChange={updateAllRows}
+          disabled={disabled}
+        />
+      </div>
 
       <table className={styles.columnMappingTable}>
         <thead>

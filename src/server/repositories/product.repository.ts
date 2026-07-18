@@ -255,6 +255,7 @@ export class ProductRepository {
       id: string;
       primaryCode: string | null;
       normalizedCode: string | null;
+      description: string | null;
       dynamicData: Prisma.JsonValue;
     }>
   > {
@@ -264,6 +265,7 @@ export class ProductRepository {
         id: true,
         primaryCode: true,
         normalizedCode: true,
+        description: true,
         dynamicData: true,
       },
     });

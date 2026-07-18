@@ -26,6 +26,8 @@ export type ProductTableItem = {
   description: string | null;
   dynamicData: Record<string, unknown>;
   primaryImage: ProductTablePrimaryImage | null;
+  /** Optional gallery images next to COL 0 (ZIP/primary), not tied to a data column. */
+  extraImages: ProductTablePrimaryImage[];
   imagesByColumnKey: Record<string, ProductTablePrimaryImage[]>;
   fieldAnnotationsByColumnKey: Record<string, ProductFieldAnnotation>;
   createdAt: string;

@@ -26,6 +26,12 @@ export type ProcessEmbeddedImagesInput = {
   importJobId: string;
   rowToProductId: Map<number, string>;
   folderColumns?: ColumnLabelRef[];
+  /**
+   * When true, embedded images on rows without a product mapping are skipped
+   * (not sent to PENDING_REVIEW). Used for COMBINAR so existing-row pictures
+   * are not re-prompted for ZIP-style linking.
+   */
+  skipUnmatchedRows?: boolean;
 };
 
 export type ProcessedImageRecord = {
@@ -183,6 +189,12 @@ export class ImageExtractionService {
         continue;
       }
 
+      const productIdForRow = input.rowToProductId.get(ref.row) ?? null;
+      if (!productIdForRow && input.skipUnmatchedRows) {
+        // COMBINAR: ignore embedded images on rows that already existed in the folder.
+        continue;
+      }
+
       stats.extracted += 1;
 
       const buffer = getEmbeddedImageBuffer(input.workbook, ref.imageId);
@@ -239,7 +251,7 @@ export class ImageExtractionService {
         continue;
       }
 
-      const productId = input.rowToProductId.get(ref.row) ?? null;
+      const productId = productIdForRow;
       let status: ProductImageStatus = "PENDING_REVIEW";
 
       if (productId) {

@@ -86,4 +86,21 @@ describe("folderHasLinkedImages", () => {
       ]),
     ).toBe(false);
   });
+
+  it("no trata columnas IMAGEN/FOTO embebidas como vínculo ZIP aunque isImageCode esté en true", () => {
+    expect(
+      folderHasLinkedImages([
+        {
+          isImageCode: true,
+          originalName: "IMAGEN",
+          displayName: "IMAGEN",
+        },
+        {
+          isImageCode: true,
+          originalName: "FOTO",
+          displayName: "FOTO",
+        },
+      ]),
+    ).toBe(false);
+  });
 });

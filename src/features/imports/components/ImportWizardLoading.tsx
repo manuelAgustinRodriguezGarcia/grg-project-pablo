@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./ImportWizard.module.scss";
 
 export type ImportWizardLoadingVariant = "progress" | "spinner";
@@ -16,10 +16,15 @@ type ImportWizardLoadingProps = {
 const HOLD_AT_100_MS = 380;
 const HOLD_SPINNER_COMPLETE_MS = 280;
 const FADE_OUT_MS = 320;
-const WAITING_CEILING = 96;
-const TICK_MS = 80;
-/** Minimum time between visible +1% bumps while waiting on a long request. */
-const MIN_PERCENT_BUMP_MS = 700;
+const TICK_MS = 45;
+/** Soft ceiling while waiting — approached asymptotically, never a hard stop. */
+const WAITING_CEILING = 99;
+/**
+ * Per-tick fraction of remaining distance above the stall.
+ * Slow enough that typical waits only gain a few points past the target,
+ * but the bar never freezes at a fixed percent.
+ */
+const CRAWL_RATE = 0.0035;
 
 export function ImportWizardLoading({
   message,
@@ -32,8 +37,6 @@ export function ImportWizardLoading({
   const [isExiting, setIsExiting] = useState(false);
   const displayPercent = Math.round(progress);
   const isSpinner = variant === "spinner";
-  const lastBumpAtRef = useRef(0);
-  const lastDisplayedPercentRef = useRef(0);
 
   useEffect(() => {
     setIsExiting(false);
@@ -51,44 +54,26 @@ export function ImportWizardLoading({
             return 100;
           }
           const delta = 100 - current;
-          return Math.min(100, current + Math.max(2, delta * 0.3));
+          return Math.min(100, current + Math.max(1.5, delta * 0.25));
         }
 
-        const stall = Math.min(WAITING_CEILING - 2, Math.max(1, progressTarget));
-        let next: number;
+        // Ease toward the stage target (same feel as the original bar).
+        const stall = Math.min(WAITING_CEILING - 0.5, Math.max(1, progressTarget));
 
         if (current < stall) {
           const delta = stall - current;
-          next = Math.min(
-            stall,
-            current + Math.max(0.5, delta * 0.12 + Math.random() * 0.3),
-          );
-        } else {
-          // Steady crawl — never idle while waiting.
-          next = Math.min(WAITING_CEILING, current + 0.2 + Math.random() * 0.25);
+          const step = Math.max(0.35, delta * 0.12);
+          return Math.min(stall, current + step);
         }
 
-        const now = Date.now();
-        const nextDisplay = Math.floor(next);
-        const lastDisplay = lastDisplayedPercentRef.current;
-
-        if (
-          nextDisplay <= lastDisplay &&
-          lastDisplay < WAITING_CEILING &&
-          now - lastBumpAtRef.current >= MIN_PERCENT_BUMP_MS
-        ) {
-          next = Math.min(WAITING_CEILING, lastDisplay + 1);
-          lastBumpAtRef.current = now;
-          lastDisplayedPercentRef.current = Math.floor(next);
-          return next;
+        // Past the target: keep crawling toward the soft ceiling.
+        // Speed falls as we get closer, so we don't rush to 99% and sit there.
+        const remaining = WAITING_CEILING - current;
+        if (remaining <= 0.01) {
+          return WAITING_CEILING - 0.01;
         }
 
-        if (nextDisplay > lastDisplay) {
-          lastBumpAtRef.current = now;
-          lastDisplayedPercentRef.current = nextDisplay;
-        }
-
-        return next;
+        return current + remaining * CRAWL_RATE;
       });
     }, TICK_MS);
 

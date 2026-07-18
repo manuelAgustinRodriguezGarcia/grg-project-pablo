@@ -1,4 +1,6 @@
-const IMAGE_HEADER_PATTERNS = [/imagen/i, /image/i, /foto/i, /photo/i];
+/** Broad labels for picture columns (NOT ZIP image-code columns). */
+const IMAGE_LABEL_HEADER_PATTERNS = [/imagen/i, /image/i, /foto/i, /photo/i];
+/** ZIP filename match columns: "COD. IMG.", "CODIGO IMAGEN", etc. */
 const IMAGE_CODE_COLUMN_PATTERNS = [
   /\bcod(?:igo)?\.?\s*imagen\b/i,
   /\bcod(?:igo)?\.?\s*img\.?\b/i,
@@ -22,16 +24,35 @@ function matchesHeaderPattern(headerName: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(normalized));
 }
 
+export function isImageCodeColumnName(headerName: string): boolean {
+  const normalized = normalizeHeaderNameForSemantics(headerName);
+  return IMAGE_CODE_COLUMN_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+/**
+ * Plain image/foto headers (e.g. "IMAGEN") used next to embedded pictures.
+ * These must NOT activate ZIP-linked image-code mode.
+ */
+export function isBroadImageLabelHeader(headerName: string): boolean {
+  return (
+    matchesHeaderPattern(headerName, IMAGE_LABEL_HEADER_PATTERNS) &&
+    !isImageCodeColumnName(headerName)
+  );
+}
+
 export function detectSemanticFlags(headerName: string): {
   isPrimaryCode: boolean;
   isDescription: boolean;
   isImageCode: boolean;
   isPrice: boolean;
 } {
+  const isImageCode = isImageCodeColumnName(headerName);
+
   return {
-    isPrimaryCode: matchesHeaderPattern(headerName, CODE_HEADER_PATTERNS),
+    isPrimaryCode:
+      !isImageCode && matchesHeaderPattern(headerName, CODE_HEADER_PATTERNS),
     isDescription: matchesHeaderPattern(headerName, DESCRIPTION_HEADER_PATTERNS),
-    isImageCode: matchesHeaderPattern(headerName, IMAGE_HEADER_PATTERNS),
+    isImageCode,
     isPrice: matchesHeaderPattern(headerName, PRICE_HEADER_PATTERNS),
   };
 }
@@ -39,7 +60,7 @@ export function detectSemanticFlags(headerName: string): {
 export type ColumnSemanticKind = "primaryCode" | "description" | "imageCode" | null;
 
 export function detectColumnSemanticKind(headerName: string): ColumnSemanticKind {
-  if (matchesHeaderPattern(headerName, IMAGE_HEADER_PATTERNS)) {
+  if (isImageCodeColumnName(headerName)) {
     return "imageCode";
   }
 
@@ -67,11 +88,6 @@ export function semanticKindLabel(kind: ColumnSemanticKind): string | null {
   }
 }
 
-export function isImageCodeColumnName(headerName: string): boolean {
-  const normalized = normalizeHeaderNameForSemantics(headerName);
-  return IMAGE_CODE_COLUMN_PATTERNS.some((pattern) => pattern.test(normalized));
-}
-
 export function isImageCodeHeader(headerName: string): boolean {
-  return detectSemanticFlags(headerName).isImageCode || isImageCodeColumnName(headerName);
+  return isImageCodeColumnName(headerName);
 }

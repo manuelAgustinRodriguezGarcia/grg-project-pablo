@@ -148,8 +148,9 @@ function resolveFolderId(
   const allowFallback = options?.allowFallback ?? true;
 
   if (folders.length === 0) {
-    // Keep a pending deep-link / global-search target while folders load.
-    return selectedFolderId;
+    // While loading, preserve a deep-link target. Once navigation is ready
+    // (allowFallback), an empty catalog has no active folder.
+    return allowFallback ? "" : selectedFolderId;
   }
 
   const exists = folders.some((folder) => folder.id === selectedFolderId);
@@ -415,6 +416,10 @@ export function CatalogNavigator({
 
   if (canLoadFolderProducts && productTable) {
     stableTableDataRef.current = productTable;
+  } else if (isNavigationReady && !canLoadFolderProducts) {
+    // Catalog ready with no selectable folder (e.g. all folders deleted):
+    // drop the previous folder snapshot so we don't keep showing its table.
+    stableTableDataRef.current = null;
   }
 
   // Keep the last table snapshot while catalog/folder navigation loads so we
@@ -422,7 +427,12 @@ export function CatalogNavigator({
   const tableData =
     canLoadFolderProducts && productTable
       ? productTable
-      : (stableTableDataRef.current ?? null);
+      : isNavigationReady && !canLoadFolderProducts
+        ? null
+        : (stableTableDataRef.current ?? null);
+
+  const catalogHasNoFolders =
+    Boolean(activeCatalogId) && isNavigationReady && folders.length === 0;
 
   const isFolderContextLoading =
     isLoadingFolders ||
@@ -767,6 +777,13 @@ export function CatalogNavigator({
         (folder) => folder.id !== deleteFolderTarget.id,
       );
 
+      if (activeCatalogId) {
+        queryClient.setQueryData(
+          adminQueryKeys.navigation(activeCatalogId),
+          nextFolders,
+        );
+      }
+
       setCatalogList((current) =>
         current.map((catalog) =>
           catalog.id === activeCatalogId
@@ -782,6 +799,12 @@ export function CatalogNavigator({
         const nextFolderId = sortByName(nextFolders)[0]?.id ?? "";
         setSelectedFolderId(nextFolderId);
         setPage(1);
+        if (!nextFolderId) {
+          stableTableDataRef.current = null;
+          void queryClient.removeQueries({
+            queryKey: adminQueryKeys.products(deleteFolderTarget.id),
+          });
+        }
       }
 
       setDeleteFolderTarget(null);
@@ -795,6 +818,7 @@ export function CatalogNavigator({
     deleteFolderTarget,
     folders,
     invalidateCatalogQueries,
+    queryClient,
     router,
     selectedFolderId,
   ]);
@@ -920,6 +944,8 @@ export function CatalogNavigator({
   const importWizard = isImportOpen ? (
     <LazyImportWizard
       catalogs={sortedCatalogs}
+      initialCatalogId={activeCatalogId}
+      initialFolderId={activeFolderId}
       onClose={() => setIsImportOpen(false)}
       onPublished={handleImportPublished}
     />
@@ -983,6 +1009,13 @@ export function CatalogNavigator({
             isRefreshing={hideInternalLoaders ? false : isTableRefreshing}
             isFilterRefreshing={hideInternalLoaders ? false : isFilterRefreshing}
             error={productsError}
+            emptyMessage={
+              catalogHasNoFolders
+                ? "Este catálogo no tiene carpetas."
+                : !activeCatalogId
+                  ? "Seleccioná un catálogo y una carpeta."
+                  : "Seleccioná una carpeta."
+            }
             onPageChange={handlePageChange}
             enableColumnFilters={enableColumnFilters}
             columnFilters={columnFilters}

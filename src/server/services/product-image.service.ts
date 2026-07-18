@@ -4,6 +4,7 @@ import type {
   ProductImageStatus,
 } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
+import { LINKED_EXTRA_IMAGE_LABEL } from "@/features/catalog/utils/linked-extra-image";
 import type { ExternalImageRef } from "@/server/importers/types";
 import { requireAuth, requireAdmin, requireEditor } from "@/server/auth";
 import {
@@ -772,6 +773,37 @@ export class ProductImageService {
           thumbnailUrl: urls.thumbnailUrl,
           fullUrl: urls.fullUrl,
         });
+      }),
+    );
+
+    return result;
+  }
+
+  async resolveExtraImagesForProducts(
+    productIds: string[],
+    options?: { includeFullUrls?: boolean },
+  ): Promise<Map<string, ProductImageUrls[]>> {
+    const images = await productImageRepository.findAssociatedByProductIds(productIds);
+    const result = new Map<string, ProductImageUrls[]>();
+
+    await Promise.all(
+      images.map(async (image) => {
+        if (!image.productId || image.isPrimary) {
+          return;
+        }
+
+        if (image.label !== LINKED_EXTRA_IMAGE_LABEL) {
+          return;
+        }
+
+        const urls = await resolveImageUrls(image, options);
+        const bucket = result.get(image.productId) ?? [];
+        bucket.push({
+          id: image.id,
+          thumbnailUrl: urls.thumbnailUrl,
+          fullUrl: urls.fullUrl,
+        });
+        result.set(image.productId, bucket);
       }),
     );
 

@@ -30,7 +30,25 @@ vi.mock("@/features/imports/components/ImportSearchableSelect", () => ({
 }));
 
 vi.mock("@/features/imports/components/ImportYesNoRadio", () => ({
-  ImportYesNoRadio: () => <div data-testid="yes-no-radio" />,
+  ImportYesNoRadio: ({
+    name,
+    value,
+    onChange,
+  }: {
+    name: string;
+    value: boolean;
+    onChange: (value: boolean) => void;
+  }) => (
+    <div data-testid={`yes-no-radio-${name}`}>
+      <button type="button" onClick={() => onChange(true)}>
+        Sí
+      </button>
+      <button type="button" onClick={() => onChange(false)}>
+        No
+      </button>
+      <span data-testid={`yes-no-value-${name}`}>{value ? "yes" : "no"}</span>
+    </div>
+  ),
 }));
 
 const HEADERS = [
@@ -94,5 +112,55 @@ describe("ImportStepColumns", () => {
     expect(
       screen.getByRole("columnheader", { name: "Crear columna nueva" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("SELECCIONAR TODAS")).toBeInTheDocument();
+  });
+
+  it("permite seleccionar o deseleccionar todas las columnas", async () => {
+    const onMappingRowsChange = vi.fn();
+    const mappingRows = [
+      {
+        headerInternalKey: "numero_de_orden",
+        headerOriginalName: "NÚMERO DE ORDEN",
+        targetValue: "__create__",
+      },
+      {
+        headerInternalKey: "detalle",
+        headerOriginalName: "Detalle",
+        targetValue: "__create__",
+      },
+    ];
+
+    render(
+      <ImportStepColumns
+        headers={HEADERS}
+        folderColumns={[]}
+        mappingRows={mappingRows}
+        primaryCodeHeaderKey="numero_de_orden"
+        showPrimaryCodeSelection={false}
+        disabled={false}
+        onMappingRowsChange={onMappingRowsChange}
+        onPrimaryCodeHeaderKeyChange={vi.fn()}
+      />,
+    );
+
+    const selectAllGroup = screen.getByTestId("yes-no-radio-create-column-select-all");
+    expect(screen.getByTestId("yes-no-value-create-column-select-all")).toHaveTextContent(
+      "yes",
+    );
+
+    selectAllGroup.querySelectorAll("button")[1]?.click();
+
+    expect(onMappingRowsChange).toHaveBeenCalledWith([
+      {
+        headerInternalKey: "numero_de_orden",
+        headerOriginalName: "NÚMERO DE ORDEN",
+        targetValue: "__ignore__",
+      },
+      {
+        headerInternalKey: "detalle",
+        headerOriginalName: "Detalle",
+        targetValue: "__ignore__",
+      },
+    ]);
   });
 });

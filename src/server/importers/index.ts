@@ -5,7 +5,15 @@ export { detectSheetImages, buildEmbeddedImageSummary, listEmbeddedImageAnchors 
 export type { EmbeddedImageAnchor, SheetImageStats } from "./excel-image.detector";
 export { parseWorksheet } from "./excel-sheet.parser";
 export { parseSheetFromBuffer, parseWorkbookFromBuffer, toExcelJsBuffer } from "./excel-workbook.parser";
-export { buildExistingCodeIndex, findMatchingProductId, normalizeCodeForMatch } from "./match-detector";
+export {
+  buildExistingCodeIndex,
+  buildExistingContentIndex,
+  buildRowContentFingerprint,
+  findMatchingProductId,
+  findMatchingProductIdByContent,
+  normalizeCodeForMatch,
+  resolveImportProductMatchId,
+} from "./match-detector";
 export { mapSheetToProducts } from "./product-row.mapper";
 export type {
   ColumnMappingEntry,

@@ -106,6 +106,9 @@ type ImportWizardProps = {
   mode?: "CATALOG_FOLDER" | "PRICE_LIST";
   priceLists?: PriceListListItem[];
   initialPriceListId?: string;
+  /** Preselect destination from the catalog page the user opened the wizard from. */
+  initialCatalogId?: string;
+  initialFolderId?: string;
 };
 
 const STEP_ORDER = [
@@ -177,6 +180,8 @@ export function ImportWizard({
   mode = "CATALOG_FOLDER",
   priceLists = [],
   initialPriceListId = "",
+  initialCatalogId = "",
+  initialFolderId = "",
 }: ImportWizardProps) {
   const isPriceMode = mode === "PRICE_LIST";
   const [step, setStep] = useState<ImportWizardStep>(initialJobId ? "destination" : "upload");
@@ -215,8 +220,8 @@ export function ImportWizard({
   const [isLoadingFolders, setIsLoadingFolders] = useState(false);
   const [sheets, setSheets] = useState<ImportSheetItem[]>([]);
 
-  const [selectedCatalogId, setSelectedCatalogId] = useState("");
-  const [selectedFolderId, setSelectedFolderId] = useState("");
+  const [selectedCatalogId, setSelectedCatalogId] = useState(initialCatalogId);
+  const [selectedFolderId, setSelectedFolderId] = useState(initialFolderId);
   const [selectedSheetName, setSelectedSheetName] = useState("");
   const [priceListList, setPriceListList] = useState<PriceListListItem[]>(priceLists);
   const [selectedPriceListId, setSelectedPriceListId] = useState(initialPriceListId);
@@ -422,6 +427,37 @@ export function ImportWizard({
     }
   }, []);
 
+  const applyInitialDestination = useCallback(() => {
+    if (isPriceMode) {
+      setSelectedPriceListId(initialPriceListId);
+      setSelectedCatalogId("");
+      setSelectedFolderId("");
+      setFolders([]);
+      return;
+    }
+
+    setSelectedCatalogId(initialCatalogId);
+    setSelectedFolderId(initialFolderId);
+    if (initialCatalogId) {
+      void loadFolders(initialCatalogId);
+    } else {
+      setFolders([]);
+    }
+  }, [
+    initialCatalogId,
+    initialFolderId,
+    initialPriceListId,
+    isPriceMode,
+    loadFolders,
+  ]);
+
+  useEffect(() => {
+    if (isPriceMode || !initialCatalogId) {
+      return;
+    }
+    void loadFolders(initialCatalogId);
+  }, [initialCatalogId, isPriceMode, loadFolders]);
+
   const handleClose = useCallback(() => {
     if (isBusy) {
       return;
@@ -478,12 +514,8 @@ export function ImportWizard({
     ) => {
       setJobId(activeJobId);
       setError(null);
-      setSelectedCatalogId("");
-      setSelectedFolderId("");
       setSelectedSheetName("");
-      if (isPriceMode) {
-        setSelectedPriceListId(initialPriceListId);
-      }
+      applyInitialDestination();
 
       updateLoadingOverlay(
         "Analizando el archivo…",
@@ -539,7 +571,7 @@ export function ImportWizard({
       await completeLoadingOverlay();
       setStep("destination");
     },
-    [completeLoadingOverlay, updateLoadingOverlay],
+    [applyInitialDestination, completeLoadingOverlay, updateLoadingOverlay],
   );
 
   useEffect(() => {
@@ -575,12 +607,8 @@ export function ImportWizard({
     }
 
     setError(null);
-    setSelectedCatalogId("");
-    setSelectedFolderId("");
     setSelectedSheetName("");
-    if (isPriceMode) {
-      setSelectedPriceListId(initialPriceListId);
-    }
+    applyInitialDestination();
     startLoadingOverlay("Subiendo archivo…", pickProgressStall(UPLOAD_STALLS));
 
     try {
