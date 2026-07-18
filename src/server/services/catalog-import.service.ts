@@ -9,11 +9,12 @@ import ExcelJS from "exceljs";
 import { requireAdmin } from "@/server/auth";
 import {
   buildExistingCodeIndex,
+  buildExistingContentIndex,
   detectSemanticFlags,
-  findMatchingProductId,
   isImageCodeHeader,
   mapSheetToProducts,
   parseWorkbookFromBuffer,
+  resolveImportProductMatchId,
   toExcelJsBuffer,
   type ImportJobConfig,
   type MappedProductRow,
@@ -516,13 +517,27 @@ export class CatalogImportService {
   private async buildRowToProductMap(
     folderId: string,
     mappedProducts: MappedProductRow[],
+    options: {
+      preferContentMatch?: boolean;
+      matchKeys?: readonly string[];
+    } = {},
   ): Promise<Map<number, string>> {
-    const products = await productRepository.findPrimaryCodesByFolder(folderId);
-    const index = buildExistingCodeIndex(products);
+    const products = await productRepository.findForMatchingByFolder(folderId);
+    const codeIndex = buildExistingCodeIndex(products);
+    const contentIndex = buildExistingContentIndex(products, {
+      allowedKeys: options.matchKeys,
+    });
     const map = new Map<number, string>();
 
     for (const row of mappedProducts) {
-      const productId = findMatchingProductId(row.primaryCode, index);
+      const productId = resolveImportProductMatchId(
+        row,
+        { codeIndex, contentIndex },
+        {
+          allowedKeys: options.matchKeys,
+          preferContentMatch: options.preferContentMatch,
+        },
+      );
       if (productId) {
         map.set(row.rowNumber, productId);
       }
@@ -539,6 +554,8 @@ export class CatalogImportService {
     config: ImportJobConfig;
     columns: Awaited<ReturnType<typeof columnRepository.findByFolderIdOrdered>>;
     workbook: ExcelJS.Workbook;
+    /** Skip embedded images on rows not mapped to a product (COMBINAR). */
+    skipUnmatchedEmbeddedRows?: boolean;
   }): Promise<{
     warnings: string[];
     stats: {
@@ -576,9 +593,14 @@ export class CatalogImportService {
       productsWithMultipleEmbeddedImages: 0,
     };
 
+    const preferContentMatch = Boolean(input.config.useGeneratedPrimaryCodes);
+    const matchKeys = input.columns
+      .filter((column) => column.internalKey !== GENERATED_PRIMARY_CODE_COLUMN_KEY)
+      .map((column) => column.internalKey);
     const rowToProductId = await this.buildRowToProductMap(
       input.folderId,
       input.mappedProducts,
+      { preferContentMatch, matchKeys },
     );
 
     if (input.sheet.imageCount > 0) {
@@ -588,6 +610,9 @@ export class CatalogImportService {
         folderId: input.folderId,
         importJobId: input.jobId,
         rowToProductId,
+        // Without ZIP, never send embedded pictures to the ZIP-style review step
+        // for rows that were not part of this apply batch (e.g. COMBINAR matches).
+        skipUnmatchedRows: preferContentMatch || Boolean(input.skipUnmatchedEmbeddedRows),
         folderColumns: input.columns.map((column) => ({
           internalKey: column.internalKey,
           originalName: column.originalName,
@@ -916,7 +941,8 @@ export class CatalogImportService {
           order: index,
           isPrimaryCode,
           isDescription,
-          isImageCode: flags.isImageCode,
+          // Image-code columns are only for ZIP filename matching.
+          isImageCode: config.useGeneratedPrimaryCodes ? false : flags.isImageCode,
           isSearchable: isPrimaryCode || isDescription,
           isFilterable: false,
         });
@@ -936,6 +962,11 @@ export class CatalogImportService {
 
       if (config.useGeneratedPrimaryCodes) {
         columns = await this.syncGeneratedPrimaryCodeColumn(folderId, columns, options.persist);
+        columns = await this.clearImageCodeFlagsWithoutZip(
+          folderId,
+          columns,
+          options.persist,
+        );
       }
 
       return columns;
@@ -973,7 +1004,7 @@ export class CatalogImportService {
         isPrimaryCode:
           !config.useGeneratedPrimaryCodes && config.primaryCodeColumnKey === targetKey,
         isDescription: config.descriptionColumnKey === targetKey,
-        isImageCode: flags.isImageCode,
+        isImageCode: config.useGeneratedPrimaryCodes ? false : flags.isImageCode,
         isSearchable:
           (!config.useGeneratedPrimaryCodes &&
             config.primaryCodeColumnKey === targetKey) ||
@@ -1026,6 +1057,43 @@ export class CatalogImportService {
 
     if (config.useGeneratedPrimaryCodes) {
       columns = await this.syncGeneratedPrimaryCodeColumn(folderId, columns, options.persist);
+      columns = await this.clearImageCodeFlagsWithoutZip(
+        folderId,
+        columns,
+        options.persist,
+      );
+    }
+
+    return columns;
+  }
+
+  /**
+   * Without a ZIP there is no image-code linking. Clear stale isImageCode flags
+   * (e.g. plain "IMAGEN" headers from older imports) so the folder is not treated
+   * as ZIP-linked.
+   */
+  private async clearImageCodeFlagsWithoutZip(
+    folderId: string,
+    columns: Awaited<ReturnType<typeof columnRepository.findByFolderIdOrdered>>,
+    persist: boolean,
+  ) {
+    let changed = false;
+
+    for (const column of columns) {
+      if (!column.isImageCode) {
+        continue;
+      }
+
+      changed = true;
+      if (persist) {
+        await columnRepository.update(column.id, { isImageCode: false });
+      } else {
+        column.isImageCode = false;
+      }
+    }
+
+    if (changed && persist) {
+      return columnRepository.findByFolderIdOrdered(folderId);
     }
 
     return columns;
@@ -1186,11 +1254,20 @@ export class CatalogImportService {
     const repeatedColumns = findRepeatedColumnNames(sheet.headers, columnsBeforeSync, config);
 
     const mappedProducts = mapSheetToProducts(sheet, columns, config);
-    const existingProducts = await productRepository.findPrimaryCodesByFolder(job.folderId);
-    const matchIndex = buildExistingCodeIndex(existingProducts);
+    const existingProducts = await productRepository.findForMatchingByFolder(job.folderId);
+    const matchKeys = columnsBeforeSync.map((column) => column.internalKey);
+    const codeIndex = buildExistingCodeIndex(existingProducts);
+    const contentIndex = buildExistingContentIndex(existingProducts, {
+      allowedKeys: matchKeys,
+    });
+    const preferContentMatch = Boolean(config.useGeneratedPrimaryCodes);
 
     const recognizedProducts = mappedProducts.map((product) => {
-      const matchedProductId = findMatchingProductId(product.primaryCode, matchIndex);
+      const matchedProductId = resolveImportProductMatchId(
+        product,
+        { codeIndex, contentIndex },
+        { allowedKeys: matchKeys, preferContentMatch },
+      );
       return {
         ...product,
         isMatch: Boolean(matchedProductId),
@@ -1374,6 +1451,7 @@ export class CatalogImportService {
 
     const config = (job.config as ImportJobConfig | null) ?? {};
     const sheet = await this.loadTargetSheet(job);
+    const columnsBeforeSync = await columnRepository.findByFolderIdOrdered(job.folderId);
     await this.pruneOrphanAutoGeneratedColumns(job.folderId, sheet);
     const columns = await this.syncColumnsFromSheet(job.folderId, sheet, config, {
       persist: true,
@@ -1384,10 +1462,21 @@ export class CatalogImportService {
     let productsToInsert = mappedProducts;
 
     if (input.actionType === "COMBINAR_LISTA") {
-      const existingProducts = await productRepository.findPrimaryCodesByFolder(job.folderId);
-      const matchIndex = buildExistingCodeIndex(existingProducts);
+      const existingProducts = await productRepository.findForMatchingByFolder(job.folderId);
+      const matchKeys = columnsBeforeSync.map((column) => column.internalKey);
+      const codeIndex = buildExistingCodeIndex(existingProducts);
+      const contentIndex = buildExistingContentIndex(existingProducts, {
+        allowedKeys: matchKeys,
+      });
+      const preferContentMatch = Boolean(config.useGeneratedPrimaryCodes);
+
       productsToInsert = mappedProducts.filter(
-        (product) => !findMatchingProductId(product.primaryCode, matchIndex),
+        (product) =>
+          !resolveImportProductMatchId(
+            product,
+            { codeIndex, contentIndex },
+            { allowedKeys: matchKeys, preferContentMatch },
+          ),
       );
     }
 
@@ -1458,14 +1547,17 @@ export class CatalogImportService {
       });
 
       const workbook = await this.loadWorkbookFromJob(job);
+      const productsForImages =
+        input.actionType === "COMBINAR_LISTA" ? productsToInsert : mappedProducts;
       const imageProcessing = await this.processImportImages({
         jobId,
         folderId: job.folderId!,
         sheet,
-        mappedProducts,
+        mappedProducts: productsForImages,
         config,
         columns,
         workbook,
+        skipUnmatchedEmbeddedRows: input.actionType === "COMBINAR_LISTA",
       });
 
       const embeddedReport = await this.summarizeEmbeddedImageReport(jobId, sheet);

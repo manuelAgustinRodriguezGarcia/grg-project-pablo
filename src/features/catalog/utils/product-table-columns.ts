@@ -1,5 +1,8 @@
 import { GENERATED_PRIMARY_CODE_COLUMN_KEY } from "@/shared/import/generated-primary-code.constants";
-import { isImageCodeColumnName } from "@/shared/import/header-semantics";
+import {
+  isBroadImageLabelHeader,
+  isImageCodeColumnName,
+} from "@/shared/import/header-semantics";
 
 export function isGeneratedPrimaryCodeColumn(column: {
   internalKey: string;
@@ -7,19 +10,36 @@ export function isGeneratedPrimaryCodeColumn(column: {
   return column.internalKey === GENERATED_PRIMARY_CODE_COLUMN_KEY;
 }
 
+/**
+ * ZIP image-code columns only ("COD. IMG.", "CODIGO IMAGEN", …).
+ * Plain "IMAGEN"/"FOTO" headers (embedded pictures) must not activate
+ * the linked-image / COL 0 UI — even if an older import set isImageCode.
+ */
 export function isImageCodeColumn(column: {
   isImageCode: boolean;
   originalName: string;
   displayName: string;
 }): boolean {
-  if (column.isImageCode) {
+  if (
+    isImageCodeColumnName(column.originalName) ||
+    isImageCodeColumnName(column.displayName)
+  ) {
     return true;
   }
 
-  return (
-    isImageCodeColumnName(column.originalName) ||
-    isImageCodeColumnName(column.displayName)
-  );
+  if (!column.isImageCode) {
+    return false;
+  }
+
+  // Ignore stale flags on plain image-label headers from older imports.
+  if (
+    isBroadImageLabelHeader(column.originalName) ||
+    isBroadImageLabelHeader(column.displayName)
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 export function getProductTableColumns<T extends { internalKey: string }>(

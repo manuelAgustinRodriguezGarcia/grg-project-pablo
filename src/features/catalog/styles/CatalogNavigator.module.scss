@@ -2622,6 +2622,63 @@ $table-image-size: 6.25rem;
   min-width: 0;
 }
 
+.productFormImageSlots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.productFormImageSlot {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.productFormImageAddSlot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba($navy, 0.18);
+  border-radius: 999px;
+  background: rgba($navy, 0.03);
+  color: rgba($navy, 0.72);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    border-color: rgba($blue, 0.4);
+    background: rgba($blue, 0.06);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+}
+
 .productFormImageDropzone {
   position: relative;
   display: flex;

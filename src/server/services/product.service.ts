@@ -56,6 +56,11 @@ export type ProductTableItem = {
     thumbnailUrl: string | null;
     fullUrl: string | null;
   } | null;
+  extraImages: Array<{
+    id: string;
+    thumbnailUrl: string | null;
+    fullUrl: string | null;
+  }>;
   imagesByColumnKey: Record<
     string,
     Array<{
@@ -129,6 +134,7 @@ function toProductTableItem(
   visibleColumnKeys: Iterable<string>,
   role: UserRole,
   primaryImage: ProductTableItem["primaryImage"],
+  extraImages: ProductTableItem["extraImages"],
   imagesByColumnKey: ProductTableItem["imagesByColumnKey"],
   fieldAnnotationsByColumnKey: ProductTableItem["fieldAnnotationsByColumnKey"],
 ): ProductTableItem {
@@ -144,6 +150,7 @@ function toProductTableItem(
     description: product.description,
     dynamicData,
     primaryImage,
+    extraImages,
     imagesByColumnKey,
     fieldAnnotationsByColumnKey,
     createdAt: product.createdAt.toISOString(),
@@ -307,23 +314,27 @@ export class ProductService {
       const visibleColumnKeys = columnItems.map((column) => column.internalKey);
       const productIds = paginated.items.map((product) => product.id);
       const includeFullUrls = input.includeFullUrls !== false;
-      const [primaryImages, columnImages, fieldAnnotations] = await Promise.all([
-        productImageService.resolvePrimaryImagesForProducts(productIds, {
-          includeFullUrls,
-        }),
-        productImageService.resolveColumnImagesForProducts(
-          productIds,
-          columnItems.map((column) => ({
-            internalKey: column.internalKey,
-            originalName: column.originalName,
-            displayName: column.displayName,
-          })),
-          { includeFullUrls },
-        ),
-        productFieldAnnotationService.resolveForProducts(productIds, {
-          includeFullUrls,
-        }),
-      ]);
+      const [primaryImages, extraImages, columnImages, fieldAnnotations] =
+        await Promise.all([
+          productImageService.resolvePrimaryImagesForProducts(productIds, {
+            includeFullUrls,
+          }),
+          productImageService.resolveExtraImagesForProducts(productIds, {
+            includeFullUrls,
+          }),
+          productImageService.resolveColumnImagesForProducts(
+            productIds,
+            columnItems.map((column) => ({
+              internalKey: column.internalKey,
+              originalName: column.originalName,
+              displayName: column.displayName,
+            })),
+            { includeFullUrls },
+          ),
+          productFieldAnnotationService.resolveForProducts(productIds, {
+            includeFullUrls,
+          }),
+        ]);
 
       return {
         folder: {
@@ -338,6 +349,7 @@ export class ProductService {
             visibleColumnKeys,
             role,
             primaryImages.get(product.id) ?? null,
+            extraImages.get(product.id) ?? [],
             columnImages.get(product.id) ?? {},
             fieldAnnotations.get(product.id) ?? {},
           ),
@@ -459,9 +471,10 @@ export class ProductService {
 
     const { folder } = await assertFolderForAdmin(product.folderId);
     const columns = await columnRepository.findByFolderIdOrdered(folder.id);
-    const [primaryImages, columnImages, fieldAnnotationsMap, equivalences] =
+    const [primaryImages, extraImages, columnImages, fieldAnnotationsMap, equivalences] =
       await Promise.all([
         productImageService.resolvePrimaryImagesForProducts([product.id]),
+        productImageService.resolveExtraImagesForProducts([product.id]),
         productImageService.resolveColumnImagesForProducts(
           [product.id],
           columns.map((column) => ({
@@ -479,6 +492,7 @@ export class ProductService {
       columns.map((column) => column.internalKey),
       profile.role,
       primaryImages.get(product.id) ?? null,
+      extraImages.get(product.id) ?? [],
       columnImages.get(product.id) ?? {},
       fieldAnnotationsMap.get(product.id) ?? {},
     );

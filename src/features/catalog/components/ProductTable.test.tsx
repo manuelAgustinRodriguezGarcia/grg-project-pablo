@@ -83,6 +83,7 @@ describe("ProductTable", () => {
         description: "Ruleman",
         dynamicData: { montadora: "John Deere" },
         primaryImage: null,
+        extraImages: [],
         imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {},
       },
@@ -112,6 +113,7 @@ describe("ProductTable", () => {
         description: "Ruleman",
         dynamicData: { montadora: "John Deere" },
         primaryImage: null,
+        extraImages: [],
         imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {},
       },
@@ -157,6 +159,7 @@ describe("ProductTable", () => {
           thumbnailUrl: "https://example.com/thumb.jpg",
           fullUrl: "https://example.com/full.jpg",
         },
+        extraImages: [],
         imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -195,6 +198,7 @@ describe("ProductTable", () => {
           thumbnailUrl: "https://example.com/thumb.jpg",
           fullUrl: "https://example.com/full.jpg",
         },
+        extraImages: [],
         imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -227,6 +231,7 @@ describe("ProductTable", () => {
           thumbnailUrl: "https://example.com/thumb.jpg",
           fullUrl: null,
         },
+        extraImages: [],
         imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -238,6 +243,7 @@ describe("ProductTable", () => {
         description: "Sin imagen",
         dynamicData: {},
         primaryImage: null,
+        extraImages: [],
         imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -264,6 +270,7 @@ describe("ProductTable", () => {
           thumbnailUrl: "https://example.com/thumb.jpg",
           fullUrl: null,
         },
+        extraImages: [],
         imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -275,6 +282,7 @@ describe("ProductTable", () => {
         description: "Sin imagen",
         dynamicData: {},
         primaryImage: null,
+        extraImages: [],
         imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {},
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -339,6 +347,7 @@ describe("ProductTable", () => {
           description: null,
           dynamicData: { detalle: "Producto A" },
           primaryImage: null,
+          extraImages: [],
           imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {},
           createdAt: "2026-01-01T00:00:00.000Z",
@@ -412,6 +421,7 @@ describe("ProductTable", () => {
           description: "Ruleman",
           dynamicData: { montadora: "John Deere", obs: "35" },
           primaryImage: null,
+          extraImages: [],
           imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {},
           createdAt: "2026-01-01T00:00:00.000Z",
@@ -500,6 +510,7 @@ describe("ProductTable", () => {
             thumbnailUrl: "https://example.com/thumb.jpg",
             fullUrl: "https://example.com/full.jpg",
           },
+          extraImages: [],
           imagesByColumnKey: {
             foto: [
               {
@@ -542,6 +553,7 @@ describe("ProductTable", () => {
         description: "Ruleman",
         dynamicData: { anclaje_frente: "Delantero" },
         primaryImage: null,
+        extraImages: [],
         imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {
           anclaje_frente: {
@@ -609,6 +621,7 @@ describe("ProductTable", () => {
         description: "Ruleman",
         dynamicData: { anclaje_frente: "" },
         primaryImage: null,
+        extraImages: [],
         imagesByColumnKey: {},
         fieldAnnotationsByColumnKey: {
           anclaje_frente: {

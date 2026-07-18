@@ -8,6 +8,12 @@ type ProductImageResponse = {
   code?: string;
 };
 
+export type UploadProductLinkedImageOptions = {
+  isPrimary?: boolean;
+  label?: string;
+  sortOrder?: number;
+};
+
 function mapImageResponse(
   image: ProductImageResponse,
 ): ProductTablePrimaryImage {
@@ -21,13 +27,27 @@ function mapImageResponse(
 export async function uploadProductLinkedImage(
   productId: string,
   file: File,
+  options: UploadProductLinkedImageOptions = {},
 ): Promise<
   | { success: true; data: ProductTablePrimaryImage }
   | { success: false; error: string; code?: string }
 > {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("isPrimary", "true");
+
+  if (options.isPrimary !== undefined) {
+    formData.append("isPrimary", options.isPrimary ? "true" : "false");
+  } else {
+    formData.append("isPrimary", "true");
+  }
+
+  if (options.label) {
+    formData.append("label", options.label);
+  }
+
+  if (options.sortOrder !== undefined) {
+    formData.append("sortOrder", String(options.sortOrder));
+  }
 
   const response = await fetch(`/api/admin/products/${productId}/images`, {
     method: "POST",

@@ -1479,6 +1479,26 @@
   color: rgba($navy, 0.7);
 }
 
+.columnMappingSelectAllCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba($blue, 0.35);
+  border-radius: $radius-md;
+  background: rgba($blue, 0.06);
+}
+
+.columnMappingSelectAllLabel {
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: $navy;
+}
+
 .columnMappingTable {
   width: 100%;
   border-collapse: collapse;

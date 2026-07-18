@@ -14,7 +14,11 @@ import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPil
 import { FolderTableSearch } from "@/features/catalog/components/FolderTableSearch";
 import { ColumnHeaderCell } from "@/features/catalog/components/ColumnHeaderCell";
 import { ProductImagePreviewModal } from "./ProductImagePreviewModal";
-import { getProductTableColumns, isImageCodeColumn } from "@/features/catalog/utils/product-table-columns";
+import {
+  folderHasLinkedImages,
+  getProductTableColumns,
+  isImageCodeColumn,
+} from "@/features/catalog/utils/product-table-columns";
 import { toActiveFilterPillsFromState } from "@/features/catalog/utils/column-filter-state";
 import { normalizeMultilineText } from "@/shared/text/normalize-multiline-text";
 import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
@@ -28,6 +32,7 @@ type ProductTableProps = {
   isRefreshing?: boolean;
   isFilterRefreshing?: boolean;
   error: string | null;
+  emptyMessage?: string;
   onPageChange: (page: number) => void;
   enableColumnFilters?: boolean;
   columnFilters?: ColumnFilterInput[];
@@ -142,7 +147,16 @@ function hasColumnImages(
   return Object.values(imagesByColumnKey).some((images) => images.length > 0);
 }
 
-function shouldShowGlobalImageColumn(products: ProductTableItem[]): boolean {
+function shouldShowGlobalImageColumn(
+  products: ProductTableItem[],
+  columns: ProductTableResponse["columns"],
+): boolean {
+  // ZIP/linked folders always keep COL 0 when any product has a primary image,
+  // even if field dropzones also have column-keyed images.
+  if (folderHasLinkedImages(columns)) {
+    return products.some((product) => product.primaryImage !== null);
+  }
+
   return products.some(
     (product) =>
       product.primaryImage !== null && !hasColumnImages(product.imagesByColumnKey),
@@ -163,6 +177,7 @@ export const ProductTable = memo(function ProductTable({
   isRefreshing = false,
   isFilterRefreshing = false,
   error,
+  emptyMessage = "Seleccioná un catálogo y una carpeta.",
   onPageChange,
   enableColumnFilters = false,
   columnFilters = [],
@@ -242,7 +257,8 @@ export const ProductTable = memo(function ProductTable({
     [sortedColumns],
   );
   const showImageColumn = useMemo(
-    () => (data ? shouldShowGlobalImageColumn(data.products) : false),
+    () =>
+      data ? shouldShowGlobalImageColumn(data.products, data.columns) : false,
     [data],
   );
 
@@ -326,7 +342,16 @@ export const ProductTable = memo(function ProductTable({
   if (!data) {
     return (
       <section className={styles.tablePanel} aria-label="Tabla de productos">
-        <p className={styles.tableState}>Seleccioná un catálogo y una carpeta.</p>
+        <div className={`${styles.tableWrap} ${styles.tableWrapEmpty}`}>
+          <div className={styles.tableEmpty} role="status">
+            <File
+              className={styles.tableEmptyIcon}
+              strokeWidth={ICON_STROKE}
+              aria-hidden
+            />
+            <p className={styles.tableEmptyText}>{emptyMessage}</p>
+          </div>
+        </div>
       </section>
     );
   }
