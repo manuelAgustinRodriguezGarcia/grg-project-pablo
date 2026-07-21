@@ -253,7 +253,7 @@ export function PriceColumnFilterMenu({
       return;
     }
 
-    function handlePointerDown(event: MouseEvent) {
+    function handlePointerDown(event: globalThis.MouseEvent) {
       const target = event.target as Node;
 
       if (
@@ -266,7 +266,7 @@ export function PriceColumnFilterMenu({
       closeMenu();
     }
 
-    function handleEscape(event: KeyboardEvent) {
+    function handleEscape(event: globalThis.KeyboardEvent) {
       if (event.key === "Escape") {
         closeMenu();
       }

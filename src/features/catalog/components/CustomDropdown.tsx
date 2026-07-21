@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type MouseEvent,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type TransitionEvent,
 } from "react";
@@ -160,7 +160,7 @@ function DropdownIconAction({
   children,
 }: {
   label: string;
-  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+  onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   variant?: "default" | "danger";
   children: ReactNode;
 }) {
@@ -335,13 +335,13 @@ export function CustomDropdown({
       return;
     }
 
-    function handlePointerDown(event: MouseEvent) {
+    function handlePointerDown(event: globalThis.MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
 
-    function handleEscape(event: KeyboardEvent) {
+    function handleEscape(event: globalThis.KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
       }

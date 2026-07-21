@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type MouseEvent,
+  type MouseEvent as ReactMouseEvent,
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
@@ -297,7 +297,7 @@ export function ColumnFilterMenu({
       return;
     }
 
-    function handlePointerDown(event: MouseEvent) {
+    function handlePointerDown(event: globalThis.MouseEvent) {
       if (isHelpImagePreviewOpen) {
         return;
       }
@@ -314,7 +314,7 @@ export function ColumnFilterMenu({
       closeMenu();
     }
 
-    function handleEscape(event: KeyboardEvent) {
+    function handleEscape(event: globalThis.KeyboardEvent) {
       if (event.key !== "Escape") {
         return;
       }
@@ -408,7 +408,7 @@ export function ColumnFilterMenu({
   }, [closeMenu, isEditModalOpen, isOpen]);
 
   const handleOpenEdit = useCallback(
-    (event: MouseEvent<HTMLButtonElement>) => {
+    (event: ReactMouseEvent<HTMLButtonElement>) => {
       // Prevent the click from falling through to the header after the popover
       // unmounts — that was reopening the filter (with autoFocus) under the modal.
       event.preventDefault();
