@@ -1488,15 +1488,19 @@ $table-image-size: 6.25rem;
   min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
-  scrollbar-width: thin;
+  scrollbar-width: auto;
   scrollbar-color: rgba($blue, 0.35) transparent;
 
   &::-webkit-scrollbar {
     width: 6px;
-    height: 6px;
+    height: 14px;
     background: transparent;
     -webkit-appearance: none;
     appearance: none;
+  }
+
+  &::-webkit-scrollbar:horizontal {
+    height: 14px;
   }
 
   &::-webkit-scrollbar-track {
@@ -3371,7 +3375,6 @@ $table-image-size: 6.25rem;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-top: 0.85rem;
   padding: 0.75rem 1rem 1rem;
   border-top: 1px solid rgba($blue, 0.06);
   background: rgba($blue, 0.015);
