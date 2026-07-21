@@ -16,6 +16,7 @@ export function createProductFixture(overrides: Partial<Product> = {}): Product 
     dynamicData: { marca: "SKF", nota_interna: "admin only" },
     originalText: null,
     indexedText: null,
+    normalizedIndexedText: null,
     createdAt: baseDate,
     updatedAt: baseDate,
     ...overrides,

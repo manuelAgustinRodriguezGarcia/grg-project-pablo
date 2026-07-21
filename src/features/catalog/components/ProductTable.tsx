@@ -618,12 +618,18 @@ export const ProductTable = memo(function ProductTable({
                             <button
                               type="button"
                               className={styles.tableCellThumbButton}
-                              onClick={() =>
+                              onClick={() => {
+                                const url =
+                                  fieldAnnotation?.fullUrl ??
+                                  fieldAnnotation?.thumbnailUrl ??
+                                  annotationThumb;
+
+                                if (!url) {
+                                  return;
+                                }
+
                                 setPreviewImage({
-                                  url:
-                                    fieldAnnotation?.fullUrl ??
-                                    fieldAnnotation?.thumbnailUrl ??
-                                    annotationThumb,
+                                  url,
                                   alt: buildProductImageAlt(
                                     product.primaryCode,
                                     product.description,
@@ -631,12 +637,12 @@ export const ProductTable = memo(function ProductTable({
                                   ),
                                   productId: product.id,
                                   imageId: "",
-                                })
-                              }
+                                });
+                              }}
                               aria-label={`Ver imagen de ayuda de ${column.displayName}`}
                             >
                               <img
-                                src={annotationThumb}
+                                src={annotationThumb ?? undefined}
                                 alt=""
                                 className={styles.tableCellThumb}
                                 loading="lazy"
