@@ -491,15 +491,23 @@ $price-shadow:
   min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
-  scrollbar-width: thin;
+  scrollbar-width: auto;
   scrollbar-color: rgba($green, 0.35) transparent;
 
   &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 14px;
+    height: 14px;
     background: transparent;
     -webkit-appearance: none;
     appearance: none;
+  }
+
+  &::-webkit-scrollbar:vertical {
+    width: 14px;
+  }
+
+  &::-webkit-scrollbar:horizontal {
+    height: 14px;
   }
 
   &::-webkit-scrollbar-track {
