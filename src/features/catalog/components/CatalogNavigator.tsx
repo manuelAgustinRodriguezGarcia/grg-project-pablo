@@ -182,7 +182,15 @@ export function CatalogNavigator({
 
   if (catalogs !== prevCatalogs) {
     setPrevCatalogs(catalogs);
-    setCatalogList(catalogs);
+    setCatalogList((current) => {
+      const serverIds = new Set(catalogs.map((catalog) => catalog.id));
+      const localOnly = current.filter((catalog) => !serverIds.has(catalog.id));
+      if (localOnly.length === 0) {
+        return catalogs;
+      }
+      // Keep optimistic creates until the refreshed server list includes them.
+      return sortByName([...catalogs, ...localOnly]);
+    });
   }
 
   const sortedCatalogs = useMemo(() => sortByName(catalogList), [catalogList]);
@@ -661,6 +669,12 @@ export function CatalogNavigator({
 
       const created = toDirectoryCatalogItem(result.data);
       setCatalogList((current) => sortByName([...current, created]));
+      // Seed empty navigation so the folder dropdown is ready without waiting
+      // for the first network fetch of the new catalog.
+      queryClient.setQueryData(adminQueryKeys.navigation(created.id), []);
+      void queryClient.cancelQueries({
+        queryKey: adminQueryKeys.navigation(created.id),
+      });
       setSelectedCatalogId(created.id);
       setSelectedFolderId("");
       setPage(1);
@@ -670,7 +684,7 @@ export function CatalogNavigator({
     } finally {
       setIsCatalogActionBusy(false);
     }
-  }, [createCatalogNameDraft, router]);
+  }, [createCatalogNameDraft, queryClient, router]);
 
   const handleConfirmCreateFolder = useCallback(async () => {
     if (!activeCatalogId) {
@@ -697,16 +711,38 @@ export function CatalogNavigator({
       }
 
       const created = toNavigationFolderItem(result.data);
+      const currentFolders =
+        queryClient.getQueryData<CatalogNavigationFolderItem[]>(
+          adminQueryKeys.navigation(activeCatalogId),
+        ) ?? folders;
+      const nextFolders = sortByName([...currentFolders, created]);
+
+      queryClient.setQueryData(
+        adminQueryKeys.navigation(activeCatalogId),
+        nextFolders,
+      );
+      setCatalogList((current) =>
+        current.map((catalog) =>
+          catalog.id === activeCatalogId
+            ? { ...catalog, sectionCount: catalog.sectionCount + 1 }
+            : catalog,
+        ),
+      );
       setSelectedFolderId(created.id);
       setPage(1);
       setIsCreateFolderOpen(false);
       setCreateFolderNameDraft("");
-      invalidateCatalogQueries();
       router.refresh();
     } finally {
       setIsFolderActionBusy(false);
     }
-  }, [activeCatalogId, createFolderNameDraft, invalidateCatalogQueries, router]);
+  }, [
+    activeCatalogId,
+    createFolderNameDraft,
+    folders,
+    queryClient,
+    router,
+  ]);
 
   const handleEditCatalog = useCallback(
     (catalogId: string) => {
@@ -847,14 +883,35 @@ export function CatalogNavigator({
         return;
       }
 
+      const updated = toNavigationFolderItem(result.data);
+      if (activeCatalogId) {
+        const currentFolders =
+          queryClient.getQueryData<CatalogNavigationFolderItem[]>(
+            adminQueryKeys.navigation(activeCatalogId),
+          ) ?? folders;
+        queryClient.setQueryData(
+          adminQueryKeys.navigation(activeCatalogId),
+          sortByName(
+            currentFolders.map((folder) =>
+              folder.id === updated.id ? updated : folder,
+            ),
+          ),
+        );
+      }
       setEditFolderTarget(null);
       setEditFolderNameDraft("");
-      invalidateCatalogQueries();
       router.refresh();
     } finally {
       setIsFolderActionBusy(false);
     }
-  }, [editFolderNameDraft, editFolderTarget, invalidateCatalogQueries, router]);
+  }, [
+    activeCatalogId,
+    editFolderNameDraft,
+    editFolderTarget,
+    folders,
+    queryClient,
+    router,
+  ]);
 
   const handleConfirmDeleteCatalog = useCallback(async () => {
     if (!deleteCatalogTarget) {
@@ -1009,13 +1066,22 @@ export function CatalogNavigator({
             isRefreshing={hideInternalLoaders ? false : isTableRefreshing}
             isFilterRefreshing={hideInternalLoaders ? false : isFilterRefreshing}
             error={productsError}
-            emptyMessage={
+            emptyTitle={
               catalogHasNoFolders
-                ? "Este catálogo no tiene carpetas."
+                ? "Este catálogo no tiene carpetas"
                 : !activeCatalogId
-                  ? "Seleccioná un catálogo y una carpeta."
-                  : "Seleccioná una carpeta."
+                  ? "Seleccioná un catálogo y una carpeta"
+                  : "Seleccioná una carpeta"
             }
+            emptyDescription={
+              catalogHasNoFolders
+                ? "Creá una carpeta o importá un Excel para comenzar."
+                : null
+            }
+            onImportExcel={
+              isAdmin && catalogHasNoFolders ? handleImportExcelClick : undefined
+            }
+            onAddFolder={isAdmin && catalogHasNoFolders ? handleAddFolder : undefined}
             onPageChange={handlePageChange}
             enableColumnFilters={enableColumnFilters}
             columnFilters={columnFilters}

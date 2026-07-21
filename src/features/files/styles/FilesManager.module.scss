@@ -949,30 +949,6 @@ $files-shadow:
   white-space: nowrap;
 }
 
-.emptyCta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 0.35rem;
-  padding: 0.55rem 1rem;
-  border-radius: 999px;
-  background: $blue;
-  font-family: $font-sans;
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: $white;
-  text-decoration: none;
-
-  &:hover {
-    background: color-mix(in srgb, $blue 94%, black);
-  }
-
-  &:focus-visible {
-    outline: 2px solid $blue;
-    outline-offset: 2px;
-  }
-}
-
 .desktopTable {
   display: block;
 }

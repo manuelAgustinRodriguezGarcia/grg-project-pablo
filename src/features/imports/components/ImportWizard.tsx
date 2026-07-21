@@ -319,14 +319,17 @@ export function ImportWizard({
     (priceListId: string) => {
       setSelectedPriceListId(priceListId);
       const list = priceListList.find((item) => item.id === priceListId);
-      if (list) {
-        if (list.supplierName?.trim()) {
-          setSupplierName(list.supplierName.trim());
+
+      if (list && !supplierName.trim()) {
+        const fromList = list.supplierName?.trim() ?? "";
+        if (fromList) {
+          setSupplierName(fromList);
         }
         if (list.supplierDate) {
           setSupplierDate(list.supplierDate);
         }
       }
+
       setFolderColumns([]);
       setMappingRows([]);
       setPrimaryCodeHeaderKey("");
@@ -334,7 +337,7 @@ export function ImportWizard({
       setPreview(null);
       setSelectedAction(null);
     },
-    [priceListList],
+    [priceListList, supplierName],
   );
 
   const handleSelectFolder = useCallback((folderId: string) => {
@@ -1255,10 +1258,6 @@ export function ImportWizard({
                   isBusy={isBusy}
                   onSupplierNameChange={setSupplierName}
                   onSupplierDateChange={setSupplierDate}
-                  onStartCreatePriceList={() => {
-                    setSupplierName("");
-                    setSupplierDate(getTodayIsoDateOnly());
-                  }}
                   onSelectPriceList={handleSelectPriceList}
                   onSelectSheet={setSelectedSheetName}
                   onCreatePriceList={handleCreatePriceList}

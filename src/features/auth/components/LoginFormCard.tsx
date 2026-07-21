@@ -118,7 +118,7 @@ export function LoginFormCard({ redirectTo = ADMIN_HOME_PATH }: LoginFormCardPro
         </div>
       </div>
 
-      <div className={styles.rememberRow}>
+      <label className={styles.rememberRow} htmlFor="login-remember-email">
         <input
           id="login-remember-email"
           className={styles.rememberCheckbox}
@@ -127,10 +127,9 @@ export function LoginFormCard({ redirectTo = ADMIN_HOME_PATH }: LoginFormCardPro
           onChange={(event) => setRememberEmail(event.target.checked)}
           disabled={isPending}
         />
-        <label className={styles.rememberLabel} htmlFor="login-remember-email">
-          Recordar mi correo
-        </label>
-      </div>
+        <span className={styles.rememberBox} aria-hidden="true" />
+        <span className={styles.rememberLabel}>Recordar mi correo</span>
+      </label>
 
       <button
         type="submit"

@@ -40,7 +40,6 @@ type PriceItemTableProps = {
   hasSelectedList: boolean;
   hasAnyLists: boolean;
   onPageChange: (page: number) => void;
-  onImportExcel?: () => void;
   onEditItem?: (item: PriceItemTableRow) => void;
   onDeleteItem?: (item: PriceItemTableRow) => void;
   columnDetails: PriceColumnListItem[];
@@ -127,7 +126,6 @@ export const PriceItemTable = memo(function PriceItemTable({
   hasSelectedList,
   hasAnyLists,
   onPageChange,
-  onImportExcel,
   onEditItem,
   onDeleteItem,
   columnDetails,
@@ -214,17 +212,6 @@ export const PriceItemTable = memo(function PriceItemTable({
           <p className={styles.tableStateText}>
             Importe un Excel para crear la lista automáticamente.
           </p>
-          {isAdmin && onImportExcel ? (
-            <div className={styles.emptyStateActions}>
-              <button
-                type="button"
-                className={`${styles.emptyStateCta} ${styles.emptyStateCtaGreen}`}
-                onClick={onImportExcel}
-              >
-                Importar Excel
-              </button>
-            </div>
-          ) : null}
         </div>
       </section>
     );

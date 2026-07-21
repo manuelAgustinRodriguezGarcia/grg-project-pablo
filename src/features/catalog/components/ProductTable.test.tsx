@@ -141,6 +141,7 @@ describe("ProductTable", () => {
       <ProductTable data={data} isLoading={false} error={null} onPageChange={vi.fn()} />,
     );
 
+    expect(screen.getByText("Esta carpeta está vacía")).toBeInTheDocument();
     expect(screen.getByText("No hay productos en esta carpeta.")).toBeInTheDocument();
     expect(screen.getByRole("status")).toBeInTheDocument();
     expect(container.querySelector(".tableEmptyIcon")).toBeInTheDocument();

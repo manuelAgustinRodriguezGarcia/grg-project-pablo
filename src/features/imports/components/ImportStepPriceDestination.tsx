@@ -23,7 +23,6 @@ type ImportStepPriceDestinationProps = {
   onSelectPriceList: (priceListId: string) => void;
   onSelectSheet: (sheetName: string) => void;
   onCreatePriceList: (name: string) => Promise<boolean>;
-  onStartCreatePriceList?: () => void;
 };
 
 export function ImportStepPriceDestination({
@@ -41,7 +40,6 @@ export function ImportStepPriceDestination({
   onSelectPriceList,
   onSelectSheet,
   onCreatePriceList,
-  onStartCreatePriceList,
 }: ImportStepPriceDestinationProps) {
   const [listDraft, setListDraft] = useState<string | null>(null);
 
@@ -100,13 +98,7 @@ export function ImportStepPriceDestination({
             type="button"
             className={styles.addButton}
             onClick={() =>
-              setListDraft((value) => {
-                if (value === null) {
-                  onStartCreatePriceList?.();
-                  return selectedSheetName;
-                }
-                return null;
-              })
+              setListDraft((value) => (value === null ? selectedSheetName : null))
             }
             disabled={isBusy}
           >

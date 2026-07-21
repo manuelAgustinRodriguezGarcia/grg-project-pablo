@@ -63,6 +63,21 @@ export function ColumnHeaderCell({
       ref={headerRef}
       scope="col"
       className={`${styles.tableDataCell} ${showColumnMenu ? styles.tableHeaderFilterable : ""} ${hasActiveFilter ? styles.tableHeaderFiltered : ""} ${isFilterMenuOpen ? styles.tableHeaderFilterOpen : ""} ${isHiddenForNormalUser ? styles.tableColumnHidden : ""}`}
+      onMouseDown={(event) => {
+        // USUARIO: evitar que el <th> robe el foco al abrir el filtro,
+        // así el input puede quedar enfocado de inmediato.
+        if (!showColumnMenu || isAdmin) {
+          return;
+        }
+
+        if (!headerRef.current?.contains(event.target as Node)) {
+          return;
+        }
+
+        if (!isFilterMenuOpen) {
+          event.preventDefault();
+        }
+      }}
       onClick={(event) => {
         if (!showColumnMenu) {
           return;

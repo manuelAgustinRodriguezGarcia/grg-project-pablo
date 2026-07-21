@@ -104,6 +104,49 @@
   }
 }
 
+.passwordInputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordInput {
+  padding-right: 2.5rem;
+}
+
+.passwordEyeButton {
+  position: absolute;
+  right: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: rgba($navy, 0.5);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($blue, 0.45);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.passwordEyeIcon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
 .formTextarea {
   min-height: 4.5rem;
   resize: vertical;
