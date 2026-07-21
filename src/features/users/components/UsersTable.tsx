@@ -4,7 +4,7 @@ import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkelet
 import { UserRoleBadge } from "@/features/users/components/UserRoleBadge";
 import type { UserListItem } from "@/features/users/types/user.types";
 import { formatAdminDateTime } from "@/features/files/utils/format-admin-datetime";
-import { ICON_STROKE, Pencil, UserRound, UserX } from "@/shared/icons";
+import { ICON_STROKE, Pencil, Trash2, UserRound } from "@/shared/icons";
 import styles from "@/features/users/styles/UsersManager.module.scss";
 
 type UsersTableProps = {
@@ -95,43 +95,34 @@ export function UsersTable({
                     </td>
                     <td className={styles.actionsCell}>
                       <div className={styles.actionsGroup}>
-                        <span className={styles.actionWrap}>
-                          <button
-                            type="button"
-                            className={styles.iconButton}
-                            onClick={() => onEdit(user)}
-                            aria-label={`Editar ${user.name}`}
-                            disabled={isBusy}
-                          >
-                            <Pencil strokeWidth={ICON_STROKE} aria-hidden />
-                          </button>
-                          <span className={styles.actionTooltip} role="tooltip">
-                            Editar
-                          </span>
-                        </span>
-                        <span className={styles.actionWrap}>
-                          <button
-                            type="button"
-                            className={styles.iconButtonDanger}
-                            onClick={() => onToggleStatus(user)}
-                            aria-label={
-                              user.status === "ACTIVE"
-                                ? `Desactivar ${user.name}`
-                                : `Activar ${user.name}`
-                            }
-                            disabled={isBusy || (user.status === "ACTIVE" && isSelf)}
-                          >
-                            <UserX strokeWidth={ICON_STROKE} aria-hidden />
-                          </button>
-                          <span
-                            className={`${styles.actionTooltip} ${styles.actionTooltipDanger}`}
-                            role="tooltip"
-                          >
-                            {isSelf && user.status === "ACTIVE"
+                        <button
+                          type="button"
+                          className={styles.editActionButton}
+                          onClick={() => onEdit(user)}
+                          disabled={isBusy}
+                        >
+                          <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+                          <span>Editar</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.deleteActionButton}
+                          onClick={() => onToggleStatus(user)}
+                          title={
+                            isSelf && user.status === "ACTIVE"
                               ? "No es posible desactivar su propia cuenta"
-                              : "Eliminar"}
-                          </span>
-                        </span>
+                              : undefined
+                          }
+                          aria-label={
+                            user.status === "ACTIVE"
+                              ? `Eliminar ${user.name}`
+                              : `Activar ${user.name}`
+                          }
+                          disabled={isBusy || (user.status === "ACTIVE" && isSelf)}
+                        >
+                          <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+                          <span>{user.status === "ACTIVE" ? "Eliminar" : "Activar"}</span>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -165,7 +156,8 @@ export function UsersTable({
                     onClick={() => onEdit(user)}
                     disabled={isBusy}
                   >
-                    Editar
+                    <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+                    <span>Editar</span>
                   </button>
                   <button
                     type="button"
@@ -173,7 +165,8 @@ export function UsersTable({
                     onClick={() => onToggleStatus(user)}
                     disabled={isBusy || (user.status === "ACTIVE" && isSelf)}
                   >
-                    {user.status === "ACTIVE" ? "Desactivar" : "Activar"}
+                    <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+                    <span>{user.status === "ACTIVE" ? "Eliminar" : "Activar"}</span>
                   </button>
                 </div>
               </article>

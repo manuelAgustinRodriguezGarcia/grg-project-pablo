@@ -783,46 +783,6 @@ $price-shadow:
   }
 }
 
-.emptyStateActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  margin-top: 0.5rem;
-}
-
-.emptyStateCta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0;
-  min-height: 2.35rem;
-  padding: 0.45rem 1rem;
-  border: 1px solid rgba($blue, 0.35);
-  border-radius: 999px;
-  background: rgba($blue, 0.06);
-  color: $blue;
-  font-family: $font-sans;
-  font-size: 0.86rem;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:hover {
-    background: rgba($blue, 0.12);
-  }
-}
-
-.emptyStateCtaGreen {
-  border-color: rgba($green, 0.35);
-  background: rgba($green, 0.06);
-  color: $green;
-
-  &:hover {
-    background: rgba($green, 0.12);
-  }
-}
-
 .colPrimaryCode {
   width: 9rem;
 }

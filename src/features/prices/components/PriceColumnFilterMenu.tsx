@@ -135,6 +135,7 @@ export function PriceColumnFilterMenu({
 }: PriceColumnFilterMenuProps) {
   const menuId = useId();
   const popoverRef = useRef<HTMLDivElement>(null);
+  const filterInputRef = useRef<HTMLInputElement>(null);
   const debounceTimeoutRef = useRef<number | null>(null);
   const wasOpenRef = useRef(false);
   const externalClearRef = useRef(false);
@@ -216,6 +217,36 @@ export function PriceColumnFilterMenu({
 
     updatePopoverPosition();
   }, [isOpen, updatePopoverPosition]);
+
+  useEffect(() => {
+    if (!isOpen || isAdmin) {
+      return;
+    }
+
+    let cancelled = false;
+
+    function focusFilterInput() {
+      if (cancelled) {
+        return;
+      }
+
+      const input = filterInputRef.current;
+      if (!input || document.activeElement === input) {
+        return;
+      }
+
+      input.focus({ preventScroll: true });
+    }
+
+    const immediateId = window.setTimeout(focusFilterInput, 0);
+    const retryId = window.setTimeout(focusFilterInput, 40);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(immediateId);
+      window.clearTimeout(retryId);
+    };
+  }, [isAdmin, isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -377,6 +408,7 @@ export function PriceColumnFilterMenu({
         ) : null}
 
         <input
+          ref={filterInputRef}
           type="text"
           className={filterStyles.columnFilterInput}
           value={draftValue}
@@ -389,7 +421,6 @@ export function PriceColumnFilterMenu({
             }
           }}
           placeholder={formatColumnFilterPlaceholder(column.displayName)}
-          autoFocus
           aria-label={`Valor de filtro para ${column.displayName}`}
         />
 

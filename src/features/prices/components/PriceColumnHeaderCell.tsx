@@ -59,6 +59,17 @@ export function PriceColumnHeaderCell({
       ref={headerRef}
       scope="col"
       className={thClassName || undefined}
+      onMouseDown={(event) => {
+        if (!showFilterMenu || isAdmin || isFilterMenuOpen) {
+          return;
+        }
+
+        if (!headerRef.current?.contains(event.target as Node)) {
+          return;
+        }
+
+        event.preventDefault();
+      }}
       onDoubleClick={(event) => {
         if (!showFilterMenu) {
           return;

@@ -278,11 +278,6 @@ export function UploadedFilesList({
               aria-hidden
             />
             <p className={styles.tableEmptyText}>No hay archivos subidos.</p>
-            {isAdmin ? (
-              <Link href="/admin/catalogos" className={styles.emptyCta}>
-                Importar desde Catálogos
-              </Link>
-            ) : null}
           </div>
         ) : (
           isDesktopLayout ? (

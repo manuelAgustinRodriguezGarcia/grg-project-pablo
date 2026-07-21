@@ -27,6 +27,7 @@ export function AdminLogo({ isCollapsed = false }: AdminLogoProps) {
         width={isCollapsed ? 44 : width}
         height={44}
         decoding="async"
+        draggable={false}
       />
     </div>
   );

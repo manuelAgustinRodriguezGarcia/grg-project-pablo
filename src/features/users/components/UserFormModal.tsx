@@ -6,6 +6,7 @@ import { CustomSelect } from "@/shared/components/CustomSelect";
 import type { UserListItem } from "@/features/users/types/user.types";
 import { USER_ROLE_LABELS } from "@/features/users/types/user.types";
 import type { UserRole } from "@/generated/prisma/client";
+import { Eye, EyeOff, ICON_STROKE } from "@/shared/icons";
 import modalStyles from "@/features/prices/styles/PriceColumnEditModal.module.scss";
 
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = (
@@ -45,6 +46,7 @@ export function UserFormModal({
   const [email, setEmail] = useState(initialUser?.email ?? "");
   const [role, setRole] = useState<UserRole>(initialUser?.role ?? "USUARIO");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -156,18 +158,42 @@ export function UserFormModal({
             <label className={modalStyles.formLabel} htmlFor="user-password">
               {mode === "create" ? "Contraseña" : "Nueva contraseña (opcional)"}
             </label>
-            <input
-              id="user-password"
-              type="password"
-              className={modalStyles.formInput}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              minLength={mode === "create" ? 8 : undefined}
-              maxLength={72}
-              required={mode === "create"}
-              autoComplete={mode === "create" ? "new-password" : "off"}
-              disabled={isBusy}
-            />
+            <div className={modalStyles.passwordInputWrap}>
+              <input
+                id="user-password"
+                type={showPassword ? "text" : "password"}
+                className={`${modalStyles.formInput} ${modalStyles.passwordInput}`}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={mode === "create" ? 8 : undefined}
+                maxLength={72}
+                required={mode === "create"}
+                autoComplete={mode === "create" ? "new-password" : "off"}
+                disabled={isBusy}
+              />
+              <button
+                type="button"
+                className={modalStyles.passwordEyeButton}
+                onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-pressed={showPassword}
+                disabled={isBusy}
+              >
+                {showPassword ? (
+                  <EyeOff
+                    className={modalStyles.passwordEyeIcon}
+                    strokeWidth={ICON_STROKE}
+                    aria-hidden
+                  />
+                ) : (
+                  <Eye
+                    className={modalStyles.passwordEyeIcon}
+                    strokeWidth={ICON_STROKE}
+                    aria-hidden
+                  />
+                )}
+              </button>
+            </div>
           </div>
 
           {error ? <p className={modalStyles.formError}>{error}</p> : null}

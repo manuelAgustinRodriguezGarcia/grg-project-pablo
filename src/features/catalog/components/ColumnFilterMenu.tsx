@@ -148,6 +148,7 @@ export function ColumnFilterMenu({
   const isVisibilityOnly = mode === "visibility-only";
   const menuId = useId();
   const popoverRef = useRef<HTMLDivElement>(null);
+  const filterInputRef = useRef<HTMLInputElement>(null);
   const debounceTimeoutRef = useRef<number | null>(null);
   const wasOpenRef = useRef(false);
   const externalClearRef = useRef(false);
@@ -237,12 +238,49 @@ export function ColumnFilterMenu({
   }, [alignPopover, anchorRef]);
 
   useLayoutEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || isEditModalOpen) {
       return;
     }
 
     updatePopoverPosition();
-  }, [hasColumnDescription, isOpen, updatePopoverPosition]);
+  }, [hasColumnDescription, isEditModalOpen, isOpen, updatePopoverPosition]);
+
+  useEffect(() => {
+    // Solo USUARIO (no admin): ahorrar el click extra en el input.
+    if (!isOpen || isEditModalOpen || isVisibilityOnly || isAdmin) {
+      return;
+    }
+
+    let cancelled = false;
+
+    function focusFilterInput() {
+      if (cancelled) {
+        return;
+      }
+
+      const input = filterInputRef.current;
+      if (!input) {
+        return;
+      }
+
+      if (document.activeElement === input) {
+        return;
+      }
+
+      input.focus({ preventScroll: true });
+    }
+
+    // El click del <th> termina después del layout; hay que enfocar luego,
+    // si no el navegador devuelve el foco al header.
+    const immediateId = window.setTimeout(focusFilterInput, 0);
+    const retryId = window.setTimeout(focusFilterInput, 40);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(immediateId);
+      window.clearTimeout(retryId);
+    };
+  }, [isAdmin, isEditModalOpen, isOpen, isVisibilityOnly]);
 
   useEffect(() => {
     if (isOpen) {
@@ -456,6 +494,7 @@ export function ColumnFilterMenu({
 
         {!isVisibilityOnly ? (
           <input
+            ref={filterInputRef}
             type="text"
             className={styles.columnFilterInput}
             value={draftValue}
@@ -468,7 +507,6 @@ export function ColumnFilterMenu({
               }
             }}
             placeholder={formatColumnFilterPlaceholder(column.displayName)}
-            autoFocus={!isEditModalOpen}
             aria-label={`Valor de filtro para ${column.displayName}`}
           />
         ) : null}

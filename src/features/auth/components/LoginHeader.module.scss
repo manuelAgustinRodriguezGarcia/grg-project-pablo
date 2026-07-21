@@ -15,3 +15,16 @@
   padding-left: landing.$landing-content-inset-x;
   padding-right: $section-padding-x;
 }
+
+.logoLink {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  text-decoration: none;
+  border-radius: $radius-sm;
+
+  &:focus-visible {
+    outline: 2px solid $blue-main;
+    outline-offset: 4px;
+  }
+}

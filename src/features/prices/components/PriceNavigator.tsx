@@ -580,7 +580,6 @@ export function PriceNavigator({
             hasSelectedList={Boolean(activeListId)}
             hasAnyLists={sortedLists.length > 0}
             onPageChange={handlePageChange}
-            onImportExcel={isAdmin ? handleImportExcelClick : undefined}
             onEditItem={
               isAdmin
                 ? (item) => {

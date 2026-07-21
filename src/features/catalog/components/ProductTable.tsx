@@ -32,7 +32,10 @@ type ProductTableProps = {
   isRefreshing?: boolean;
   isFilterRefreshing?: boolean;
   error: string | null;
-  emptyMessage?: string;
+  emptyTitle?: string;
+  emptyDescription?: string | null;
+  onImportExcel?: () => void;
+  onAddFolder?: () => void;
   onPageChange: (page: number) => void;
   enableColumnFilters?: boolean;
   columnFilters?: ColumnFilterInput[];
@@ -177,7 +180,10 @@ export const ProductTable = memo(function ProductTable({
   isRefreshing = false,
   isFilterRefreshing = false,
   error,
-  emptyMessage = "Seleccioná un catálogo y una carpeta.",
+  emptyTitle = "Seleccioná un catálogo y una carpeta",
+  emptyDescription = null,
+  onImportExcel,
+  onAddFolder,
   onPageChange,
   enableColumnFilters = false,
   columnFilters = [],
@@ -349,7 +355,32 @@ export const ProductTable = memo(function ProductTable({
               strokeWidth={ICON_STROKE}
               aria-hidden
             />
-            <p className={styles.tableEmptyText}>{emptyMessage}</p>
+            <h2 className={styles.tableEmptyTitle}>{emptyTitle}</h2>
+            {emptyDescription ? (
+              <p className={styles.tableEmptyText}>{emptyDescription}</p>
+            ) : null}
+            {isAdmin && (onAddFolder || onImportExcel) ? (
+              <div className={styles.emptyStateActions}>
+                {onAddFolder ? (
+                  <button
+                    type="button"
+                    className={styles.emptyStateCta}
+                    onClick={onAddFolder}
+                  >
+                    Agregar carpeta
+                  </button>
+                ) : null}
+                {onImportExcel ? (
+                  <button
+                    type="button"
+                    className={`${styles.emptyStateCta} ${styles.emptyStateCtaGreen}`}
+                    onClick={onImportExcel}
+                  >
+                    Importar Excel
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
@@ -400,11 +431,20 @@ export const ProductTable = memo(function ProductTable({
               strokeWidth={ICON_STROKE}
               aria-hidden
             />
-            <p className={styles.tableEmptyText}>
+            <h2 className={styles.tableEmptyTitle}>
               {trimmedFolderSearch
-                ? `Sin resultados para «${trimmedFolderSearch}» en esta carpeta.`
-                : "No hay productos en esta carpeta."}
-            </p>
+                ? `Sin resultados para «${trimmedFolderSearch}»`
+                : "Esta carpeta está vacía"}
+            </h2>
+            {trimmedFolderSearch ? (
+              <p className={styles.tableEmptyText}>
+                Probá con otro término o limpiá la búsqueda.
+              </p>
+            ) : (
+              <p className={styles.tableEmptyText}>
+                No hay productos en esta carpeta.
+              </p>
+            )}
           </div>
         ) : (
         <table className={styles.productTable}>
