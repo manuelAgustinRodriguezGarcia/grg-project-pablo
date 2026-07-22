@@ -46,9 +46,9 @@ export function PriceColumnHeaderCell({
 
   const thClassName = [
     column.isPrice ? styles.priceHeaderPrice : undefined,
-    showFilterMenu ? filterStyles.tableHeaderFilterable : undefined,
-    hasActiveFilter ? filterStyles.tableHeaderFiltered : undefined,
-    isFilterMenuOpen ? filterStyles.tableHeaderFilterOpen : undefined,
+    showFilterMenu ? styles.tableHeaderFilterable : undefined,
+    hasActiveFilter ? styles.tableHeaderFiltered : undefined,
+    isFilterMenuOpen ? styles.tableHeaderFilterOpen : undefined,
     isHiddenForNormalUser ? filterStyles.tableColumnHidden : undefined,
   ]
     .filter(Boolean)
@@ -60,7 +60,9 @@ export function PriceColumnHeaderCell({
       scope="col"
       className={thClassName || undefined}
       onMouseDown={(event) => {
-        if (!showFilterMenu || isAdmin || isFilterMenuOpen) {
+        // USUARIO: evitar que el <th> robe el foco al abrir el filtro,
+        // así el input puede quedar enfocado de inmediato.
+        if (!showFilterMenu || isAdmin) {
           return;
         }
 
@@ -68,14 +70,28 @@ export function PriceColumnHeaderCell({
           return;
         }
 
-        event.preventDefault();
+        if (!isFilterMenuOpen) {
+          event.preventDefault();
+        }
       }}
-      onDoubleClick={(event) => {
+      onClick={(event) => {
         if (!showFilterMenu) {
           return;
         }
 
+        // Portaled popovers still bubble in the React tree. Ignore clicks
+        // that did not originate inside the header cell DOM.
+        if (!headerRef.current?.contains(event.target as Node)) {
+          return;
+        }
+
         event.preventDefault();
+
+        if (isFilterMenuOpen) {
+          onFilterMenuClose?.();
+          return;
+        }
+
         onFilterMenuOpen?.();
       }}
     >
