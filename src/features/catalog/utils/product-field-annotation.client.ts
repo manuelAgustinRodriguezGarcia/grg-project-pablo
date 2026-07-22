@@ -1,6 +1,20 @@
 import type { ProductFieldAnnotationDisplay } from "@/server/services/product-field-annotation.utils";
+import {
+  postJson,
+  uploadFileToSignedTarget,
+} from "@/features/catalog/utils/direct-storage-upload";
 
 export type ProductFieldAnnotation = ProductFieldAnnotationDisplay;
+
+type PendingUploadIntent = {
+  upload: {
+    bucket: string;
+    path: string;
+    token: string;
+    contentType: string;
+    originalFilename: string;
+  };
+};
 
 export async function uploadProductFieldHelpImage(
   productId: string,
@@ -19,47 +33,61 @@ export async function uploadProductFieldHelpImage(
     }
   | { success: false; error: string; code?: string }
 > {
-  const formData = new FormData();
-  formData.append("file", file);
+  const encodedKey = encodeURIComponent(columnInternalKey);
 
-  if (altText) {
-    formData.append("altText", altText);
-  }
-
-  const response = await fetch(
-    `/api/admin/products/${productId}/fields/${encodeURIComponent(columnInternalKey)}/help-image`,
+  const intent = await postJson<PendingUploadIntent>(
+    `/api/admin/products/${productId}/fields/${encodedKey}/help-image/upload-intent`,
     {
-      method: "POST",
-      body: formData,
+      originalFilename: file.name,
+      contentType: file.type || "application/octet-stream",
+      sizeBytes: file.size,
+      altText: altText ?? undefined,
     },
   );
 
-  const body = (await response.json().catch(() => null)) as
-    | {
-        annotation?: {
-          columnInternalKey: string;
-          helpText: string | null;
-          thumbnailUrl: string | null;
-          fullUrl: string | null;
-        };
-        error?: string;
-        code?: string;
-      }
-    | null;
+  if (!intent.ok) {
+    return { success: false, error: intent.error, code: intent.code };
+  }
 
-  if (!response.ok) {
+  try {
+    await uploadFileToSignedTarget(intent.data.upload, file);
+  } catch (error) {
     return {
       success: false,
-      error: body?.error ?? "No se pudo subir la imagen del campo.",
-      code: body?.code,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo subir la imagen del campo.",
     };
   }
 
-  if (!body?.annotation) {
-    return { success: false, error: "Respuesta inválida del servidor." };
+  const finalized = await postJson<{
+    annotation: {
+      columnInternalKey: string;
+      helpText: string | null;
+      thumbnailUrl: string | null;
+      fullUrl: string | null;
+    };
+  }>(
+    `/api/admin/products/${productId}/fields/${encodedKey}/help-image/finalize-upload`,
+    {
+      stagingPath: intent.data.upload.path,
+      originalFilename: file.name,
+      altText: altText ?? undefined,
+    },
+  );
+
+  if (!finalized.ok || !finalized.data.annotation) {
+    return {
+      success: false,
+      error: finalized.ok
+        ? "Respuesta inválida del servidor."
+        : finalized.error,
+      code: finalized.ok ? undefined : finalized.code,
+    };
   }
 
-  return { success: true, data: body.annotation };
+  return { success: true, data: finalized.data.annotation };
 }
 
 export async function deleteProductFieldHelpImage(

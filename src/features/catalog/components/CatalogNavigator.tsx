@@ -20,6 +20,7 @@ import { CatalogPageIntro } from "@/features/catalog/components/CatalogPageChrom
 import { LazyProductFormModal } from "@/features/catalog/components/LazyProductFormModal";
 import { ProductTable } from "@/features/catalog/components/ProductTable";
 import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
+import type { ImportDirectoryChange } from "@/features/imports/components/ImportWizard";
 import { deleteProductAction } from "@/features/records/actions/product.actions";
 import type {
   CatalogNavigationFolderItem,
@@ -257,6 +258,157 @@ export function CatalogNavigator({
     void queryClient.invalidateQueries({ queryKey: adminQueryKeys.navigation(activeCatalogId) });
     void queryClient.invalidateQueries({ queryKey: adminQueryKeys.products() });
   }, [activeCatalogId, queryClient]);
+
+  const bumpFolderProductCount = useCallback(
+    (folderId: string, delta: number) => {
+      if (!activeCatalogId || !folderId || delta === 0) {
+        return;
+      }
+
+      const currentFolders =
+        queryClient.getQueryData<CatalogNavigationFolderItem[]>(
+          adminQueryKeys.navigation(activeCatalogId),
+        ) ?? [];
+
+      if (currentFolders.length === 0) {
+        return;
+      }
+
+      queryClient.setQueryData(
+        adminQueryKeys.navigation(activeCatalogId),
+        currentFolders.map((folder) =>
+          folder.id === folderId
+            ? {
+                ...folder,
+                productCount: Math.max(0, folder.productCount + delta),
+              }
+            : folder,
+        ),
+      );
+    },
+    [activeCatalogId, queryClient],
+  );
+
+  const handleDirectoryChanged = useCallback(
+    (change: ImportDirectoryChange) => {
+      switch (change.type) {
+        case "catalog-created": {
+          setCatalogList((current) => sortByName([...current, change.catalog]));
+          queryClient.setQueryData(adminQueryKeys.navigation(change.catalog.id), []);
+          void queryClient.cancelQueries({
+            queryKey: adminQueryKeys.navigation(change.catalog.id),
+          });
+          break;
+        }
+        case "catalog-updated": {
+          setCatalogList((current) =>
+            sortByName(
+              current.map((catalog) =>
+                catalog.id === change.catalog.id ? change.catalog : catalog,
+              ),
+            ),
+          );
+          break;
+        }
+        case "catalog-deleted": {
+          setCatalogList((current) =>
+            current.filter((catalog) => catalog.id !== change.catalogId),
+          );
+          void queryClient.removeQueries({
+            queryKey: adminQueryKeys.navigation(change.catalogId),
+          });
+          if (selectedCatalogId === change.catalogId) {
+            setSelectedCatalogId("");
+            setSelectedFolderId("");
+          }
+          break;
+        }
+        case "folder-created": {
+          const currentFolders = queryClient.getQueryData<CatalogNavigationFolderItem[]>(
+            adminQueryKeys.navigation(change.catalogId),
+          );
+          if (currentFolders) {
+            queryClient.setQueryData(
+              adminQueryKeys.navigation(change.catalogId),
+              sortByName([
+                ...currentFolders.filter((folder) => folder.id !== change.folder.id),
+                change.folder,
+              ]),
+            );
+          } else {
+            void queryClient.invalidateQueries({
+              queryKey: adminQueryKeys.navigation(change.catalogId),
+            });
+          }
+          setCatalogList((current) =>
+            current.map((catalog) =>
+              catalog.id === change.catalogId
+                ? { ...catalog, sectionCount: catalog.sectionCount + 1 }
+                : catalog,
+            ),
+          );
+          break;
+        }
+        case "folder-updated": {
+          const currentFolders = queryClient.getQueryData<CatalogNavigationFolderItem[]>(
+            adminQueryKeys.navigation(change.catalogId),
+          );
+          if (currentFolders) {
+            queryClient.setQueryData(
+              adminQueryKeys.navigation(change.catalogId),
+              sortByName(
+                currentFolders.map((folder) =>
+                  folder.id === change.folder.id ? change.folder : folder,
+                ),
+              ),
+            );
+          } else {
+            void queryClient.invalidateQueries({
+              queryKey: adminQueryKeys.navigation(change.catalogId),
+            });
+          }
+          break;
+        }
+        case "folder-deleted": {
+          const currentFolders = queryClient.getQueryData<CatalogNavigationFolderItem[]>(
+            adminQueryKeys.navigation(change.catalogId),
+          );
+          if (currentFolders) {
+            queryClient.setQueryData(
+              adminQueryKeys.navigation(change.catalogId),
+              currentFolders.filter((folder) => folder.id !== change.folderId),
+            );
+          } else {
+            void queryClient.invalidateQueries({
+              queryKey: adminQueryKeys.navigation(change.catalogId),
+            });
+          }
+          setCatalogList((current) =>
+            current.map((catalog) =>
+              catalog.id === change.catalogId
+                ? {
+                    ...catalog,
+                    sectionCount: Math.max(0, catalog.sectionCount - 1),
+                  }
+                : catalog,
+            ),
+          );
+          if (selectedFolderId === change.folderId) {
+            setSelectedFolderId("");
+          }
+          break;
+        }
+        default: {
+          const _exhaustive: never = change;
+          void _exhaustive;
+          break;
+        }
+      }
+
+      router.refresh();
+    },
+    [queryClient, router, selectedCatalogId, selectedFolderId],
+  );
 
   const navigationQuery = useQuery({
     queryKey: adminQueryKeys.navigation(activeCatalogId),
@@ -628,15 +780,17 @@ export function CatalogNavigator({
       }
 
       setDeleteProductTarget(null);
+      bumpFolderProductCount(activeFolderId, -1);
       invalidateCatalogQueries();
     } finally {
       setIsProductActionBusy(false);
     }
-  }, [deleteProductTarget, invalidateCatalogQueries]);
+  }, [activeFolderId, bumpFolderProductCount, deleteProductTarget, invalidateCatalogQueries]);
 
   const handleImportPublished = useCallback(() => {
     invalidateCatalogQueries();
-  }, [invalidateCatalogQueries]);
+    router.refresh();
+  }, [invalidateCatalogQueries, router]);
 
   const handleAddCatalog = useCallback(() => {
     setCatalogActionError(null);
@@ -1005,6 +1159,7 @@ export function CatalogNavigator({
       initialFolderId={activeFolderId}
       onClose={() => setIsImportOpen(false)}
       onPublished={handleImportPublished}
+      onDirectoryChanged={handleDirectoryChanged}
     />
   ) : null;
 
@@ -1117,10 +1272,11 @@ export function CatalogNavigator({
           }}
           onSaved={() => {
             const wasCreating = editingProduct === null;
-            invalidateCatalogQueries();
             if (wasCreating) {
+              bumpFolderProductCount(productTable.folder.id, 1);
               setPage(1);
             }
+            invalidateCatalogQueries();
           }}
         />
       ) : null}

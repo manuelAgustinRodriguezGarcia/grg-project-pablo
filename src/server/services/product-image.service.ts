@@ -34,6 +34,13 @@ import {
 } from "@/server/storage";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
 import { BUCKET_CONFIGS } from "@/server/storage/config";
+import { StorageError } from "@/server/storage/errors";
+import {
+  beginPendingImageUpload,
+  deletePendingImageUploadBestEffort,
+  downloadPendingImageUpload,
+  type PendingImageUploadTarget,
+} from "@/server/storage/pending-image-upload";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { ProductImageError } from "./product-image.errors";
@@ -1017,6 +1024,141 @@ export class ProductImageService {
     });
 
     return this.mapReviewItem(image);
+  }
+
+  async beginManualImageDirectUpload(input: {
+    productId: string;
+    originalFilename: string;
+    contentType: string;
+    sizeBytes: number;
+    isPrimary?: boolean;
+    sortOrder?: number;
+    label?: string | null;
+  }): Promise<{
+    upload: PendingImageUploadTarget;
+    meta: {
+      isPrimary?: boolean;
+      sortOrder?: number;
+      label?: string | null;
+    };
+  }> {
+    await this.assertProductForEditor(input.productId);
+
+    try {
+      const upload = await beginPendingImageUpload({
+        scope: "product-image",
+        ownerId: input.productId,
+        originalFilename: input.originalFilename,
+        contentType: input.contentType,
+        sizeBytes: input.sizeBytes,
+        maxSizeBytes: BUCKET_CONFIGS[STORAGE_BUCKETS.PRODUCT_IMAGES].maxSizeBytes,
+      });
+
+      return {
+        upload,
+        meta: {
+          isPrimary: input.isPrimary,
+          sortOrder: input.sortOrder,
+          label: input.label,
+        },
+      };
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw new ProductImageError(error.message, "VALIDATION_ERROR");
+      }
+      throw error;
+    }
+  }
+
+  async finalizeManualImageDirectUpload(input: {
+    productId: string;
+    stagingPath: string;
+    originalFilename: string;
+    isPrimary?: boolean;
+    sortOrder?: number;
+    label?: string | null;
+  }): Promise<ProductImageReviewItem> {
+    let buffer: Buffer;
+    try {
+      buffer = await downloadPendingImageUpload(input.stagingPath);
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw new ProductImageError(error.message, "VALIDATION_ERROR");
+      }
+      throw error;
+    }
+
+    try {
+      return await this.uploadManualImage({
+        productId: input.productId,
+        buffer,
+        originalFilename: input.originalFilename,
+        isPrimary: input.isPrimary,
+        sortOrder: input.sortOrder,
+        label: input.label,
+      });
+    } finally {
+      await deletePendingImageUploadBestEffort(input.stagingPath);
+    }
+  }
+
+  async beginReplaceManualImageDirectUpload(input: {
+    productId: string;
+    imageId: string;
+    originalFilename: string;
+    contentType: string;
+    sizeBytes: number;
+  }): Promise<{ upload: PendingImageUploadTarget }> {
+    await this.assertProductForEditor(input.productId);
+    const image = await productImageRepository.findById(input.imageId);
+    if (!image || image.productId !== input.productId || image.status === "DELETED") {
+      throw new ProductImageError("Imagen no encontrada.", "IMAGE_NOT_FOUND");
+    }
+
+    try {
+      const upload = await beginPendingImageUpload({
+        scope: "product-image-replace",
+        ownerId: input.productId,
+        originalFilename: input.originalFilename,
+        contentType: input.contentType,
+        sizeBytes: input.sizeBytes,
+        maxSizeBytes: BUCKET_CONFIGS[STORAGE_BUCKETS.PRODUCT_IMAGES].maxSizeBytes,
+      });
+      return { upload };
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw new ProductImageError(error.message, "VALIDATION_ERROR");
+      }
+      throw error;
+    }
+  }
+
+  async finalizeReplaceManualImageDirectUpload(input: {
+    productId: string;
+    imageId: string;
+    stagingPath: string;
+    originalFilename: string;
+  }): Promise<ProductImageReviewItem> {
+    let buffer: Buffer;
+    try {
+      buffer = await downloadPendingImageUpload(input.stagingPath);
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw new ProductImageError(error.message, "VALIDATION_ERROR");
+      }
+      throw error;
+    }
+
+    try {
+      return await this.replaceManualImage({
+        productId: input.productId,
+        imageId: input.imageId,
+        buffer,
+        originalFilename: input.originalFilename,
+      });
+    } finally {
+      await deletePendingImageUploadBestEffort(input.stagingPath);
+    }
   }
 
   async replaceManualImage(input: {

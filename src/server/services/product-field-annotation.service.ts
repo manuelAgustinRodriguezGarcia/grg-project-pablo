@@ -15,6 +15,13 @@ import {
   STORAGE_BUCKETS,
   uploadFile,
 } from "@/server/storage";
+import { StorageError } from "@/server/storage/errors";
+import {
+  beginPendingImageUpload,
+  deletePendingImageUploadBestEffort,
+  downloadPendingImageUpload,
+  type PendingImageUploadTarget,
+} from "@/server/storage/pending-image-upload";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { ProductFieldAnnotationError } from "./product-field-annotation.errors";
@@ -313,6 +320,67 @@ export class ProductFieldAnnotationService {
 
     const urls = await this.resolveImageUrls(updated);
     return toResolvedAnnotation(updated, urls);
+  }
+
+  async beginFieldHelpImageDirectUpload(input: {
+    productId: string;
+    columnInternalKey: string;
+    originalFilename: string;
+    contentType: string;
+    sizeBytes: number;
+    altText?: string | null;
+  }): Promise<{ upload: PendingImageUploadTarget; altText?: string | null }> {
+    await requireEditor();
+    const product = await requireProduct(input.productId);
+    await assertColumnKeyInFolder(product.folderId, input.columnInternalKey);
+
+    try {
+      const upload = await beginPendingImageUpload({
+        scope: "field-help",
+        ownerId: `${input.productId}-${input.columnInternalKey}`,
+        originalFilename: input.originalFilename,
+        contentType: input.contentType,
+        sizeBytes: input.sizeBytes,
+        maxSizeBytes:
+          BUCKET_CONFIGS[STORAGE_BUCKETS.PRODUCT_FIELD_HELP_IMAGES].maxSizeBytes,
+      });
+      return { upload, altText: input.altText };
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw new ProductFieldAnnotationError(error.message, "VALIDATION_ERROR");
+      }
+      throw error;
+    }
+  }
+
+  async finalizeFieldHelpImageDirectUpload(input: {
+    productId: string;
+    columnInternalKey: string;
+    stagingPath: string;
+    originalFilename: string;
+    altText?: string | null;
+  }): Promise<ProductFieldAnnotationResolved> {
+    let buffer: Buffer;
+    try {
+      buffer = await downloadPendingImageUpload(input.stagingPath);
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw new ProductFieldAnnotationError(error.message, "VALIDATION_ERROR");
+      }
+      throw error;
+    }
+
+    try {
+      return await this.uploadFieldHelpImage({
+        productId: input.productId,
+        columnInternalKey: input.columnInternalKey,
+        buffer,
+        originalFilename: input.originalFilename,
+        altText: input.altText,
+      });
+    } finally {
+      await deletePendingImageUploadBestEffort(input.stagingPath);
+    }
   }
 
   async deleteFieldHelpImage(

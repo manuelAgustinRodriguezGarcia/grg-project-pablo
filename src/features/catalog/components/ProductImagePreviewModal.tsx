@@ -13,6 +13,15 @@ type ProductImagePreviewModalProps = {
   onClose: () => void;
 };
 
+function preloadImage(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const image = new window.Image();
+    image.onload = () => resolve(true);
+    image.onerror = () => resolve(false);
+    image.src = url;
+  });
+}
+
 export function ProductImagePreviewModal({
   imageUrl,
   imageAlt,
@@ -39,31 +48,45 @@ export function ProductImagePreviewModal({
     let cancelled = false;
 
     async function resolvePreviewUrl() {
-      setIsLoading(true);
       setResolvedUrl(imageUrl);
+      setIsLoading(true);
 
-      if (productId && imageId) {
-        try {
-          const response = await fetch(
-            `/api/admin/products/${productId}/images/${imageId}/url?size=full`,
-          );
-
-          if (response.ok) {
-            const payload = (await response.json()) as { url: string | null };
-            if (!cancelled && payload.url) {
-              setResolvedUrl(payload.url);
-            }
-          }
-        } catch {
-          // Mantener thumbnail como fallback.
-        }
+      // If the opening URL is already cached, avoid a loading flash.
+      const initialReady = await preloadImage(imageUrl);
+      if (cancelled) {
+        return;
+      }
+      if (initialReady) {
+        setIsLoading(false);
       }
 
-      if (!cancelled) {
-        const image = imageRef.current;
-        if (image?.complete && image.naturalWidth > 0) {
+      if (!productId || !imageId) {
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/admin/products/${productId}/images/${imageId}/url?size=full`,
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as { url: string | null };
+        const fullUrl = payload.url;
+        if (!fullUrl || fullUrl === imageUrl || cancelled) {
+          return;
+        }
+
+        // Prefetch the full image, then swap without flashing "Cargando…".
+        const fullReady = await preloadImage(fullUrl);
+        if (!cancelled && fullReady) {
+          setResolvedUrl(fullUrl);
           setIsLoading(false);
         }
+      } catch {
+        // Keep the initial URL as fallback.
       }
     }
 
@@ -73,15 +96,6 @@ export function ProductImagePreviewModal({
       cancelled = true;
     };
   }, [imageUrl, productId, imageId]);
-
-  useEffect(() => {
-    setIsLoading(true);
-
-    const image = imageRef.current;
-    if (image?.complete && image.naturalWidth > 0) {
-      setIsLoading(false);
-    }
-  }, [resolvedUrl]);
 
   if (typeof document === "undefined") {
     return null;
