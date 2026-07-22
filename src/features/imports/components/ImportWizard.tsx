@@ -43,7 +43,6 @@ import {
   type ColumnMappingRow,
 } from "@/features/imports/utils/column-mapping";
 import {
-  appendExternalImagesToFormData,
   hasAttachedZip,
   hasExternalImages,
   snapshotExternalImageSources,
@@ -51,9 +50,10 @@ import {
   type StagedExternalImagesSummary,
 } from "@/features/imports/utils/external-images";
 import {
-  fetchStagedImageCount,
-  uploadExternalImagesToJob,
-} from "@/features/imports/utils/upload-external-images";
+  uploadExternalImagesToJobDirect,
+  uploadImportViaDirectStorage,
+} from "@/features/imports/utils/direct-import-upload";
+import { fetchStagedImageCount } from "@/features/imports/utils/upload-external-images";
 import { useNativeFilePickerOutsideClickGuard } from "@/features/imports/utils/native-file-picker-outside-click-guard";
 import {
   ANALYSIS_FINISH_STALLS,
@@ -264,7 +264,7 @@ export function ImportWizard({
 
       setIsUploadingImages(true);
       try {
-        await uploadExternalImagesToJob(jobId, externalImages);
+        await uploadExternalImagesToJobDirect(jobId, externalImages);
         if (options?.clearAfter) {
           setExternalImages({ zipFile: null, imageFiles: [] });
         }
@@ -615,30 +615,15 @@ export function ImportWizard({
     startLoadingOverlay("Subiendo archivo…", pickProgressStall(UPLOAD_STALLS));
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      if (!isPriceMode) {
-        appendExternalImagesToFormData(formData, externalImages);
-      }
-
       updateLoadingOverlay(
         "Subiendo archivo…",
         pickProgressStall(UPLOAD_WAIT_STALLS),
       );
 
-      const uploadResponse = await fetch("/api/admin/imports/upload", {
-        method: "POST",
-        body: formData,
+      const { jobId: newJobId } = await uploadImportViaDirectStorage({
+        excelFile: file,
+        externalImages: isPriceMode ? undefined : externalImages,
       });
-
-      if (!uploadResponse.ok) {
-        const payload = await uploadResponse.json().catch(() => null);
-        throw new Error(readErrorMessage(payload, "No se pudo subir el archivo."));
-      }
-
-      const { jobId: newJobId } = (await uploadResponse.json()) as {
-        jobId: string;
-      };
 
       await prepareJobForDestination(newJobId, {
         externalImagesSelection: externalImages,
