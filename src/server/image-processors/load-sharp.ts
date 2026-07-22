@@ -27,8 +27,7 @@ function loadSharpViaCjsHelper(): SharpModule | null {
 
 /**
  * Production/serverless path. The string literal must stay static so Next.js
- * file tracing packs `sharp` into the Vercel function (createRequire from
- * package.json is invisible to the tracer).
+ * file tracing packs `sharp` (and its deps) into the Vercel function.
  */
 async function loadSharpViaImport(): Promise<SharpModule> {
   const mod = await import("sharp");
@@ -37,7 +36,14 @@ async function loadSharpViaImport(): Promise<SharpModule> {
 
 export async function loadSharp(): Promise<SharpModule> {
   if (!sharpModule) {
-    sharpModule = loadSharpViaCjsHelper() ?? (await loadSharpViaImport());
+    // On Vercel the CJS helper may still be present in /var/task (NFT copies the
+    // source path), but requiring sharp through it leaves transitive deps like
+    // detect-libc untraced. Always use the static import there.
+    if (process.env.VERCEL) {
+      sharpModule = await loadSharpViaImport();
+    } else {
+      sharpModule = loadSharpViaCjsHelper() ?? (await loadSharpViaImport());
+    }
   }
 
   return sharpModule;

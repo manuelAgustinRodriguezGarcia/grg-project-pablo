@@ -42,12 +42,16 @@ const IMPORT_UPLOAD_BODY_LIMIT = "55mb" as const;
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["sharp", "unzipper"],
-  // Ensure sharp + platform binaries are copied into serverless functions.
-  // Dynamic createRequire() paths are invisible to file tracing.
+  // Ensure sharp + pnpm-nested deps/binaries are copied into serverless functions.
+  // Partial includes of only `sharp/**` leave transitive deps (e.g. detect-libc) out.
   outputFileTracingIncludes: {
     "/*": [
       "./node_modules/sharp/**/*",
       "./node_modules/@img/**/*",
+      "./node_modules/detect-libc/**/*",
+      "./node_modules/.pnpm/sharp@*/node_modules/**/*",
+      "./node_modules/.pnpm/@img+*/**/*",
+      "./node_modules/.pnpm/detect-libc@*/node_modules/**/*",
     ],
   },
   experimental: {
