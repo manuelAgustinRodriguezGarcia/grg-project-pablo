@@ -1,36 +1,15 @@
 import {
-  appendExternalImagesToFormData,
   hasExternalImages,
   type ExternalImageSelection,
 } from "./external-images";
+import { uploadExternalImagesToJobDirect } from "./direct-import-upload";
 
+/** @deprecated Prefer uploadExternalImagesToJobDirect — kept as alias for callers. */
 export async function uploadExternalImagesToJob(
   jobId: string,
   selection: ExternalImageSelection,
 ): Promise<void> {
-  if (!hasExternalImages(selection)) {
-    return;
-  }
-
-  const formData = new FormData();
-  appendExternalImagesToFormData(formData, selection);
-
-  const response = await fetch(`/api/admin/imports/${jobId}/images`, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null);
-    const message =
-      payload &&
-      typeof payload === "object" &&
-      "error" in payload &&
-      typeof payload.error === "string"
-        ? payload.error
-        : "No se pudieron subir las imágenes externas.";
-    throw new Error(message);
-  }
+  await uploadExternalImagesToJobDirect(jobId, selection);
 }
 
 export async function fetchStagedImageCount(jobId: string): Promise<number> {
@@ -48,3 +27,7 @@ export async function fetchStagedImageCount(jobId: string): Promise<number> {
 
   return payload.pagination?.total ?? 0;
 }
+
+// Re-export for type-only consumers that imported hasExternalImages from here historically.
+export type { ExternalImageSelection };
+export { hasExternalImages };

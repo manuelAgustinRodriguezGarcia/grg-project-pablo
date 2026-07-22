@@ -254,6 +254,47 @@ export class ProductImageService {
     };
   }
 
+  /**
+   * Validates a buffer already stored at `storagePath` and returns the config ref
+   * without uploading again (used by direct browser → Supabase import uploads).
+   */
+  async registerExternalAtPath(input: {
+    jobId: string;
+    storagePath: string;
+    buffer: Buffer;
+    originalFilename: string;
+    source: ExternalImageRef["source"];
+  }): Promise<ExternalImageRef> {
+    await requireAdmin();
+
+    if (!isAllowedImageExtension(input.originalFilename)) {
+      throw new ProductImageError(
+        "Extensión de imagen no permitida.",
+        "VALIDATION_ERROR",
+      );
+    }
+
+    const validation = await validateImageBuffer(input.buffer);
+    if (!validation.valid) {
+      throw new ProductImageError(validation.error, "VALIDATION_ERROR");
+    }
+
+    if (!input.storagePath.startsWith(`imports/${input.jobId}/`)) {
+      throw new ProductImageError(
+        "Ruta de staging inválida para la importación.",
+        "VALIDATION_ERROR",
+      );
+    }
+
+    return {
+      storagePath: input.storagePath,
+      originalName: input.originalFilename,
+      mimeType: validation.mimeType,
+      sizeBytes: input.buffer.byteLength,
+      source: input.source,
+    };
+  }
+
   async processExternalImages(
     input: ProcessExternalImagesInput,
   ): Promise<ProcessExternalImagesResult> {

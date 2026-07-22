@@ -8,6 +8,7 @@ import { StorageError } from "./errors";
 import { sanitizeFilename } from "./sanitize-filename";
 import { getSupabaseAdminClient } from "./supabase-admin";
 import type {
+  SignedUploadUrlResult,
   SignedUrlResult,
   StorageBucketName,
   UploadFileInput,
@@ -91,6 +92,55 @@ export async function uploadFile(
   }
 
   return result;
+}
+
+export async function createSignedUploadUrl(
+  bucket: StorageBucketName,
+  path: string,
+): Promise<SignedUploadUrlResult> {
+  const normalizedPath = normalizeStoragePath(path);
+  const client = getSupabaseAdminClient();
+
+  const { data, error } = await client.storage
+    .from(bucket)
+    .createSignedUploadUrl(normalizedPath);
+
+  if (error || !data?.signedUrl || !data.token) {
+    throw new StorageError(
+      `Error al generar URL de subida firmada: ${error?.message ?? "respuesta vacía"}`,
+    );
+  }
+
+  return {
+    bucket,
+    path: normalizedPath,
+    signedUrl: data.signedUrl,
+    token: data.token,
+  };
+}
+
+export async function storageObjectExists(
+  bucket: StorageBucketName,
+  path: string,
+): Promise<boolean> {
+  const normalizedPath = normalizeStoragePath(path);
+  const client = getSupabaseAdminClient();
+  const folder = normalizedPath.includes("/")
+    ? normalizedPath.slice(0, normalizedPath.lastIndexOf("/"))
+    : "";
+  const fileName = normalizedPath.includes("/")
+    ? normalizedPath.slice(normalizedPath.lastIndexOf("/") + 1)
+    : normalizedPath;
+
+  const { data, error } = await client.storage.from(bucket).list(folder, {
+    limit: 1000,
+  });
+
+  if (error || !data) {
+    return false;
+  }
+
+  return data.some((entry) => entry.name === fileName);
 }
 
 export async function createSignedDownloadUrl(

@@ -11,16 +11,19 @@ export {
 export {
   buildStoragePath,
   createSignedDownloadUrl,
+  createSignedUploadUrl,
   deleteFile,
   downloadFile,
   ensureStorageBuckets,
   listStorageBuckets,
+  storageObjectExists,
   uploadFile,
 } from "./storage.service";
 export { runWithSignedUrlCache } from "./signed-url-cache";
 export { getSupabaseAdminClient } from "./supabase-admin";
 export type {
   BucketConfig,
+  SignedUploadUrlResult,
   SignedUrlResult,
   StorageBucketName,
   UploadFileInput,

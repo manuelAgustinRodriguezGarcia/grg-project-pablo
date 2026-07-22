@@ -39,11 +39,17 @@ import { normalizeIndexedText } from "@/server/search/search-normalizer";
 import { prisma } from "@/server/database/prisma";
 import {
   buildStoragePath,
+  createSignedUploadUrl,
   downloadFile,
+  storageObjectExists,
   uploadFile,
 } from "@/server/storage";
+import { BUCKET_CONFIGS } from "@/server/storage/config";
+import { resolveExcelContentType } from "@/server/storage/resolve-excel-content-type";
+import { getFileExtension } from "@/server/storage/sanitize-filename";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
 import { StorageError } from "@/server/storage/errors";
+import { buildImportExternalImagePath } from "@/server/image-processors";
 import { imageExtractionService } from "./image-extraction.service";
 import { productImageService } from "./product-image.service";
 import { equivalenceService } from "./equivalence.service";
@@ -53,6 +59,7 @@ import { priceImportService } from "./price-import.service";
 import type { MappedPriceItemRow } from "@/server/importers/price-item-row.mapper";
 import { ImportError } from "./import.errors";
 import { uploadedFileRetentionService } from "./uploaded-file-retention";
+import { ProductImageError } from "./product-image.errors";
 
 const BATCH_SIZE = 500;
 
@@ -150,6 +157,41 @@ export type UploadImportImageInput = {
   buffer: Buffer;
   originalFilename: string;
   contentType: string;
+  isZip: boolean;
+};
+
+export type DirectUploadFileMeta = {
+  originalFilename: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
+export type DirectUploadExternalMeta = DirectUploadFileMeta & {
+  isZip: boolean;
+};
+
+export type DirectUploadTarget = {
+  bucket: string;
+  path: string;
+  signedUrl: string;
+  token: string;
+  originalFilename: string;
+  contentType: string;
+  isZip?: boolean;
+};
+
+export type BeginDirectUploadResult = {
+  jobId: string;
+  uploadedFileId: string;
+  excel: DirectUploadTarget;
+  externals: DirectUploadTarget[];
+};
+
+export type FinalizeExternalUploadInput = {
+  path: string;
+  originalFilename: string;
+  contentType: string;
+  sizeBytes: number;
   isZip: boolean;
 };
 
@@ -285,6 +327,389 @@ export class CatalogImportService {
     });
 
     return { jobId: job.id, uploadedFileId: uploadedFile.id };
+  }
+
+  async beginDirectUpload(input: {
+    excel: DirectUploadFileMeta;
+    externals?: DirectUploadExternalMeta[];
+  }): Promise<BeginDirectUploadResult> {
+    const { profile: admin } = await requireAdmin();
+    const excelConfig = BUCKET_CONFIGS[STORAGE_BUCKETS.EXCEL_ORIGINALS];
+    const tempConfig = BUCKET_CONFIGS[STORAGE_BUCKETS.TEMP_IMPORTS];
+
+    const excelName = input.excel.originalFilename.trim();
+    const excelExtOk = excelConfig.allowedExtensions.some((ext) =>
+      excelName.toLowerCase().endsWith(ext),
+    );
+    if (!excelExtOk) {
+      throw new ImportError("Formato no permitido. Use .xlsx o .xlsm.", "INVALID_FILE");
+    }
+    if (input.excel.sizeBytes <= 0 || input.excel.sizeBytes > excelConfig.maxSizeBytes) {
+      throw new ImportError(
+        "El archivo supera el tamaño máximo permitido (50 MB).",
+        "INVALID_FILE",
+      );
+    }
+
+    const excelContentType = resolveExcelContentType(
+      excelName,
+      input.excel.contentType,
+    );
+    const excelPath = buildStoragePath("imports", excelName);
+
+    const uploadedFile = await uploadedFileRepository.create({
+      originalName: excelName,
+      storagePath: excelPath,
+      mimeType: excelContentType,
+      sizeBytes: input.excel.sizeBytes,
+      uploadedById: admin.id,
+    });
+
+    const job = await importJobRepository.create({
+      uploadedFileId: uploadedFile.id,
+      status: "STORED",
+    });
+
+    let excelSigned;
+    try {
+      excelSigned = await createSignedUploadUrl(
+        STORAGE_BUCKETS.EXCEL_ORIGINALS,
+        excelPath,
+      );
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw new ImportError(error.message, "INVALID_FILE");
+      }
+      throw error;
+    }
+
+    const externals: DirectUploadTarget[] = [];
+    for (const external of input.externals ?? []) {
+      const extension = getFileExtension(external.originalFilename);
+      const isZip = external.isZip || extension === ".zip";
+      const isImage = [".jpg", ".jpeg", ".png", ".webp"].includes(extension);
+
+      if (!isZip && !isImage) {
+        throw new ImportError(
+          `Formato no permitido: ${external.originalFilename}`,
+          "INVALID_FILE",
+        );
+      }
+      if (external.sizeBytes <= 0 || external.sizeBytes > tempConfig.maxSizeBytes) {
+        throw new ImportError(
+          `El archivo ${external.originalFilename} supera el tamaño máximo permitido.`,
+          "INVALID_FILE",
+        );
+      }
+
+      const path = isZip
+        ? buildStoragePath(`imports/${job.id}/zips`, external.originalFilename)
+        : buildImportExternalImagePath(
+            job.id,
+            crypto.randomUUID(),
+            external.originalFilename,
+          );
+
+      const contentType = isZip
+        ? "application/zip"
+        : external.contentType || "image/jpeg";
+
+      let signed;
+      try {
+        signed = await createSignedUploadUrl(STORAGE_BUCKETS.TEMP_IMPORTS, path);
+      } catch (error) {
+        if (error instanceof StorageError) {
+          throw new ImportError(error.message, "INVALID_FILE");
+        }
+        throw error;
+      }
+
+      externals.push({
+        bucket: signed.bucket,
+        path: signed.path,
+        signedUrl: signed.signedUrl,
+        token: signed.token,
+        originalFilename: external.originalFilename,
+        contentType,
+        isZip,
+      });
+    }
+
+    return {
+      jobId: job.id,
+      uploadedFileId: uploadedFile.id,
+      excel: {
+        bucket: excelSigned.bucket,
+        path: excelSigned.path,
+        signedUrl: excelSigned.signedUrl,
+        token: excelSigned.token,
+        originalFilename: excelName,
+        contentType: excelContentType,
+      },
+      externals,
+    };
+  }
+
+  async finalizeDirectUpload(
+    jobId: string,
+    input?: { externals?: FinalizeExternalUploadInput[] },
+  ) {
+    await requireAdmin();
+    const job = await importJobRepository.findByIdWithRelations(jobId);
+
+    if (!job) {
+      throw new ImportError("Importación no encontrada.", "IMPORT_NOT_FOUND");
+    }
+
+    assertStatus(job.status, ["STORED"]);
+
+    if (!job.uploadedFile?.storagePath) {
+      throw new ImportError("Archivo de importación no encontrado.", "IMPORT_NOT_FOUND");
+    }
+
+    const excelExists = await storageObjectExists(
+      STORAGE_BUCKETS.EXCEL_ORIGINALS,
+      job.uploadedFile.storagePath,
+    );
+    if (!excelExists) {
+      throw new ImportError(
+        "El Excel aún no está disponible en Storage. Intente subir de nuevo.",
+        "INVALID_FILE",
+      );
+    }
+
+    const externals = input?.externals ?? [];
+    if (externals.length === 0) {
+      return { jobId, uploadedFileId: job.uploadedFileId };
+    }
+
+    const files: Array<UploadImportImageInput & { storagePath?: string }> = [];
+
+    for (const external of externals) {
+      if (!external.path.startsWith(`imports/${jobId}/`)) {
+        throw new ImportError("Ruta de imagen externa inválida.", "VALIDATION_ERROR");
+      }
+
+      const exists = await storageObjectExists(
+        STORAGE_BUCKETS.TEMP_IMPORTS,
+        external.path,
+      );
+      if (!exists) {
+        throw new ImportError(
+          `No se encontró el archivo subido: ${external.originalFilename}`,
+          "INVALID_FILE",
+        );
+      }
+
+      const buffer = await downloadFile(STORAGE_BUCKETS.TEMP_IMPORTS, external.path);
+
+      files.push({
+        buffer,
+        originalFilename: external.originalFilename,
+        contentType: external.contentType || (external.isZip ? "application/zip" : "image/jpeg"),
+        isZip: external.isZip,
+        storagePath: external.isZip ? undefined : external.path,
+      });
+    }
+
+    await this.registerDirectExternalUploads(jobId, files);
+
+    return { jobId, uploadedFileId: job.uploadedFileId };
+  }
+
+  /**
+   * Registers client-uploaded external files on the job.
+   * ZIPs are extracted server-side; loose images already live at staging paths.
+   */
+  private async registerDirectExternalUploads(
+    jobId: string,
+    files: Array<UploadImportImageInput & { storagePath?: string }>,
+  ) {
+    const job = await importJobRepository.findByIdWithRelations(jobId);
+    if (!job) {
+      throw new ImportError("Importación no encontrada.", "IMPORT_NOT_FOUND");
+    }
+
+    const config = (job.config as ImportJobConfig | null) ?? {};
+    const externalImages = [...(config.externalImages ?? [])];
+
+    for (const file of files) {
+      try {
+        if (file.isZip) {
+          let extracted;
+          try {
+            extracted = await extractImagesFromZip(file.buffer);
+          } catch (error) {
+            if (error instanceof ZipExtractionError) {
+              throw new ImportError(error.message, "INVALID_FILE");
+            }
+            throw error;
+          }
+
+          for (const entry of extracted) {
+            const staged = await productImageService.uploadExternalToStaging({
+              jobId,
+              buffer: entry.buffer,
+              originalFilename: entry.originalName,
+              contentType: "application/octet-stream",
+              source: "EXTERNAL_ZIP",
+            });
+            externalImages.push(staged);
+          }
+          continue;
+        }
+
+        if (!file.storagePath) {
+          throw new ImportError("Falta la ruta de la imagen externa.", "VALIDATION_ERROR");
+        }
+
+        const staged = await productImageService.registerExternalAtPath({
+          jobId,
+          storagePath: file.storagePath,
+          buffer: file.buffer,
+          originalFilename: file.originalFilename,
+          source: "EXTERNAL_UPLOAD",
+        });
+        externalImages.push(staged);
+      } catch (error) {
+        if (error instanceof ProductImageError) {
+          throw new ImportError(error.message, "INVALID_FILE");
+        }
+        throw error;
+      }
+    }
+
+    await importJobRepository.update(jobId, {
+      config: {
+        ...config,
+        externalImages,
+      } as unknown as Prisma.InputJsonValue,
+    });
+  }
+
+  async beginExternalImagesDirectUpload(
+    jobId: string,
+    externals: DirectUploadExternalMeta[],
+  ): Promise<{ jobId: string; externals: DirectUploadTarget[] }> {
+    await requireAdmin();
+    const job = await importJobRepository.findByIdWithRelations(jobId);
+
+    if (!job) {
+      throw new ImportError("Importación no encontrada.", "IMPORT_NOT_FOUND");
+    }
+
+    assertStatus(job.status, [
+      "STORED",
+      "PENDING_DESTINATION",
+      "PENDING_CONFIG",
+      "READY_TO_APPLY",
+    ]);
+
+    const tempConfig = BUCKET_CONFIGS[STORAGE_BUCKETS.TEMP_IMPORTS];
+    const targets: DirectUploadTarget[] = [];
+
+    for (const external of externals) {
+      const extension = getFileExtension(external.originalFilename);
+      const isZip = external.isZip || extension === ".zip";
+      const isImage = [".jpg", ".jpeg", ".png", ".webp"].includes(extension);
+
+      if (!isZip && !isImage) {
+        throw new ImportError(
+          `Formato no permitido: ${external.originalFilename}`,
+          "INVALID_FILE",
+        );
+      }
+      if (external.sizeBytes <= 0 || external.sizeBytes > tempConfig.maxSizeBytes) {
+        throw new ImportError(
+          `El archivo ${external.originalFilename} supera el tamaño máximo permitido.`,
+          "INVALID_FILE",
+        );
+      }
+
+      const path = isZip
+        ? buildStoragePath(`imports/${jobId}/zips`, external.originalFilename)
+        : buildImportExternalImagePath(
+            jobId,
+            crypto.randomUUID(),
+            external.originalFilename,
+          );
+
+      const contentType = isZip
+        ? "application/zip"
+        : external.contentType || "image/jpeg";
+
+      let signed;
+      try {
+        signed = await createSignedUploadUrl(STORAGE_BUCKETS.TEMP_IMPORTS, path);
+      } catch (error) {
+        if (error instanceof StorageError) {
+          throw new ImportError(error.message, "INVALID_FILE");
+        }
+        throw error;
+      }
+
+      targets.push({
+        bucket: signed.bucket,
+        path: signed.path,
+        signedUrl: signed.signedUrl,
+        token: signed.token,
+        originalFilename: external.originalFilename,
+        contentType,
+        isZip,
+      });
+    }
+
+    return { jobId, externals: targets };
+  }
+
+  async finalizeExternalImagesDirectUpload(
+    jobId: string,
+    externals: FinalizeExternalUploadInput[],
+  ) {
+    await requireAdmin();
+    const job = await importJobRepository.findByIdWithRelations(jobId);
+
+    if (!job) {
+      throw new ImportError("Importación no encontrada.", "IMPORT_NOT_FOUND");
+    }
+
+    assertStatus(job.status, [
+      "STORED",
+      "PENDING_DESTINATION",
+      "PENDING_CONFIG",
+      "READY_TO_APPLY",
+    ]);
+
+    const files: Array<UploadImportImageInput & { storagePath?: string }> = [];
+
+    for (const external of externals) {
+      if (!external.path.startsWith(`imports/${jobId}/`)) {
+        throw new ImportError("Ruta de imagen externa inválida.", "VALIDATION_ERROR");
+      }
+
+      const exists = await storageObjectExists(
+        STORAGE_BUCKETS.TEMP_IMPORTS,
+        external.path,
+      );
+      if (!exists) {
+        throw new ImportError(
+          `No se encontró el archivo subido: ${external.originalFilename}`,
+          "INVALID_FILE",
+        );
+      }
+
+      const buffer = await downloadFile(STORAGE_BUCKETS.TEMP_IMPORTS, external.path);
+      files.push({
+        buffer,
+        originalFilename: external.originalFilename,
+        contentType: external.contentType || (external.isZip ? "application/zip" : "image/jpeg"),
+        isZip: external.isZip,
+        storagePath: external.isZip ? undefined : external.path,
+      });
+    }
+
+    await this.registerDirectExternalUploads(jobId, files);
+    return importJobRepository.findByIdWithRelations(jobId);
   }
 
   async createJobFromUploadedFile(uploadedFileId: string) {

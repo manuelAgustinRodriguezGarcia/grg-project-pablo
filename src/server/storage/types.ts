@@ -45,3 +45,10 @@ export interface SignedUrlResult {
   signedUrl: string;
   expiresInSeconds: number;
 }
+
+export interface SignedUploadUrlResult {
+  bucket: StorageBucketName;
+  path: string;
+  signedUrl: string;
+  token: string;
+}
