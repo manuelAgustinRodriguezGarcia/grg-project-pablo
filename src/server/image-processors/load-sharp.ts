@@ -1,44 +1,43 @@
 import { createRequire } from "node:module";
+import fs from "node:fs";
 import path from "node:path";
 
 type SharpModule = typeof import("sharp").default;
-
-const requireFromProject = createRequire(path.join(process.cwd(), "package.json"));
 
 const SHARP_CJS_HELPER = "./src/server/image-processors/load-sharp.cjs";
 
 let sharpModule: SharpModule | null = null;
 
-function isModuleNotFound(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code: unknown }).code === "MODULE_NOT_FOUND"
+function loadSharpViaCjsHelper(): SharpModule | null {
+  const helperAbsolutePath = path.join(process.cwd(), SHARP_CJS_HELPER);
+  if (!fs.existsSync(helperAbsolutePath)) {
+    return null;
+  }
+
+  // Local/dev: load through a plain CJS helper so Turbopack does not intercept
+  // the native binding with its external-module loader (broken on win32).
+  const requireFromProject = createRequire(
+    path.join(process.cwd(), "package.json"),
   );
+  const { getSharp } = requireFromProject(SHARP_CJS_HELPER) as {
+    getSharp: () => SharpModule;
+  };
+  return getSharp();
 }
 
 /**
- * Loads sharp through a plain CJS helper so Turbopack does not intercept
- * the native binding with its external-module loader (broken on win32 dev).
- *
- * On Vercel/serverless the `src/` tree is not present at runtime, so we fall
- * back to requiring `sharp` directly (listed in serverExternalPackages).
+ * Production/serverless path. The string literal must stay static so Next.js
+ * file tracing packs `sharp` into the Vercel function (createRequire from
+ * package.json is invisible to the tracer).
  */
+async function loadSharpViaImport(): Promise<SharpModule> {
+  const mod = await import("sharp");
+  return mod.default;
+}
+
 export async function loadSharp(): Promise<SharpModule> {
   if (!sharpModule) {
-    try {
-      const { getSharp } = requireFromProject(SHARP_CJS_HELPER) as {
-        getSharp: () => SharpModule;
-      };
-      sharpModule = getSharp();
-    } catch (error) {
-      if (!isModuleNotFound(error)) {
-        throw error;
-      }
-
-      sharpModule = requireFromProject("sharp") as SharpModule;
-    }
+    sharpModule = loadSharpViaCjsHelper() ?? (await loadSharpViaImport());
   }
 
   return sharpModule;
