@@ -42,6 +42,14 @@ const IMPORT_UPLOAD_BODY_LIMIT = "55mb" as const;
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["sharp", "unzipper"],
+  // Ensure sharp + platform binaries are copied into serverless functions.
+  // Dynamic createRequire() paths are invisible to file tracing.
+  outputFileTracingIncludes: {
+    "/*": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/**/*",
+    ],
+  },
   experimental: {
     // Excel + imágenes embebidas pueden superar 10 MB (límite por defecto de Next).
     proxyClientMaxBodySize: IMPORT_UPLOAD_BODY_LIMIT,
