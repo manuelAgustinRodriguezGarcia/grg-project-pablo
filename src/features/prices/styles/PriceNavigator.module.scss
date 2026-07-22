@@ -58,10 +58,12 @@ $price-shadow:
   gap: 0.65rem;
   width: min(100%, calc(2 * 15rem + 0.85rem));
   flex: 0 0 auto;
+  align-self: stretch;
 }
 
 .supplierBanner {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -71,6 +73,39 @@ $price-shadow:
   border-radius: $radius-md;
   background: $white;
   box-shadow: 0 2px 10px rgba($navy, 0.05);
+}
+
+.supplierBannerUser {
+  padding: 0.75rem 0.85rem;
+}
+
+.supplierBannerFields {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.supplierBannerField {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.supplierBannerIcon {
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  color: $green;
+}
+
+.supplierBannerFieldText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .supplierBannerText {
@@ -87,12 +122,12 @@ $price-shadow:
   color: rgba($navy, 0.5);
 }
 
-.supplierBannerLabel {
+.supplierBannerInlineLabel {
   font-weight: 400;
   color: rgba($navy, 0.55);
 }
 
-.supplierBannerValue {
+.supplierBannerInlineValue {
   font-weight: 700;
   color: $navy;
 }
@@ -100,6 +135,27 @@ $price-shadow:
 .supplierBannerDivider {
   margin: 0 0.45rem;
   color: rgba($navy, 0.28);
+}
+
+.supplierBannerLabel {
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: $navy-light;
+}
+
+.supplierBannerValue {
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: $navy;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .supplierBannerEditButton {

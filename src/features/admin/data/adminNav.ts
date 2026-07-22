@@ -24,6 +24,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItemConfig[] = [
     href: "/admin/archivos",
     label: "Archivos",
     icon: Archive,
+    adminOnly: true,
   },
   {
     href: "/admin/usuarios",
