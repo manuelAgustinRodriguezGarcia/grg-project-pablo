@@ -622,6 +622,91 @@ $price-shadow:
   }
 }
 
+.tableHeaderFilterable {
+  cursor: pointer;
+}
+
+// Compound with `th` so these beat `.priceTable th` background.
+.priceTable th.tableHeaderFilterable {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(.tableHeaderFiltered):not(.tableHeaderFilterOpen) {
+      background:
+        linear-gradient(
+          180deg,
+          rgba($white, var(--header-scroll-progress, 0)) 0%,
+          rgba($white, var(--header-scroll-progress, 0)) 100%
+        ),
+        linear-gradient(
+          180deg,
+          rgba($green, 0.14) 0%,
+          rgba($green, 0.09) 100%
+        ),
+        $white;
+    }
+  }
+}
+
+.priceTable th.tableHeaderFilterOpen {
+  z-index: 12;
+  background:
+    linear-gradient(
+      180deg,
+      rgba($white, var(--header-scroll-progress, 0)) 0%,
+      rgba($white, var(--header-scroll-progress, 0)) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba($green, 0.26) 0%,
+      rgba($green, 0.18) 100%
+    ),
+    $white;
+  box-shadow:
+    inset 0 -2px 0 rgba($green, 0.36),
+    0 calc(var(--header-scroll-progress, 0) * 1px)
+      calc(var(--header-scroll-progress, 0) * 5px)
+      rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
+}
+
+.priceTable th.tableHeaderFiltered {
+  background:
+    linear-gradient(
+      180deg,
+      rgba($white, calc(var(--header-scroll-progress, 0) * 0.88)) 0%,
+      rgba($white, calc(var(--header-scroll-progress, 0) * 0.88)) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba($green, 0.14) 0%,
+      rgba($green, 0.09) 100%
+    ),
+    $white;
+  box-shadow:
+    inset 0 -2px 0 rgba($green, 0.26),
+    0 calc(var(--header-scroll-progress, 0) * 1px)
+      calc(var(--header-scroll-progress, 0) * 5px)
+      rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
+}
+
+.priceTable th.tableHeaderFiltered.tableHeaderFilterOpen {
+  background:
+    linear-gradient(
+      180deg,
+      rgba($white, calc(var(--header-scroll-progress, 0) * 0.88)) 0%,
+      rgba($white, calc(var(--header-scroll-progress, 0) * 0.88)) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba($green, 0.28) 0%,
+      rgba($green, 0.2) 100%
+    ),
+    $white;
+  box-shadow:
+    inset 0 -2px 0 rgba($green, 0.4),
+    0 calc(var(--header-scroll-progress, 0) * 1px)
+      calc(var(--header-scroll-progress, 0) * 5px)
+      rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
+}
+
 .priceHeaderPrice {
   color: $amber;
 }
