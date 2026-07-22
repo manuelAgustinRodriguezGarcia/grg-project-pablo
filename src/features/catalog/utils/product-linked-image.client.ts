@@ -1,4 +1,8 @@
 import type { ProductTablePrimaryImage } from "@/features/catalog/types/product-table.types";
+import {
+  postJson,
+  uploadFileToSignedTarget,
+} from "@/features/catalog/utils/direct-storage-upload";
 
 type ProductImageResponse = {
   id: string;
@@ -6,6 +10,21 @@ type ProductImageResponse = {
   fullUrl: string | null;
   error?: string;
   code?: string;
+};
+
+type PendingUploadIntent = {
+  upload: {
+    bucket: string;
+    path: string;
+    token: string;
+    contentType: string;
+    originalFilename: string;
+  };
+  meta?: {
+    isPrimary?: boolean;
+    sortOrder?: number;
+    label?: string | null;
+  };
 };
 
 export type UploadProductLinkedImageOptions = {
@@ -32,39 +51,56 @@ export async function uploadProductLinkedImage(
   | { success: true; data: ProductTablePrimaryImage }
   | { success: false; error: string; code?: string }
 > {
-  const formData = new FormData();
-  formData.append("file", file);
+  const intent = await postJson<PendingUploadIntent>(
+    `/api/admin/products/${productId}/images/upload-intent`,
+    {
+      originalFilename: file.name,
+      contentType: file.type || "application/octet-stream",
+      sizeBytes: file.size,
+      isPrimary: options.isPrimary ?? true,
+      label: options.label,
+      sortOrder: options.sortOrder,
+    },
+  );
 
-  if (options.isPrimary !== undefined) {
-    formData.append("isPrimary", options.isPrimary ? "true" : "false");
-  } else {
-    formData.append("isPrimary", "true");
+  if (!intent.ok) {
+    return { success: false, error: intent.error, code: intent.code };
   }
 
-  if (options.label) {
-    formData.append("label", options.label);
-  }
-
-  if (options.sortOrder !== undefined) {
-    formData.append("sortOrder", String(options.sortOrder));
-  }
-
-  const response = await fetch(`/api/admin/products/${productId}/images`, {
-    method: "POST",
-    body: formData,
-  });
-
-  const body = (await response.json().catch(() => null)) as ProductImageResponse | null;
-
-  if (!response.ok || !body?.id) {
+  try {
+    await uploadFileToSignedTarget(intent.data.upload, file);
+  } catch (error) {
     return {
       success: false,
-      error: body?.error ?? "No se pudo subir la imagen del producto.",
-      code: body?.code,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo subir la imagen del producto.",
     };
   }
 
-  return { success: true, data: mapImageResponse(body) };
+  const finalized = await postJson<ProductImageResponse>(
+    `/api/admin/products/${productId}/images/finalize-upload`,
+    {
+      stagingPath: intent.data.upload.path,
+      originalFilename: file.name,
+      isPrimary: options.isPrimary ?? true,
+      label: options.label,
+      sortOrder: options.sortOrder,
+    },
+  );
+
+  if (!finalized.ok || !finalized.data.id) {
+    return {
+      success: false,
+      error: finalized.ok
+        ? "No se pudo subir la imagen del producto."
+        : finalized.error,
+      code: finalized.ok ? undefined : finalized.code,
+    };
+  }
+
+  return { success: true, data: mapImageResponse(finalized.data) };
 }
 
 export async function replaceProductLinkedImage(
@@ -75,28 +111,50 @@ export async function replaceProductLinkedImage(
   | { success: true; data: ProductTablePrimaryImage }
   | { success: false; error: string; code?: string }
 > {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch(
-    `/api/admin/products/${productId}/images/${imageId}`,
+  const intent = await postJson<PendingUploadIntent>(
+    `/api/admin/products/${productId}/images/${imageId}/upload-intent`,
     {
-      method: "PATCH",
-      body: formData,
+      originalFilename: file.name,
+      contentType: file.type || "application/octet-stream",
+      sizeBytes: file.size,
     },
   );
 
-  const body = (await response.json().catch(() => null)) as ProductImageResponse | null;
+  if (!intent.ok) {
+    return { success: false, error: intent.error, code: intent.code };
+  }
 
-  if (!response.ok || !body?.id) {
+  try {
+    await uploadFileToSignedTarget(intent.data.upload, file);
+  } catch (error) {
     return {
       success: false,
-      error: body?.error ?? "No se pudo reemplazar la imagen del producto.",
-      code: body?.code,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo reemplazar la imagen del producto.",
     };
   }
 
-  return { success: true, data: mapImageResponse(body) };
+  const finalized = await postJson<ProductImageResponse>(
+    `/api/admin/products/${productId}/images/${imageId}/finalize-upload`,
+    {
+      stagingPath: intent.data.upload.path,
+      originalFilename: file.name,
+    },
+  );
+
+  if (!finalized.ok || !finalized.data.id) {
+    return {
+      success: false,
+      error: finalized.ok
+        ? "No se pudo reemplazar la imagen del producto."
+        : finalized.error,
+      code: finalized.ok ? undefined : finalized.code,
+    };
+  }
+
+  return { success: true, data: mapImageResponse(finalized.data) };
 }
 
 export async function deleteProductLinkedImage(

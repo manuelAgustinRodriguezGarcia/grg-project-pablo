@@ -98,10 +98,28 @@ type ImportPublishedContext = {
   priceListId?: string;
 };
 
+export type ImportDirectoryChange =
+  | { type: "catalog-created"; catalog: DirectoryCatalogItem }
+  | { type: "catalog-updated"; catalog: DirectoryCatalogItem }
+  | { type: "catalog-deleted"; catalogId: string }
+  | {
+      type: "folder-created";
+      catalogId: string;
+      folder: CatalogNavigationFolderItem;
+    }
+  | {
+      type: "folder-updated";
+      catalogId: string;
+      folder: CatalogNavigationFolderItem;
+    }
+  | { type: "folder-deleted"; catalogId: string; folderId: string };
+
 type ImportWizardProps = {
   catalogs: DirectoryCatalogItem[];
   onClose: () => void;
   onPublished: (context?: ImportPublishedContext) => void;
+  /** Keep parent catalog/folder dropdowns in sync when created/edited inside the wizard. */
+  onDirectoryChanged?: (change: ImportDirectoryChange) => void;
   initialJobId?: string;
   mode?: "CATALOG_FOLDER" | "PRICE_LIST";
   priceLists?: PriceListListItem[];
@@ -176,6 +194,7 @@ export function ImportWizard({
   catalogs,
   onClose,
   onPublished,
+  onDirectoryChanged,
   initialJobId,
   mode = "CATALOG_FOLDER",
   priceLists = [],
@@ -216,9 +235,23 @@ export function ImportWizard({
     isUploadingImages;
 
   const [catalogList, setCatalogList] = useState<DirectoryCatalogItem[]>(catalogs);
+  const [prevCatalogs, setPrevCatalogs] = useState(catalogs);
   const [folders, setFolders] = useState<CatalogNavigationFolderItem[]>([]);
   const [isLoadingFolders, setIsLoadingFolders] = useState(false);
   const [sheets, setSheets] = useState<ImportSheetItem[]>([]);
+
+  // Keep wizard dropdowns in sync when the parent refreshes its catalog list.
+  if (catalogs !== prevCatalogs) {
+    setPrevCatalogs(catalogs);
+    setCatalogList((current) => {
+      const serverIds = new Set(catalogs.map((catalog) => catalog.id));
+      const localOnly = current.filter((catalog) => !serverIds.has(catalog.id));
+      if (localOnly.length === 0) {
+        return catalogs;
+      }
+      return [...catalogs, ...localOnly];
+    });
+  }
 
   const [selectedCatalogId, setSelectedCatalogId] = useState(initialCatalogId);
   const [selectedFolderId, setSelectedFolderId] = useState(initialFolderId);
@@ -668,6 +701,7 @@ export function ImportWizard({
       setSelectedCatalogId(created.id);
       setSelectedFolderId("");
       setFolders([]);
+      onDirectoryChanged?.({ type: "catalog-created", catalog: created });
       return true;
     } finally {
       setInlineBusy(false);
@@ -699,7 +733,19 @@ export function ImportWizard({
         updatedAt: result.data.updatedAt,
       };
       setFolders((current) => [...current, created]);
+      setCatalogList((current) =>
+        current.map((catalog) =>
+          catalog.id === selectedCatalogId
+            ? { ...catalog, sectionCount: catalog.sectionCount + 1 }
+            : catalog,
+        ),
+      );
       setSelectedFolderId(created.id);
+      onDirectoryChanged?.({
+        type: "folder-created",
+        catalogId: selectedCatalogId,
+        folder: created,
+      });
       return true;
     } finally {
       setInlineBusy(false);
@@ -746,12 +792,13 @@ export function ImportWizard({
         return;
       }
 
+      const deletedCatalogId = deleteCatalogTarget.id;
       const nextCatalogs = catalogList.filter(
-        (catalog) => catalog.id !== deleteCatalogTarget.id,
+        (catalog) => catalog.id !== deletedCatalogId,
       );
       setCatalogList(nextCatalogs);
 
-      if (selectedCatalogId === deleteCatalogTarget.id) {
+      if (selectedCatalogId === deletedCatalogId) {
         const nextCatalogId = nextCatalogs[0]?.id ?? "";
         setSelectedCatalogId(nextCatalogId);
         setSelectedFolderId("");
@@ -759,10 +806,11 @@ export function ImportWizard({
       }
 
       setDeleteCatalogTarget(null);
+      onDirectoryChanged?.({ type: "catalog-deleted", catalogId: deletedCatalogId });
     } finally {
       setIsCatalogActionBusy(false);
     }
-  }, [catalogList, deleteCatalogTarget, selectedCatalogId]);
+  }, [catalogList, deleteCatalogTarget, onDirectoryChanged, selectedCatalogId]);
 
   const handleConfirmEditCatalog = useCallback(async () => {
     if (!editCatalogTarget) {
@@ -794,10 +842,11 @@ export function ImportWizard({
       );
       setEditCatalogTarget(null);
       setEditCatalogNameDraft("");
+      onDirectoryChanged?.({ type: "catalog-updated", catalog: updated });
     } finally {
       setIsCatalogActionBusy(false);
     }
-  }, [editCatalogNameDraft, editCatalogTarget]);
+  }, [editCatalogNameDraft, editCatalogTarget, onDirectoryChanged]);
 
   const editCatalogNameEmpty = editCatalogNameDraft.trim().length === 0;
   const editCatalogNameUnchanged =

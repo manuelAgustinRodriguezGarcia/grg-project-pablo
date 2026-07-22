@@ -15,6 +15,13 @@ import {
   STORAGE_BUCKETS,
   uploadFile,
 } from "@/server/storage";
+import { StorageError } from "@/server/storage/errors";
+import {
+  beginPendingImageUpload,
+  deletePendingImageUploadBestEffort,
+  downloadPendingImageUpload,
+  type PendingImageUploadTarget,
+} from "@/server/storage/pending-image-upload";
 import type { ColumnListItem } from "@/features/catalog/types/column.types";
 import { toColumnDisplayItem } from "@/features/catalog/types/column.types";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
@@ -258,6 +265,62 @@ export class ColumnHelpService {
 
     const [item] = await this.resolveHelpForColumns([updated], "ADMIN");
     return item;
+  }
+
+  async beginHelpImageDirectUpload(input: {
+    columnId: string;
+    originalFilename: string;
+    contentType: string;
+    sizeBytes: number;
+    altText?: string | null;
+  }): Promise<{ upload: PendingImageUploadTarget; altText?: string | null }> {
+    await requireAdmin();
+    await requireColumn(input.columnId);
+
+    try {
+      const upload = await beginPendingImageUpload({
+        scope: "column-help",
+        ownerId: input.columnId,
+        originalFilename: input.originalFilename,
+        contentType: input.contentType,
+        sizeBytes: input.sizeBytes,
+        maxSizeBytes: BUCKET_CONFIGS[STORAGE_BUCKETS.COLUMN_HELP_IMAGES].maxSizeBytes,
+      });
+      return { upload, altText: input.altText };
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw new ColumnHelpError(error.message, "VALIDATION_ERROR");
+      }
+      throw error;
+    }
+  }
+
+  async finalizeHelpImageDirectUpload(input: {
+    columnId: string;
+    stagingPath: string;
+    originalFilename: string;
+    altText?: string | null;
+  }): Promise<ColumnListItem> {
+    let buffer: Buffer;
+    try {
+      buffer = await downloadPendingImageUpload(input.stagingPath);
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw new ColumnHelpError(error.message, "VALIDATION_ERROR");
+      }
+      throw error;
+    }
+
+    try {
+      return await this.uploadHelpImage({
+        columnId: input.columnId,
+        buffer,
+        originalFilename: input.originalFilename,
+        altText: input.altText,
+      });
+    } finally {
+      await deletePendingImageUploadBestEffort(input.stagingPath);
+    }
   }
 
   async deleteHelpImage(columnId: string): Promise<ColumnListItem> {
