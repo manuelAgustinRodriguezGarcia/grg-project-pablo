@@ -30,7 +30,8 @@ type ProductFormModalProps = {
   columns: ColumnListItem[];
   product?: ProductTableItem | null;
   onClose: () => void;
-  onSaved: () => void;
+  /** Called with a table-ready snapshot so the parent can patch the visible row instantly. */
+  onSaved: (savedProduct: ProductTableItem) => void;
 };
 
 const MAX_FIELD_IMAGE_SLOTS = 2;
@@ -243,6 +244,124 @@ function hasFieldImageDraftChanges(
 
 function hasLinkedImageSlotChanges(slots: FieldImageSlotDraft[]): boolean {
   return slots.some((slot) => Boolean(slot.pendingFile || slot.removeImage));
+}
+
+function toTableImageFromSlot(
+  slot: FieldImageSlotDraft,
+  fallbackId: string,
+): ProductTableItem["primaryImage"] {
+  if (!slotHasVisibleImage(slot)) {
+    return null;
+  }
+
+  return {
+    id: slot.imageId ?? fallbackId,
+    thumbnailUrl: slot.previewUrl,
+    fullUrl: slot.previewUrl,
+  };
+}
+
+function buildSavedProductTableItem(input: {
+  productId: string;
+  base: ProductTableItem | null | undefined;
+  editableColumns: ColumnListItem[];
+  values: Record<string, string>;
+  linkedImageSlots: FieldImageSlotDraft[];
+  imageDrafts: Record<string, FieldImageSlotDraft[]>;
+  includeLinkedImages: boolean;
+}): ProductTableItem {
+  const {
+    productId,
+    base,
+    editableColumns,
+    values,
+    linkedImageSlots,
+    imageDrafts,
+    includeLinkedImages,
+  } = input;
+
+  let primaryCode = base?.primaryCode ?? null;
+  let description = base?.description ?? null;
+  const dynamicData: Record<string, unknown> = { ...(base?.dynamicData ?? {}) };
+
+  for (const column of editableColumns) {
+    const raw = values[column.internalKey] ?? "";
+    const trimmed = raw.trim();
+    if (column.isPrimaryCode) {
+      primaryCode = trimmed === "" ? null : trimmed;
+      continue;
+    }
+    if (column.isDescription) {
+      description = trimmed === "" ? null : trimmed;
+      continue;
+    }
+    dynamicData[column.internalKey] = trimmed;
+  }
+
+  let primaryImage = base?.primaryImage ?? null;
+  let extraImages = base?.extraImages ?? [];
+
+  if (includeLinkedImages) {
+    const visibleLinked = linkedImageSlots
+      .map((slot, index) =>
+        toTableImageFromSlot(slot, `${productId}-linked-${index}`),
+      )
+      .filter((image): image is NonNullable<typeof image> => image !== null);
+    primaryImage = visibleLinked[0] ?? null;
+    extraImages = visibleLinked.slice(1);
+  }
+
+  const imagesByColumnKey: ProductTableItem["imagesByColumnKey"] = {
+    ...(base?.imagesByColumnKey ?? {}),
+  };
+  const fieldAnnotationsByColumnKey: ProductTableItem["fieldAnnotationsByColumnKey"] =
+    {
+      ...(base?.fieldAnnotationsByColumnKey ?? {}),
+    };
+
+  for (const column of editableColumns) {
+    const slots = imageDrafts[column.internalKey] ?? [];
+    const nextImages = slots
+      .map((slot, index) =>
+        toTableImageFromSlot(slot, `${productId}-${column.internalKey}-${index}`),
+      )
+      .filter((image): image is NonNullable<typeof image> => image !== null);
+
+    if (nextImages.length > 0) {
+      imagesByColumnKey[column.internalKey] = nextImages;
+    } else {
+      delete imagesByColumnKey[column.internalKey];
+    }
+
+    const annotation = fieldAnnotationsByColumnKey[column.internalKey];
+    if (annotation) {
+      const stillHasAnnotationImage = slots.some(
+        (slot) => slot.source === "annotation" && slotHasVisibleImage(slot),
+      );
+      if (!stillHasAnnotationImage) {
+        fieldAnnotationsByColumnKey[column.internalKey] = {
+          ...annotation,
+          thumbnailUrl: null,
+          fullUrl: null,
+        };
+      }
+    }
+  }
+
+  const now = new Date().toISOString();
+
+  return {
+    id: productId,
+    primaryCode,
+    description,
+    dynamicData,
+    primaryImage,
+    extraImages,
+    imagesByColumnKey,
+    fieldAnnotationsByColumnKey,
+    createdAt: base?.createdAt ?? now,
+    updatedAt: now,
+  };
 }
 
 function slotFileInputKey(columnKey: string, slotIndex: number): string {
@@ -738,14 +857,29 @@ export function ProductFormModal({
       imageDrafts,
     );
 
+    const emitSaved = (productId: string) => {
+      onSaved(
+        buildSavedProductTableItem({
+          productId,
+          base: product,
+          editableColumns,
+          values,
+          linkedImageSlots,
+          imageDrafts,
+          includeLinkedImages: showLinkedProductImage,
+        }),
+      );
+      onClose();
+    };
+
     if (
       isEditMode &&
+      product?.id &&
       !needsProductPatch &&
       !needsLinkedImagePersist &&
       !needsFieldImagePersist
     ) {
-      onSaved();
-      onClose();
+      emitSaved(product.id);
       setIsSaving(false);
       return;
     }
@@ -794,6 +928,13 @@ export function ProductFormModal({
         productId = payload.id;
       }
 
+      if (!productId) {
+        setError(
+          isEditMode ? "No se pudo actualizar el producto." : "No se pudo crear el producto.",
+        );
+        return;
+      }
+
       const linkedImageError = needsLinkedImagePersist
         ? await persistLinkedProductImages(productId)
         : null;
@@ -810,8 +951,7 @@ export function ProductFormModal({
         return;
       }
 
-      onSaved();
-      onClose();
+      emitSaved(productId);
     } catch {
       setError(
         isEditMode ? "No se pudo actualizar el producto." : "No se pudo crear el producto.",

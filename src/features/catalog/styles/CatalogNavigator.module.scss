@@ -1380,6 +1380,16 @@ $table-image-size: 6.25rem;
   overflow: hidden;
 }
 
+// Non-scrolling shell so refresh/search overlays cover the visible table
+// viewport even when `.tableWrap` is scrolled mid-content.
+.tableBodyShell {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
 @mixin table-panel-state-layout {
   display: flex;
   flex: 1;
@@ -3657,6 +3667,11 @@ $table-image-size: 6.25rem;
     flex: none;
     min-height: auto;
     overflow: visible;
+  }
+
+  .tableBodyShell {
+    flex: none;
+    min-height: auto;
   }
 
   .tableWrap {

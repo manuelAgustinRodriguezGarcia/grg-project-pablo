@@ -1,6 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -88,6 +89,48 @@ function formatDeleteProductPreviewValue(
 
 function formatDeleteProductPreviewHeader(displayName: string): string {
   return displayName.replace(/\r\n/g, "\n").replace(/\n+/g, " ").trim();
+}
+
+function patchProductInTableCaches(
+  queryClient: QueryClient,
+  folderId: string,
+  savedProduct: ProductTableItem,
+  options?: { prependIfMissing?: boolean },
+) {
+  queryClient.setQueriesData<ProductTableResponse>(
+    { queryKey: adminQueryKeys.products(folderId) },
+    (current) => {
+      if (!current) {
+        return current;
+      }
+
+      const existingIndex = current.products.findIndex(
+        (product) => product.id === savedProduct.id,
+      );
+
+      if (existingIndex >= 0) {
+        const products = current.products.slice();
+        products[existingIndex] = {
+          ...products[existingIndex],
+          ...savedProduct,
+        };
+        return { ...current, products };
+      }
+
+      if (!options?.prependIfMissing) {
+        return current;
+      }
+
+      return {
+        ...current,
+        products: [savedProduct, ...current.products],
+        pagination: {
+          ...current.pagination,
+          total: current.pagination.total + 1,
+        },
+      };
+    },
+  );
 }
 
 function toDirectoryCatalogItem(catalog: CatalogListItem): DirectoryCatalogItem {
@@ -516,6 +559,7 @@ export function CatalogNavigator({
 
       const response = await fetch(
         `/api/admin/folders/${activeFolderId}/products?${params.toString()}`,
+        { cache: "no-store" },
       );
 
       if (!response.ok) {
@@ -529,6 +573,7 @@ export function CatalogNavigator({
     },
     enabled: canLoadFolderProducts,
     placeholderData: keepPreviousData,
+    staleTime: 0,
   });
 
   const globalSearchQuery = useQuery({
@@ -1270,13 +1315,28 @@ export function CatalogNavigator({
             setIsProductFormOpen(false);
             setEditingProduct(null);
           }}
-          onSaved={() => {
+          onSaved={(savedProduct) => {
             const wasCreating = editingProduct === null;
+            const folderId = productTable.folder.id;
+
+            patchProductInTableCaches(queryClient, folderId, savedProduct, {
+              prependIfMissing: wasCreating,
+            });
+
             if (wasCreating) {
-              bumpFolderProductCount(productTable.folder.id, 1);
+              bumpFolderProductCount(folderId, 1);
               setPage(1);
             }
-            invalidateCatalogQueries();
+
+            // Background reconcile with server (images, generated codes, etc.)
+            // without delaying the modal close / visible row update.
+            void queryClient.refetchQueries({
+              queryKey: adminQueryKeys.products(folderId),
+              type: "active",
+            });
+            void queryClient.invalidateQueries({
+              queryKey: adminQueryKeys.navigation(activeCatalogId),
+            });
           }}
         />
       ) : null}
