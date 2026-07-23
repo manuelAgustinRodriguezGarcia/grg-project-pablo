@@ -5,7 +5,7 @@ import { directoryService } from "@/server/services/directory.service";
 import { requireAdminOrRedirect } from "@/server/auth";
 
 export const metadata: Metadata = {
-  title: "Archivos | Admin Rothamel Repuestos",
+  title: "Archivos",
 };
 
 export default async function AdminArchivosPage() {

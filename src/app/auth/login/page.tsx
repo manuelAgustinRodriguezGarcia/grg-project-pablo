@@ -8,9 +8,13 @@ import sharedStyles from "@/features/auth/styles/loginShared.module.scss";
 import styles from "./login.module.scss";
 
 export const metadata: Metadata = {
-  title: "Iniciar Sesión | Rothamel Repuestos",
+  title: "Iniciar Sesión",
   description:
     "Acceso exclusivo para usuarios autorizados y administradores de Rothamel Repuestos.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 function resolveRedirectTo(redirectTo?: string): string {
