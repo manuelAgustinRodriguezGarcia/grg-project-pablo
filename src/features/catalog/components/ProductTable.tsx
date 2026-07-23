@@ -402,10 +402,7 @@ export const ProductTable = memo(function ProductTable({
       }
     >
       {tableToolbar}
-      <div
-        ref={tableWrapRef}
-        className={`${styles.tableWrap} ${data.products.length === 0 ? styles.tableWrapEmpty : ""} ${lockTableScroll ? styles.tableWrapRefreshing : ""}`}
-      >
+      <div className={styles.tableBodyShell}>
         {navRefreshOverlayMounted ? (
           <div
             className={`${styles.tableRefreshOverlay} ${styles.tableRefreshOverlaySolid} ${
@@ -424,6 +421,10 @@ export const ProductTable = memo(function ProductTable({
             aria-label="Aplicando filtros"
           />
         ) : null}
+        <div
+          ref={tableWrapRef}
+          className={`${styles.tableWrap} ${data.products.length === 0 ? styles.tableWrapEmpty : ""} ${lockTableScroll ? styles.tableWrapRefreshing : ""}`}
+        >
         {data.products.length === 0 ? (
           <div className={styles.tableEmpty} role="status">
             <File
@@ -710,6 +711,7 @@ export const ProductTable = memo(function ProductTable({
           </tbody>
         </table>
         )}
+        </div>
       </div>
 
       <footer className={styles.tableFooter}>
