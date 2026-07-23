@@ -5,7 +5,7 @@ import { listPriceListsAction } from "@/features/prices/actions/price-list.actio
 import { requireAuthOrRedirect } from "@/server/auth";
 
 export const metadata: Metadata = {
-  title: "Precios | Admin Rothamel Repuestos",
+  title: "Precios",
 };
 
 type AdminPreciosPageProps = {

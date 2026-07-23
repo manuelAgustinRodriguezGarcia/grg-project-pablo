@@ -5,7 +5,7 @@ import { requireAuthOrRedirect } from "@/server/auth";
 import { directoryService } from "@/server/services/directory.service";
 
 export const metadata: Metadata = {
-  title: "Catálogos | Admin Rothamel Repuestos",
+  title: "Catálogos",
 };
 
 type AdminCatalogosPageProps = {

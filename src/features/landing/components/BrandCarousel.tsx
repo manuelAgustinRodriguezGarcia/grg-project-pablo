@@ -55,9 +55,14 @@ function BrandRowCarousel({ row }: BrandRowCarouselProps) {
 
 export function BrandCarousel() {
   return (
-    <section className={styles.section} aria-label="Trabajamos con las mejores marcas">
+    <section
+      className={styles.section}
+      aria-labelledby="brands-heading"
+    >
       <div className={styles.header}>
-        <h2 className={landingStyles.sectionTitle}>Trabajamos con las mejores marcas</h2>
+        <h2 id="brands-heading" className={landingStyles.sectionTitle}>
+          Trabajamos con las mejores marcas
+        </h2>
       </div>
 
       <div className={styles.rows}>

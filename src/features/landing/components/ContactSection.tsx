@@ -118,15 +118,17 @@ export function ContactSection() {
               </div>
               <div className={styles.mapHeaderText}>
                 <h3 className={styles.mapTitle}>Dónde encontrarnos</h3>
-                <p className={styles.mapBusinessName}>{MAP_LOCATION.name}</p>
-                <p className={styles.mapAddress}>
-                  <MapPin
-                    className={styles.mapAddressIcon}
-                    strokeWidth={ICON_STROKE}
-                    aria-hidden
-                  />
-                  <span>{fullAddress}</span>
-                </p>
+                <address className={styles.mapAddressBlock}>
+                  <p className={styles.mapBusinessName}>{MAP_LOCATION.name}</p>
+                  <p className={styles.mapAddress}>
+                    <MapPin
+                      className={styles.mapAddressIcon}
+                      strokeWidth={ICON_STROKE}
+                      aria-hidden
+                    />
+                    <span>{fullAddress}</span>
+                  </p>
+                </address>
                 <a
                   href={MAP_LOCATION.mapsUrl}
                   className={styles.directionsLink}
