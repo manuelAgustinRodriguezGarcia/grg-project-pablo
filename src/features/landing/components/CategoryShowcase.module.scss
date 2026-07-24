@@ -1,0 +1,77 @@
+@use "../styles/variables" as *;
+
+.section {
+  padding-block: clamp(2.5rem, 5vw, 4rem);
+  padding-inline: $landing-content-inset-x;
+  background: $white;
+  border-bottom: 1px solid $border-soft;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(1rem, 3vw, 2.5rem);
+  align-items: start;
+  justify-items: center;
+  max-width: $container-max;
+  margin-inline: auto;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 11rem;
+  text-align: center;
+}
+
+.circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(5.5rem, 14vw, 8.5rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid $border-soft;
+  background: $white;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+  // Placeholder logos sit inset; swap to padding: 0 when real product photos land.
+  padding: 18%;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  user-select: none;
+  pointer-events: none;
+}
+
+.title {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(0.72rem, 1.4vw, 0.9rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  color: $navy;
+  text-wrap: balance;
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem 1.25rem;
+  }
+
+  .item {
+    max-width: 9.5rem;
+  }
+}

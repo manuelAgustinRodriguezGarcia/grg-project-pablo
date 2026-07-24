@@ -1,4 +1,5 @@
 import { BrandCarousel } from "@/features/landing/components/BrandCarousel";
+import { CategoryShowcase } from "@/features/landing/components/CategoryShowcase";
 import { ContactSection } from "@/features/landing/components/ContactSection";
 import { HeroSection } from "@/features/landing/components/HeroSection";
 import { LandingFooter } from "@/features/landing/components/LandingFooter";
@@ -15,6 +16,7 @@ export default function Home() {
       <LandingHeader />
       <main className={styles.main}>
         <HeroSection />
+        <CategoryShowcase />
         <BrandCarousel />
         <ContactSection />
       </main>
