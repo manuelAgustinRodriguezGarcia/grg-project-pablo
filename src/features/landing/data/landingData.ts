@@ -35,7 +35,7 @@ export const PHONE_TEL = "+543644580297";
 export const WHATSAPP_DISPLAY = "+54 9 364 458-0297";
 export const WHATSAPP_URL = "https://wa.me/5493644580297";
 
-export const EMAIL_DISPLAY = "rothamelsh@hotmail.com";
+export const EMAIL_DISPLAY = "rothamelsh@gmail.com";
 export const EMAIL_MAILTO = `mailto:${EMAIL_DISPLAY}`;
 
 export const LOGIN_PATH = "/auth/login";
@@ -136,38 +136,79 @@ export const BRAND_CAROUSEL_ROWS: readonly BrandCarouselRow[] = [
 export type CategoryShowcaseItem = {
   id: string;
   title: string;
-  /** Product/category photo. Placeholder until real spare-part images land. */
+  /** Product/category photo from /public/circles. */
   imageSrc: string;
   imageAlt: string;
+  /** Smaller product art so more of the ring stays visible. */
+  imageFit?: "compact";
 };
 
-/** Temporary placeholder shared by all category circles until product photos replace it. */
-const CATEGORY_IMAGE_PLACEHOLDER = "/logo-grg-negro.svg";
+/** Ruta de imagen de categoría en /public/circles. */
+export const circleImage = (filename: string) => `/circles/${filename}` as const;
 
 export const CATEGORY_SHOWCASE_ITEMS: readonly CategoryShowcaseItem[] = [
   {
-    id: "electricidad",
-    title: "ELECTRICIDAD",
-    imageSrc: CATEGORY_IMAGE_PLACEHOLDER,
-    imageAlt: "Electricidad",
+    id: "circuito-de-aire",
+    title: "CIRCUITO DE AIRE",
+    imageSrc: circleImage("circuito_de_aire.png"),
+    imageAlt: "Circuito de aire",
   },
   {
-    id: "motor",
-    title: "MOTOR",
-    imageSrc: CATEGORY_IMAGE_PLACEHOLDER,
-    imageAlt: "Motor",
+    id: "encendido",
+    title: "ENCENDIDO",
+    imageSrc: circleImage("encendido.png"),
+    imageAlt: "Encendido",
+    imageFit: "compact",
   },
   {
-    id: "neumatica",
-    title: "NEUMATICA",
-    imageSrc: CATEGORY_IMAGE_PLACEHOLDER,
-    imageAlt: "Neumática",
+    id: "embragues",
+    title: "EMBRAGUES",
+    imageSrc: circleImage("embragues.png"),
+    imageAlt: "Embragues",
   },
   {
-    id: "transmision",
-    title: "TRANSMISION",
-    imageSrc: CATEGORY_IMAGE_PLACEHOLDER,
-    imageAlt: "Transmisión",
+    id: "rodamientos",
+    title: "RODAMIENTOS",
+    imageSrc: circleImage("rodamientos.png"),
+    imageAlt: "Rodamientos",
+  },
+  {
+    id: "partes-de-acoplados",
+    title: "PARTES DE ACOPLADOS",
+    imageSrc: circleImage("partes_de_acoplado.png"),
+    imageAlt: "Partes de acoplados",
+  },
+  {
+    id: "mazas-de-rueda",
+    title: "MAZAS DE RUEDA",
+    imageSrc: circleImage("mazas_de_rueda.png"),
+    imageAlt: "Mazas de rueda",
+    imageFit: "compact",
+  },
+  {
+    id: "campanas-de-rueda",
+    title: "CAMPANAS DE RUEDA",
+    imageSrc: circleImage("campana_de_rueda.png"),
+    imageAlt: "Campanas de rueda",
+    imageFit: "compact",
+  },
+  {
+    id: "frenos",
+    title: "FRENOS",
+    imageSrc: circleImage("frenos.png"),
+    imageAlt: "Frenos",
+  },
+  {
+    id: "filtros",
+    title: "FILTROS",
+    imageSrc: circleImage("filtros.png"),
+    imageAlt: "Filtros",
+  },
+  {
+    id: "diferencial",
+    title: "DIFERENCIAL",
+    imageSrc: circleImage("diferencial.png"),
+    imageAlt: "Diferencial",
   },
 ];
 

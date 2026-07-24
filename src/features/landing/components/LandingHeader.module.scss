@@ -17,7 +17,7 @@
   justify-content: space-between;
   gap: 1rem;
   width: 100%;
-  min-height: 5.75rem;
+  min-height: 7.5rem;
   padding-left: $landing-content-inset-x;
   padding-right: $section-padding-x;
 }
@@ -101,6 +101,10 @@
 }
 
 @media (max-width: 480px) {
+  .inner {
+    min-height: 5.5rem;
+  }
+
   .loginButton {
     padding: 0.6rem 1rem;
     font-size: 0.85rem;

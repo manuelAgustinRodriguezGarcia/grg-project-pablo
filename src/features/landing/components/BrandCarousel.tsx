@@ -1,6 +1,5 @@
 import type { Brand, BrandCarouselRow } from "../data/landingData";
 import { BRAND_CAROUSEL_ROWS } from "../data/landingData";
-import landingStyles from "../styles/landing.module.scss";
 import { BrandLogo } from "./BrandLogo";
 import styles from "./BrandCarousel.module.scss";
 import {
@@ -55,11 +54,7 @@ function BrandRowCarousel({ row }: BrandRowCarouselProps) {
 
 export function BrandCarousel() {
   return (
-    <section className={styles.section} aria-label="Trabajamos con las mejores marcas">
-      <div className={styles.header}>
-        <h2 className={landingStyles.sectionTitle}>Trabajamos con las mejores marcas</h2>
-      </div>
-
+    <section className={styles.section} aria-label="Marcas con las que trabajamos">
       <div className={styles.rows}>
         {BRAND_CAROUSEL_ROWS.map((row) => (
           <BrandRowCarousel key={row.id} row={row} />

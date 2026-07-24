@@ -44,11 +44,33 @@ $hero-height: clamp(30rem, 60vh, 38rem);
   color: $navy;
 }
 
-.description {
-  margin-top: 1.25rem;
-  font-size: clamp(1rem, 1.5vw, 1.125rem);
-  line-height: 1.7;
-  color: $text-muted;
+.highlights {
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  font-size: clamp(1.1rem, 1.7vw, 1.3rem);
+  font-weight: 550;
+  line-height: 1.45;
+  color: #1a1f26;
+
+  li {
+    position: relative;
+    padding-left: 1.15rem;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.55em;
+      width: 0.4rem;
+      height: 0.4rem;
+      border-radius: 50%;
+      background: currentColor;
+    }
+  }
 }
 
 .cta {

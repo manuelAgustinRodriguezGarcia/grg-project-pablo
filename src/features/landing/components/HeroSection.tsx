@@ -14,10 +14,11 @@ export function HeroSection() {
           <h1 id="hero-heading" className={styles.heading}>
             Repuestos pesados para camiones, acoplados y maquinaria agrícola
           </h1>
-          <p className={styles.description}>
-            Sabemos lo importante que es que su vehículo siga trabajando. Por eso, en Rothamel Repuestos lo asesoramos para que encuentre el repuesto correcto con atención personalizada.
-
-          </p>
+          <ul className={styles.highlights}>
+            <li>Más de 40 años de experiencia a su servicio</li>
+            <li>Amplio stock de marcas líderes</li>
+            <li>La mejor solución para su vehículo</li>
+          </ul>
           <a
             href={WHATSAPP_URL}
             className={styles.cta}
