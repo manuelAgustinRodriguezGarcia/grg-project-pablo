@@ -7,14 +7,24 @@ import {
   getScrollDurationSec,
   getSegmentRepeats,
 } from "./brand-carousel.utils";
+import type { CSSProperties } from "react";
 
 type BrandItemProps = {
   brand: Brand;
 };
 
 function BrandItem({ brand }: BrandItemProps) {
+  const logoScale = brand.logoScale ?? 1;
+
   return (
-    <li className={styles.brandItem}>
+    <li
+      className={styles.brandItem}
+      style={
+        logoScale !== 1
+          ? ({ "--brand-logo-scale": logoScale } as CSSProperties)
+          : undefined
+      }
+    >
       <BrandLogo brand={brand} />
     </li>
   );
