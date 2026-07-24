@@ -87,12 +87,13 @@ $hero-height: clamp(30rem, 60vh, 38rem);
   font-family: $font-sans;
   font-size: 1rem;
   font-weight: 600;
-  border: 2px solid transparent;
+  border: 2px solid $green;
   box-shadow: 0 6px 20px rgba($green, 0.35);
   transition:
-    background-color 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 
   &:focus-visible {
     outline: 2px solid $navy;
@@ -101,9 +102,10 @@ $hero-height: clamp(30rem, 60vh, 38rem);
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: $green-hover;
-      box-shadow: 0 8px 24px rgba($green, 0.4);
-      transform: translateY(-1px);
+      background: #f3fbf6;
+      color: $green;
+      border-color: $green;
+      box-shadow: none;
     }
   }
 }
@@ -112,6 +114,7 @@ $hero-height: clamp(30rem, 60vh, 38rem);
   width: 1.25rem;
   height: 1.25rem;
   flex-shrink: 0;
+  color: inherit;
 }
 
 .visual {

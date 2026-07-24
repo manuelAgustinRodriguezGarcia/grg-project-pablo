@@ -35,6 +35,11 @@ export const PHONE_TEL = "+543644580297";
 export const WHATSAPP_DISPLAY = "+54 9 364 458-0297";
 export const WHATSAPP_URL = "https://wa.me/5493644580297";
 
+export function categoryWhatsAppUrl(categoryTitle: string): string {
+  const text = `Hola, quisiera consultar por ${categoryTitle}`;
+  return `${WHATSAPP_URL}?text=${encodeURIComponent(text)}`;
+}
+
 export const EMAIL_DISPLAY = "rothamelsh@gmail.com";
 export const EMAIL_MAILTO = `mailto:${EMAIL_DISPLAY}`;
 

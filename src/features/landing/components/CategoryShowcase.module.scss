@@ -2,7 +2,7 @@
 
 .section {
   padding-block: clamp(2.5rem, 5vw, 4rem);
-  padding-inline: $landing-content-inset-x;
+  padding-inline: clamp(0.75rem, 2.5vw, 1.5rem);
   background: $white;
   border-bottom: 1px solid $border-soft;
 }
@@ -10,10 +10,10 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(1.5rem, 3vw, 2.25rem) clamp(0.75rem, 2vw, 1.5rem);
+  gap: clamp(1.5rem, 3vw, 2.25rem) clamp(0.5rem, 1.5vw, 1.25rem);
   align-items: start;
   justify-items: center;
-  max-width: min(100%, 68rem);
+  max-width: min(100%, 78rem);
   margin-inline: auto;
   padding: 0;
   list-style: none;
@@ -23,15 +23,43 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
+  max-width: 11.5rem;
+  text-align: center;
+}
+
+.trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 0.85rem;
   width: 100%;
-  max-width: 9.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
   text-align: center;
+  cursor: pointer;
+  appearance: none;
+
+  &:focus-visible {
+    outline: 2px solid $navy;
+    outline-offset: 4px;
+    border-radius: $radius-sm;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover .image {
+      transform: scale(1.08);
+    }
+  }
 }
 
 .media {
   position: relative;
-  width: clamp(4.75rem, 11vw, 7rem);
+  width: clamp(5.5rem, 13vw, 8.5rem);
   aspect-ratio: 1;
   // Room for the subtle pop-out so neighbors / titles don't clip it.
   margin-block: 0.35rem;
@@ -56,6 +84,9 @@
   object-fit: contain;
   object-position: center;
   filter: drop-shadow(0 4px 8px rgba(6, 43, 95, 0.22));
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 0.28s ease;
   user-select: none;
   pointer-events: none;
 }
@@ -69,12 +100,192 @@
 .title {
   margin: 0;
   font-family: $font-sans;
-  font-size: clamp(0.65rem, 1.15vw, 0.8rem);
+  font-size: clamp(0.8rem, 1.4vw, 0.95rem);
   font-weight: 700;
   letter-spacing: 0.05em;
   line-height: 1.25;
   color: $navy;
   text-wrap: balance;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(3, 27, 61, 0.55);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+
+.modalOverlayOpen {
+  opacity: 1;
+}
+
+.modalOverlayClosing {
+  opacity: 0;
+}
+
+.modalCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  width: min(100%, 22rem);
+  padding: clamp(1.75rem, 4vw, 2.25rem) clamp(1.25rem, 4vw, 1.75rem);
+  border-radius: $radius-xl;
+  background: $white;
+  box-shadow: 0 24px 64px rgba(6, 43, 95, 0.28);
+  transform: translateY(0.75rem);
+  opacity: 0;
+  transition:
+    transform 0.28s ease,
+    opacity 0.28s ease;
+}
+
+.modalCardOpen {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.modalCardClosing {
+  transform: translateY(0.75rem);
+  opacity: 0;
+}
+
+.modalClose {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid $border-soft;
+  border-radius: 999px;
+  background: $bg-light;
+  color: $navy;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+
+  &:focus-visible {
+    outline: 2px solid $blue-main;
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: $white;
+      border-color: #b8c7db;
+    }
+  }
+
+  svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.modalMedia {
+  width: clamp(11rem, 42vw, 14rem);
+  margin-block: 0.5rem 0.15rem;
+  flex-shrink: 0;
+
+  .image {
+    // Avoid inheriting the grid hover transform transition inside the modal.
+    transition: none;
+    transform: none;
+  }
+}
+
+.modalTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(1rem, 2.4vw, 1.15rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  color: $navy;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.whatsappButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 999px;
+  border: 2px solid #5dade2;
+  background: #f4faff;
+  color: $blue-main;
+  font-family: $font-sans;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    color 0.25s ease;
+
+  &:focus-visible {
+    outline: 2px solid $navy;
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: $blue-main;
+      background: $blue-main;
+      color: $white;
+    }
+
+    &:hover .whatsappIcon {
+      color: $white;
+    }
+  }
+}
+
+.whatsappIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  color: $blue-main;
+  transition: color 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image {
+    transition: none;
+  }
+
+  .trigger:hover .image {
+    transform: none;
+  }
+
+  .modalOverlay,
+  .modalCard {
+    transition: none;
+  }
+
+  .modalCardOpen,
+  .modalCardClosing {
+    transform: none;
+  }
 }
 
 @media (max-width: 900px) {
@@ -91,6 +302,6 @@
   }
 
   .item {
-    max-width: 9rem;
+    max-width: 10.5rem;
   }
 }
