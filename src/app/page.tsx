@@ -16,8 +16,8 @@ export default function Home() {
       <LandingHeader />
       <main className={styles.main}>
         <HeroSection />
-        <CategoryShowcase />
         <BrandCarousel />
+        <CategoryShowcase />
         <ContactSection />
       </main>
       <LandingFooter />

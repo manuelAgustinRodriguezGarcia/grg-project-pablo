@@ -20,5 +20,9 @@
 
 .main {
   flex: 1;
-  padding-top: 5.75rem;
+  padding-top: 7.5rem;
+
+  @media (max-width: 480px) {
+    padding-top: 5.5rem;
+  }
 }

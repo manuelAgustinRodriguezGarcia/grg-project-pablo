@@ -13,7 +13,7 @@ type RothamelLogoProps = {
 const LOGO_ASPECT_RATIO = LOGO_WIDTH / LOGO_HEIGHT;
 
 function getLogoDimensions(variant: "header" | "footer") {
-  const height = variant === "footer" ? 52 : 72;
+  const height = variant === "footer" ? 52 : 108;
 
   return {
     width: Math.round(height * LOGO_ASPECT_RATIO),
