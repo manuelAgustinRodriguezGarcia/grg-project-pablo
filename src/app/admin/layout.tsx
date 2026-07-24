@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   AdminSectionLoadingOverlay,
   AdminSectionTransitionProvider,
@@ -7,6 +8,13 @@ import { AdminQueryProvider } from "@/features/admin/providers/AdminQueryProvide
 import { ADMIN_USER_EMAIL_FALLBACK } from "@/features/admin/data/adminNav";
 import layoutStyles from "@/features/admin/styles/adminLayout.module.scss";
 import { requireAuthOrRedirect } from "@/server/auth";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AdminLayout({
   children,

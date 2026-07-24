@@ -4,7 +4,7 @@ import { listUsersAction } from "@/features/users/actions/user.actions";
 import { requireAdminOrRedirect } from "@/server/auth";
 
 export const metadata: Metadata = {
-  title: "Usuarios | Admin Rothamel Repuestos",
+  title: "Usuarios",
 };
 
 export default async function AdminUsuariosPage() {

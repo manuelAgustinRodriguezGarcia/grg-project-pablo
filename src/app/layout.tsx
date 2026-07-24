@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import {
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  SITE_OG_IMAGE,
+  SITE_TITLE,
+  SITE_URL,
+} from "@/shared/seo/site";
 import "./globals.scss";
 
 const geistSans = Geist({
@@ -8,10 +16,20 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.rothamelrepuestos.com.ar"),
-  title: "Rothamel Repuestos | Repuestos para vehículos pesados",
-  description:
-    "Soluciones en repuestos para camiones y vehículos pesados con servicio profesional e información actualizada en Resistencia, Chaco.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  keywords: [...SITE_KEYWORDS],
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
     icon: [
       { url: "/logos/alt-logo-white.svg", type: "image/svg+xml" },
@@ -19,19 +37,26 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "Rothamel Repuestos | Repuestos para vehículos pesados",
-    description:
-      "Soluciones en repuestos para camiones y vehículos pesados con servicio profesional e información actualizada en Resistencia, Chaco.",
-    url: "https://www.rothamelrepuestos.com.ar",
-    siteName: "Rothamel Repuestos",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: SITE_NAME,
     locale: "es_AR",
     type: "website",
+    images: [
+      {
+        url: SITE_OG_IMAGE,
+        width: 750,
+        height: 496,
+        alt: SITE_NAME,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rothamel Repuestos | Repuestos para vehículos pesados",
-    description:
-      "Soluciones en repuestos para camiones y vehículos pesados con servicio profesional e información actualizada en Resistencia, Chaco.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [SITE_OG_IMAGE],
   },
 };
 
