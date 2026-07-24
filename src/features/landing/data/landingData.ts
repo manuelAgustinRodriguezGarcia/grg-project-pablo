@@ -1,6 +1,8 @@
 export type Brand = {
   name: string;
   logoSrc?: string;
+  /** Visual scale relative to default track height (1 = normal). */
+  logoScale?: number;
 };
 
 /** Ruta de logo en /public/marcas (SVG, PNG, JPG, WebP, etc.). */
@@ -50,45 +52,6 @@ export type BrandCarouselRow = {
   brands: readonly Brand[];
 };
 
-const CAMIONES_MOTORES_BRANDS: readonly Brand[] = [
-  { name: "Iveco", logoSrc: marcaLogo("IVECO.svg") },
-  { name: "Ford", logoSrc: marcaLogo("FORD.svg") },
-  { name: "Volkswagen", logoSrc: marcaLogo("Volkswagen.svg") },
-  { name: "Mercedes Benz", logoSrc: marcaLogo("MERCEDES.svg") },
-  { name: "Scania", logoSrc: marcaLogo("SCANIA.svg") },
-  { name: "Cummins", logoSrc: marcaLogo("Cummins.svg") },
-];
-
-const TRACTORES_AGRICOLAS_BRANDS: readonly Brand[] = [
-  { name: "Zanello", logoSrc: marcaLogo("zanello.svg") },
-  { name: "Pauny", logoSrc: marcaLogo("pauny.svg") },
-  { name: "Massey Ferguson", logoSrc: marcaLogo("Massey.svg") },
-  { name: "Deutz", logoSrc: marcaLogo("deutz.svg") },
-];
-
-function interleaveBrands(
-  ...groups: readonly (readonly Brand[])[]
-): Brand[] {
-  const maxLength = Math.max(...groups.map((group) => group.length));
-  const result: Brand[] = [];
-
-  for (let index = 0; index < maxLength; index += 1) {
-    for (const group of groups) {
-      const brand = group[index];
-      if (brand) {
-        result.push(brand);
-      }
-    }
-  }
-
-  return result;
-}
-
-const VEHICULOS_BRANDS = interleaveBrands(
-  CAMIONES_MOTORES_BRANDS,
-  TRACTORES_AGRICOLAS_BRANDS,
-);
-
 const MARCAS_REPUESTOS_BRANDS: readonly Brand[] = [
   { name: "Indiel", logoSrc: marcaLogo("indiel.jpg") },
   { name: "Exintrader", logoSrc: marcaLogo("exintrader.png") },
@@ -98,27 +61,28 @@ const MARCAS_REPUESTOS_BRANDS: readonly Brand[] = [
   { name: "Hasting", logoSrc: marcaLogo("hasting.png") },
   { name: "SKF", logoSrc: marcaLogo("SFK.svg") },
   { name: "Timken", logoSrc: marcaLogo("TIMKEN.svg") },
-  { name: "RSK Rodamientos", logoSrc: marcaLogo("RSK.svg") },
-  { name: "SAV Retenes", logoSrc: marcaLogo("SAV-RETENES.svg") },
-  { name: "Etma Crucetas", logoSrc: marcaLogo("ETMA.svg") },
+  { name: "RSK Rodamientos", logoSrc: marcaLogo("RSK.svg"), logoScale: 0.72 },
+  { name: "SAV Retenes", logoSrc: marcaLogo("SAV-RETENES.png") },
+  { name: "Etma Crucetas", logoSrc: marcaLogo("ETMA.png") },
   { name: "THE Crapodinas", logoSrc: marcaLogo("THE-crapodinas.jpg") },
   { name: "Dayco", logoSrc: marcaLogo("dayco-3.svg") },
-  { name: "RG Frenos", logoSrc: marcaLogo("RG-FRENOS.svg") },
-  { name: "Tecnofricción", logoSrc: marcaLogo("tecnofriccion.png") },
+  { name: "RG Frenos", logoSrc: marcaLogo("RG-FRENOS.svg"), logoScale: 1.4 },
+  { name: "Tecnofricción", logoSrc: marcaLogo("tecnofriccion.png"), logoScale: 1.25 },
   { name: "Wabco", logoSrc: marcaLogo("WABCO.svg") },
-  { name: "Trucktec", logoSrc: marcaLogo("TRUCKTEC.svg") },
-  { name: "Tifec", logoSrc: marcaLogo("TIFEC.png") },
+  { name: "Trucktec", logoSrc: marcaLogo("TRUCKTEC.svg"), logoScale: 1.3 },
+  { name: "Tifec", logoSrc: marcaLogo("TIFEC.png"), logoScale: 1.3 },
   { name: "Euroricambi", logoSrc: marcaLogo("EURORICAMBI.webp") },
   { name: "FLRS Embragues", logoSrc: marcaLogo("FLRS-EMBRAGUES.jpg") },
   { name: "Iarmetal", logoSrc: marcaLogo("IAR-METAL.jpeg") },
   { name: "Sachs", logoSrc: marcaLogo("sachs.jpg") },
-  { name: "VMG", logoSrc: marcaLogo("VMG.png") },
+  { name: "VMG", logoSrc: marcaLogo("VMG.png"), logoScale: 1.4 },
   { name: "Juntas Pampa", logoSrc: marcaLogo("JUNTAS-PAMPA.png") },
-  { name: "Correas ABIX", logoSrc: marcaLogo("ABIX.jpeg") },
-  { name: "Kobla", logoSrc: marcaLogo("KOBLA.png") },
+  { name: "Correas ABIX", logoSrc: marcaLogo("ABIX.jpeg"), logoScale: 1.25 },
+  { name: "Kobla", logoSrc: marcaLogo("KOBLA.png"), logoScale: 1.3 },
   {
     name: "Establecimiento Metalúrgico San Francisco",
     logoSrc: marcaLogo("METALURGICO-SAN-FRANCISCO.png"),
+    logoScale: 1.4,
   },
   { name: "Wheel Componentes de Acoplados", logoSrc: marcaLogo("wheel.png") },
   {
@@ -128,10 +92,6 @@ const MARCAS_REPUESTOS_BRANDS: readonly Brand[] = [
 ];
 
 export const BRAND_CAROUSEL_ROWS: readonly BrandCarouselRow[] = [
-  {
-    id: "vehiculos",
-    brands: VEHICULOS_BRANDS,
-  },
   {
     id: "repuestos",
     brands: MARCAS_REPUESTOS_BRANDS,
@@ -214,6 +174,36 @@ export const CATEGORY_SHOWCASE_ITEMS: readonly CategoryShowcaseItem[] = [
     title: "DIFERENCIAL",
     imageSrc: circleImage("diferencial.png"),
     imageAlt: "Diferencial",
+  },
+  {
+    id: "elasticos-y-manoplas",
+    title: "ELÁSTICOS Y MANOPLAS",
+    imageSrc: circleImage("elasticos_y_manoplas.png"),
+    imageAlt: "Elásticos y manoplas",
+  },
+  {
+    id: "barras-cardanicas",
+    title: "BARRAS CARDÁNICAS",
+    imageSrc: circleImage("barra_cardanica.png"),
+    imageAlt: "Barras cardánicas",
+  },
+  {
+    id: "palieres",
+    title: "PALIERES",
+    imageSrc: circleImage("palieres.png"),
+    imageAlt: "Palieres",
+  },
+  {
+    id: "transmision",
+    title: "TRANSMISION",
+    imageSrc: circleImage("transmision.png"),
+    imageAlt: "Transmisión",
+  },
+  {
+    id: "bombas-de-agua",
+    title: "BOMBAS DE AGUA",
+    imageSrc: circleImage("bombas_de_agua.png"),
+    imageAlt: "Bombas de agua",
   },
 ];
 

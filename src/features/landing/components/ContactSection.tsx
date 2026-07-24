@@ -5,9 +5,10 @@ import {
   WHATSAPP_URL,
 } from "../data/landingData";
 import landingStyles from "../styles/landing.module.scss";
-import { Clock, Mail, Map, MapPin, ICON_STROKE } from "@/shared/icons";
+import { Mail, Map, MapPin, ICON_STROKE } from "@/shared/icons";
 import { WhatsAppIcon } from "@/shared/components/WhatsAppIcon";
 import { EmailCopyLink } from "./EmailCopyLink";
+import { HoursContactCard } from "./HoursContactCard";
 import styles from "./ContactSection.module.scss";
 
 export function ContactSection() {
@@ -25,7 +26,8 @@ export function ContactSection() {
             Contáctese con nosotros
           </h2>
           <p className={styles.supporting}>
-            A su disposición de lunes a sábados para asesorarlo y ayudarlo a encontrar los repuestos que necesita.
+            A su disposición de lunes a sábados para asesorarlo y ayudarlo a
+            encontrar los repuestos que necesita.
           </p>
         </header>
 
@@ -75,33 +77,9 @@ export function ContactSection() {
               </div>
             </article>
 
-            <article
-              className={`${styles.contactCard} ${landingStyles.animateSlideUp} ${landingStyles.animateDelay2}`}
-            >
-              <div className={styles.cardContent}>
-                <div className={styles.cardIconWrap} aria-hidden="true">
-                  <Clock
-                    className={styles.cardIcon}
-                    strokeWidth={ICON_STROKE}
-                    aria-hidden
-                  />
-                </div>
-
-                <div className={styles.cardText}>
-                  <h3 className={styles.cardTitle}>Horarios de Atención</h3>
-                  <div className={`${styles.infoBody} ${styles.hoursBody}`}>
-                    <div className={styles.hoursBlock}>
-                      <p className={styles.hoursDay}>Lunes a Viernes</p>
-                      <p className={styles.hoursTime}>07:30 - 19:30</p>
-                    </div>
-                    <div className={styles.hoursBlock}>
-                      <p className={styles.hoursDay}>Sábados</p>
-                      <p className={styles.hoursTime}>07:30 - 12:30</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </article>
+            <HoursContactCard
+              className={`${landingStyles.animateSlideUp} ${landingStyles.animateDelay2}`}
+            />
           </div>
 
           <article
