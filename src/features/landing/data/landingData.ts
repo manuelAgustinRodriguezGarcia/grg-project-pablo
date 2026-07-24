@@ -133,6 +133,44 @@ export const BRAND_CAROUSEL_ROWS: readonly BrandCarouselRow[] = [
   },
 ];
 
+export type CategoryShowcaseItem = {
+  id: string;
+  title: string;
+  /** Product/category photo. Placeholder until real spare-part images land. */
+  imageSrc: string;
+  imageAlt: string;
+};
+
+/** Temporary placeholder shared by all category circles until product photos replace it. */
+const CATEGORY_IMAGE_PLACEHOLDER = "/logo-grg-negro.svg";
+
+export const CATEGORY_SHOWCASE_ITEMS: readonly CategoryShowcaseItem[] = [
+  {
+    id: "electricidad",
+    title: "ELECTRICIDAD",
+    imageSrc: CATEGORY_IMAGE_PLACEHOLDER,
+    imageAlt: "Electricidad",
+  },
+  {
+    id: "motor",
+    title: "MOTOR",
+    imageSrc: CATEGORY_IMAGE_PLACEHOLDER,
+    imageAlt: "Motor",
+  },
+  {
+    id: "neumatica",
+    title: "NEUMATICA",
+    imageSrc: CATEGORY_IMAGE_PLACEHOLDER,
+    imageAlt: "Neumática",
+  },
+  {
+    id: "transmision",
+    title: "TRANSMISION",
+    imageSrc: CATEGORY_IMAGE_PLACEHOLDER,
+    imageAlt: "Transmisión",
+  },
+];
+
 export const MAP_LOCATION = {
   name: "Rothamel Repuestos",
   address: "Acceso Este",
