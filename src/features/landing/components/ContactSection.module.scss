@@ -134,30 +134,6 @@ $contact-bg: #f6f8fb;
   }
 }
 
-.hoursCardSummer .seasonToggle {
-  color: #b45309;
-  border-color: rgba(180, 83, 9, 0.28);
-  background: rgba(180, 83, 9, 0.1);
-}
-
-.hoursCardWinter .seasonToggle {
-  color: #1d6fa5;
-  border-color: rgba(29, 111, 165, 0.28);
-  background: rgba(29, 111, 165, 0.1);
-}
-
-.hoursCardSummer .seasonToggle:hover {
-  @media (hover: hover) and (pointer: fine) {
-    background: rgba(180, 83, 9, 0.16);
-  }
-}
-
-.hoursCardWinter .seasonToggle:hover {
-  @media (hover: hover) and (pointer: fine) {
-    background: rgba(29, 111, 165, 0.16);
-  }
-}
-
 .seasonToggleIcon {
   width: 1.65rem;
   height: 1.65rem;

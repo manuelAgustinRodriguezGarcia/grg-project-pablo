@@ -49,6 +49,7 @@ export {
   User,
   Users,
   UserRound,
+  CircleUserRound,
   UserX,
   ShieldUser,
   X,

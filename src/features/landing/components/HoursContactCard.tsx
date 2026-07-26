@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ICON_STROKE, Snowflake, Sun } from "@/shared/icons";
+import { Clock, ICON_STROKE } from "@/shared/icons";
 import styles from "./ContactSection.module.scss";
 
 type Season = "summer" | "winter";
@@ -72,17 +72,11 @@ export function HoursContactCard({ className }: HoursContactCardProps) {
               : "Cambiar a horarios de verano"
           }
         >
-          {isSummer ? (
-            <Sun
-              className={styles.seasonToggleIcon}
-              strokeWidth={ICON_STROKE}
-            />
-          ) : (
-            <Snowflake
-              className={styles.seasonToggleIcon}
-              strokeWidth={ICON_STROKE}
-            />
-          )}
+          <Clock
+            className={styles.seasonToggleIcon}
+            strokeWidth={ICON_STROKE}
+            aria-hidden
+          />
         </button>
 
         <div className={styles.cardText}>

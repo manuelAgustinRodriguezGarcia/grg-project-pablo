@@ -303,5 +303,10 @@
 
   .item {
     max-width: 10.5rem;
+
+    // 15 items → last row would be a single orphan on 2 columns.
+    &:last-child {
+      display: none;
+    }
   }
 }
