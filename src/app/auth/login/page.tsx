@@ -3,6 +3,7 @@ import { LoginFormCard } from "@/features/auth/components/LoginFormCard";
 import { LoginHeader } from "@/features/auth/components/LoginHeader";
 import { LoginImagePanel } from "@/features/auth/components/LoginImagePanel";
 import { LoginScrollbarHide } from "@/features/auth/components/LoginScrollbarHide";
+import { LOGIN_IMAGE_SRC } from "@/features/auth/data/loginData";
 import { ADMIN_HOME_PATH } from "@/server/auth/config";
 import sharedStyles from "@/features/auth/styles/loginShared.module.scss";
 import styles from "./login.module.scss";
@@ -34,6 +35,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <div className={styles.page}>
+      <link
+        rel="preload"
+        as="image"
+        href={LOGIN_IMAGE_SRC}
+        type="image/webp"
+        // Helps Chromium start the download earlier on first visit.
+        fetchPriority="high"
+      />
       <LoginScrollbarHide />
       <LoginHeader />
 

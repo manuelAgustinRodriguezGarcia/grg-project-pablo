@@ -1,4 +1,7 @@
-import { getFileExtension } from "@/server/storage/sanitize-filename";
+import {
+  getFileExtension,
+  sanitizeFilename,
+} from "@/server/storage/sanitize-filename";
 
 export function buildProductImageStoragePaths(
   folderId: string,
@@ -46,5 +49,6 @@ export function buildImportExternalImagePath(
   originalFilename: string,
 ): string {
   const safeId = uniqueId.replace(/[^\w-]/g, "");
-  return `imports/${jobId}/external/${safeId}-${originalFilename.replace(/[/\\]/g, "_")}`;
+  const safeName = sanitizeFilename(originalFilename);
+  return `imports/${jobId}/external/${safeId}-${safeName}`;
 }

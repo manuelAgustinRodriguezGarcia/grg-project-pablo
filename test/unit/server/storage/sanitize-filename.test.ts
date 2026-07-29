@@ -4,6 +4,7 @@ import {
   getFileExtension,
   sanitizeFilename,
 } from "@/server/storage/sanitize-filename";
+import { buildImportExternalImagePath } from "@/server/image-processors/image-paths";
 
 describe("sanitizeFilename", () => {
   it("extrae solo el basename de rutas con path traversal", () => {
@@ -21,8 +22,12 @@ describe("sanitizeFilename", () => {
     expect(() => sanitizeFilename("..")).toThrow(StorageValidationError);
   });
 
-  it("conserva acentos y espacios en el nombre base", () => {
-    expect(sanitizeFilename("Catálogo Azul.xlsx")).toBe("Catálogo Azul.xlsx");
+  it("pliega acentos a ASCII para keys de Storage", () => {
+    expect(sanitizeFilename("Catálogo Azul.xlsx")).toBe("Catalogo Azul.xlsx");
+    expect(sanitizeFilename("IMPULSOR-DIAMETROPIÑON.jpg")).toBe(
+      "IMPULSOR-DIAMETROPINON.jpg",
+    );
+    expect(sanitizeFilename("piñón-áéíóúü.jpg")).toBe("pinon-aeiouu.jpg");
   });
 });
 
@@ -35,5 +40,20 @@ describe("getFileExtension", () => {
   it("devuelve cadena vacía sin extensión", () => {
     expect(getFileExtension("sin-extension")).toBe("");
     expect(getFileExtension(".hidden")).toBe("");
+  });
+});
+
+describe("buildImportExternalImagePath", () => {
+  it("usa nombre sanitizado en la key pero conserva extensión", () => {
+    const path = buildImportExternalImagePath(
+      "job1",
+      "3b0bd5e3-b61d-40e7-89d2-529c32f71227",
+      "IMPULSOR-DIAMETROPIÑON.jpg",
+    );
+
+    expect(path).toBe(
+      "imports/job1/external/3b0bd5e3-b61d-40e7-89d2-529c32f71227-IMPULSOR-DIAMETROPINON.jpg",
+    );
+    expect(path).not.toMatch(/[^\x00-\x7F]/);
   });
 });

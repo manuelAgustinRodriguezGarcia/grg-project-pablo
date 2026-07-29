@@ -1,7 +1,10 @@
+import {
+  LOGIN_IMAGE_HEIGHT,
+  LOGIN_IMAGE_SRC,
+  LOGIN_IMAGE_WIDTH,
+} from "../data/loginData";
 import sharedStyles from "../styles/loginShared.module.scss";
 import styles from "./LoginImagePanel.module.scss";
-
-const LOGIN_IMAGE_SRC = "/login/login.webp";
 
 export function LoginImagePanel() {
   return (
@@ -13,7 +16,10 @@ export function LoginImagePanel() {
         className={styles.image}
         src={LOGIN_IMAGE_SRC}
         alt=""
+        width={LOGIN_IMAGE_WIDTH}
+        height={LOGIN_IMAGE_HEIGHT}
         decoding="async"
+        fetchPriority="high"
       />
     </div>
   );

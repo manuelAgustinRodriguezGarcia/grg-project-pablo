@@ -3,14 +3,21 @@
 .panel {
   flex-shrink: 0;
   height: 100%;
+  // Reserve horizontal space before the image bytes arrive so the form
+  // does not start centered and then jump right.
+  aspect-ratio: 1181 / 1081;
+  width: auto;
+  overflow: hidden;
   line-height: 0;
+  background: $bg-page;
 }
 
 .image {
   display: block;
+  width: 100%;
   height: 100%;
-  width: auto;
-  max-width: none;
+  object-fit: cover;
+  object-position: center;
 }
 
 @media (max-width: 900px) {

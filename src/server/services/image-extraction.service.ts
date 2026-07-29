@@ -11,8 +11,12 @@ import {
   resolveImageColumnInternalKey,
   type ColumnLabelRef,
 } from "@/server/services/product-image-column-map";
-import { buildProductImageStoragePaths } from "@/server/image-processors";
-import { generateThumbnail, validateImageBuffer } from "@/server/image-processors";
+import {
+  buildImportExternalImagePath,
+  buildProductImageStoragePaths,
+  generateThumbnail,
+  validateImageBuffer,
+} from "@/server/image-processors";
 import { productImageRepository } from "@/server/repositories/product-image.repository";
 import { uploadFile } from "@/server/storage";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
@@ -303,8 +307,11 @@ export class ImageExtractionService {
         storagePath = paths.storagePath;
         thumbnailPath = paths.thumbnailPath;
       } else {
-        const stagingId = crypto.randomUUID();
-        const stagingPath = `imports/${input.importJobId}/external/${stagingId}-${originalName.replace(/[/\\]/g, "_")}`;
+        const stagingPath = buildImportExternalImagePath(
+          input.importJobId,
+          crypto.randomUUID(),
+          originalName,
+        );
 
         await uploadFile({
           bucket: STORAGE_BUCKETS.TEMP_IMPORTS,
