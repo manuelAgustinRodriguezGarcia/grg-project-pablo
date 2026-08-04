@@ -1,10 +1,23 @@
+import {
+  formatBetweenFilterLabel,
+} from "@/server/filters/column-filter-range";
 import type {
   ActiveFilterPill,
   ColumnFilterInput,
 } from "@/server/filters/column-filter.types";
 
-function formatActiveFilterLabel(displayName: string, value: string): string {
-  return `${displayName}: "${value}"`;
+function formatActiveFilterLabel(
+  displayName: string,
+  filter: ColumnFilterInput,
+): string {
+  if (filter.operator === "between") {
+    return (
+      formatBetweenFilterLabel(displayName, filter.value) ??
+      `${displayName}: ${filter.value}`
+    );
+  }
+
+  return `${displayName}: "${filter.value}"`;
 }
 
 export function upsertColumnFilter(
@@ -43,7 +56,7 @@ export function toActiveFilterPillsFromState(
       columnDisplayName: displayName,
       operator: filter.operator,
       value: filter.value,
-      label: formatActiveFilterLabel(displayName, filter.value),
+      label: formatActiveFilterLabel(displayName, filter),
     };
   });
 }

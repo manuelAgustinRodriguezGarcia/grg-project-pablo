@@ -25,7 +25,11 @@ export function ActiveFilterPills({
       <ul className={styles.activeFiltersList}>
         {filters.map((filter) => (
           <li key={filter.id}>
-            <span className={styles.activeFilterPill}>
+            <span
+              className={`${styles.activeFilterPill} ${
+                filter.operator === "between" ? styles.activeFilterPillRange : ""
+              }`}
+            >
               <span className={styles.activeFilterPillText}>{filter.label}</span>
               <button
                 type="button"

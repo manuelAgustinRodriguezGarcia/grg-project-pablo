@@ -1,4 +1,4 @@
-export type ColumnFilterOperator = "contains" | "equals";
+export type ColumnFilterOperator = "contains" | "equals" | "between";
 
 export type ColumnFilterInput = {
   columnInternalKey: string;

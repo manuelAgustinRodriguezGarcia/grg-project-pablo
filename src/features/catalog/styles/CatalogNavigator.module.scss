@@ -1,7 +1,8 @@
 @use "../../admin/styles/variables" as *;
 
 $catalog-surface: rgba($blue, 0.02);
-$catalog-heading-bg: rgba($blue, 0.045);
+$catalog-heading-bg: rgba($blue, 0.09);
+$table-row-stripe-bg: rgba($blue, 0.04);
 $catalog-panel-bg: rgba($white, 0.94);
 $catalog-shadow:
   0 2px 8px rgba($blue, 0.035),
@@ -1648,12 +1649,12 @@ $table-image-size: 6.25rem;
       ),
       linear-gradient(
         180deg,
-        rgba($blue, 0.06) 0%,
+        $catalog-heading-bg 0%,
         $catalog-heading-bg 100%
       ),
       $white;
     box-shadow:
-      inset 0 -1px 0 rgba($blue, calc(0.06 + var(--header-scroll-progress, 0) * 0.04)),
+      inset 0 -1px 0 rgba($blue, calc(0.1 + var(--header-scroll-progress, 0) * 0.04)),
       0 calc(var(--header-scroll-progress, 0) * 1px)
         calc(var(--header-scroll-progress, 0) * 5px)
         rgba($navy, calc(var(--header-scroll-progress, 0) * 0.04));
@@ -1670,8 +1671,16 @@ $table-image-size: 6.25rem;
     }
   }
 
+  tbody tr:nth-child(odd) {
+    background: $white;
+  }
+
+  tbody tr:nth-child(even) {
+    background: $table-row-stripe-bg;
+  }
+
   tbody tr:hover {
-    background: rgba($blue, 0.03);
+    background: $catalog-heading-bg;
   }
 }
 
@@ -2013,8 +2022,8 @@ $table-image-size: 6.25rem;
         ),
         linear-gradient(
           180deg,
-          rgba($blue, 0.11) 0%,
-          rgba($blue, 0.07) 100%
+          rgba($blue, 0.14) 0%,
+          rgba($blue, 0.11) 100%
         ),
         $white;
     }
@@ -2202,6 +2211,65 @@ $table-image-size: 6.25rem;
     outline: none;
     border-color: rgba($blue, 0.45);
     box-shadow: 0 0 0 2px rgba($blue, 0.12);
+  }
+}
+
+.columnFilterRangeRow {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+
+.columnFilterRangeInputWrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+  .columnFilterRangeInput {
+  padding-right: 2.35rem;
+
+  &:disabled {
+    background: rgba($navy, 0.04);
+    color: rgba($navy, 0.45);
+    cursor: not-allowed;
+  }
+}
+
+.columnFilterRangeSearchButton {
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 0;
+  border-radius: $radius-sm;
+  background: rgba($blue, 0.14);
+  color: $blue;
+  transform: translateY(-50%);
+  cursor: pointer;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba($blue, 0.22);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($blue, 0.45);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 }
 
@@ -2481,6 +2549,19 @@ $table-image-size: 6.25rem;
   font-family: $font-sans;
   font-size: 0.74rem;
   font-weight: 600;
+}
+
+.activeFilterPillRange {
+  background: rgba($green, 0.12);
+  color: $green;
+
+  .activeFilterPillRemove:hover {
+    background: rgba($green, 0.16);
+  }
+
+  .activeFilterPillRemove:focus-visible {
+    outline-color: $green;
+  }
 }
 
 .activeFilterPillText {

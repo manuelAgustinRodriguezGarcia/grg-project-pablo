@@ -1,11 +1,26 @@
 import { z } from "zod";
 import { productPaginationQuerySchema } from "@/features/records/schemas/product.schemas";
+import { parseBetweenFilterValue } from "@/server/filters/column-filter-range";
 
-export const columnFilterInputSchema = z.object({
-  columnInternalKey: z.string().trim().min(1),
-  operator: z.enum(["contains", "equals"]),
-  value: z.string().trim().min(1).max(200),
-});
+export const columnFilterInputSchema = z
+  .object({
+    columnInternalKey: z.string().trim().min(1),
+    operator: z.enum(["contains", "equals", "between"]),
+    value: z.string().trim().min(1).max(200),
+  })
+  .superRefine((data, ctx) => {
+    if (data.operator !== "between") {
+      return;
+    }
+
+    if (!parseBetweenFilterValue(data.value)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Rango de filtro inválido.",
+        path: ["value"],
+      });
+    }
+  });
 
 export const columnFiltersQuerySchema = z
   .union([

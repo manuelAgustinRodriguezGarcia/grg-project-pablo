@@ -223,6 +223,8 @@ model Product {
   originalText            String?  @db.Text
   indexedText             String?  @db.Text
   normalizedIndexedText   String?  @db.Text
+  /// Excel source row (1-based). Null for legacy/manual products — list falls back to updatedAt.
+  sourceRow               Int?
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
@@ -233,6 +235,7 @@ model Product {
 
   @@index([folderId])
   @@index([folderId, updatedAt, id])
+  @@index([folderId, sourceRow, id])
   @@index([normalizedCode])
   @@index([dynamicData], type: Gin)
 }

@@ -12,11 +12,16 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { Eye, EyeOff, ICON_STROKE, Pencil, X } from "@/shared/icons";
+import { Eye, EyeOff, ICON_STROKE, Pencil, Search, X } from "@/shared/icons";
 import { ColumnEditModal } from "@/features/catalog/components/ColumnEditModal";
 import { ProductImagePreviewModal } from "@/features/catalog/components/ProductImagePreviewModal";
 import { setColumnVisibilityAction } from "@/features/catalog/actions/column.actions";
 import type { ColumnListItem } from "@/features/catalog/types/column.types";
+import {
+  buildBetweenFilterValue,
+  isPureNumericFilterValue,
+  splitBetweenFilterValue,
+} from "@/server/filters/column-filter-range";
 import type {
   ColumnFilterInput,
   ColumnFilterOperator,
@@ -24,6 +29,7 @@ import type {
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 const FILTER_DEBOUNCE_MS = 2500;
+const RANGE_INTENT_WAIT_MS = 2000;
 const POPOVER_WIDTH_PX = 224;
 const POPOVER_TOP_OFFSET_PX = 6;
 const POPOVER_START_OFFSET_PX = 8;
@@ -93,10 +99,45 @@ function buildFilterFromDraft(
     return null;
   }
 
+  const operator = draftOperator === "between" ? "equals" : draftOperator;
+
   return {
     columnInternalKey,
-    operator: draftOperator,
+    operator,
     value: trimmedValue,
+  };
+}
+
+function draftsFromActiveFilter(
+  column: ColumnListItem,
+  activeFilter?: ColumnFilterInput,
+): {
+  value: string;
+  rangeEnd: string;
+  operator: ColumnFilterOperator;
+} {
+  if (!activeFilter) {
+    return {
+      value: "",
+      rangeEnd: "",
+      operator: defaultOperator(column),
+    };
+  }
+
+  if (activeFilter.operator === "between") {
+    const split = splitBetweenFilterValue(activeFilter.value);
+
+    return {
+      value: split?.from ?? "",
+      rangeEnd: split?.to ?? "",
+      operator: "equals",
+    };
+  }
+
+  return {
+    value: activeFilter.value,
+    rangeEnd: "",
+    operator: activeFilter.operator,
   };
 }
 
@@ -146,10 +187,13 @@ export function ColumnFilterMenu({
   onBlockHeaderInteractionChange,
 }: ColumnFilterMenuProps) {
   const isVisibilityOnly = mode === "visibility-only";
+  const supportsRange = !isVisibilityOnly;
   const menuId = useId();
   const popoverRef = useRef<HTMLDivElement>(null);
   const filterInputRef = useRef<HTMLInputElement>(null);
   const debounceTimeoutRef = useRef<number | null>(null);
+  const rangeIntentTimeoutRef = useRef<number | null>(null);
+  const rangeEndTypedRef = useRef(false);
   const wasOpenRef = useRef(false);
   const externalClearRef = useRef(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -158,6 +202,7 @@ export function ColumnFilterMenu({
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({
     visibility: "hidden",
   });
+  const [rangeIntentActive, setRangeIntentActive] = useState(false);
 
   const helpImageUrl = column.helpImagePreviewUrl ?? column.helpImageFullUrl;
   const helpText = column.helpText?.trim() || null;
@@ -165,9 +210,11 @@ export function ColumnFilterMenu({
     column.hasContextualHelp || Boolean(helpText) || Boolean(helpImageUrl);
   const helpPreviewUrl = column.helpImageFullUrl ?? helpImageUrl;
 
-  const [draftValue, setDraftValue] = useState(activeFilter?.value ?? "");
+  const initialDrafts = draftsFromActiveFilter(column, activeFilter);
+  const [draftValue, setDraftValue] = useState(initialDrafts.value);
+  const [draftRangeEnd, setDraftRangeEnd] = useState(initialDrafts.rangeEnd);
   const [draftOperator, setDraftOperator] = useState<ColumnFilterOperator>(
-    activeFilter?.operator ?? defaultOperator(column),
+    initialDrafts.operator,
   );
 
   const activeFilterKey = activeFilter
@@ -176,25 +223,60 @@ export function ColumnFilterMenu({
   const [syncedFilterKey, setSyncedFilterKey] = useState(activeFilterKey);
 
   if (activeFilterKey !== syncedFilterKey && !isOpen) {
+    const nextDrafts = draftsFromActiveFilter(column, activeFilter);
     setSyncedFilterKey(activeFilterKey);
-    setDraftValue(activeFilter?.value ?? "");
-    setDraftOperator(activeFilter?.operator ?? defaultOperator(column));
+    setDraftValue(nextDrafts.value);
+    setDraftRangeEnd(nextDrafts.rangeEnd);
+    setDraftOperator(nextDrafts.operator);
+    setRangeIntentActive(false);
+    rangeEndTypedRef.current = false;
     externalClearRef.current = !activeFilter;
   }
+
+  const canEditRangeEnd = supportsRange && isPureNumericFilterValue(draftValue);
+  const canApplyRange =
+    canEditRangeEnd && isPureNumericFilterValue(draftRangeEnd);
 
   const closeMenu = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
 
-  const commitFilter = useCallback(() => {
+  const clearDebounce = useCallback(() => {
+    if (debounceTimeoutRef.current !== null) {
+      window.clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearRangeIntentTimeout = useCallback(() => {
+    if (rangeIntentTimeoutRef.current !== null) {
+      window.clearTimeout(rangeIntentTimeoutRef.current);
+      rangeIntentTimeoutRef.current = null;
+    }
+  }, []);
+
+  const commitSingleFilter = useCallback(() => {
     if (externalClearRef.current) {
       externalClearRef.current = false;
       setDraftValue("");
+      setDraftRangeEnd("");
       setDraftOperator(defaultOperator(column));
+      setRangeIntentActive(false);
+      rangeEndTypedRef.current = false;
       return;
     }
 
-    const nextFilter = buildFilterFromDraft(column.internalKey, draftOperator, draftValue);
+    // With a range end drafted, never auto-apply a single-value filter
+    // (range is applied only via the search button).
+    if (draftRangeEnd.trim()) {
+      return;
+    }
+
+    const nextFilter = buildFilterFromDraft(
+      column.internalKey,
+      draftOperator,
+      draftValue,
+    );
 
     if (filtersAreEqual(activeFilter, nextFilter)) {
       return;
@@ -205,24 +287,102 @@ export function ColumnFilterMenu({
     activeFilter,
     column,
     draftOperator,
+    draftRangeEnd,
     draftValue,
     onFilterChange,
   ]);
 
-  const clearDebounce = useCallback(() => {
-    if (debounceTimeoutRef.current !== null) {
-      window.clearTimeout(debounceTimeoutRef.current);
-      debounceTimeoutRef.current = null;
+  const commitRangeFilter = useCallback(() => {
+    if (!canApplyRange) {
+      return;
     }
-  }, []);
+
+    const rangeValue = buildBetweenFilterValue(draftValue, draftRangeEnd);
+    if (!rangeValue) {
+      return;
+    }
+
+    const nextFilter: ColumnFilterInput = {
+      columnInternalKey: column.internalKey,
+      operator: "between",
+      value: rangeValue,
+    };
+
+    clearDebounce();
+    clearRangeIntentTimeout();
+    // Keep range intent so the single-value debounce cannot overwrite the range.
+    setRangeIntentActive(true);
+    rangeEndTypedRef.current = true;
+
+    if (filtersAreEqual(activeFilter, nextFilter)) {
+      return;
+    }
+
+    onFilterChange?.(nextFilter);
+  }, [
+    activeFilter,
+    canApplyRange,
+    clearDebounce,
+    clearRangeIntentTimeout,
+    column.internalKey,
+    draftRangeEnd,
+    draftValue,
+    onFilterChange,
+  ]);
 
   const scheduleDebouncedCommit = useCallback(() => {
     clearDebounce();
     debounceTimeoutRef.current = window.setTimeout(() => {
       debounceTimeoutRef.current = null;
-      commitFilter();
+      commitSingleFilter();
     }, FILTER_DEBOUNCE_MS);
-  }, [clearDebounce, commitFilter]);
+  }, [clearDebounce, commitSingleFilter]);
+
+  const scheduleRangeIntentFallback = useCallback(() => {
+    clearRangeIntentTimeout();
+    rangeIntentTimeoutRef.current = window.setTimeout(() => {
+      rangeIntentTimeoutRef.current = null;
+
+      if (rangeEndTypedRef.current) {
+        return;
+      }
+
+      commitSingleFilter();
+    }, RANGE_INTENT_WAIT_MS);
+  }, [clearRangeIntentTimeout, commitSingleFilter]);
+
+  const handleRangeInputFocus = useCallback(() => {
+    if (!supportsRange) {
+      return;
+    }
+
+    clearDebounce();
+    setRangeIntentActive(true);
+    rangeEndTypedRef.current = draftRangeEnd.trim().length > 0;
+
+    if (!rangeEndTypedRef.current) {
+      scheduleRangeIntentFallback();
+    } else {
+      clearRangeIntentTimeout();
+    }
+  }, [
+    clearDebounce,
+    clearRangeIntentTimeout,
+    draftRangeEnd,
+    scheduleRangeIntentFallback,
+    supportsRange,
+  ]);
+
+  const handleRangeInputChange = useCallback(
+    (value: string) => {
+      setDraftRangeEnd(value);
+      setRangeIntentActive(true);
+      rangeEndTypedRef.current = value.trim().length > 0;
+      clearDebounce();
+      clearRangeIntentTimeout();
+    },
+    [clearDebounce, clearRangeIntentTimeout],
+  );
 
   const updatePopoverPosition = useCallback(() => {
     const anchor = anchorRef.current;
@@ -351,7 +511,17 @@ export function ColumnFilterMenu({
       return;
     }
 
-    const nextFilter = buildFilterFromDraft(column.internalKey, draftOperator, draftValue);
+    // While drafting or holding a range end value, suppress single-value debounce.
+    if (rangeIntentActive || draftRangeEnd.trim()) {
+      clearDebounce();
+      return;
+    }
+
+    const nextFilter = buildFilterFromDraft(
+      column.internalKey,
+      draftOperator,
+      draftValue,
+    );
 
     if (!isOpen && filtersAreEqual(activeFilter, nextFilter)) {
       clearDebounce();
@@ -368,9 +538,11 @@ export function ColumnFilterMenu({
     clearDebounce,
     column.internalKey,
     draftOperator,
+    draftRangeEnd,
     draftValue,
     isOpen,
     isVisibilityOnly,
+    rangeIntentActive,
     scheduleDebouncedCommit,
   ]);
 
@@ -381,17 +553,31 @@ export function ColumnFilterMenu({
 
     if (wasOpenRef.current && !isOpen) {
       clearDebounce();
-      commitFilter();
+      clearRangeIntentTimeout();
+      // Do not overwrite an applied/pending range with the first input alone.
+      if (!draftRangeEnd.trim()) {
+        commitSingleFilter();
+      }
+      setRangeIntentActive(false);
+      rangeEndTypedRef.current = false;
     }
 
     wasOpenRef.current = isOpen;
-  }, [clearDebounce, commitFilter, isOpen, isVisibilityOnly]);
+  }, [
+    clearDebounce,
+    clearRangeIntentTimeout,
+    commitSingleFilter,
+    draftRangeEnd,
+    isOpen,
+    isVisibilityOnly,
+  ]);
 
   useEffect(
     () => () => {
       clearDebounce();
+      clearRangeIntentTimeout();
     },
-    [clearDebounce],
+    [clearDebounce, clearRangeIntentTimeout],
   );
 
   useEffect(() => {
@@ -498,17 +684,71 @@ export function ColumnFilterMenu({
             type="text"
             className={styles.columnFilterInput}
             value={draftValue}
-            onChange={(event) => setDraftValue(event.target.value)}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              setDraftValue(nextValue);
+
+              if (
+                draftRangeEnd &&
+                (!nextValue.trim() || !isPureNumericFilterValue(nextValue))
+              ) {
+                setDraftRangeEnd("");
+                rangeEndTypedRef.current = false;
+                clearRangeIntentTimeout();
+                setRangeIntentActive(false);
+              }
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
                 clearDebounce();
-                commitFilter();
+                clearRangeIntentTimeout();
+
+                if (draftRangeEnd.trim()) {
+                  if (canApplyRange) {
+                    commitRangeFilter();
+                  }
+                  return;
+                }
+
+                commitSingleFilter();
               }
             }}
             placeholder={formatColumnFilterPlaceholder(column.displayName)}
             aria-label={`Valor de filtro para ${column.displayName}`}
           />
+        ) : null}
+
+        {supportsRange ? (
+          <div className={styles.columnFilterRangeRow}>
+            <div className={styles.columnFilterRangeInputWrap}>
+              <input
+                type="text"
+                className={`${styles.columnFilterInput} ${styles.columnFilterRangeInput}`}
+                value={draftRangeEnd}
+                disabled={!canEditRangeEnd}
+                onChange={(event) => handleRangeInputChange(event.target.value)}
+                onFocus={handleRangeInputFocus}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && canApplyRange) {
+                    event.preventDefault();
+                    commitRangeFilter();
+                  }
+                }}
+                placeholder="Segundo valor del rango"
+                aria-label={`Segundo valor del rango para ${column.displayName}`}
+              />
+              <button
+                type="button"
+                className={styles.columnFilterRangeSearchButton}
+                aria-label={`Buscar rango en ${column.displayName}`}
+                disabled={!canApplyRange}
+                onClick={commitRangeFilter}
+              >
+                <Search strokeWidth={ICON_STROKE} aria-hidden />
+              </button>
+            </div>
+          </div>
         ) : null}
 
         {isVisibilityOnly || isAdmin ? (

@@ -3,6 +3,10 @@ import type { PriceColumn } from "@/generated/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
 import { Prisma as PrismaNamespace } from "@/generated/prisma/client";
 import { PriceItemError } from "@/server/services/price-item.errors";
+import {
+  formatBetweenFilterLabel,
+  parseBetweenFilterValue,
+} from "./column-filter-range";
 import type {
   ActiveFilterPill,
   ColumnFilterInput,
@@ -10,11 +14,25 @@ import type {
   JsonTextColumnFilter,
 } from "./column-filter.types";
 
-const columnFilterSchema = z.object({
-  columnInternalKey: z.string().trim().min(1),
-  operator: z.enum(["contains", "equals"]),
-  value: z.string().trim().min(1).max(200),
-});
+const columnFilterSchema = z
+  .object({
+    columnInternalKey: z.string().trim().min(1),
+    operator: z.enum(["contains", "equals", "between"]),
+    value: z.string().trim().min(1).max(200),
+  })
+  .superRefine((data, ctx) => {
+    if (data.operator !== "between") {
+      return;
+    }
+
+    if (!parseBetweenFilterValue(data.value)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Rango de filtro inválido.",
+        path: ["value"],
+      });
+    }
+  });
 
 const columnFiltersSchema = z
   .array(columnFilterSchema)
@@ -26,18 +44,33 @@ export type PartitionedPriceColumnFilters = {
   amountContainsFilters: JsonTextColumnFilter[];
 };
 
-function formatActiveFilterLabel(displayName: string, value: string): string {
-  return `${displayName}: "${value}"`;
+function formatActiveFilterLabel(
+  displayName: string,
+  filter: ColumnFilterInput,
+): string {
+  if (filter.operator === "between") {
+    return (
+      formatBetweenFilterLabel(displayName, filter.value) ??
+      `${displayName}: ${filter.value}`
+    );
+  }
+
+  return `${displayName}: "${filter.value}"`;
 }
 
 function isJsonTextDynamicFilter(
   column: PriceColumn,
   filter: ColumnFilterInput,
 ): boolean {
+  if (column.isPrimaryCode || column.isDescription || column.isPrice) {
+    return false;
+  }
+
+  if (filter.operator === "between") {
+    return true;
+  }
+
   return (
-    !column.isPrimaryCode &&
-    !column.isDescription &&
-    !column.isPrice &&
     column.dataType === "TEXT" &&
     column.internalKey === filter.columnInternalKey
   );
@@ -56,33 +89,63 @@ function buildDynamicDataCondition(
   value: string,
   dataType: PriceColumn["dataType"],
 ): Prisma.PriceItemWhereInput {
-  if (dataType === "NUMBER" && operator === "equals") {
-    const numeric = Number(value);
-    if (!Number.isNaN(numeric)) {
+  switch (operator) {
+    case "between": {
+      const parsed = parseBetweenFilterValue(value);
+      if (!parsed) {
+        return { id: { in: [] } };
+      }
+
+      return {
+        AND: [
+          {
+            dynamicData: {
+              path: [columnInternalKey],
+              gte: parsed.min,
+            },
+          },
+          {
+            dynamicData: {
+              path: [columnInternalKey],
+              lte: parsed.max,
+            },
+          },
+        ],
+      };
+    }
+    case "equals": {
+      if (dataType === "NUMBER") {
+        const numeric = Number(value);
+        if (!Number.isNaN(numeric)) {
+          return {
+            dynamicData: {
+              path: [columnInternalKey],
+              equals: numeric,
+            },
+          };
+        }
+      }
+
       return {
         dynamicData: {
           path: [columnInternalKey],
-          equals: numeric,
+          equals: value,
         },
       };
     }
+    case "contains": {
+      return {
+        dynamicData: {
+          path: [columnInternalKey],
+          string_contains: value,
+        },
+      };
+    }
+    default: {
+      const _exhaustive: never = operator;
+      return _exhaustive;
+    }
   }
-
-  if (operator === "equals") {
-    return {
-      dynamicData: {
-        path: [columnInternalKey],
-        equals: value,
-      },
-    };
-  }
-
-  return {
-    dynamicData: {
-      path: [columnInternalKey],
-      string_contains: value,
-    },
-  };
 }
 
 export class PriceColumnFilterService {
@@ -268,7 +331,7 @@ export class PriceColumnFilterService {
         columnDisplayName: displayName,
         operator: filter.operator,
         value: filter.value,
-        label: formatActiveFilterLabel(displayName, filter.value),
+        label: formatActiveFilterLabel(displayName, filter),
       };
     });
   }

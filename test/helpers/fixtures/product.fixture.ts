@@ -17,6 +17,7 @@ export function createProductFixture(overrides: Partial<Product> = {}): Product 
     originalText: null,
     indexedText: null,
     normalizedIndexedText: null,
+    sourceRow: null,
     createdAt: baseDate,
     updatedAt: baseDate,
     ...overrides,
