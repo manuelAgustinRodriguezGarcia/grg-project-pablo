@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import {
   EMAIL_DISPLAY,
+  LOGIN_PATH,
   PHONE_DISPLAY,
 } from "@/features/landing/data/landingData";
-import { Mail, ICON_STROKE } from "@/shared/icons";
+import { Lock, Mail, ICON_STROKE } from "@/shared/icons";
 import { WhatsAppIcon } from "@/shared/components/WhatsAppIcon";
 import { copyTextToClipboard } from "@/shared/clipboard/copy-to-clipboard";
 import { useCopiedToast } from "@/shared/hooks/use-copied-toast";
@@ -56,6 +58,13 @@ export function LandingFooterSocial() {
         >
           <Mail className={styles.socialIcon} strokeWidth={ICON_STROKE} aria-hidden />
         </button>
+        <Link
+          href={LOGIN_PATH}
+          className={styles.footerLogin}
+          aria-label="Iniciar sesión"
+        >
+          <Lock className={styles.socialIcon} strokeWidth={ICON_STROKE} aria-hidden />
+        </Link>
       </div>
       {toast}
     </>
