@@ -16,6 +16,7 @@ describe("column-filter.service", () => {
       internalKey: "estrias",
       displayName: "Cant. de estrías",
       isFilterable: true,
+      isPrimaryCode: false,
       dataType: "NUMBER",
     }),
     createColumnFixture({
@@ -37,7 +38,51 @@ describe("column-filter.service", () => {
 
     const pills = columnFilterService.toActiveFilterPills(filters, columns);
     expect(pills).toHaveLength(1);
-    expect(pills[0]?.label).toBe('Montadora contiene "John D"');
+    expect(pills[0]?.label).toBe('Montadora: "John D"');
+  });
+
+  it("genera pill de rango sin comillas y particiona between a SQL", () => {
+    const filters = columnFilterService.parseFilters([
+      {
+        columnInternalKey: "estrias",
+        operator: "between",
+        value: "107|105",
+      },
+    ]);
+
+    const pills = columnFilterService.toActiveFilterPills(filters, columns);
+    expect(pills[0]?.label).toBe("Cant. de estrías: 105 - 107");
+    expect(pills[0]?.operator).toBe("between");
+
+    const partitioned = columnFilterService.partitionFilters(filters, columns);
+    expect(partitioned.jsonTextFilters).toEqual([
+      {
+        columnInternalKey: "estrias",
+        operator: "between",
+        value: "107|105",
+      },
+    ]);
+    expect(partitioned.prismaFilters).toEqual([]);
+  });
+
+  it("acepta between en columnas TEXT", () => {
+    const filters = columnFilterService.parseFilters([
+      {
+        columnInternalKey: "montadora",
+        operator: "between",
+        value: "1|2",
+      },
+    ]);
+
+    expect(() =>
+      columnFilterService.validateFiltersForColumns(filters, columns, [
+        "montadora",
+        "estrias",
+      ]),
+    ).not.toThrow();
+
+    const partitioned = columnFilterService.partitionFilters(filters, columns);
+    expect(partitioned.jsonTextFilters).toHaveLength(1);
   });
 
   it("combina filtros prisma con AND", () => {

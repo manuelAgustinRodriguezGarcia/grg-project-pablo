@@ -330,4 +330,207 @@ describe("ColumnFilterMenu", () => {
     expect(screen.getByText("Descripción")).toBeInTheDocument();
     expect(screen.getByText("Explica el tipo de alternador.")).toBeInTheDocument();
   });
+
+  it("aplica filtro por rango en columnas TEXT con valores numéricos", () => {
+    vi.useFakeTimers();
+    const onFilterChange = vi.fn();
+    const anchorRef = createRef<HTMLTableCellElement>();
+
+    render(
+      <>
+        <table>
+          <thead>
+            <tr>
+              <th ref={anchorRef}>EXTERIOR</th>
+            </tr>
+          </thead>
+        </table>
+        <ColumnFilterMenu
+          column={createColumn({
+            displayName: "EXTERIOR",
+            internalKey: "exterior",
+            dataType: "TEXT",
+          })}
+          onFilterChange={onFilterChange}
+          isOpen
+          onOpenChange={vi.fn()}
+          anchorRef={anchorRef}
+        />
+      </>,
+    );
+
+    const firstInput = screen.getByLabelText("Valor de filtro para EXTERIOR");
+    const secondInput = screen.getByLabelText("Segundo valor del rango para EXTERIOR");
+    const searchButton = screen.getByRole("button", {
+      name: "Buscar rango en EXTERIOR",
+    });
+
+    expect(secondInput).toBeDisabled();
+    expect(searchButton).toBeDisabled();
+
+    act(() => {
+      fireEvent.change(firstInput, { target: { value: "105" } });
+    });
+
+    expect(secondInput).not.toBeDisabled();
+
+    act(() => {
+      fireEvent.change(secondInput, { target: { value: "107" } });
+    });
+
+    expect(searchButton).not.toBeDisabled();
+    expect(onFilterChange).not.toHaveBeenCalled();
+
+    act(() => {
+      fireEvent.click(searchButton);
+    });
+
+    expect(onFilterChange).toHaveBeenCalledTimes(1);
+    expect(onFilterChange).toHaveBeenCalledWith({
+      columnInternalKey: "exterior",
+      operator: "between",
+      value: "105|107",
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(onFilterChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("bloquea el segundo input si el primero tiene letras", () => {
+    const anchorRef = createRef<HTMLTableCellElement>();
+
+    render(
+      <>
+        <table>
+          <thead>
+            <tr>
+              <th ref={anchorRef}>EXTERIOR</th>
+            </tr>
+          </thead>
+        </table>
+        <ColumnFilterMenu
+          column={createColumn({
+            displayName: "EXTERIOR",
+            internalKey: "exterior",
+            dataType: "TEXT",
+          })}
+          onFilterChange={vi.fn()}
+          isOpen
+          onOpenChange={vi.fn()}
+          anchorRef={anchorRef}
+        />
+      </>,
+    );
+
+    const firstInput = screen.getByLabelText("Valor de filtro para EXTERIOR");
+    const secondInput = screen.getByLabelText("Segundo valor del rango para EXTERIOR");
+
+    act(() => {
+      fireEvent.change(firstInput, { target: { value: "105" } });
+    });
+    expect(secondInput).not.toBeDisabled();
+
+    act(() => {
+      fireEvent.change(secondInput, { target: { value: "107" } });
+      fireEvent.change(firstInput, { target: { value: "10a" } });
+    });
+
+    expect(secondInput).toBeDisabled();
+    expect(secondInput).toHaveValue("");
+    expect(
+      screen.getByRole("button", { name: "Buscar rango en EXTERIOR" }),
+    ).toBeDisabled();
+  });
+
+  it("deshabilita buscar rango si el primer valor no es numérico", () => {
+    const anchorRef = createRef<HTMLTableCellElement>();
+
+    render(
+      <>
+        <table>
+          <thead>
+            <tr>
+              <th ref={anchorRef}>EXTERIOR</th>
+            </tr>
+          </thead>
+        </table>
+        <ColumnFilterMenu
+          column={createColumn({
+            displayName: "EXTERIOR",
+            internalKey: "exterior",
+            dataType: "TEXT",
+          })}
+          onFilterChange={vi.fn()}
+          isOpen
+          onOpenChange={vi.fn()}
+          anchorRef={anchorRef}
+        />
+      </>,
+    );
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Valor de filtro para EXTERIOR"), {
+        target: { value: "10a" },
+      });
+    });
+
+    expect(
+      screen.getByLabelText("Segundo valor del rango para EXTERIOR"),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Buscar rango en EXTERIOR" }),
+    ).toBeDisabled();
+  });
+
+  it("al enfocar el segundo input sin escribir aplica el primero tras 2s", () => {
+    vi.useFakeTimers();
+    const onFilterChange = vi.fn();
+    const anchorRef = createRef<HTMLTableCellElement>();
+
+    render(
+      <>
+        <table>
+          <thead>
+            <tr>
+              <th ref={anchorRef}>EXTERIOR</th>
+            </tr>
+          </thead>
+        </table>
+        <ColumnFilterMenu
+          column={createColumn({
+            displayName: "EXTERIOR",
+            internalKey: "exterior",
+            dataType: "TEXT",
+          })}
+          onFilterChange={onFilterChange}
+          isOpen
+          onOpenChange={vi.fn()}
+          anchorRef={anchorRef}
+        />
+      </>,
+    );
+
+    const firstInput = screen.getByLabelText("Valor de filtro para EXTERIOR");
+    const secondInput = screen.getByLabelText("Segundo valor del rango para EXTERIOR");
+
+    act(() => {
+      fireEvent.change(firstInput, { target: { value: "105" } });
+      fireEvent.focus(secondInput);
+    });
+
+    expect(onFilterChange).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(onFilterChange).toHaveBeenCalledWith({
+      columnInternalKey: "exterior",
+      operator: "contains",
+      value: "105",
+    });
+  });
 });

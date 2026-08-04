@@ -25,6 +25,8 @@ import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 
 const BATCH_SIZE = 500;
+const IMPORT_TRANSACTION_TIMEOUT_MS = 120_000;
+const IMPORT_TRANSACTION_MAX_WAIT_MS = 20_000;
 const PREVIEW_COLUMN_ID_PREFIX = "preview:";
 
 export type SetPriceImportDestinationInput = {
@@ -498,34 +500,40 @@ export class PriceImportService {
     const skippedCount = mappedItems.length - itemsToInsert.length;
     const matchedInPreview = previewItems.filter((item) => item.isMatch).length;
 
-    await prisma.$transaction(async () => {
-      if (input.actionType === "REEMPLAZAR_LISTA") {
-        await priceItemRepository.deleteByPriceList(priceListId);
-      }
+    await prisma.$transaction(
+      async () => {
+        if (input.actionType === "REEMPLAZAR_LISTA") {
+          await priceItemRepository.deleteByPriceList(priceListId);
+        }
 
-      for (let offset = 0; offset < itemsToInsert.length; offset += BATCH_SIZE) {
-        const batch = itemsToInsert.slice(offset, offset + BATCH_SIZE);
-        await priceItemRepository.createMany(
-          batch.map((item) => {
-            const indexedText = buildIndexedTextForMappedPriceItem(columns, item);
-            return {
-              priceListId,
-              primaryCode: item.primaryCode,
-              normalizedCode: item.normalizedCode,
-              description: item.description,
-              amount:
-                item.amount !== null && item.amount !== undefined
-                  ? new Prisma.Decimal(item.amount)
-                  : null,
-              dynamicData: item.dynamicData,
-              originalText: item.originalText,
-              indexedText,
-              normalizedIndexedText: normalizeIndexedText(indexedText),
-            };
-          }),
-        );
-      }
-    });
+        for (let offset = 0; offset < itemsToInsert.length; offset += BATCH_SIZE) {
+          const batch = itemsToInsert.slice(offset, offset + BATCH_SIZE);
+          await priceItemRepository.createMany(
+            batch.map((item) => {
+              const indexedText = buildIndexedTextForMappedPriceItem(columns, item);
+              return {
+                priceListId,
+                primaryCode: item.primaryCode,
+                normalizedCode: item.normalizedCode,
+                description: item.description,
+                amount:
+                  item.amount !== null && item.amount !== undefined
+                    ? new Prisma.Decimal(item.amount)
+                    : null,
+                dynamicData: item.dynamicData,
+                originalText: item.originalText,
+                indexedText,
+                normalizedIndexedText: normalizeIndexedText(indexedText),
+              };
+            }),
+          );
+        }
+      },
+      {
+        maxWait: IMPORT_TRANSACTION_MAX_WAIT_MS,
+        timeout: IMPORT_TRANSACTION_TIMEOUT_MS,
+      },
+    );
 
     const formulaStats = countFormulas(mappedItems);
     const report = {

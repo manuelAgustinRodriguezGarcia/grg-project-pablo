@@ -113,15 +113,23 @@ describe("column-filter-state", () => {
           operator: "equals",
           value: "19",
         },
+        {
+          columnInternalKey: "exterior",
+          operator: "between",
+          value: "105|107",
+        },
       ],
       [
         { internalKey: "montadora", displayName: "Montadora" },
         { internalKey: "estrias", displayName: "Cant. de estrías" },
+        { internalKey: "exterior", displayName: "EXTERIOR" },
       ],
     );
 
-    expect(pills).toHaveLength(2);
-    expect(pills[0]?.label).toBe('Montadora contiene "John"');
-    expect(pills[1]?.label).toBe('Cant. de estrías = "19"');
+    expect(pills).toHaveLength(3);
+    expect(pills[0]?.label).toBe('Montadora: "John"');
+    expect(pills[1]?.label).toBe('Cant. de estrías: "19"');
+    expect(pills[2]?.label).toBe("EXTERIOR: 105 - 107");
+    expect(pills[2]?.operator).toBe("between");
   });
 });

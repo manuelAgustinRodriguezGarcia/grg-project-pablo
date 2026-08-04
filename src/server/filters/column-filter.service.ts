@@ -2,6 +2,10 @@ import { z } from "zod";
 import type { FolderColumn } from "@/generated/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
 import { ProductError } from "@/server/services/product.errors";
+import {
+  formatBetweenFilterLabel,
+  parseBetweenFilterValue,
+} from "./column-filter-range";
 import type {
   ActiveFilterPill,
   ColumnFilterInput,
@@ -9,11 +13,25 @@ import type {
   JsonTextColumnFilter,
 } from "./column-filter.types";
 
-const columnFilterSchema = z.object({
-  columnInternalKey: z.string().trim().min(1),
-  operator: z.enum(["contains", "equals"]),
-  value: z.string().trim().min(1).max(200),
-});
+const columnFilterSchema = z
+  .object({
+    columnInternalKey: z.string().trim().min(1),
+    operator: z.enum(["contains", "equals", "between"]),
+    value: z.string().trim().min(1).max(200),
+  })
+  .superRefine((data, ctx) => {
+    if (data.operator !== "between") {
+      return;
+    }
+
+    if (!parseBetweenFilterValue(data.value)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Rango de filtro inválido.",
+        path: ["value"],
+      });
+    }
+  });
 
 const columnFiltersSchema = z
   .array(columnFilterSchema)
@@ -24,8 +42,18 @@ export type PartitionedColumnFilters = {
   jsonTextFilters: JsonTextColumnFilter[];
 };
 
-function formatActiveFilterLabel(displayName: string, value: string): string {
-  return `${displayName}: "${value}"`;
+function formatActiveFilterLabel(
+  displayName: string,
+  filter: ColumnFilterInput,
+): string {
+  if (filter.operator === "between") {
+    return (
+      formatBetweenFilterLabel(displayName, filter.value) ??
+      `${displayName}: ${filter.value}`
+    );
+  }
+
+  return `${displayName}: "${filter.value}"`;
 }
 
 function getDynamicValue(
@@ -47,12 +75,47 @@ function isJsonTextDynamicFilter(
   column: FolderColumn,
   filter: ColumnFilterInput,
 ): boolean {
+  if (column.isPrimaryCode || column.isDescription) {
+    return false;
+  }
+
+  // Range compares dynamic JSON values as numbers via raw SQL for any dataType.
+  if (filter.operator === "between") {
+    return true;
+  }
+
   return (
-    !column.isPrimaryCode &&
-    !column.isDescription &&
     column.dataType === "TEXT" &&
     column.internalKey === filter.columnInternalKey
   );
+}
+
+function buildBetweenDynamicCondition(
+  columnInternalKey: string,
+  value: string,
+): Prisma.ProductWhereInput {
+  const parsed = parseBetweenFilterValue(value);
+
+  if (!parsed) {
+    return { id: { in: [] } };
+  }
+
+  return {
+    AND: [
+      {
+        dynamicData: {
+          path: [columnInternalKey],
+          gte: parsed.min,
+        },
+      },
+      {
+        dynamicData: {
+          path: [columnInternalKey],
+          lte: parsed.max,
+        },
+      },
+    ],
+  };
 }
 
 function buildDynamicDataCondition(
@@ -61,33 +124,43 @@ function buildDynamicDataCondition(
   value: string,
   dataType: FolderColumn["dataType"],
 ): Prisma.ProductWhereInput {
-  if (dataType === "NUMBER" && operator === "equals") {
-    const numeric = Number(value);
-    if (!Number.isNaN(numeric)) {
+  switch (operator) {
+    case "between": {
+      return buildBetweenDynamicCondition(columnInternalKey, value);
+    }
+    case "equals": {
+      if (dataType === "NUMBER") {
+        const numeric = Number(value);
+        if (!Number.isNaN(numeric)) {
+          return {
+            dynamicData: {
+              path: [columnInternalKey],
+              equals: numeric,
+            },
+          };
+        }
+      }
+
       return {
         dynamicData: {
           path: [columnInternalKey],
-          equals: numeric,
+          equals: value,
         },
       };
     }
+    case "contains": {
+      return {
+        dynamicData: {
+          path: [columnInternalKey],
+          string_contains: value,
+        },
+      };
+    }
+    default: {
+      const _exhaustive: never = operator;
+      return _exhaustive;
+    }
   }
-
-  if (operator === "equals") {
-    return {
-      dynamicData: {
-        path: [columnInternalKey],
-        equals: value,
-      },
-    };
-  }
-
-  return {
-    dynamicData: {
-      path: [columnInternalKey],
-      string_contains: value,
-    },
-  };
 }
 
 export class ColumnFilterService {
@@ -254,7 +327,7 @@ export class ColumnFilterService {
         columnDisplayName: displayName,
         operator: filter.operator,
         value: filter.value,
-        label: formatActiveFilterLabel(displayName, filter.value),
+        label: formatActiveFilterLabel(displayName, filter),
       };
     });
   }

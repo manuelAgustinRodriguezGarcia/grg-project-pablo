@@ -1,12 +1,42 @@
 import type { PriceItem } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
+import { parseBetweenFilterValue } from "@/server/filters/column-filter-range";
 import type { JsonTextColumnFilter } from "@/server/filters/column-filter.types";
 
 const VALID_JSON_COLUMN_KEY = /^[a-z0-9_]+$/;
+const NUMERIC_TEXT_PATTERN = "^-?[0-9]+([.,][0-9]+)?$";
 
 function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\]/g, "\\$&");
+}
+
+function buildJsonTextFilterCondition(filter: JsonTextColumnFilter): Prisma.Sql {
+  switch (filter.operator) {
+    case "equals": {
+      return Prisma.sql`LOWER("dynamicData"->>${filter.columnInternalKey}) = LOWER(${filter.value})`;
+    }
+    case "contains": {
+      const pattern = `%${escapeIlikePattern(filter.value)}%`;
+      return Prisma.sql`"dynamicData"->>${filter.columnInternalKey} ILIKE ${pattern}`;
+    }
+    case "between": {
+      const parsed = parseBetweenFilterValue(filter.value);
+      if (!parsed) {
+        return Prisma.sql`FALSE`;
+      }
+
+      return Prisma.sql`(
+        ("dynamicData"->>${filter.columnInternalKey}) ~ ${NUMERIC_TEXT_PATTERN}
+        AND REPLACE("dynamicData"->>${filter.columnInternalKey}, ',', '.')::numeric >= ${parsed.min}
+        AND REPLACE("dynamicData"->>${filter.columnInternalKey}, ',', '.')::numeric <= ${parsed.max}
+      )`;
+    }
+    default: {
+      const _exhaustive: never = filter.operator;
+      return _exhaustive;
+    }
+  }
 }
 
 export type PriceItemPaginationOptions = {
@@ -136,14 +166,7 @@ export class PriceItemRepository {
       }
     }
 
-    const conditions = filters.map((filter) => {
-      if (filter.operator === "equals") {
-        return Prisma.sql`LOWER("dynamicData"->>${filter.columnInternalKey}) = LOWER(${filter.value})`;
-      }
-
-      const pattern = `%${escapeIlikePattern(filter.value)}%`;
-      return Prisma.sql`"dynamicData"->>${filter.columnInternalKey} ILIKE ${pattern}`;
-    });
+    const conditions = filters.map((filter) => buildJsonTextFilterCondition(filter));
 
     const rows = await prisma.$queryRaw<Array<{ id: string }>>`
       SELECT "id"

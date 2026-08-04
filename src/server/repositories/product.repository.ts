@@ -1,12 +1,45 @@
 import type { Catalog, CatalogFolder, EquivalentCode, Product } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
+import { parseBetweenFilterValue } from "@/server/filters/column-filter-range";
 import type { JsonTextColumnFilter } from "@/server/filters/column-filter.types";
+import { PRODUCT_LIST_ORDER_BY } from "@/server/repositories/product-list-order";
 
 const VALID_JSON_COLUMN_KEY = /^[a-zA-Z0-9_]+$/;
+const NUMERIC_TEXT_PATTERN = "^-?[0-9]+([.,][0-9]+)?$";
+
+type ProductDbClient = Prisma.TransactionClient | typeof prisma;
 
 function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\]/g, "\\$&");
+}
+
+function buildJsonTextFilterCondition(filter: JsonTextColumnFilter): Prisma.Sql {
+  switch (filter.operator) {
+    case "equals": {
+      return Prisma.sql`LOWER("dynamicData"->>${filter.columnInternalKey}) = LOWER(${filter.value})`;
+    }
+    case "contains": {
+      const pattern = `%${escapeIlikePattern(filter.value)}%`;
+      return Prisma.sql`"dynamicData"->>${filter.columnInternalKey} ILIKE ${pattern}`;
+    }
+    case "between": {
+      const parsed = parseBetweenFilterValue(filter.value);
+      if (!parsed) {
+        return Prisma.sql`FALSE`;
+      }
+
+      return Prisma.sql`(
+        ("dynamicData"->>${filter.columnInternalKey}) ~ ${NUMERIC_TEXT_PATTERN}
+        AND REPLACE("dynamicData"->>${filter.columnInternalKey}, ',', '.')::numeric >= ${parsed.min}
+        AND REPLACE("dynamicData"->>${filter.columnInternalKey}, ',', '.')::numeric <= ${parsed.max}
+      )`;
+    }
+    default: {
+      const _exhaustive: never = filter.operator;
+      return _exhaustive;
+    }
+  }
 }
 
 export type ProductPaginationOptions = {
@@ -56,6 +89,7 @@ export type CreateProductData = {
   originalText?: string | null;
   indexedText?: string | null;
   normalizedIndexedText?: string | null;
+  sourceRow?: number | null;
 };
 
 export class ProductRepository {
@@ -91,7 +125,7 @@ export class ProductRepository {
     const [items, total] = await Promise.all([
       prisma.product.findMany({
         where,
-        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+        orderBy: PRODUCT_LIST_ORDER_BY,
         skip,
         take: pageSize,
         select: {
@@ -146,7 +180,7 @@ export class ProductRepository {
     const [items, total] = await Promise.all([
       prisma.product.findMany({
         where,
-        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+        orderBy: PRODUCT_LIST_ORDER_BY,
         skip,
         take: pageSize,
       }),
@@ -176,14 +210,7 @@ export class ProductRepository {
       }
     }
 
-    const conditions = filters.map((filter) => {
-      if (filter.operator === "equals") {
-        return Prisma.sql`LOWER("dynamicData"->>${filter.columnInternalKey}) = LOWER(${filter.value})`;
-      }
-
-      const pattern = `%${escapeIlikePattern(filter.value)}%`;
-      return Prisma.sql`"dynamicData"->>${filter.columnInternalKey} ILIKE ${pattern}`;
-    });
+    const conditions = filters.map((filter) => buildJsonTextFilterCondition(filter));
 
     const rows = await prisma.$queryRaw<Array<{ id: string }>>`
       SELECT "id"
@@ -274,7 +301,7 @@ export class ProductRepository {
   async findByFolderId(folderId: string): Promise<Product[]> {
     return prisma.product.findMany({
       where: { folderId },
-      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      orderBy: PRODUCT_LIST_ORDER_BY,
     });
   }
 
@@ -289,6 +316,7 @@ export class ProductRepository {
         originalText: data.originalText ?? null,
         indexedText: data.indexedText ?? null,
         normalizedIndexedText: data.normalizedIndexedText ?? null,
+        sourceRow: data.sourceRow ?? null,
       },
     });
   }
@@ -321,12 +349,15 @@ export class ProductRepository {
     await prisma.product.delete({ where: { id } });
   }
 
-  async createMany(data: CreateProductData[]): Promise<number> {
+  async createMany(
+    data: CreateProductData[],
+    client: ProductDbClient = prisma,
+  ): Promise<number> {
     if (data.length === 0) {
       return 0;
     }
 
-    const result = await prisma.product.createMany({
+    const result = await client.product.createMany({
       data: data.map((item) => ({
         folderId: item.folderId,
         primaryCode: item.primaryCode ?? null,
@@ -336,14 +367,18 @@ export class ProductRepository {
         originalText: item.originalText ?? null,
         indexedText: item.indexedText ?? null,
         normalizedIndexedText: item.normalizedIndexedText ?? null,
+        sourceRow: item.sourceRow ?? null,
       })),
     });
 
     return result.count;
   }
 
-  async deleteByFolder(folderId: string): Promise<number> {
-    const result = await prisma.product.deleteMany({ where: { folderId } });
+  async deleteByFolder(
+    folderId: string,
+    client: ProductDbClient = prisma,
+  ): Promise<number> {
+    const result = await client.product.deleteMany({ where: { folderId } });
     return result.count;
   }
 
