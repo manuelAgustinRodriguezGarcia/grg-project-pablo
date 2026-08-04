@@ -71,19 +71,6 @@
   }
 }
 
-.loginDesktopContent {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.loginMobileIcon {
-  display: none;
-  width: 1.5rem;
-  height: 1.5rem;
-  flex-shrink: 0;
-}
-
 .loginIconWrap {
   position: relative;
   width: 1rem;
@@ -116,23 +103,7 @@
 
 @media (max-width: 768px) {
   .loginButton {
-    position: fixed;
-    right: max(1rem, env(safe-area-inset-right));
-    bottom: max(1rem, env(safe-area-inset-bottom));
-    z-index: 110;
-    width: 3.25rem;
-    height: 3.25rem;
-    padding: 0;
-    gap: 0;
-    box-shadow: 0 8px 24px rgba($navy, 0.28);
-  }
-
-  .loginDesktopContent {
     display: none;
-  }
-
-  .loginMobileIcon {
-    display: block;
   }
 }
 

@@ -2,7 +2,8 @@
 @use "../styles/animations" as *;
 
 .section {
-  padding-block: $section-padding-y;
+  padding-top: 0;
+  padding-bottom: $section-padding-y;
   background: $white;
   border-top: 1px solid $border-soft;
 }

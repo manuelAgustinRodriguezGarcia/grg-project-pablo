@@ -12,7 +12,9 @@ export function HeroSection() {
           className={`${styles.content} ${landingStyles.animateSlideUp}`}
         >
           <h1 id="hero-heading" className={styles.heading}>
-            Repuestos pesados para camiones, acoplados y maquinaria agrícola
+            <span className={styles.headingLine}>Repuestos pesados</span>{" "}
+            <span className={styles.headingLine}>para camiones, acoplados</span>{" "}
+            <span className={styles.headingLine}>y maquinaria agrícola</span>
           </h1>
           <ul className={styles.highlights}>
             <li>Más de 40 años de experiencia a su servicio</li>

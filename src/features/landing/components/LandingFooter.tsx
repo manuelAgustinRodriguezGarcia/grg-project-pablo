@@ -20,28 +20,28 @@ export function LandingFooter() {
 
       <div className={styles.bottomBar}>
         <p className={styles.copyright}>
-          © 2026 Rothamel Repuestos S.H. Todos los derechos reservados.
+          © 2026 Rothamel Repuestos S.H.
         </p>
 
-        <div className={styles.developer}>
+        <a
+          href={GRG_WEBSITE_URL}
+          className={styles.developer}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GRG Solutions — Desarrollo y diseño web"
+        >
           <span className={styles.developerLabel}>Desarrollado por</span>
-          <a
-            href={GRG_WEBSITE_URL}
-            className={styles.grgLogoLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="GRG Solutions — Desarrollo y diseño web"
-          >
+          <span className={styles.grgLogoLink}>
             <img
               src={GRG_LOGO_SRC}
-              alt="GRG Solutions"
+              alt=""
               width={GRG_LOGO_WIDTH}
               height={GRG_LOGO_HEIGHT}
               className={styles.grgLogo}
               decoding="async"
             />
-          </a>
-        </div>
+          </span>
+        </a>
       </div>
     </footer>
   );

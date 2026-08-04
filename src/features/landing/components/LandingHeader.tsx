@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CircleUserRound, Lock, LockOpen, ICON_STROKE } from "@/shared/icons";
+import { Lock, LockOpen, ICON_STROKE } from "@/shared/icons";
 import { LOGIN_PATH } from "../data/landingData";
 import landingStyles from "../styles/landing.module.scss";
 import { RothamelLogo } from "./RothamelLogo";
@@ -20,21 +20,14 @@ export function LandingHeader() {
           className={styles.loginButton}
           aria-label="Iniciar sesión"
         >
-          <span className={styles.loginDesktopContent}>
-            <span className={styles.loginIconWrap} aria-hidden="true">
-              <Lock className={styles.loginIconLock} strokeWidth={ICON_STROKE} />
-              <LockOpen
-                className={styles.loginIconLockOpen}
-                strokeWidth={ICON_STROKE}
-              />
-            </span>
-            <span>Iniciar Sesión</span>
+          <span className={styles.loginIconWrap} aria-hidden="true">
+            <Lock className={styles.loginIconLock} strokeWidth={ICON_STROKE} />
+            <LockOpen
+              className={styles.loginIconLockOpen}
+              strokeWidth={ICON_STROKE}
+            />
           </span>
-          <CircleUserRound
-            className={styles.loginMobileIcon}
-            strokeWidth={ICON_STROKE}
-            aria-hidden="true"
-          />
+          <span>Iniciar Sesión</span>
         </Link>
       </div>
     </header>
