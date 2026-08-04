@@ -2,6 +2,7 @@ import type { Catalog, CatalogFolder, EquivalentCode, Product } from "@/generate
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
 import { parseBetweenFilterValue } from "@/server/filters/column-filter-range";
+import { buildJsonTextContainsCondition } from "@/server/filters/column-filter-text-contains";
 import type { JsonTextColumnFilter } from "@/server/filters/column-filter.types";
 import { PRODUCT_LIST_ORDER_BY } from "@/server/repositories/product-list-order";
 
@@ -10,18 +11,13 @@ const NUMERIC_TEXT_PATTERN = "^-?[0-9]+([.,][0-9]+)?$";
 
 type ProductDbClient = Prisma.TransactionClient | typeof prisma;
 
-function escapeIlikePattern(value: string): string {
-  return value.replace(/[%_\\]/g, "\\$&");
-}
-
 function buildJsonTextFilterCondition(filter: JsonTextColumnFilter): Prisma.Sql {
   switch (filter.operator) {
     case "equals": {
       return Prisma.sql`LOWER("dynamicData"->>${filter.columnInternalKey}) = LOWER(${filter.value})`;
     }
     case "contains": {
-      const pattern = `%${escapeIlikePattern(filter.value)}%`;
-      return Prisma.sql`"dynamicData"->>${filter.columnInternalKey} ILIKE ${pattern}`;
+      return buildJsonTextContainsCondition(filter.columnInternalKey, filter.value);
     }
     case "between": {
       const parsed = parseBetweenFilterValue(filter.value);

@@ -2,6 +2,7 @@ import type { PriceItem } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
 import { parseBetweenFilterValue } from "@/server/filters/column-filter-range";
+import { buildJsonTextContainsCondition } from "@/server/filters/column-filter-text-contains";
 import type { JsonTextColumnFilter } from "@/server/filters/column-filter.types";
 
 const VALID_JSON_COLUMN_KEY = /^[a-z0-9_]+$/;
@@ -17,8 +18,7 @@ function buildJsonTextFilterCondition(filter: JsonTextColumnFilter): Prisma.Sql 
       return Prisma.sql`LOWER("dynamicData"->>${filter.columnInternalKey}) = LOWER(${filter.value})`;
     }
     case "contains": {
-      const pattern = `%${escapeIlikePattern(filter.value)}%`;
-      return Prisma.sql`"dynamicData"->>${filter.columnInternalKey} ILIKE ${pattern}`;
+      return buildJsonTextContainsCondition(filter.columnInternalKey, filter.value);
     }
     case "between": {
       const parsed = parseBetweenFilterValue(filter.value);
