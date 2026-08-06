@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { ADMIN_HOME_PATH } from "@/server/auth/config";
 import { loginFormAction } from "@/features/auth/actions/login-form.action";
 import {
@@ -26,6 +26,7 @@ export function LoginFormCard({ redirectTo = ADMIN_HOME_PATH }: LoginFormCardPro
     AuthActionResult | null,
     FormData
   >(loginFormAction, null);
+  const errorAlertRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const rememberedEmail = readRememberedEmail();
@@ -34,6 +35,15 @@ export function LoginFormCard({ redirectTo = ADMIN_HOME_PATH }: LoginFormCardPro
       setRememberEmail(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (state?.success === false) {
+      errorAlertRef.current?.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    }
+  }, [state]);
 
   function handleSubmit() {
     if (rememberEmail) {
@@ -153,7 +163,12 @@ export function LoginFormCard({ redirectTo = ADMIN_HOME_PATH }: LoginFormCardPro
       </form>
 
       {state?.success === false ? (
-        <div className={styles.errorAlert} role="alert" aria-live="polite">
+        <div
+          ref={errorAlertRef}
+          className={styles.errorAlert}
+          role="alert"
+          aria-live="polite"
+        >
           <Info className={styles.errorIcon} strokeWidth={ICON_STROKE} aria-hidden />
           <p className={styles.errorText}>{state.error}</p>
         </div>
