@@ -46,13 +46,19 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2rem);
   background: $bg-page;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .formWrap {
@@ -60,6 +66,13 @@
   max-width: 24rem;
   display: flex;
   justify-content: center;
+  margin-block: auto;
+}
+
+@media (max-height: 820px) and (min-width: 901px) {
+  .content {
+    padding-block: 1rem;
+  }
 }
 
 @media (max-width: 900px) {

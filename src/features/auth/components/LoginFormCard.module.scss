@@ -301,3 +301,33 @@
     max-width: none;
   }
 }
+
+@media (max-height: 820px) and (min-width: 901px) {
+  .card {
+    padding: 1.35rem 1.5rem;
+  }
+
+  .cardHeader {
+    margin-bottom: 1rem;
+  }
+
+  .title {
+    font-size: 1.65rem;
+  }
+
+  .intro {
+    margin-top: 0.45rem;
+  }
+
+  .field + .field {
+    margin-top: 0.9rem;
+  }
+
+  .primaryButton {
+    margin-top: 1.1rem;
+  }
+
+  .divider {
+    margin: 0.9rem 0;
+  }
+}
