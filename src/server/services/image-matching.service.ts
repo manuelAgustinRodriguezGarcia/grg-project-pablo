@@ -26,7 +26,7 @@ export type ImageMatchCandidate = {
 };
 
 export type ImageMatchOutcome =
-  | { status: "ASSOCIATED_AUTO"; productId: string }
+  | { status: "ASSOCIATED_AUTO"; productIds: string[] }
   | { status: "AMBIGUOUS"; candidates: ImageMatchCandidate[] }
   | { status: "PENDING_REVIEW" }
   | { status: "DUPLICATE_NAME" };
@@ -96,18 +96,8 @@ export function matchExternalImage(
   const normalizedName = normalizeFilenameForMatch(image.originalName);
   const productIds = index.byCode.get(normalizedName) ?? [];
 
-  if (productIds.length === 1) {
-    return { status: "ASSOCIATED_AUTO", productId: productIds[0]! };
-  }
-
-  if (productIds.length > 1) {
-    return {
-      status: "AMBIGUOUS",
-      candidates: productIds.map((productId) => ({
-        productId,
-        code: normalizedName,
-      })),
-    };
+  if (productIds.length >= 1) {
+    return { status: "ASSOCIATED_AUTO", productIds };
   }
 
   return { status: "PENDING_REVIEW" };

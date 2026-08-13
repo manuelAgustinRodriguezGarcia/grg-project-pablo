@@ -30,10 +30,13 @@ describe("image-matching.service", () => {
       seenNames,
     );
 
-    expect(outcome).toEqual({ status: "ASSOCIATED_AUTO", productId: "prod-1" });
+    expect(outcome).toEqual({
+      status: "ASSOCIATED_AUTO",
+      productIds: ["prod-1"],
+    });
   });
 
-  it("marca asociación ambigua cuando hay múltiples candidatos", () => {
+  it("asocia la misma imagen a todos los productos con el mismo código", () => {
     const index = buildProductMatchIndex(
       [
         {
@@ -58,10 +61,10 @@ describe("image-matching.service", () => {
       new Map<string, number>(),
     );
 
-    expect(outcome.status).toBe("AMBIGUOUS");
-    if (outcome.status === "AMBIGUOUS") {
-      expect(outcome.candidates).toHaveLength(2);
-    }
+    expect(outcome).toEqual({
+      status: "ASSOCIATED_AUTO",
+      productIds: ["prod-1", "prod-2"],
+    });
   });
 
   it("detecta nombres duplicados en el lote", () => {
@@ -94,7 +97,41 @@ describe("image-matching.service", () => {
       new Map<string, number>(),
     );
 
-    expect(outcome).toEqual({ status: "ASSOCIATED_AUTO", productId: "prod-img" });
+    expect(outcome).toEqual({
+      status: "ASSOCIATED_AUTO",
+      productIds: ["prod-img"],
+    });
+  });
+
+  it("repite la imagen en todos los ítems que comparten código imagen", () => {
+    const index = buildProductMatchIndex(
+      [
+        {
+          id: "prod-a",
+          primaryCode: "SKU-1",
+          normalizedCode: "SKU1",
+          dynamicData: { codigo_imagen: "IMG-SHARED" },
+        },
+        {
+          id: "prod-b",
+          primaryCode: "SKU-2",
+          normalizedCode: "SKU2",
+          dynamicData: { codigo_imagen: "IMG-SHARED" },
+        },
+      ],
+      ["codigo_imagen"],
+    );
+
+    const outcome = matchExternalImage(
+      { originalName: "IMG-SHARED.jpg" },
+      index,
+      new Map<string, number>(),
+    );
+
+    expect(outcome).toEqual({
+      status: "ASSOCIATED_AUTO",
+      productIds: ["prod-a", "prod-b"],
+    });
   });
 
   it("asocia por código imagen aunque el primaryCode sea distinto", () => {
@@ -116,7 +153,10 @@ describe("image-matching.service", () => {
       new Map<string, number>(),
     );
 
-    expect(outcome).toEqual({ status: "ASSOCIATED_AUTO", productId: "prod-alt" });
+    expect(outcome).toEqual({
+      status: "ASSOCIATED_AUTO",
+      productIds: ["prod-alt"],
+    });
   });
 
   it("omite primaryCode del índice cuando includePrimaryCode es false", () => {

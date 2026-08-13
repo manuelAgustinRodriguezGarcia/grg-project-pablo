@@ -420,23 +420,24 @@ export class ProductImageService {
         continue;
       }
 
-      const productId = outcome.productId;
-      const count = (productImageCounts.get(productId) ?? 0) + 1;
-      productImageCounts.set(productId, count);
-      stats.associated += 1;
+      for (const productId of outcome.productIds) {
+        const count = (productImageCounts.get(productId) ?? 0) + 1;
+        productImageCounts.set(productId, count);
+        stats.associated += 1;
 
-      await persistMatchedImage({
-        importJobId: input.importJobId,
-        folderId: input.folderId,
-        productId,
-        buffer: image.buffer,
-        originalName: image.originalName,
-        mimeType: validation.mimeType,
-        source: image.source,
-        status: "ASSOCIATED_AUTO",
-        sortOrder: count - 1,
-        isPrimary: count === 1,
-      });
+        await persistMatchedImage({
+          importJobId: input.importJobId,
+          folderId: input.folderId,
+          productId,
+          buffer: image.buffer,
+          originalName: image.originalName,
+          mimeType: validation.mimeType,
+          source: image.source,
+          status: "ASSOCIATED_AUTO",
+          sortOrder: count - 1,
+          isPrimary: count === 1,
+        });
+      }
     }
 
     return { warnings, stats };
