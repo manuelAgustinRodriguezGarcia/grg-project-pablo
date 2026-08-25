@@ -34,8 +34,7 @@ import { productRepository } from "@/server/repositories/product.repository";
 import { uploadedFileRepository } from "@/server/repositories/uploaded-file.repository";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
 import { folderRepository } from "@/server/repositories/folder.repository";
-import { buildIndexedTextForMappedProduct } from "@/server/services/product-field.builder";
-import { normalizeIndexedText } from "@/server/search/search-normalizer";
+import { buildIndexedTextForMappedProduct, buildNormalizedIndexedTextForMappedProduct } from "@/server/services/product-field.builder";
 import { prisma } from "@/server/database/prisma";
 import {
   buildStoragePath,
@@ -1271,7 +1270,7 @@ export class CatalogImportService {
 
       if (job.priceListId !== input.expectedPriceListId) {
         throw new ImportError(
-          "La lista de precios destino no coincide. Volvé al paso Destino y confirmá de nuevo.",
+          "La lista de precios destino no coincide. Vuelva al paso Destino y confirme de nuevo.",
           "VALIDATION_ERROR",
         );
       }
@@ -1285,7 +1284,7 @@ export class CatalogImportService {
 
     if (job.folderId !== input.expectedFolderId) {
       throw new ImportError(
-        "La carpeta destino no coincide. Volvé al paso Destino y confirmá de nuevo.",
+        "La carpeta destino no coincide. Vuelva al paso Destino y confirme de nuevo.",
         "VALIDATION_ERROR",
       );
     }
@@ -1940,7 +1939,10 @@ export class CatalogImportService {
                     dynamicData: product.dynamicData,
                     originalText: product.originalText,
                     indexedText,
-                    normalizedIndexedText: normalizeIndexedText(indexedText),
+                    normalizedIndexedText: buildNormalizedIndexedTextForMappedProduct(
+                      columns,
+                      product,
+                    ),
                     sourceRow: product.rowNumber,
                   };
                 }),

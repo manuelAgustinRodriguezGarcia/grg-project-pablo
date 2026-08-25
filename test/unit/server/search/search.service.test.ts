@@ -34,6 +34,7 @@ vi.mock("@/server/repositories/folder.repository", () => ({
 vi.mock("@/server/repositories/column.repository", () => ({
   columnRepository: {
     findByFolderIdOrdered: vi.fn(),
+    findByFolderIdsOrdered: vi.fn(),
     findByGlobalFieldKey: vi.fn(),
   },
 }));
@@ -167,6 +168,27 @@ describe("buildProductSearchWhere", () => {
       ]),
     );
   });
+
+  it("no busca un código numérico compacto en normalizedIndexedText pegado", () => {
+    const where = buildProductSearchWhere("30210");
+    const conditions = (where as { OR: unknown[] }).OR;
+
+    expect(conditions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ normalizedCode: "30210" }),
+        expect.objectContaining({
+          indexedText: expect.objectContaining({ contains: "30210" }),
+        }),
+      ]),
+    );
+    expect(conditions).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          normalizedIndexedText: expect.anything(),
+        }),
+      ]),
+    );
+  });
 });
 
 describe("searchService.searchInCatalog", () => {
@@ -235,6 +257,7 @@ describe("searchService.searchInCatalog", () => {
     expect(result.items[0]?.matchType).toBe("equivalence");
     expect(result.items[0]?.matchValue).toBe("2902");
     expect(result.items[0]?.folder.name).toBe(folder.name);
+    expect(result.items[0]?.previewColumns.length).toBeGreaterThan(0);
   });
 });
 
@@ -254,6 +277,8 @@ describe("searchService.searchGlobal", () => {
     });
     vi.mocked(catalogRepository.findMatching).mockResolvedValue([]);
     vi.mocked(folderRepository.findMatching).mockResolvedValue([]);
+    vi.mocked(columnRepository.findByFolderIdsOrdered).mockResolvedValue([]);
+    vi.mocked(columnRepository.findByFolderIdOrdered).mockResolvedValue([]);
   });
 
   it("devuelve catálogos, secciones y productos para una búsqueda global", async () => {

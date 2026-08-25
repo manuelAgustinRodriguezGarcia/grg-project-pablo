@@ -21,6 +21,11 @@ export type SearchResultOrigin = {
   };
 };
 
+export type SearchPreviewCell = {
+  displayName: string;
+  value: string;
+};
+
 export type SearchResultItem = {
   productId: string;
   primaryCode: string | null;
@@ -34,6 +39,7 @@ export type SearchResultItem = {
     thumbnailUrl: string | null;
     fullUrl: string | null;
   } | null;
+  previewColumns: SearchPreviewCell[];
 };
 
 export type CatalogSearchHit = {

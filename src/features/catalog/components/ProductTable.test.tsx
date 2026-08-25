@@ -675,4 +675,39 @@ describe("ProductTable", () => {
     expect(screen.queryByText("—")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Ver imagen de ayuda de Anclaje frente")).toBeInTheDocument();
   });
+
+  it("resetea el scroll de la tabla al cambiar de página", () => {
+    const data = createTableData([
+      {
+        id: "product-1",
+        primaryCode: "6205",
+        description: "Ruleman",
+        dynamicData: { montadora: "John Deere" },
+        primaryImage: null,
+        extraImages: [],
+        imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    data.pagination = {
+      page: 1,
+      pageSize: 25,
+      total: 50,
+      totalPages: 2,
+    };
+
+    const { container } = render(
+      <ProductTable data={data} isLoading={false} error={null} onPageChange={vi.fn()} />,
+    );
+    const tableWrap = container.querySelector(".tableWrap") as HTMLDivElement;
+    tableWrap.scrollTop = 480;
+    tableWrap.scrollLeft = 12;
+
+    fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
+
+    expect(tableWrap.scrollTop).toBe(0);
+    expect(tableWrap.scrollLeft).toBe(0);
+  });
 });

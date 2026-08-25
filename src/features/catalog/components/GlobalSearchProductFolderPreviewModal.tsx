@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import type { SearchResultItem } from "@/features/catalog/types/global-search.types";
 import type { ProductFolderSearchGroup } from "@/features/catalog/utils/group-search-results-by-folder";
-import {
-  formatSearchMatchType,
-  truncateMatchValue,
-} from "@/features/catalog/utils/format-search-match-type";
 import { ICON_STROKE, X } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
@@ -17,41 +13,54 @@ type GlobalSearchProductFolderPreviewModalProps = {
   onNavigate: () => void;
 };
 
-function formatCellValue(value: string | null): string {
-  if (!value?.trim()) {
-    return "—";
-  }
-
-  return value.trim();
+function groupHasProductImages(items: SearchResultItem[]): boolean {
+  return items.some((item) => {
+    const thumbnailUrl =
+      item.primaryImage?.thumbnailUrl ?? item.primaryImage?.fullUrl ?? null;
+    return Boolean(thumbnailUrl);
+  });
 }
 
-function ProductPreviewRow({ item }: { item: SearchResultItem }) {
+function ProductPreviewRow({
+  item,
+  showImageColumn,
+}: {
+  item: SearchResultItem;
+  showImageColumn: boolean;
+}) {
   const thumbnailUrl =
     item.primaryImage?.thumbnailUrl ?? item.primaryImage?.fullUrl ?? null;
+  const cells =
+    item.previewColumns.length > 0
+      ? item.previewColumns
+      : [
+          { displayName: "Código", value: item.primaryCode?.trim() || "—" },
+          {
+            displayName: "Descripción",
+            value: item.description?.trim() || "—",
+          },
+        ];
 
   return (
     <tr>
-      <td className={styles.searchPreviewThumbCell}>
-        {thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt=""
-            className={styles.searchPreviewThumb}
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <span className={styles.searchPreviewThumbEmpty}>—</span>
-        )}
-      </td>
-      <td>{formatCellValue(item.primaryCode)}</td>
-      <td>{truncateMatchValue(formatCellValue(item.description), 80)}</td>
-      <td>
-        <span className={styles.searchMatchBadge}>
-          {formatSearchMatchType(item.matchType)}
-        </span>
-      </td>
-      <td>{truncateMatchValue(item.matchValue, 64) || "—"}</td>
+      {showImageColumn ? (
+        <td className={styles.searchPreviewThumbCell}>
+          {thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt=""
+              className={styles.searchPreviewThumb}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span className={styles.searchPreviewThumbEmpty}>—</span>
+          )}
+        </td>
+      ) : null}
+      {cells.map((cell, index) => (
+        <td key={`${item.productId}-${cell.displayName}-${index}`}>{cell.value}</td>
+      ))}
     </tr>
   );
 }
@@ -71,6 +80,19 @@ export function GlobalSearchProductFolderPreviewModal({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
+
+  const showImageColumn = useMemo(
+    () => groupHasProductImages(group.items),
+    [group.items],
+  );
+  const previewHeaders = useMemo(() => {
+    const withColumns = group.items.find((item) => item.previewColumns.length > 0);
+    if (withColumns) {
+      return withColumns.previewColumns.map((cell) => cell.displayName);
+    }
+
+    return ["Código", "Descripción"];
+  }, [group.items]);
 
   if (typeof document === "undefined") {
     return null;
@@ -112,16 +134,21 @@ export function GlobalSearchProductFolderPreviewModal({
           <table className={styles.searchPreviewTable}>
             <thead>
               <tr>
-                <th scope="col">Imagen</th>
-                <th scope="col">Código</th>
-                <th scope="col">Descripción</th>
-                <th scope="col">Coincidencia</th>
-                <th scope="col">Valor</th>
+                {showImageColumn ? <th scope="col">Imagen</th> : null}
+                {previewHeaders.map((header, index) => (
+                  <th key={`${header}-${index}`} scope="col">
+                    {header}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {group.items.map((item) => (
-                <ProductPreviewRow key={item.productId} item={item} />
+                <ProductPreviewRow
+                  key={item.productId}
+                  item={item}
+                  showImageColumn={showImageColumn}
+                />
               ))}
             </tbody>
           </table>

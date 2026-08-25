@@ -57,6 +57,20 @@ export class ColumnRepository {
     });
   }
 
+  async findByFolderIdsOrdered(
+    folderIds: string[],
+    where: Prisma.FolderColumnWhereInput = {},
+  ): Promise<FolderColumn[]> {
+    if (folderIds.length === 0) {
+      return [];
+    }
+
+    return prisma.folderColumn.findMany({
+      where: { folderId: { in: folderIds }, ...where },
+      orderBy: [{ order: "asc" }, { displayName: "asc" }],
+    });
+  }
+
   async findById(id: string): Promise<FolderColumn | null> {
     return prisma.folderColumn.findUnique({
       where: { id },

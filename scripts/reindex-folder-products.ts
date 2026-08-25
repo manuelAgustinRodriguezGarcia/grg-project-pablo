@@ -2,7 +2,7 @@
 import { columnRepository } from "@/server/repositories/column.repository";
 import { folderRepository } from "@/server/repositories/folder.repository";
 import { productRepository } from "@/server/repositories/product.repository";
-import { buildIndexedTextForStoredProduct } from "@/server/services/product-field.builder";
+import { buildIndexedTextForStoredProduct, buildNormalizedIndexedTextForStoredProduct } from "@/server/services/product-field.builder";
 import { equivalenceService } from "@/server/services/equivalence.service";
 
 async function reindexFolder(folderId: string): Promise<number> {
@@ -26,7 +26,11 @@ async function reindexFolder(folderId: string): Promise<number> {
     await equivalenceService.syncFromProduct(product.id, columns, dynamicData);
 
     const indexedText = buildIndexedTextForStoredProduct(columns, product);
-    await productRepository.updateIndexedText(product.id, indexedText);
+    await productRepository.updateIndexedText(
+      product.id,
+      indexedText,
+      buildNormalizedIndexedTextForStoredProduct(columns, product),
+    );
     updated += 1;
   }
 

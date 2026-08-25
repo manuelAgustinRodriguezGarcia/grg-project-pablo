@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  INDEXED_TEXT_FIELD_SEPARATOR,
   isCodeLikeQuery,
+  isCompactNumericQuery,
   normalizeIndexedText,
+  normalizeIndexedTextParts,
   normalizeSearchTerm,
   normalizeTextContains,
   splitSearchTokens,
@@ -45,5 +48,21 @@ describe("search-normalizer", () => {
     expect(isCodeLikeQuery("2902")).toBe(true);
     expect(isCodeLikeQuery("1-A")).toBe(true);
     expect(isCodeLikeQuery("John Deere")).toBe(false);
+  });
+
+  it("detecta consultas numéricas compactas precisas", () => {
+    expect(isCompactNumericQuery("30210")).toBe(true);
+    expect(isCompactNumericQuery("2902")).toBe(true);
+    expect(isCompactNumericQuery("PFICH")).toBe(false);
+    expect(isCompactNumericQuery("30-210")).toBe(false);
+    expect(isCompactNumericQuery("bomba agua")).toBe(false);
+  });
+
+  it("normaliza campos por separado para no pegar valores adyacentes", () => {
+    expect(normalizeIndexedTextParts(["30.2", "10"])).toBe(
+      `302${INDEXED_TEXT_FIELD_SEPARATOR}10`,
+    );
+    expect(normalizeIndexedTextParts(["30.2", "10"])).not.toContain("30210");
+    expect(normalizeIndexedTextParts(["525 P.FICH"])).toBe("525PFICH");
   });
 });

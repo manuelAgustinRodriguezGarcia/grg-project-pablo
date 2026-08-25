@@ -1,7 +1,7 @@
 import type { FolderColumn } from "@/generated/prisma/client";
 import type { MappedProductRow } from "@/server/importers/types";
 import { normalizeCodeForMatch } from "@/server/importers/match-detector";
-import { normalizeIndexedText } from "@/server/search/search-normalizer";
+import { normalizeIndexedText, normalizeIndexedTextParts } from "@/server/search/search-normalizer";
 import { ProductError } from "./product.errors";
 import {
   collectEquivalenceTokensFromColumns,
@@ -73,7 +73,7 @@ function buildOriginalText(parts: string[]): string | null {
   return filtered.length > 0 ? filtered.join(" | ") : null;
 }
 
-export function buildIndexedText(input: BuildIndexedTextInput): string | null {
+function collectIndexedTextParts(input: BuildIndexedTextInput): string[] {
   const parts: string[] = [];
 
   if (input.primaryCode) {
@@ -96,8 +96,18 @@ export function buildIndexedText(input: BuildIndexedTextInput): string | null {
     parts.push(token.normalizedCode);
   }
 
-  const unique = [...new Set(parts.map((part) => part.trim()).filter(Boolean))];
-  return unique.length > 0 ? unique.join(" ") : null;
+  return [...new Set(parts.map((part) => part.trim()).filter(Boolean))];
+}
+
+export function buildIndexedText(input: BuildIndexedTextInput): string | null {
+  const parts = collectIndexedTextParts(input);
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
+export function buildNormalizedIndexedText(
+  input: BuildIndexedTextInput,
+): string | null {
+  return normalizeIndexedTextParts(collectIndexedTextParts(input));
 }
 
 export function buildIndexedTextForMappedProduct(
@@ -113,6 +123,27 @@ export function buildIndexedTextForMappedProduct(
   );
 
   return buildIndexedText({
+    primaryCode: product.primaryCode,
+    description: product.description,
+    columns,
+    dynamicData: product.dynamicData,
+    equivalenceTokens,
+  });
+}
+
+export function buildNormalizedIndexedTextForMappedProduct(
+  columns: FolderColumn[],
+  product: Pick<
+    MappedProductRow,
+    "primaryCode" | "description" | "dynamicData"
+  >,
+): string | null {
+  const equivalenceTokens = collectEquivalenceTokensFromColumns(
+    columns,
+    product.dynamicData,
+  );
+
+  return buildNormalizedIndexedText({
     primaryCode: product.primaryCode,
     description: product.description,
     columns,
@@ -137,6 +168,28 @@ export function buildIndexedTextForStoredProduct(
       : {};
 
   return buildIndexedTextForMappedProduct(columns, {
+    primaryCode: product.primaryCode,
+    description: product.description,
+    dynamicData,
+  });
+}
+
+export function buildNormalizedIndexedTextForStoredProduct(
+  columns: FolderColumn[],
+  product: {
+    primaryCode: string | null;
+    description: string | null;
+    dynamicData: unknown;
+  },
+): string | null {
+  const dynamicData =
+    typeof product.dynamicData === "object" &&
+    product.dynamicData !== null &&
+    !Array.isArray(product.dynamicData)
+      ? (product.dynamicData as Record<string, unknown>)
+      : {};
+
+  return buildNormalizedIndexedTextForMappedProduct(columns, {
     primaryCode: product.primaryCode,
     description: product.description,
     dynamicData,
@@ -253,7 +306,13 @@ export function buildProductFields(
     dynamicData,
     originalText,
     indexedText,
-    normalizedIndexedText: normalizeIndexedText(indexedText),
+    normalizedIndexedText: buildNormalizedIndexedText({
+      primaryCode,
+      description,
+      columns,
+      dynamicData,
+      equivalenceTokens,
+    }),
     equivalenceTokens,
   };
 }
