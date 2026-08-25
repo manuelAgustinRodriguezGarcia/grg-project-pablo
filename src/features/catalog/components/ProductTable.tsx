@@ -180,7 +180,7 @@ export const ProductTable = memo(function ProductTable({
   isRefreshing = false,
   isFilterRefreshing = false,
   error,
-  emptyTitle = "Seleccioná un catálogo y una carpeta",
+  emptyTitle = "Seleccione un catálogo y una carpeta",
   emptyDescription = null,
   onImportExcel,
   onAddFolder,
@@ -241,6 +241,39 @@ export const ProductTable = memo(function ProductTable({
     isFilterRefreshing && !showNavRefreshOverlay && !isNavRefreshOverlayExiting;
   const lockTableScroll =
     navRefreshOverlayMounted || filterRefreshOverlayVisible;
+
+  const resetTableScroll = useCallback(() => {
+    const wrap = tableWrapRef.current;
+    if (!wrap) {
+      return;
+    }
+
+    wrap.scrollTop = 0;
+    wrap.scrollLeft = 0;
+
+    if (typeof document !== "undefined") {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+  }, []);
+
+  useEffect(() => {
+    resetTableScroll();
+  }, [data?.pagination.page, folderId, resetTableScroll]);
+
+  useEffect(() => {
+    if (lockTableScroll) {
+      resetTableScroll();
+    }
+  }, [lockTableScroll, resetTableScroll]);
+
+  const handlePageChange = useCallback(
+    (nextPage: number) => {
+      resetTableScroll();
+      onPageChange(nextPage);
+    },
+    [onPageChange, resetTableScroll],
+  );
 
   useTableHeaderScrollProgress(
     tableWrapRef,
@@ -439,7 +472,7 @@ export const ProductTable = memo(function ProductTable({
             </h2>
             {trimmedFolderSearch ? (
               <p className={styles.tableEmptyText}>
-                Probá con otro término o limpiá la búsqueda.
+                Pruebe con otro término o limpie la búsqueda.
               </p>
             ) : (
               <p className={styles.tableEmptyText}>
@@ -727,7 +760,7 @@ export const ProductTable = memo(function ProductTable({
             type="button"
             className={styles.paginationButton}
             disabled={pagination.page <= 1 || isLoading || lockTableScroll}
-            onClick={() => onPageChange(pagination.page - 1)}
+            onClick={() => handlePageChange(pagination.page - 1)}
             aria-label="Página anterior"
           >
             <ChevronLeft strokeWidth={ICON_STROKE} aria-hidden />
@@ -745,7 +778,7 @@ export const ProductTable = memo(function ProductTable({
               isLoading ||
               lockTableScroll
             }
-            onClick={() => onPageChange(pagination.page + 1)}
+            onClick={() => handlePageChange(pagination.page + 1)}
             aria-label="Página siguiente"
           >
             <ChevronRight strokeWidth={ICON_STROKE} aria-hidden />

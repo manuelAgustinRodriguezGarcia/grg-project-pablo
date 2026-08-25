@@ -1,5 +1,12 @@
-import type { CatalogFolder, EquivalentCode, FolderColumn, Product } from "@/generated/prisma/client";
+import type {
+  CatalogFolder,
+  EquivalentCode,
+  FolderColumn,
+  Product,
+  UserRole,
+} from "@/generated/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
+import { buildSearchPreviewCells } from "@/features/catalog/utils/search-preview-columns";
 import { requireAuth } from "@/server/auth";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
 import { columnRepository } from "@/server/repositories/column.repository";
@@ -19,6 +26,7 @@ import { visibilityService } from "@/server/services/visibility.service";
 import { SearchError } from "./search.errors";
 import { resolveSearchableKeys } from "./search-config.resolver";
 import {
+  isCompactNumericQuery,
   normalizeIndexedText,
   normalizeSearchTerm,
   normalizeTextContains,
@@ -40,6 +48,32 @@ type ProductWithRelations = Product & {
     catalog?: { id: string; name: string };
   };
 };
+
+function parseDynamicData(value: unknown): Record<string, unknown> {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  return {};
+}
+
+function groupColumnsByFolderId(
+  columns: FolderColumn[],
+): Map<string, FolderColumn[]> {
+  const columnsByFolderId = new Map<string, FolderColumn[]>();
+
+  for (const column of columns) {
+    const existing = columnsByFolderId.get(column.folderId);
+    if (existing) {
+      existing.push(column);
+      continue;
+    }
+
+    columnsByFolderId.set(column.folderId, [column]);
+  }
+
+  return columnsByFolderId;
+}
 
 const GLOBAL_ENTITY_LIMIT = 25;
 const MIN_GLOBAL_QUERY_CHARS = 2;
@@ -106,6 +140,13 @@ function buildTextSearchConditions(textTerm: string): Prisma.ProductWhereInput[]
     buildFieldTokenConditions("indexedText", tokens),
     buildFieldTokenConditions("originalText", tokens),
   ];
+
+  // Compact numeric codes (e.g. "30210") already match via indexedText /
+  // primary code. Searching glued normalizedIndexedText would also hit
+  // concatenations of unrelated short numbers like "30.2" + "10".
+  if (isCompactNumericQuery(textTerm)) {
+    return conditions;
+  }
 
   const normalizedTokens = tokens
     .map((token) => normalizeSearchTerm(token))
@@ -311,12 +352,7 @@ function inferMatchType(
     };
   }
 
-  const dynamicData =
-    typeof product.dynamicData === "object" &&
-    product.dynamicData !== null &&
-    !Array.isArray(product.dynamicData)
-      ? (product.dynamicData as Record<string, unknown>)
-      : {};
+  const dynamicData = parseDynamicData(product.dynamicData);
 
   for (const value of Object.values(dynamicData)) {
     if (value !== null && value !== undefined) {
@@ -347,18 +383,56 @@ function inferMatchType(
   };
 }
 
+async function loadPreviewColumnsByFolderId(
+  products: Array<ProductWithRelations | ProductSearchResult>,
+  role: UserRole,
+  preloadedColumns?: FolderColumn[],
+): Promise<Map<string, FolderColumn[]>> {
+  if (preloadedColumns && preloadedColumns.length > 0) {
+    return groupColumnsByFolderId(preloadedColumns);
+  }
+
+  const folderIds = [
+    ...new Set(
+      products.map((product) => product.folderId).filter((id) => id.length > 0),
+    ),
+  ];
+
+  if (folderIds.length === 0) {
+    return new Map();
+  }
+
+  const columns = await columnRepository.findByFolderIdsOrdered(
+    folderIds,
+    visibilityService.columnWhereForRole(role),
+  );
+
+  return groupColumnsByFolderId(columns);
+}
+
 async function mapSearchItems(
   products: Array<ProductWithRelations | ProductSearchResult>,
   query: string,
+  role: UserRole,
+  preloadedColumns?: FolderColumn[],
 ): Promise<SearchResultItem[]> {
   const productIds = products.map((product) => product.id);
-  const primaryImages =
-    await productImageService.resolvePrimaryImagesForProducts(productIds);
+  const [primaryImages, columnsByFolderId] = await Promise.all([
+    productImageService.resolvePrimaryImagesForProducts(productIds),
+    loadPreviewColumnsByFolderId(products, role, preloadedColumns),
+  ]);
 
   return products.map((product) => {
     const folder = product.folder;
     const catalog = folder?.catalog;
     const { matchType, matchValue } = inferMatchType(product, query);
+    const folderColumns = columnsByFolderId.get(product.folderId) ?? [];
+    const visibleKeys = folderColumns.map((column) => column.internalKey);
+    const dynamicData = visibilityService.stripHiddenDynamicData(
+      parseDynamicData(product.dynamicData),
+      visibleKeys,
+      role,
+    );
 
     return {
       productId: product.id,
@@ -375,6 +449,14 @@ async function mapSearchItems(
         name: folder?.name ?? "",
       },
       primaryImage: primaryImages.get(product.id) ?? null,
+      previewColumns: buildSearchPreviewCells(
+        {
+          primaryCode: product.primaryCode,
+          description: product.description,
+          dynamicData,
+        },
+        folderColumns,
+      ),
     };
   });
 }
@@ -471,7 +553,12 @@ export class SearchService {
     return {
       catalog: { id: catalog.id, name: catalog.name },
       search: buildSearchQueryMeta(query),
-      items: await mapSearchItems(paginated.items, query),
+      items: await mapSearchItems(
+        paginated.items,
+        query,
+        role,
+        columnsByFolder.flatMap((entry) => entry.columns),
+      ),
       pagination: {
         page: paginated.page,
         pageSize: paginated.pageSize,
@@ -621,7 +708,7 @@ export class SearchService {
           name: folder.catalog.name,
         },
       })),
-      items: await mapSearchItems(paginated.items, searchText),
+      items: await mapSearchItems(paginated.items, searchText, role),
       pagination: {
         page: paginated.page,
         pageSize: paginated.pageSize,

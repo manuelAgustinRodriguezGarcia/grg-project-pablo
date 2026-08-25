@@ -30,6 +30,10 @@ const sampleResponse: GlobalSearchResponse = {
       catalog: { id: "c1", name: "Catálogo A" },
       folder: { id: "f1", name: "Carpeta A" },
       primaryImage: null,
+      previewColumns: [
+        { displayName: "Código", value: "AB-1" },
+        { displayName: "Descripción", value: "Producto 1" },
+      ],
     },
     {
       productId: "p2",
@@ -44,6 +48,10 @@ const sampleResponse: GlobalSearchResponse = {
         thumbnailUrl: "https://example.com/thumb.webp",
         fullUrl: null,
       },
+      previewColumns: [
+        { displayName: "Código", value: "AB-2" },
+        { displayName: "Descripción", value: "Producto 2" },
+      ],
     },
     {
       productId: "p3",
@@ -54,6 +62,10 @@ const sampleResponse: GlobalSearchResponse = {
       catalog: { id: "c2", name: "Catálogo B" },
       folder: { id: "f2", name: "Carpeta B" },
       primaryImage: null,
+      previewColumns: [
+        { displayName: "Código", value: "XY-1" },
+        { displayName: "Descripción", value: "Otro" },
+      ],
     },
   ],
   pagination: { page: 1, pageSize: 8, total: 3, totalPages: 1 },

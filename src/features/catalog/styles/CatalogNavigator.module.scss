@@ -383,7 +383,7 @@ $table-image-size: 6.25rem;
 .searchPreviewCard {
   position: relative;
   display: flex;
-  width: min(56rem, calc(100vw - 2.5rem));
+  width: min(68rem, calc(100vw - 2.5rem));
   max-height: min(85vh, 40rem);
   flex-direction: column;
   gap: 0.85rem;

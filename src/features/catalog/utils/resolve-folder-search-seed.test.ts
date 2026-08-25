@@ -19,6 +19,7 @@ function makeItem(
     catalog: { id: "c1", name: "Cat" },
     folder: { id: "f1", name: "Folder" },
     primaryImage: null,
+    previewColumns: [],
   };
 }
 

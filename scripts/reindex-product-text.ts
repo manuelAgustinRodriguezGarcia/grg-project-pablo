@@ -3,7 +3,7 @@ import "dotenv/config";
 import { prisma } from "@/server/database/prisma";
 import { columnRepository } from "@/server/repositories/column.repository";
 import { productRepository } from "@/server/repositories/product.repository";
-import { buildIndexedTextForStoredProduct } from "@/server/services/product-field.builder";
+import { buildIndexedTextForStoredProduct, buildNormalizedIndexedTextForStoredProduct } from "@/server/services/product-field.builder";
 import { equivalenceService } from "@/server/services/equivalence.service";
 
 async function reindexFolder(folderId: string): Promise<number> {
@@ -23,6 +23,7 @@ async function reindexFolder(folderId: string): Promise<number> {
     await productRepository.updateIndexedText(
       product.id,
       buildIndexedTextForStoredProduct(columns, product),
+      buildNormalizedIndexedTextForStoredProduct(columns, product),
     );
     updated += 1;
   }

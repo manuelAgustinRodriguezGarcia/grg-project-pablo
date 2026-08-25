@@ -53,6 +53,37 @@ describe("buildProductFields", () => {
     expect(result.normalizedIndexedText).not.toContain("=");
   });
 
+  it("no pega valores de columnas adyacentes en normalizedIndexedText", () => {
+    const result = buildProductFields(
+      [
+        columns[0]!,
+        columns[1]!,
+        createColumnFixture({
+          id: "diametro-col",
+          internalKey: "diametro",
+          displayName: "Diámetro",
+        }),
+        createColumnFixture({
+          id: "espesor-col",
+          internalKey: "espesor",
+          displayName: "Espesor",
+        }),
+      ],
+      {
+        values: {
+          codigo: "ABC",
+          descripcion: "Disco",
+          diametro: "30.2",
+          espesor: "10",
+        },
+      },
+    );
+
+    expect(result.normalizedIndexedText).not.toContain("30210");
+    expect(result.normalizedIndexedText).toContain("302");
+    expect(result.normalizedIndexedText).toContain("10");
+  });
+
   it("incluye columnas no marcadas como buscables en indexedText", () => {
     const result = buildProductFields(
       [
