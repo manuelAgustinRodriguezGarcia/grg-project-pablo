@@ -22,6 +22,7 @@ type FolderPickerScreenProps = {
   isLoading: boolean;
   expectedFolderCount?: number;
   isAdmin?: boolean;
+  error?: string | null;
   onBack: () => void;
   onSelectFolder: (folderId: string) => void;
   onEditFolder?: (folderId: string) => void;
@@ -36,6 +37,7 @@ export function FolderPickerScreen({
   isLoading,
   expectedFolderCount = 0,
   isAdmin = false,
+  error = null,
   onBack,
   onSelectFolder,
   onEditFolder,
@@ -77,9 +79,27 @@ export function FolderPickerScreen({
     },
   });
 
+  const didInitFocusRef = useRef(false);
+
   useEffect(() => {
-    searchInputRef.current?.focus();
-  }, []);
+    if (isLoading) {
+      didInitFocusRef.current = false;
+      return;
+    }
+
+    if (filteredFolders.length === 0) {
+      didInitFocusRef.current = false;
+      searchInputRef.current?.focus();
+      return;
+    }
+
+    if (didInitFocusRef.current) {
+      return;
+    }
+
+    didInitFocusRef.current = true;
+    focusCardAt(0);
+  }, [filteredFolders.length, focusCardAt, isLoading]);
 
   return (
     <section
@@ -155,6 +175,10 @@ export function FolderPickerScreen({
               </div>
             ))}
           </div>
+        ) : error ? (
+          <p className={styles.pickerEmpty} role="alert">
+            {error}
+          </p>
         ) : filteredFolders.length === 0 ? (
           <p className={styles.pickerEmpty}>
             {folders.length === 0
@@ -186,6 +210,7 @@ export function FolderPickerScreen({
                   }`}
                   tabIndex={focusedIndex === index ? 0 : -1}
                   onClick={() => onSelectFolder(folder.id)}
+                  onMouseEnter={() => focusCardAt(index)}
                   onFocus={() => {
                     if (focusedIndex !== index) {
                       focusCardAt(index);

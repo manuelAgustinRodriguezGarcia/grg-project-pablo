@@ -19,6 +19,14 @@ export const ADMIN_DASHBOARD_PATH = "/admin/inicio";
 /** Destino de home para usuarios no admin. */
 export const USER_HOME_PATH = "/admin/catalogos";
 
+export function getRoleHomePath(role: "ADMIN" | "USUARIO"): string {
+  return role === "ADMIN" ? ADMIN_DASHBOARD_PATH : USER_HOME_PATH;
+}
+
+export function isAdminEntryPath(pathname: string): boolean {
+  return pathname === ADMIN_HOME_PATH || pathname === `${ADMIN_HOME_PATH}/`;
+}
+
 /** Prefijos protegidos por middleware (requieren sesión Supabase válida). */
 export const PROTECTED_PATH_PREFIXES = ["/admin", "/api/admin"] as const;
 

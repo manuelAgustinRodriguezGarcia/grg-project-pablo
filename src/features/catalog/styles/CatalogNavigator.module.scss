@@ -37,7 +37,8 @@ $table-image-size: 6.25rem;
   flex: 1;
   min-height: 0;
   gap: 1.25rem;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-width: none;
 
   &::-webkit-scrollbar {
@@ -270,19 +271,24 @@ $table-image-size: 6.25rem;
   border: 1px solid rgba($navy, 0.1);
   border-radius: $radius-md;
   background: $white;
-  box-shadow: 0 8px 24px rgba($navy, 0.04);
+  box-shadow: none;
   text-align: left;
   color: inherit;
   cursor: pointer;
   transition:
-    border-color 0.18s ease,
-    background-color 0.18s ease,
-    box-shadow 0.18s ease;
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
 
   &:hover {
-    border-color: rgba($blue, 0.4);
-    background: rgba($blue, 0.08);
-    box-shadow: 0 14px 32px rgba($blue, 0.12);
+    border-color: $blue;
+    background: $blue;
+    color: $white;
+
+    .pickerCardTitle,
+    .pickerCardMeta {
+      color: $white;
+    }
   }
 
   &:focus {
@@ -291,17 +297,100 @@ $table-image-size: 6.25rem;
 
   &:focus-visible {
     outline: none;
-    border-color: rgba($blue, 0.4);
-    background: rgba($blue, 0.08);
-    box-shadow: 0 14px 32px rgba($blue, 0.12);
+    border-color: $blue;
+    background: $blue;
+    color: $white;
+
+    .pickerCardTitle,
+    .pickerCardMeta {
+      color: $white;
+    }
   }
 }
 
 .pickerCardFocused,
 .pickerCardFocused:hover {
-  border-color: rgba($blue, 0.4);
-  background: rgba($blue, 0.08);
-  box-shadow: 0 14px 32px rgba($blue, 0.12);
+  border-color: $blue;
+  background: $blue;
+  color: $white;
+  box-shadow: none;
+
+  .pickerCardTitle,
+  .pickerCardMeta {
+    color: $white;
+  }
+}
+
+.pickerFoldersPreview {
+  position: fixed;
+  z-index: 80;
+  box-sizing: border-box;
+  padding: 0.45rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  background: $white;
+  box-shadow:
+    0 8px 24px rgba($navy, 0.08),
+    0 2px 8px rgba($navy, 0.04);
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  pointer-events: none;
+  overflow: hidden;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.pickerFoldersPreviewVisible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.pickerFoldersPreviewColumns {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  max-height: inherit;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.pickerFoldersPreviewList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pickerFoldersPreviewItem {
+  box-sizing: border-box;
+  min-height: 1.75rem;
+  padding: 0.3rem 0.55rem;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  color: $navy;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pickerFoldersPreviewItemEven {
+  background: rgba($navy, 0.045);
+}
+
+.pickerFoldersPreviewItemOdd {
+  background: rgba($navy, 0.1);
 }
 
 .pickerGridFolders {
@@ -355,36 +444,62 @@ $table-image-size: 6.25rem;
   .pickerCardBody {
     flex: 1;
     min-width: 0;
-    padding-right: 0.25rem;
+    padding-right: 4.75rem;
+    padding-bottom: 0.15rem;
   }
 
   .pickerCardActions {
     position: absolute;
-    top: 50%;
+    top: auto;
     right: 0.65rem;
+    bottom: 0.55rem;
     z-index: 2;
     display: flex;
     align-items: center;
     gap: 0.35rem;
     margin: 0;
-    padding: 0.2rem 0.25rem 0.2rem 0.65rem;
-    border-radius: $radius-sm;
-    background: linear-gradient(
-      90deg,
-      rgba($white, 0) 0%,
-      $white 28%,
-      $white 100%
-    );
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
     opacity: 0;
     pointer-events: none;
-    transform: translateY(-50%);
+    transform: none;
     transition: opacity 0.15s ease;
   }
 
   &:hover .pickerCardActions,
-  &:focus-within .pickerCardActions {
+  &:focus-within .pickerCardActions,
+  &.pickerCardFocused .pickerCardActions {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  &:hover .pickerCardAction,
+  &:focus-within .pickerCardAction,
+  &.pickerCardFocused .pickerCardAction {
+    border-color: rgba($navy, 0.12);
+    background: $white;
+    color: $blue;
+
+    &:hover {
+      border-color: rgba($blue, 0.35);
+      background: $white;
+      color: $blue;
+    }
+  }
+
+  &:hover .pickerCardActionDanger,
+  &:focus-within .pickerCardActionDanger,
+  &.pickerCardFocused .pickerCardActionDanger {
+    border-color: rgba($navy, 0.12);
+    background: $white;
+    color: $blue;
+
+    &:hover {
+      border-color: rgba(#b42318, 0.35);
+      background: $white;
+      color: #b42318;
+    }
   }
 }
 
@@ -407,9 +522,17 @@ $table-image-size: 6.25rem;
   pointer-events: none;
   cursor: default;
 
-  &:hover {
+  &:hover,
+  &:focus-visible {
     border-color: rgba($navy, 0.1);
-    box-shadow: 0 8px 24px rgba($navy, 0.04);
+    background: $white;
+    color: inherit;
+    box-shadow: none;
+
+    .pickerCardTitle,
+    .pickerCardMeta {
+      color: inherit;
+    }
   }
 }
 
@@ -476,6 +599,13 @@ $table-image-size: 6.25rem;
   overflow: hidden;
   border-radius: $radius-sm;
   background: rgba($navy, 0.03);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pickerCard:hover .pickerCardImageWrap,
+.pickerCardFocused .pickerCardImageWrap {
+  background: $white;
+  box-shadow: inset 0 0 0 1px rgba($navy, 0.08);
 }
 
 .pickerCardImage {
@@ -533,12 +663,14 @@ $table-image-size: 6.25rem;
   -webkit-line-clamp: 2;
   white-space: normal;
   word-break: break-word;
+  transition: color 0.2s ease;
 }
 
 .pickerCardMeta {
   font-family: $font-sans;
   font-size: 0.8rem;
   color: rgba($navy, 0.55);
+  transition: color 0.2s ease;
 }
 
 .pickerCardActions {
@@ -610,6 +742,24 @@ $table-image-size: 6.25rem;
   font-family: $font-sans;
   font-size: 0.9rem;
   color: rgba($navy, 0.6);
+}
+
+.changeCoverNameField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+
+  .confirmInput {
+    margin-bottom: 0;
+  }
+}
+
+.changeCoverNameLabel {
+  font-family: $font-sans;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba($navy, 0.65);
 }
 
 .changeCoverPreview {
@@ -1381,17 +1531,18 @@ $table-image-size: 6.25rem;
 
 .actionCards {
   display: grid;
-  grid-template-columns: repeat(2, minmax(15rem, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.65rem;
   flex: 0 0 auto;
+  width: min(100%, 18rem);
 }
 
 .actionCard {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  min-height: 5.25rem;
-  padding: 1rem 1.15rem;
+  gap: 0.75rem;
+  min-height: 3.35rem;
+  padding: 0.7rem 0.95rem;
   border: 1px solid rgba($navy, 0.08);
   border-radius: $radius-lg;
   background: $white;
@@ -1454,8 +1605,8 @@ $table-image-size: 6.25rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3.35rem;
-  height: 3.35rem;
+  width: 2.35rem;
+  height: 2.35rem;
   border-radius: 50%;
   flex-shrink: 0;
   transition:
@@ -1463,8 +1614,8 @@ $table-image-size: 6.25rem;
     color 0.18s ease;
 
   svg {
-    width: 1.65rem;
-    height: 1.65rem;
+    width: 1.2rem;
+    height: 1.2rem;
   }
 }
 
@@ -1550,8 +1701,59 @@ $table-image-size: 6.25rem;
 
 .dropdownRow {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: auto minmax(0, 0.82fr) minmax(0, 1.18fr);
+  align-items: stretch;
   gap: 1rem;
+}
+
+.viewAllCatalogsButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  align-self: stretch;
+  min-width: 9.5rem;
+  max-width: 11.5rem;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: $white;
+  color: $navy;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+
+  &:hover {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.04);
+    box-shadow: 0 2px 12px rgba($navy, 0.06);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.viewAllCatalogsIcon {
+  flex-shrink: 0;
+  width: 2.15rem;
+  height: 2.15rem;
+  color: $blue;
+}
+
+.viewAllCatalogsText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: $navy;
 }
 
 .dropdown {
@@ -4464,7 +4666,7 @@ $table-image-size: 6.25rem;
 
   .actionCards {
     width: 100%;
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .selectionPanel {
@@ -4528,6 +4730,11 @@ $table-image-size: 6.25rem;
 
   .dropdownRow {
     grid-template-columns: 1fr;
+  }
+
+  .viewAllCatalogsButton {
+    max-width: none;
+    min-height: 4.25rem;
   }
 }
 

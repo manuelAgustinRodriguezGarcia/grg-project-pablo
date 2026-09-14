@@ -1,7 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { ADMIN_HOME_PATH, AuthError } from "@/server/auth";
+import {
+  ADMIN_HOME_PATH,
+  AuthError,
+  getRoleHomePath,
+  isAdminEntryPath,
+} from "@/server/auth";
 import { authService } from "@/server/auth/auth.service";
 import type { AuthActionResult, SignOutResult } from "@/server/auth/types";
 import {
@@ -31,13 +36,18 @@ export async function signInAction(
     };
   }
 
+  let destination = redirectTo;
+
   try {
-    await authService.signInWithPassword(parsed.data);
+    const { profile } = await authService.signInWithPassword(parsed.data);
+    if (isAdminEntryPath(redirectTo)) {
+      destination = getRoleHomePath(profile.role);
+    }
   } catch (error) {
     return toActionError(error);
   }
 
-  redirect(redirectTo);
+  redirect(destination);
 }
 
 export async function signOutAction(): Promise<AuthActionResult<SignOutResult>> {

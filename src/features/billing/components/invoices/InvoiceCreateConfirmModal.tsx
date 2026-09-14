@@ -113,6 +113,17 @@ export function InvoiceCreateConfirmModal({
         aria-modal="true"
         aria-labelledby="invoice-create-confirm-title"
       >
+        <span
+          className={`${styles.createConfirmTypeBadge} ${
+            invoiceType === "A"
+              ? styles.createConfirmTypeBadgeA
+              : styles.createConfirmTypeBadgeB
+          }`}
+          aria-label={INVOICE_TYPE_LABELS[invoiceType]}
+        >
+          {INVOICE_TYPE_LABELS[invoiceType]}
+        </span>
+
         <h2
           id="invoice-create-confirm-title"
           className={styles.createConfirmTitle}
@@ -124,10 +135,6 @@ export function InvoiceCreateConfirmModal({
           <div>
             <dt>Cliente</dt>
             <dd>{clientName}</dd>
-          </div>
-          <div>
-            <dt>Tipo</dt>
-            <dd>{INVOICE_TYPE_LABELS[invoiceType]}</dd>
           </div>
           <div>
             <dt>Ítems</dt>
@@ -203,7 +210,7 @@ export function InvoiceCreateConfirmModal({
           <button
             ref={confirmButtonRef}
             type="button"
-            className={confirmStyles.confirmPrimaryButton}
+            className={`${confirmStyles.confirmPrimaryButton} ${styles.createConfirmPrimaryButton}`}
             onClick={onConfirm}
             disabled={isSubmitting}
             aria-keyshortcuts="C"

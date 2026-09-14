@@ -201,15 +201,18 @@ export function DeudoresManager({
               />
               Clientes con deuda
             </h2>
-            <p className={styles.invoiceMeta}>
-              {debtors.length}{" "}
-              {debtors.length === 1 ? "cliente" : "clientes"} · {pendingInvoices}{" "}
-              {pendingInvoices === 1
-                ? "factura pendiente"
-                : "facturas pendientes"}
-            </p>
             <p className={styles.debtorsOutstandingTotal}>
-              Total adeudado: {formatArsExact(totalOutstanding)}
+              <span className={styles.debtorsOutstandingAmount}>
+                {debtors.length}
+              </span>{" "}
+              {debtors.length === 1 ? "cliente" : "clientes"} |{" "}
+              <span className={styles.debtorsOutstandingAmount}>
+                {pendingInvoices}
+              </span>{" "}
+              {pendingInvoices === 1 ? "factura" : "facturas"} | Total:{" "}
+              <span className={styles.debtorsOutstandingAmount}>
+                {formatArsExact(totalOutstanding)}
+              </span>
             </p>
           </div>
           <div className={styles.headerActions}>

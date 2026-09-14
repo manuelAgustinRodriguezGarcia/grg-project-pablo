@@ -101,7 +101,7 @@ export class CatalogRepository {
   }
 
   async findById(id: string): Promise<Catalog | null> {
-    return prisma.catalog.findUnique({
+    return prisma.catalog.findFirst({
       where: { id },
     });
   }

@@ -4,6 +4,7 @@ export {
   Award,
   Banknote,
   Ban,
+  Blocks,
   BookUser,
   ArrowBigUp,
   ArrowLeft,

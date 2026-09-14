@@ -250,6 +250,19 @@ export class FolderRepository {
     });
   }
 
+  async findNamesByCatalogIdOrdered(
+    catalogId: string,
+    where: Prisma.CatalogFolderWhereInput = {},
+  ): Promise<string[]> {
+    const folders = await prisma.catalogFolder.findMany({
+      where: { catalogId, ...where },
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      select: { name: true },
+    });
+
+    return folders.map((folder) => folder.name);
+  }
+
   async countByCatalogAndName(
     catalogId: string,
     name: string,

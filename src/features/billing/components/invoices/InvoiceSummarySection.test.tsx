@@ -195,22 +195,4 @@ describe("InvoiceSummarySection discount and submit keyboard", () => {
     expect(onApplyDiscount).not.toHaveBeenCalled();
     expect(discount).toHaveFocus();
   });
-
-  it("Shift+F crea la factura cuando el botón está habilitado", () => {
-    const { onSubmit } = renderSummary();
-
-    fireEvent.keyDown(document, { key: "F", shiftKey: true });
-
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-  });
-
-  it("Shift+F no crea la factura mientras se escribe en un campo", () => {
-    const { onSubmit } = renderSummary();
-
-    const notes = screen.getByLabelText(/Observaciones internas/);
-    notes.focus();
-    fireEvent.keyDown(notes, { key: "F", shiftKey: true });
-
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
 });

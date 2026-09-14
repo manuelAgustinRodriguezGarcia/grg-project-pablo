@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -18,6 +19,7 @@ import {
   clipOverlayBoxToViewport,
   shouldUseScopedOverlayTarget,
 } from "@/features/admin/utils/overlay-box";
+import { isAdminEntryPath } from "@/server/auth/config";
 
 const FADE_OUT_MS = 380;
 const MIN_VISIBLE_MS = 320;
@@ -217,10 +219,12 @@ function useAdminContentBox(
 
 type AdminSectionTransitionProviderProps = {
   children: ReactNode;
+  entryHomeHref?: string;
 };
 
 export function AdminSectionTransitionProvider({
   children,
+  entryHomeHref,
 }: AdminSectionTransitionProviderProps) {
   const pathname = usePathname();
   const [phase, setPhase] = useState<TransitionPhase>("idle");
@@ -266,6 +270,18 @@ export function AdminSectionTransitionProvider({
     },
     [clearSafetyTimer, pathname],
   );
+
+  useLayoutEffect(() => {
+    if (!entryHomeHref) {
+      return;
+    }
+
+    if (!isAdminEntryPath(normalizeAdminPath(pathname))) {
+      return;
+    }
+
+    beginNavigation(entryHomeHref);
+  }, [beginNavigation, entryHomeHref, pathname]);
 
   const reportSectionReady = useCallback(() => {
     if (phaseRef.current !== "visible" || !targetHrefRef.current) {

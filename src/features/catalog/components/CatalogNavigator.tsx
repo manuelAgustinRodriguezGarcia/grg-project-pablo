@@ -14,7 +14,7 @@ import {
   deleteCatalogAction,
   updateCatalogAction,
 } from "@/features/catalog/actions/catalog.actions";
-import { createFolderAction, deleteFolderAction, updateFolderAction } from "@/features/catalog/actions/folder.actions";
+import { deleteFolderAction } from "@/features/catalog/actions/folder.actions";
 import { CatalogFolderSelectors } from "@/features/catalog/components/CatalogFolderSelectors";
 import { CatalogPickerScreen } from "@/features/catalog/components/CatalogPickerScreen";
 import { ChangeCoverImageModal } from "@/features/catalog/components/ChangeCoverImageModal";
@@ -146,6 +146,7 @@ function toDirectoryCatalogItem(
     description: catalog.description,
     coverImageUrl: previous?.coverImageUrl ?? null,
     sectionCount: catalog.folderCount,
+    sectionNames: previous?.sectionNames ?? [],
     updatedAt: catalog.updatedAt,
     order: catalog.order,
     offlineSync: previous?.offlineSync ?? { status: "unavailable" },
@@ -289,14 +290,11 @@ export function CatalogNavigator({
   const [isCreateCatalogOpen, setIsCreateCatalogOpen] = useState(false);
   const [createCatalogNameDraft, setCreateCatalogNameDraft] = useState("");
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
-  const [createFolderNameDraft, setCreateFolderNameDraft] = useState("");
   const [isFolderActionBusy, setIsFolderActionBusy] = useState(false);
   const [folderActionError, setFolderActionError] = useState<string | null>(null);
 
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<CatalogTarget | null>(null);
   const [editFolderTarget, setEditFolderTarget] = useState<CatalogTarget | null>(null);
-  const [editFolderNameDraft, setEditFolderNameDraft] = useState("");
-  const [coverFolderTarget, setCoverFolderTarget] = useState<CatalogTarget | null>(null);
 
   const activeCatalogId = useMemo(
     () => resolveCatalogId(sortedCatalogs, selectedCatalogId),
@@ -392,7 +390,14 @@ export function CatalogNavigator({
           setCatalogList((current) =>
             current.map((catalog) =>
               catalog.id === change.catalogId
-                ? { ...catalog, sectionCount: catalog.sectionCount + 1 }
+                ? {
+                    ...catalog,
+                    sectionCount: catalog.sectionCount + 1,
+                    sectionNames: sortByName([
+                      ...catalog.sectionNames.map((name) => ({ name })),
+                      { name: change.folder.name },
+                    ]).map((item) => item.name),
+                  }
                 : catalog,
             ),
           );
@@ -416,6 +421,31 @@ export function CatalogNavigator({
               queryKey: adminQueryKeys.navigation(change.catalogId),
             });
           }
+          setCatalogList((current) =>
+            current.map((catalog) => {
+              if (catalog.id !== change.catalogId) {
+                return catalog;
+              }
+
+              const previousName = currentFolders?.find(
+                (folder) => folder.id === change.folder.id,
+              )?.name;
+              const nextNames = previousName
+                ? catalog.sectionNames.map((name) =>
+                    name === previousName ? change.folder.name : name,
+                  )
+                : catalog.sectionNames.includes(change.folder.name)
+                  ? catalog.sectionNames
+                  : [...catalog.sectionNames, change.folder.name];
+
+              return {
+                ...catalog,
+                sectionNames: sortByName(
+                  nextNames.map((name) => ({ name })),
+                ).map((item) => item.name),
+              };
+            }),
+          );
           break;
         }
         case "folder-deleted": {
@@ -433,14 +463,23 @@ export function CatalogNavigator({
             });
           }
           setCatalogList((current) =>
-            current.map((catalog) =>
-              catalog.id === change.catalogId
-                ? {
-                    ...catalog,
-                    sectionCount: Math.max(0, catalog.sectionCount - 1),
-                  }
-                : catalog,
-            ),
+            current.map((catalog) => {
+              if (catalog.id !== change.catalogId) {
+                return catalog;
+              }
+
+              const deletedName = currentFolders?.find(
+                (folder) => folder.id === change.folderId,
+              )?.name;
+
+              return {
+                ...catalog,
+                sectionCount: Math.max(0, catalog.sectionCount - 1),
+                sectionNames: deletedName
+                  ? catalog.sectionNames.filter((name) => name !== deletedName)
+                  : catalog.sectionNames,
+              };
+            }),
           );
           if (selectedFolderId === change.folderId) {
             setSelectedFolderId("");
@@ -872,7 +911,6 @@ export function CatalogNavigator({
 
   const handleAddFolder = useCallback(() => {
     setFolderActionError(null);
-    setCreateFolderNameDraft("");
     setIsCreateFolderOpen(true);
   }, []);
 
@@ -912,63 +950,37 @@ export function CatalogNavigator({
     }
   }, [createCatalogNameDraft, queryClient, router]);
 
-  const handleConfirmCreateFolder = useCallback(async () => {
-    if (!activeCatalogId) {
-      return;
-    }
-
-    const nextName = createFolderNameDraft.trim();
-    if (!nextName) {
-      setFolderActionError("El nombre no puede estar vacío.");
-      return;
-    }
-
-    setIsFolderActionBusy(true);
-    setFolderActionError(null);
-
-    try {
-      const result = await createFolderAction({
-        catalogId: activeCatalogId,
-        name: nextName,
-      });
-      if (!result.success) {
-        setFolderActionError(result.error);
+  const handleFolderCreateSaved = useCallback(
+    async (payload: { name: string; folderId: string }) => {
+      if (!activeCatalogId) {
         return;
       }
 
-      const created = toNavigationFolderItem(result.data);
-      const currentFolders =
-        queryClient.getQueryData<CatalogNavigationFolderItem[]>(
-          adminQueryKeys.navigation(activeCatalogId),
-        ) ?? folders;
-      const nextFolders = sortByName([...currentFolders, created]);
+      await queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.navigation(activeCatalogId),
+      });
 
-      queryClient.setQueryData(
-        adminQueryKeys.navigation(activeCatalogId),
-        nextFolders,
-      );
       setCatalogList((current) =>
         current.map((catalog) =>
           catalog.id === activeCatalogId
-            ? { ...catalog, sectionCount: catalog.sectionCount + 1 }
+            ? {
+                ...catalog,
+                sectionCount: catalog.sectionCount + 1,
+                sectionNames: sortByName([
+                  ...catalog.sectionNames.map((name) => ({ name })),
+                  { name: payload.name },
+                ]).map((item) => item.name),
+              }
             : catalog,
         ),
       );
-      setSelectedFolderId(created.id);
+      setSelectedFolderId(payload.folderId);
       setPage(1);
       setIsCreateFolderOpen(false);
-      setCreateFolderNameDraft("");
       router.refresh();
-    } finally {
-      setIsFolderActionBusy(false);
-    }
-  }, [
-    activeCatalogId,
-    createFolderNameDraft,
-    folders,
-    queryClient,
-    router,
-  ]);
+    },
+    [activeCatalogId, queryClient, router],
+  );
 
   const handleEditCatalog = useCallback(
     (catalogId: string) => {
@@ -1003,7 +1015,6 @@ export function CatalogNavigator({
       }
       setFolderActionError(null);
       setEditFolderTarget({ id: folder.id, name: folder.name });
-      setEditFolderNameDraft(folder.name);
     },
     [folders],
   );
@@ -1052,6 +1063,9 @@ export function CatalogNavigator({
             ? {
                 ...catalog,
                 sectionCount: Math.max(0, catalog.sectionCount - 1),
+                sectionNames: catalog.sectionNames.filter(
+                  (name) => name !== deleteFolderTarget.name,
+                ),
               }
             : catalog,
         ),
@@ -1082,62 +1096,40 @@ export function CatalogNavigator({
     selectedFolderId,
   ]);
 
-  const handleConfirmEditFolder = useCallback(async () => {
-    if (!editFolderTarget) {
-      return;
-    }
-
-    const nextName = editFolderNameDraft.trim();
-    if (!nextName) {
-      setFolderActionError("El nombre no puede estar vacío.");
-      return;
-    }
-
-    setIsFolderActionBusy(true);
-    setFolderActionError(null);
-
-    try {
-      const result = await updateFolderAction({
-        id: editFolderTarget.id,
-        name: nextName,
-      });
-      if (!result.success) {
-        setFolderActionError(result.error);
-        return;
+  const handleFolderEditSaved = useCallback(
+    async (payload: { previousName: string; name: string }) => {
+      if (activeCatalogId) {
+        await queryClient.invalidateQueries({
+          queryKey: adminQueryKeys.navigation(activeCatalogId),
+        });
       }
 
-      const currentFolders =
-        activeCatalogId
-          ? queryClient.getQueryData<CatalogNavigationFolderItem[]>(
-              adminQueryKeys.navigation(activeCatalogId),
-            ) ?? folders
-          : folders;
-      const previous = currentFolders.find((folder) => folder.id === result.data.id);
-      const updated = toNavigationFolderItem(result.data, previous);
-      if (activeCatalogId) {
-        queryClient.setQueryData(
-          adminQueryKeys.navigation(activeCatalogId),
-          sortByName(
-            currentFolders.map((folder) =>
-              folder.id === updated.id ? updated : folder,
-            ),
-          ),
+      if (payload.previousName !== payload.name) {
+        setCatalogList((current) =>
+          current.map((catalog) => {
+            if (catalog.id !== activeCatalogId) {
+              return catalog;
+            }
+
+            return {
+              ...catalog,
+              sectionNames: sortByName(
+                catalog.sectionNames
+                  .map((name) =>
+                    name === payload.previousName ? payload.name : name,
+                  )
+                  .map((name) => ({ name })),
+              ).map((item) => item.name),
+            };
+          }),
         );
       }
+
       setEditFolderTarget(null);
-      setEditFolderNameDraft("");
       router.refresh();
-    } finally {
-      setIsFolderActionBusy(false);
-    }
-  }, [
-    activeCatalogId,
-    editFolderNameDraft,
-    editFolderTarget,
-    folders,
-    queryClient,
-    router,
-  ]);
+    },
+    [activeCatalogId, queryClient, router],
+  );
 
   const handleConfirmDeleteCatalog = useCallback(async () => {
     if (!deleteCatalogTarget) {
@@ -1216,13 +1208,7 @@ export function CatalogNavigator({
     editCatalogNameDraft.trim() === editCatalogTarget.name.trim();
   const editNameEmpty = editCatalogNameDraft.trim().length === 0;
 
-  const editFolderNameUnchanged =
-    editFolderTarget !== null &&
-    editFolderNameDraft.trim() === editFolderTarget.name.trim();
-  const editFolderNameEmpty = editFolderNameDraft.trim().length === 0;
-
   const createCatalogNameEmpty = createCatalogNameDraft.trim().length === 0;
-  const createFolderNameEmpty = createFolderNameDraft.trim().length === 0;
 
   const importWizard = isImportOpen ? (
     <LazyImportWizard
@@ -1243,31 +1229,18 @@ export function CatalogNavigator({
   const activeCatalogSectionCount =
     sortedCatalogs.find((catalog) => catalog.id === activeCatalogId)?.sectionCount ??
     0;
-  const coverFolderImageUrl =
-    coverFolderTarget
-      ? folders.find((folder) => folder.id === coverFolderTarget.id)?.coverImageUrl ??
+  const editFolderImageUrl =
+    editFolderTarget
+      ? folders.find((folder) => folder.id === editFolderTarget.id)?.coverImageUrl ??
         null
       : null;
 
   const handleEditFolderCover = useCallback(
     (folderId: string) => {
-      const folder = folders.find((item) => item.id === folderId);
-      if (!folder) {
-        return;
-      }
-      setCoverFolderTarget({ id: folder.id, name: folder.name });
+      handleEditFolder(folderId);
     },
-    [folders],
+    [handleEditFolder],
   );
-
-  const handleCoverImageSaved = useCallback(async () => {
-    if (!activeCatalogId) {
-      return;
-    }
-    await queryClient.invalidateQueries({
-      queryKey: adminQueryKeys.navigation(activeCatalogId),
-    });
-  }, [activeCatalogId, queryClient]);
 
   return (
     <>
@@ -1289,6 +1262,7 @@ export function CatalogNavigator({
               isLoading={isLoadingFolders}
               expectedFolderCount={activeCatalogSectionCount}
               isAdmin={isAdmin}
+              error={foldersError}
               onBack={handleBackToCatalogs}
               onSelectFolder={handleSelectFolder}
               onEditFolder={isAdmin ? handleEditFolder : undefined}
@@ -1320,6 +1294,7 @@ export function CatalogNavigator({
                   isLoadingFolders={isLoadingFolders}
                   onSelectCatalog={handleSelectCatalog}
                   onSelectFolder={handleSelectFolder}
+                  onBackToCatalogs={handleBackToCatalogs}
                   onEditCatalog={isAdmin ? handleEditCatalog : undefined}
                   onDeleteCatalog={isAdmin ? handleDeleteCatalog : undefined}
                   onEditFolder={isAdmin ? handleEditFolder : undefined}
@@ -1581,41 +1556,12 @@ export function CatalogNavigator({
           />
         </ConfirmDialog>
       ) : null}
-      {isCreateFolderOpen ? (
-        <ConfirmDialog
-          title="Nueva carpeta"
-          message="Ingrese el nombre de la carpeta que desea crear en este catálogo."
-          confirmLabel="Crear carpeta"
-          isBusy={isFolderActionBusy}
-          confirmDisabled={createFolderNameEmpty}
-          onConfirm={() => void handleConfirmCreateFolder()}
-          onCancel={() => {
-            if (!isFolderActionBusy) {
-              setIsCreateFolderOpen(false);
-              setCreateFolderNameDraft("");
-            }
-          }}
-        >
-          <input
-            className={styles.confirmInput}
-            value={createFolderNameDraft}
-            onChange={(event) => setCreateFolderNameDraft(event.target.value)}
-            maxLength={200}
-            autoFocus
-            disabled={isFolderActionBusy}
-            aria-label="Nombre de la carpeta"
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !createFolderNameEmpty &&
-                !isFolderActionBusy
-              ) {
-                event.preventDefault();
-                void handleConfirmCreateFolder();
-              }
-            }}
-          />
-        </ConfirmDialog>
+      {isCreateFolderOpen && activeCatalogId ? (
+        <ChangeCoverImageModal
+          createCatalogId={activeCatalogId}
+          onClose={() => setIsCreateFolderOpen(false)}
+          onSaved={handleFolderCreateSaved}
+        />
       ) : null}
       {deleteFolderTarget ? (
         <ConfirmDialog
@@ -1642,57 +1588,13 @@ export function CatalogNavigator({
         />
       ) : null}
       {editFolderTarget ? (
-        <ConfirmDialog
-          title="Editar carpeta"
-          message={
-            <>
-              ¿Confirma el cambio de nombre de la carpeta{" "}
-              <strong className={styles.confirmHighlight}>
-                {editFolderTarget.name}
-              </strong>
-              ?
-            </>
-          }
-          confirmLabel="Guardar cambios"
-          isBusy={isFolderActionBusy}
-          confirmDisabled={editFolderNameEmpty || editFolderNameUnchanged}
-          onConfirm={() => void handleConfirmEditFolder()}
-          onCancel={() => {
-            if (!isFolderActionBusy) {
-              setEditFolderTarget(null);
-              setEditFolderNameDraft("");
-            }
-          }}
-        >
-          <input
-            className={styles.confirmInput}
-            value={editFolderNameDraft}
-            onChange={(event) => setEditFolderNameDraft(event.target.value)}
-            maxLength={200}
-            autoFocus
-            disabled={isFolderActionBusy}
-            aria-label="Nuevo nombre de la carpeta"
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !editFolderNameEmpty &&
-                !editFolderNameUnchanged &&
-                !isFolderActionBusy
-              ) {
-                event.preventDefault();
-                void handleConfirmEditFolder();
-              }
-            }}
-          />
-        </ConfirmDialog>
-      ) : null}
-      {coverFolderTarget ? (
         <ChangeCoverImageModal
-          folderId={coverFolderTarget.id}
-          folderName={coverFolderTarget.name}
-          currentImageUrl={coverFolderImageUrl}
-          onClose={() => setCoverFolderTarget(null)}
-          onSaved={handleCoverImageSaved}
+          folderId={editFolderTarget.id}
+          folderName={editFolderTarget.name}
+          currentImageUrl={editFolderImageUrl}
+          allowRename
+          onClose={() => setEditFolderTarget(null)}
+          onSaved={handleFolderEditSaved}
         />
       ) : null}
     </>

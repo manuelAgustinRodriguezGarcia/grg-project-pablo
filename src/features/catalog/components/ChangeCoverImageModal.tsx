@@ -8,8 +8,10 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  createFolderAction,
   removeFolderCoverImageAction,
   setFolderCoverImageAction,
+  updateFolderAction,
 } from "@/features/catalog/actions/folder.actions";
 import { CATALOG_COVER_FALLBACK_SRC } from "@/features/catalog/utils/catalog-cover";
 import { ICON_STROKE, Image as ImageIcon, X } from "@/shared/icons";
@@ -22,11 +24,18 @@ const ACCEPTED_IMAGE_TYPES = new Set([
 ]);
 
 type ChangeCoverImageModalProps = {
-  folderId: string;
-  folderName: string;
-  currentImageUrl: string | null;
+  folderId?: string;
+  folderName?: string;
+  currentImageUrl?: string | null;
+  createCatalogId?: string;
+  allowRename?: boolean;
   onClose: () => void;
-  onSaved: () => void | Promise<void>;
+  onSaved: (payload: {
+    previousName: string;
+    name: string;
+    folderId: string;
+    created?: boolean;
+  }) => void | Promise<void>;
 };
 
 function isAcceptedImageFile(file: File): boolean {
@@ -45,11 +54,15 @@ function isAcceptedImageFile(file: File): boolean {
 
 export function ChangeCoverImageModal({
   folderId,
-  folderName,
-  currentImageUrl,
+  folderName = "",
+  currentImageUrl = null,
+  createCatalogId,
+  allowRename = false,
   onClose,
   onSaved,
 }: ChangeCoverImageModalProps) {
+  const isCreateMode = Boolean(createCatalogId);
+  const [nameDraft, setNameDraft] = useState(folderName);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
@@ -60,6 +73,18 @@ export function ChangeCoverImageModal({
   const dragDepthRef = useRef(0);
   const objectUrlRef = useRef<string | null>(null);
   const hadPersistedImage = Boolean(currentImageUrl);
+
+  const trimmedName = nameDraft.trim();
+  const nameChanged =
+    !isCreateMode &&
+    allowRename &&
+    trimmedName.length > 0 &&
+    trimmedName !== folderName.trim();
+  const imageChanged = Boolean(pendingFile) || removeImage;
+  const canSave = isCreateMode
+    ? trimmedName.length > 0
+    : (nameChanged || imageChanged) &&
+      (!allowRename || trimmedName.length > 0);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -146,7 +171,7 @@ export function ChangeCoverImageModal({
   }
 
   async function handleSave() {
-    if (!pendingFile && !removeImage) {
+    if (!canSave) {
       onClose();
       return;
     }
@@ -155,8 +180,69 @@ export function ChangeCoverImageModal({
     setError(null);
 
     try {
+      if (isCreateMode && createCatalogId) {
+        const createResult = await createFolderAction({
+          catalogId: createCatalogId,
+          name: trimmedName,
+        });
+        if (!createResult.success) {
+          setError(createResult.error);
+          return;
+        }
+
+        const createdId = createResult.data.id;
+        let finalName = createResult.data.name;
+
+        if (pendingFile) {
+          const formData = new FormData();
+          formData.set("folderId", createdId);
+          formData.set("file", pendingFile);
+          const imageResult = await setFolderCoverImageAction(formData);
+          if (!imageResult.success) {
+            setError(imageResult.error);
+            await onSaved({
+              previousName: "",
+              name: finalName,
+              folderId: createdId,
+              created: true,
+            });
+            onClose();
+            return;
+          }
+        }
+
+        await onSaved({
+          previousName: "",
+          name: finalName,
+          folderId: createdId,
+          created: true,
+        });
+        onClose();
+        return;
+      }
+
+      if (!folderId) {
+        setError("No se encontró la carpeta.");
+        return;
+      }
+
+      let nextName = folderName;
+      let activeFolderId = folderId;
+
+      if (nameChanged) {
+        const result = await updateFolderAction({
+          id: folderId,
+          name: trimmedName,
+        });
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
+        nextName = result.data.name;
+      }
+
       if (removeImage && hadPersistedImage) {
-        const result = await removeFolderCoverImageAction({ folderId });
+        const result = await removeFolderCoverImageAction({ folderId: activeFolderId });
         if (!result.success) {
           setError(result.error);
           return;
@@ -165,7 +251,7 @@ export function ChangeCoverImageModal({
 
       if (pendingFile) {
         const formData = new FormData();
-        formData.set("folderId", folderId);
+        formData.set("folderId", activeFolderId);
         formData.set("file", pendingFile);
         const result = await setFolderCoverImageAction(formData);
         if (!result.success) {
@@ -174,7 +260,11 @@ export function ChangeCoverImageModal({
         }
       }
 
-      await onSaved();
+      await onSaved({
+        previousName: folderName,
+        name: nextName,
+        folderId: activeFolderId,
+      });
       onClose();
     } finally {
       setIsSaving(false);
@@ -183,6 +273,12 @@ export function ChangeCoverImageModal({
 
   const displaySrc = previewUrl || CATALOG_COVER_FALLBACK_SRC;
   const hasPreviewImage = Boolean(previewUrl);
+  const showNameField = isCreateMode || allowRename;
+  const title = isCreateMode
+    ? "Nueva carpeta"
+    : allowRename
+      ? "Editar carpeta"
+      : "Cambiar imagen";
 
   return createPortal(
     <div
@@ -202,7 +298,7 @@ export function ChangeCoverImageModal({
       >
         <div className={styles.changeCoverHeader}>
           <h2 id="change-cover-title" className={styles.changeCoverTitle}>
-            Cambiar imagen
+            {title}
           </h2>
           <button
             type="button"
@@ -215,7 +311,28 @@ export function ChangeCoverImageModal({
           </button>
         </div>
 
-        <p className={styles.changeCoverFolderName}>{folderName}</p>
+        {showNameField ? (
+          <label className={styles.changeCoverNameField}>
+            <span className={styles.changeCoverNameLabel}>Nombre</span>
+            <input
+              className={styles.confirmInput}
+              value={nameDraft}
+              onChange={(event) => setNameDraft(event.target.value)}
+              maxLength={200}
+              autoFocus
+              disabled={isSaving}
+              aria-label="Nombre de la carpeta"
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && canSave && !isSaving) {
+                  event.preventDefault();
+                  void handleSave();
+                }
+              }}
+            />
+          </label>
+        ) : (
+          <p className={styles.changeCoverFolderName}>{folderName}</p>
+        )}
 
         <div className={styles.changeCoverPreview}>
           <img
@@ -302,9 +419,13 @@ export function ChangeCoverImageModal({
               type="button"
               className={styles.confirmPrimaryButton}
               onClick={() => void handleSave()}
-              disabled={isSaving || (!pendingFile && !removeImage)}
+              disabled={isSaving || !canSave}
             >
-              {isSaving ? "Guardando…" : "Guardar"}
+              {isSaving
+                ? "Guardando…"
+                : isCreateMode
+                  ? "Crear carpeta"
+                  : "Guardar cambios"}
             </button>
           </div>
         </div>

@@ -30,8 +30,13 @@ export class NavigationService {
   async getCatalogNavigation(catalogId: string): Promise<CatalogNavigationResponse> {
     const { profile } = await requireAuth();
     const role = profile.role;
+    const normalizedCatalogId = catalogId.trim();
 
-    const catalog = await catalogRepository.findById(catalogId);
+    const catalog =
+      (await catalogRepository.findById(normalizedCatalogId)) ??
+      (await catalogRepository.findActiveOrdered({ id: normalizedCatalogId }))[0] ??
+      null;
+
     if (!catalog) {
       throw new CatalogError("Catálogo no encontrado.", "CATALOG_NOT_FOUND");
     }
@@ -50,7 +55,7 @@ export class NavigationService {
     }
 
     const folders = await folderRepository.findByCatalogIdOrdered(
-      catalogId,
+      catalog.id,
       visibilityService.folderWhereForRole(role),
     );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useRef, type KeyboardEvent } from "react";
 import type {
   BillingInvoiceType,
   BillingPaymentMethod,
@@ -12,7 +12,6 @@ import {
   PAYMENT_METHOD_LABELS,
 } from "@/features/billing/types/billing-invoice.types";
 import { paymentStatusForMethod } from "@/shared/utils/billing-invoice-rules";
-import { isTypingTarget } from "@/features/billing/hooks/useBillingModalKeyboard";
 import {
   INVOICE_DISCOUNT_ID,
   INVOICE_NOTES_ID,
@@ -21,13 +20,12 @@ import {
   focusInvoiceField,
   invoicePaymentMethodButtonId,
   isInvoiceFlowEnter,
-  isInvoiceSubmitShortcut,
   resolveDiscountEnter,
   resolvePaymentMethodMove,
   buildPaymentMethodCells,
   type PickerArrowKey,
 } from "@/features/billing/utils/invoice-keyboard-flow";
-import { ArrowBigUp, Banknote, Percent, ReceiptText, ICON_STROKE } from "@/shared/icons";
+import { Banknote, Percent, ReceiptText, ICON_STROKE } from "@/shared/icons";
 import styles from "@/features/billing/styles/NewInvoice.module.scss";
 
 function formatCents(cents: number): string {
@@ -230,26 +228,6 @@ export function InvoiceSummarySection({
     event.preventDefault();
     focusSubmitButton();
   }
-
-  useEffect(() => {
-    function handleSubmitShortcut(event: globalThis.KeyboardEvent) {
-      if (!isInvoiceSubmitShortcut(event) || isTypingTarget(event.target)) {
-        return;
-      }
-
-      if (!canSubmit || isSubmitting) {
-        return;
-      }
-
-      event.preventDefault();
-      onSubmit();
-    }
-
-    document.addEventListener("keydown", handleSubmitShortcut);
-    return () => {
-      document.removeEventListener("keydown", handleSubmitShortcut);
-    };
-  }, [canSubmit, isSubmitting, onSubmit]);
 
   return (
     <div className={styles.summaryColumn} aria-label="Resumen de la factura">
@@ -470,21 +448,8 @@ export function InvoiceSummarySection({
         className={styles.submitButton}
         onClick={onSubmit}
         disabled={!canSubmit || isSubmitting}
-        aria-keyshortcuts="Shift+F"
       >
         {isSubmitting ? "Creando factura…" : "Crear factura en modo prueba"}
-        {isSubmitting ? null : (
-          <span className={styles.submitShortcut} aria-hidden>
-            <kbd className={styles.shortcutKbd}>
-              <ArrowBigUp
-                className={styles.submitShortcutIcon}
-                strokeWidth={ICON_STROKE}
-              />
-            </kbd>
-            <span className={styles.submitShortcutPlus}>+</span>
-            <kbd className={styles.shortcutKbd}>F</kbd>
-          </span>
-        )}
       </button>
     </div>
   );

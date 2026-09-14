@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { createPortal } from "react-dom";
 import { useCardGridKeyboard } from "@/features/catalog/hooks/useCardGridKeyboard";
 import type { DirectoryCatalogItem } from "@/features/directory/types/directory.types";
 import { sortByName } from "@/features/catalog/utils/sortByName";
@@ -14,6 +22,140 @@ type CatalogPickerScreenProps = {
   onAddCatalog?: () => void;
 };
 
+const PREVIEW_EXIT_MS = 180;
+const PREVIEW_COLUMN_SIZE = 10;
+const PREVIEW_COLUMN_MIN_WIDTH = 168;
+const PREVIEW_ROW_HEIGHT = 28;
+const PREVIEW_PAD_Y = 24;
+
+function chunkNames(names: string[], size: number): string[][] {
+  const columns: string[][] = [];
+  for (let index = 0; index < names.length; index += size) {
+    columns.push(names.slice(index, index + size));
+  }
+  return columns;
+}
+
+function CatalogFoldersPreview({
+  anchor,
+  names,
+  active,
+}: {
+  anchor: HTMLElement | null;
+  names: string[];
+  active: boolean;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [style, setStyle] = useState<CSSProperties>({});
+  const columns = useMemo(
+    () => chunkNames(names, PREVIEW_COLUMN_SIZE),
+    [names],
+  );
+  const columnCount = Math.max(1, columns.length);
+  const rowCount = Math.min(PREVIEW_COLUMN_SIZE, names.length);
+
+  useEffect(() => {
+    if (active && names.length > 0 && anchor) {
+      setMounted(true);
+      const frame = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(frame);
+    }
+
+    setVisible(false);
+    const timeout = window.setTimeout(() => setMounted(false), PREVIEW_EXIT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [active, anchor, names.length]);
+
+  useLayoutEffect(() => {
+    if (!mounted || !anchor) {
+      return;
+    }
+
+    function updatePosition() {
+      if (!anchor) {
+        return;
+      }
+
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.min(
+        Math.max(rect.width, PREVIEW_COLUMN_MIN_WIDTH * columnCount),
+        window.innerWidth - 24,
+      );
+      let left = rect.left + rect.width / 2 - width / 2;
+      left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
+
+      const gap = 8;
+      const spaceBelow = window.innerHeight - rect.bottom - gap - 12;
+      const spaceAbove = rect.top - gap - 12;
+      const placeAbove = spaceBelow < 140 && spaceAbove > spaceBelow;
+      const estimatedHeight = rowCount * PREVIEW_ROW_HEIGHT + PREVIEW_PAD_Y;
+      const maxHeight = Math.max(
+        96,
+        Math.min(estimatedHeight, placeAbove ? spaceAbove : spaceBelow),
+      );
+      const top = placeAbove
+        ? Math.max(12, rect.top - gap - Math.min(estimatedHeight, maxHeight))
+        : Math.min(
+            rect.bottom + gap,
+            window.innerHeight - maxHeight - 12,
+          );
+
+      setStyle({
+        top,
+        left,
+        width,
+        maxHeight,
+      });
+    }
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [anchor, columnCount, mounted, rowCount]);
+
+  if (!mounted || names.length === 0 || typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className={`${styles.pickerFoldersPreview}${
+        visible ? ` ${styles.pickerFoldersPreviewVisible}` : ""
+      }`}
+      style={style}
+      role="tooltip"
+    >
+      <div className={styles.pickerFoldersPreviewColumns}>
+        {columns.map((column, columnIndex) => (
+          <ul
+            key={`preview-col-${columnIndex}`}
+            className={styles.pickerFoldersPreviewList}
+          >
+            {column.map((name, rowIndex) => (
+              <li
+                key={`${columnIndex}-${name}`}
+                className={`${styles.pickerFoldersPreviewItem}${
+                  rowIndex % 2 === 0
+                    ? ` ${styles.pickerFoldersPreviewItemEven}`
+                    : ` ${styles.pickerFoldersPreviewItemOdd}`
+                }`}
+              >
+                {name.toLocaleUpperCase("es")}
+              </li>
+            ))}
+          </ul>
+        ))}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export function CatalogPickerScreen({
   catalogs,
   isAdmin = false,
@@ -21,6 +163,9 @@ export function CatalogPickerScreen({
   onAddCatalog,
 }: CatalogPickerScreenProps) {
   const [query, setQuery] = useState("");
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [cardFocusWithin, setCardFocusWithin] = useState(false);
+  const [previewAnchor, setPreviewAnchor] = useState<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const showFab = Boolean(isAdmin && onAddCatalog);
 
@@ -52,9 +197,39 @@ export function CatalogPickerScreen({
     },
   });
 
+  const previewIndex =
+    hoveredIndex !== null ? hoveredIndex : cardFocusWithin ? focusedIndex : null;
+  const previewCatalog =
+    previewIndex !== null ? filteredCatalogs[previewIndex] ?? null : null;
+  const previewNames = previewCatalog?.sectionNames ?? [];
+  const didInitFocusRef = useRef(false);
+
   useEffect(() => {
-    searchInputRef.current?.focus();
-  }, []);
+    if (filteredCatalogs.length === 0) {
+      didInitFocusRef.current = false;
+      searchInputRef.current?.focus();
+      return;
+    }
+
+    if (didInitFocusRef.current) {
+      return;
+    }
+
+    didInitFocusRef.current = true;
+    focusCardAt(0);
+  }, [filteredCatalogs.length, focusCardAt]);
+
+  useLayoutEffect(() => {
+    if (previewIndex === null) {
+      setPreviewAnchor(null);
+      return;
+    }
+
+    const card = gridRef.current?.querySelector<HTMLElement>(
+      `[data-card-index="${previewIndex}"]`,
+    );
+    setPreviewAnchor(card ?? null);
+  }, [focusedIndex, gridRef, hoveredIndex, previewIndex]);
 
   return (
     <section
@@ -104,6 +279,14 @@ export function CatalogPickerScreen({
             className={styles.pickerGrid}
             role="listbox"
             aria-label="Catálogos"
+            onFocusCapture={() => setCardFocusWithin(true)}
+            onBlurCapture={(event) => {
+              if (
+                !event.currentTarget.contains(event.relatedTarget as Node | null)
+              ) {
+                setCardFocusWithin(false);
+              }
+            }}
           >
             {filteredCatalogs.map((catalog, index) => {
               const sectionLabel =
@@ -123,6 +306,11 @@ export function CatalogPickerScreen({
                   }`}
                   tabIndex={focusedIndex === index ? 0 : -1}
                   onClick={() => onSelectCatalog(catalog.id)}
+                  onMouseEnter={() => {
+                    setHoveredIndex(index);
+                    focusCardAt(index);
+                  }}
+                  onMouseLeave={() => setHoveredIndex(null)}
                   onFocus={() => {
                     if (focusedIndex !== index) {
                       focusCardAt(index);
@@ -149,6 +337,12 @@ export function CatalogPickerScreen({
           </div>
         )}
       </div>
+
+      <CatalogFoldersPreview
+        anchor={previewAnchor}
+        names={previewNames}
+        active={previewCatalog !== null && previewNames.length > 0}
+      />
 
       {showFab ? (
         <div className={styles.pickerFab}>

@@ -494,30 +494,6 @@ export function resolveDiscountEnter(
   return "stay";
 }
 
-export function isInvoiceSubmitShortcut(event: {
-  key: string;
-  shiftKey: boolean;
-  ctrlKey: boolean;
-  metaKey: boolean;
-  altKey: boolean;
-  repeat?: boolean;
-}): boolean {
-  if (event.repeat) {
-    return false;
-  }
-
-  if (
-    !event.shiftKey ||
-    event.ctrlKey ||
-    event.metaKey ||
-    event.altKey
-  ) {
-    return false;
-  }
-
-  return event.key === "F" || event.key === "f";
-}
-
 export function isInvoiceAddItemShortcut(event: {
   key: string;
   code?: string;

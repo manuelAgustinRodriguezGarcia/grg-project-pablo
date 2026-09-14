@@ -8,7 +8,7 @@ import { AdminQueryProvider } from "@/features/admin/providers/AdminQueryProvide
 import { UnsavedInvoiceDraftProvider } from "@/features/billing/components/invoices/UnsavedInvoiceDraftContext";
 import { ADMIN_USER_EMAIL_FALLBACK } from "@/features/admin/data/adminNav";
 import layoutStyles from "@/features/admin/styles/adminLayout.module.scss";
-import { requireAuthOrRedirect } from "@/server/auth";
+import { getRoleHomePath, requireAuthOrRedirect } from "@/server/auth";
 
 export const metadata: Metadata = {
   robots: {
@@ -27,10 +27,11 @@ export default async function AdminLayout({
     auth.supabaseUser.email ??
     auth.profile.email ??
     ADMIN_USER_EMAIL_FALLBACK;
+  const entryHomeHref = getRoleHomePath(auth.profile.role);
 
   return (
     <AdminQueryProvider>
-      <AdminSectionTransitionProvider>
+      <AdminSectionTransitionProvider entryHomeHref={entryHomeHref}>
         <UnsavedInvoiceDraftProvider>
           <div className={layoutStyles.shell}>
             <AdminSidebar userEmail={userEmail} userRole={auth.profile.role} />

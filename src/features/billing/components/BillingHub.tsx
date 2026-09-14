@@ -16,7 +16,6 @@ import { formatArs } from "@/features/billing/utils/format-ars";
 import {
   BookUser,
   CircleDollarSign,
-  FileText,
   ICON_STROKE,
   Info,
   ReceiptText,
@@ -38,6 +37,7 @@ type HubKpiCardProps = {
   trend: string;
   trendUp: boolean | null;
   icon: LucideIcon;
+  iconTone?: "default" | "danger";
   href?: string;
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
 };
@@ -48,13 +48,19 @@ function HubKpiCard({
   trend,
   trendUp,
   icon: Icon,
+  iconTone = "default",
   href,
   onNavigate,
 }: HubKpiCardProps) {
   const TrendIcon = trendUp === false ? TrendingDown : TrendingUp;
   const content = (
     <>
-      <span className={styles.kpiIconWrap} aria-hidden>
+      <span
+        className={`${styles.kpiIconWrap} ${
+          iconTone === "danger" ? styles.kpiIconWrapDanger : ""
+        }`}
+        aria-hidden
+      >
         <Icon className={styles.kpiIcon} strokeWidth={ICON_STROKE} />
       </span>
       <span className={styles.kpiBody}>
@@ -141,6 +147,7 @@ export function BillingHub({ initialInvoices = [] }: BillingHubProps) {
         <HubKpiCard
           {...metrics.hubKpis.outstanding}
           icon={Wallet}
+          iconTone="danger"
           href={BILLING_DEBTORS_PATH}
           onNavigate={goToDebtors}
         />
@@ -183,7 +190,7 @@ export function BillingHub({ initialInvoices = [] }: BillingHubProps) {
         <div className={styles.panelHeader}>
           <div className={styles.panelHeading}>
             <span className={styles.debtHeaderIconWrap} aria-hidden>
-              <FileText
+              <Wallet
                 className={styles.debtHeaderIcon}
                 strokeWidth={ICON_STROKE}
               />

@@ -19,6 +19,10 @@ import {
 } from "@/features/admin/data/adminNav";
 import { USER_ROLE_LABELS } from "@/features/users/types/user.types";
 import {
+  getRoleHomePath,
+  isAdminEntryPath,
+} from "@/server/auth/config";
+import {
   ChevronLeft,
   ChevronRight,
   Ellipsis,
@@ -39,6 +43,13 @@ type AdminSidebarProps = {
   userEmail: string;
   userRole: UserRole;
 };
+
+function resolveActivePathname(pathname: string, userRole: UserRole): string {
+  if (isAdminEntryPath(pathname)) {
+    return getRoleHomePath(userRole);
+  }
+  return pathname;
+}
 
 function isNavItemActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -100,6 +111,7 @@ function getSidebarCollapseServerSnapshot(): boolean {
 
 export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
   const pathname = usePathname();
+  const activePathname = resolveActivePathname(pathname, userRole);
   const isAdmin = userRole === "ADMIN";
   const navItems = ADMIN_NAV_ITEMS.filter(
     (item) => !item.adminOnly || isAdmin,
@@ -107,7 +119,8 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
   const dockItems = navItems.filter((item) => DOCK_HREF_SET.has(item.href));
   const isOverflowRouteActive = navItems.some(
     (item) =>
-      !DOCK_HREF_SET.has(item.href) && isNavItemActive(pathname, item.href),
+      !DOCK_HREF_SET.has(item.href) &&
+      isNavItemActive(activePathname, item.href),
   );
   const RoleIcon = isAdmin ? ShieldUser : UserRound;
   const roleLabel = USER_ROLE_LABELS[userRole];
@@ -131,7 +144,8 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
   const [navIndicatorReady, setNavIndicatorReady] = useState(false);
 
   const activeNavHref =
-    navItems.find((item) => isNavItemActive(pathname, item.href))?.href ?? null;
+    navItems.find((item) => isNavItemActive(activePathname, item.href))
+      ?.href ?? null;
   const navIndicatorHref = pendingHref ?? activeNavHref;
 
   const updateNavIndicator = useCallback(() => {
@@ -281,7 +295,7 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
                         href={item.href}
                         label={item.label}
                         icon={item.icon}
-                        isActive={isNavItemActive(pathname, item.href)}
+                        isActive={isNavItemActive(activePathname, item.href)}
                         isPending={pendingHref === item.href}
                         variant="sheet"
                         onNavigate={() => {
@@ -330,7 +344,7 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
                   href={item.href}
                   label={item.label}
                   icon={item.icon}
-                  isActive={isNavItemActive(pathname, item.href)}
+                  isActive={isNavItemActive(activePathname, item.href)}
                   isPending={pendingHref === item.href}
                   variant="dock"
                   onNavigate={() => setPendingHref(item.href)}
@@ -392,7 +406,7 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
                       href={item.href}
                       label={item.label}
                       icon={item.icon}
-                      isActive={isNavItemActive(pathname, item.href)}
+                      isActive={isNavItemActive(activePathname, item.href)}
                       isPending={pendingHref === item.href}
                       isCollapsed={isCollapsed}
                       onNavigate={() => setPendingHref(item.href)}

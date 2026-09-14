@@ -177,6 +177,7 @@ function toDirectoryCatalogItem(catalog: CatalogListItem): DirectoryCatalogItem 
     description: catalog.description,
     coverImageUrl: null,
     sectionCount: catalog.folderCount,
+    sectionNames: [],
     updatedAt: catalog.updatedAt,
     order: catalog.order,
     offlineSync: { status: "unavailable" },
@@ -693,6 +694,7 @@ export function ImportWizard({
         description: result.data.description,
         coverImageUrl: null,
         sectionCount: 0,
+        sectionNames: [],
         updatedAt: result.data.updatedAt,
         order: result.data.order,
         offlineSync: { status: "unavailable" },
@@ -737,7 +739,13 @@ export function ImportWizard({
       setCatalogList((current) =>
         current.map((catalog) =>
           catalog.id === selectedCatalogId
-            ? { ...catalog, sectionCount: catalog.sectionCount + 1 }
+            ? {
+                ...catalog,
+                sectionCount: catalog.sectionCount + 1,
+                sectionNames: [...catalog.sectionNames, created.name].sort((left, right) =>
+                  left.localeCompare(right, "es"),
+                ),
+              }
             : catalog,
         ),
       );

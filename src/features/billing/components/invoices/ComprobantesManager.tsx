@@ -155,27 +155,31 @@ export function ComprobantesManager({
         <div className={styles.comprobantesLayout}>
           <div className={styles.totalsStrip} aria-label="Totales filtrados">
             <div className={styles.totalsItem}>
+              <span className={styles.totalsLabel}>Total facturado</span>
+              <span
+                className={`${styles.totalsValue} ${styles.totalsValueAccent}`}
+              >
+                {formatArsExact(totals.billed)}
+              </span>
+            </div>
+            <div className={styles.totalsItem}>
               <span className={styles.totalsLabel}>Facturas</span>
               <span className={styles.totalsValue}>
                 {filteredInvoices.length}
               </span>
             </div>
             <div className={styles.totalsItem}>
-              <span className={styles.totalsLabel}>Facturado</span>
+              <span className={styles.totalsLabel}>Tipo A / B</span>
               <span className={styles.totalsValue}>
-                {formatArsExact(totals.billed)}
+                {totals.countA} / {totals.countB}
               </span>
             </div>
             <div className={styles.totalsItem}>
               <span className={styles.totalsLabel}>Impagas</span>
-              <span className={styles.totalsValue}>
+              <span
+                className={`${styles.totalsValue} ${styles.totalsValueDanger}`}
+              >
                 {formatArsExact(totals.unpaid)}
-              </span>
-            </div>
-            <div className={styles.totalsItem}>
-              <span className={styles.totalsLabel}>Tipo A / B</span>
-              <span className={styles.totalsValue}>
-                {totals.countA} / {totals.countB}
               </span>
             </div>
           </div>
