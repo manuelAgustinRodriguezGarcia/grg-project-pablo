@@ -5,6 +5,7 @@ import {
 } from "@/features/admin/components/AdminSectionTransition";
 import { AdminSidebar } from "@/features/admin/components/AdminSidebar";
 import { AdminQueryProvider } from "@/features/admin/providers/AdminQueryProvider";
+import { UnsavedInvoiceDraftProvider } from "@/features/billing/components/invoices/UnsavedInvoiceDraftContext";
 import { ADMIN_USER_EMAIL_FALLBACK } from "@/features/admin/data/adminNav";
 import layoutStyles from "@/features/admin/styles/adminLayout.module.scss";
 import { requireAuthOrRedirect } from "@/server/auth";
@@ -30,13 +31,15 @@ export default async function AdminLayout({
   return (
     <AdminQueryProvider>
       <AdminSectionTransitionProvider>
-        <div className={layoutStyles.shell}>
-          <AdminSidebar userEmail={userEmail} userRole={auth.profile.role} />
-          <main className={layoutStyles.content} data-admin-content>
-            <div className={layoutStyles.contentBody}>{children}</div>
-            <AdminSectionLoadingOverlay />
-          </main>
-        </div>
+        <UnsavedInvoiceDraftProvider>
+          <div className={layoutStyles.shell}>
+            <AdminSidebar userEmail={userEmail} userRole={auth.profile.role} />
+            <main className={layoutStyles.content} data-admin-content>
+              <div className={layoutStyles.contentBody}>{children}</div>
+              <AdminSectionLoadingOverlay />
+            </main>
+          </div>
+        </UnsavedInvoiceDraftProvider>
       </AdminSectionTransitionProvider>
     </AdminQueryProvider>
   );

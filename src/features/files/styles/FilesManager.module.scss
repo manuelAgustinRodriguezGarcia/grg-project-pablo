@@ -54,12 +54,22 @@ $files-shadow:
 }
 
 .sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   margin: 0;
   font-family: $font-sans;
   font-size: clamp(1.35rem, 2.5vw, 1.65rem);
   font-weight: 700;
   line-height: 1.2;
   color: $navy;
+}
+
+.sectionTitleIcon {
+  width: 1.55rem;
+  height: 1.55rem;
+  flex-shrink: 0;
+  color: $blue;
 }
 
 .headerSearchWrap {

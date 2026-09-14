@@ -4,6 +4,7 @@ export const STORAGE_BUCKETS = {
   COLUMN_HELP_IMAGES: "column-help-images",
   PRODUCT_FIELD_HELP_IMAGES: "product-field-help-images",
   TEMP_IMPORTS: "temp-imports",
+  BILLING_PAYMENT_PROOFS: "billing-payment-proofs",
 } as const;
 
 export type StorageBucketName =

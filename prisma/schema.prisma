@@ -103,6 +103,80 @@ enum PriceListStatus {
   INACTIVE
 }
 
+enum BillingIdentificationType {
+  CUIT
+  DNI
+  NINGUNO
+}
+
+enum BillingIvaCondition {
+  RESPONSABLE_INSCRIPTO
+  RESPONSABLE_NO_INSCRIPTO
+  MONOTRIBUTISTA
+  CONSUMIDOR_FINAL
+  EXENTO
+}
+
+enum BillingRubroStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BillingInvoiceType {
+  A
+  B
+}
+
+enum BillingFiscalEnvironment {
+  MODO_PRUEBA
+  HOMOLOGACION
+  PRODUCCION
+}
+
+enum BillingPaymentMethod {
+  CONTADO_EFECTIVO
+  CONTADO
+  TARJETA
+  TRANSFERENCIA
+  OTROS
+  CUENTA_CORRIENTE
+}
+
+enum BillingPaymentStatus {
+  IMPAGA
+  PARCIALMENTE_PAGA
+  PAGA
+  ANULADA
+}
+
+enum BillingReceiptPaymentMethod {
+  EFECTIVO
+  CHEQUE
+  TRANSFERENCIA
+  TARJETA
+  OTROS
+}
+
+/// Estados fiscales del comprobante (PRD Facturación §26.2).
+enum BillingInvoiceFiscalStatus {
+  MODO_PRUEBA
+  BORRADOR
+  PENDIENTE_EMISION
+  ENVIANDO_ARCA
+  AUTORIZADA
+  RECHAZADA
+  ERROR_TECNICO
+  CANCELADA
+  AJUSTADA_NC
+  AJUSTADA_ND
+  ANULADA_NC
+}
+
+enum BillingNoteKind {
+  CREDIT
+  DEBIT
+}
+
 /// Perfil local sincronizado con Supabase Auth (`auth.users.id` → `User.id`).
 model User {
   id           String     @id @db.Uuid
@@ -114,9 +188,11 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  auditLogs           AuditLog[]
-  uploadedFiles       UploadedFile[]
+  auditLogs            AuditLog[]
+  uploadedFiles        UploadedFile[]
   offlineSyncManifests OfflineSyncManifest[]
+  billingReceiptsCreated BillingReceipt[]
+  billingNotesCreated  BillingNote[]
 
   @@index([status])
 }
@@ -147,6 +223,7 @@ model CatalogFolder {
   catalogId           String
   name                String
   description         String?
+  coverImagePath      String?
   status              FolderStatus @default(ACTIVE)
   order               Int          @default(0)
   visibleToNormalUser Boolean      @default(true)
@@ -513,6 +590,236 @@ model OfflineSyncManifest {
 
   @@unique([userId, deviceId])
   @@index([userId])
+}
+
+/// Cliente de facturación cargado manualmente (PRD Facturación §8).
+model BillingClient {
+  id                   String                    @id @default(cuid())
+  code                 String                    @unique
+  codeNumber           Int                       @unique
+  name                 String
+  address              String?
+  city                 String?
+  province             String?
+  email                String?
+  whatsapp             String?
+  identificationType   BillingIdentificationType @default(NINGUNO)
+  identificationNumber String?
+  ivaCondition         BillingIvaCondition       @default(CONSUMIDOR_FINAL)
+  notes                String?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  invoices     BillingInvoice[]
+  receipts     BillingReceipt[]
+  billingNotes BillingNote[]
+
+  @@index([name])
+  @@index([identificationType])
+  @@index([ivaCondition])
+  @@index([identificationNumber])
+}
+
+/// Rubro/concepto de facturación (PRD Facturación §9).
+model BillingRubro {
+  id          String             @id @default(cuid())
+  code        String             @unique
+  codeNumber  Int                @unique
+  name        String             @unique
+  description String?
+  status      BillingRubroStatus @default(ACTIVE)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  invoiceItems BillingInvoiceItem[]
+
+  @@index([status])
+  @@index([name])
+}
+
+/// Parámetros fiscales y de facturación. Registro único (PRD Facturación §12, §14, §27).
+model BillingFiscalSettings {
+  id                 String                   @id
+  ivaPercent         Decimal                  @default(21) @db.Decimal(5, 2)
+  genericClientLimit Decimal                  @default(400000) @db.Decimal(18, 2)
+  pointOfSale        String                   @default("0007")
+  environment        BillingFiscalEnvironment @default(MODO_PRUEBA)
+  issuerName         String?
+  issuerCuit         String?
+  issuerAddress      String?
+  issuerCity         String?
+  issuerProvince     String?
+  issuerIvaCondition String?
+  issuerGrossIncome  String?
+  issuerActivitiesStartedAt String?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+}
+
+/// Factura creada en modo prueba o fiscal, con snapshot del cliente (PRD Facturación §13, §23, §24).
+model BillingInvoice {
+  id             String                     @id @default(cuid())
+  environment    BillingFiscalEnvironment   @default(MODO_PRUEBA)
+  fiscalStatus   BillingInvoiceFiscalStatus @default(MODO_PRUEBA)
+  invoiceType    BillingInvoiceType
+  pointOfSale    String
+  sequenceNumber Int
+  invoiceNumber  String                     @unique
+  issuedAt       DateTime                   @default(now())
+
+  clientId                   String?
+  clientCode                 String
+  clientName                 String
+  clientAddress              String?
+  clientCity                 String?
+  clientProvince             String?
+  clientEmail                String?
+  clientWhatsapp             String?
+  clientIdentificationType   BillingIdentificationType
+  clientIdentificationNumber String?
+  clientIvaCondition         BillingIvaCondition
+
+  subtotal           Decimal @db.Decimal(18, 2)
+  discountPercent    Decimal @default(0) @db.Decimal(5, 2)
+  discountAmount     Decimal @default(0) @db.Decimal(18, 2)
+  ivaPercent         Decimal @db.Decimal(5, 2)
+  ivaAmount          Decimal @db.Decimal(18, 2)
+  total              Decimal @db.Decimal(18, 2)
+  totalVisualRounded Decimal @db.Decimal(18, 2)
+
+  paymentMethod BillingPaymentMethod
+  paymentStatus BillingPaymentStatus @default(IMPAGA)
+  notes         String?
+
+  cae          String?
+  caeExpiresAt DateTime?
+  qrUrl        String?
+  pdfPath      String?
+  printedAt    DateTime?
+  downloadedAt DateTime?
+  sharedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client      BillingClient?              @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  items       BillingInvoiceItem[]
+  allocations  BillingReceiptAllocation[]
+  billingNotes BillingNote[]
+
+  @@unique([environment, pointOfSale, sequenceNumber])
+  @@index([issuedAt])
+  @@index([clientId])
+  @@index([invoiceType])
+  @@index([paymentStatus])
+  @@index([clientName])
+  @@index([clientIdentificationNumber])
+}
+
+/// Ítem de factura con snapshot del rubro (PRD Facturación §13.4, §29.4).
+model BillingInvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  rubroId     String?
+  rubroCode   String
+  rubroName   String
+  description String
+  quantity    Decimal  @db.Decimal(12, 2)
+  unitPrice   Decimal  @db.Decimal(18, 2)
+  lineTotal   Decimal  @db.Decimal(18, 2)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  invoice BillingInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  rubro   BillingRubro?  @relation(fields: [rubroId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+  @@index([rubroId])
+}
+
+/// Recibo X interno del cliente. Las facturas se resuelven en allocations.
+model BillingReceipt {
+  id              String                       @id @default(cuid())
+  receiptNumber   String                       @unique
+  sequenceNumber  Int                          @unique
+  clientId        String
+  issuedAt        DateTime                     @default(now())
+  amount          Decimal                      @db.Decimal(18, 2)
+  paymentMethod   BillingReceiptPaymentMethod
+  notes           String?
+  createdByUserId String                       @db.Uuid
+  printedAt       DateTime?
+  downloadedAt    DateTime?
+  sharedAt        DateTime?
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+
+  client      BillingClient              @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  createdBy   User                       @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  allocations BillingReceiptAllocation[]
+
+  @@index([clientId])
+  @@index([issuedAt])
+}
+
+/// Imputación de un Recibo X contra una factura (PRD Facturación §29.8).
+model BillingReceiptAllocation {
+  id         String   @id @default(cuid())
+  receiptId  String
+  invoiceId  String
+  amount     Decimal  @db.Decimal(18, 2)
+  createdAt  DateTime @default(now())
+
+  receipt BillingReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  invoice BillingInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@unique([receiptId, invoiceId])
+  @@index([invoiceId])
+}
+
+/// Nota de crédito o débito asociada a una factura (modo prueba).
+model BillingNote {
+  id             String                   @id @default(cuid())
+  kind           BillingNoteKind
+  environment    BillingFiscalEnvironment @default(MODO_PRUEBA)
+  invoiceType    BillingInvoiceType
+  pointOfSale    String
+  sequenceNumber Int
+  noteNumber     String                   @unique
+  issuedAt       DateTime                 @default(now())
+
+  invoiceId String
+  clientId  String?
+
+  clientCode                 String
+  clientName                 String
+  clientIdentificationType   BillingIdentificationType
+  clientIdentificationNumber String?
+  clientIvaCondition         BillingIvaCondition
+
+  amount      Decimal @db.Decimal(18, 2)
+  ivaPercent  Decimal @db.Decimal(5, 2)
+  ivaAmount   Decimal @db.Decimal(18, 2)
+  netAmount   Decimal @db.Decimal(18, 2)
+  reason      String
+  pdfPath     String?
+
+  createdByUserId String @db.Uuid
+  printedAt       DateTime?
+  downloadedAt    DateTime?
+  sharedAt        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  invoice   BillingInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  client    BillingClient? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy User           @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([kind, sequenceNumber])
+  @@index([invoiceId])
+  @@index([issuedAt])
+  @@index([kind])
+  @@index([clientId])
 }
 
 /// Registro de operaciones importantes (login, CRUD, importaciones, etc.).

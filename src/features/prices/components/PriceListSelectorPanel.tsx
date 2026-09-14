@@ -42,7 +42,7 @@ export function PriceListSelectorPanel({
         onOptionEdit={onEditList}
         onOptionDelete={onDeleteList}
         emptyMessage="Sin listas de precios"
-        placeholder="Seleccioná una lista"
+        placeholder="Seleccione una lista"
         preferPlaceholderWithoutOptions
       />
     </section>

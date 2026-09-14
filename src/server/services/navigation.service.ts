@@ -55,6 +55,9 @@ export class NavigationService {
     );
 
     const coverImageUrl = await resolveCoverImageUrl(catalog.coverImagePath);
+    const folderCoverUrls = await Promise.all(
+      folders.map((folder) => resolveCoverImageUrl(folder.coverImagePath)),
+    );
 
     return {
       catalog: {
@@ -66,10 +69,11 @@ export class NavigationService {
         visibleToNormalUser: catalog.visibleToNormalUser,
         updatedAt: catalog.updatedAt.toISOString(),
       },
-      folders: folders.map((folder) => ({
+      folders: folders.map((folder, index) => ({
         id: folder.id,
         name: folder.name,
         description: folder.description,
+        coverImageUrl: folderCoverUrls[index] ?? null,
         order: folder.order,
         visibleToNormalUser: folder.visibleToNormalUser,
         productCount: folder.productCount,

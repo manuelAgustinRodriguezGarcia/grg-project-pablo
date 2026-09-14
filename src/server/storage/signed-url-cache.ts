@@ -8,7 +8,12 @@ const signedUrlCacheStorage = new AsyncLocalStorage<
 export function buildSignedUrlCacheKey(
   bucket: string,
   path: string,
+  downloadFilename?: string,
 ): string {
+  if (downloadFilename) {
+    return `${bucket}\0${path}\0download:${downloadFilename}`;
+  }
+
   return `${bucket}\0${path}`;
 }
 

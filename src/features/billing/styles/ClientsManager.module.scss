@@ -1,0 +1,4136 @@
+@use "../../admin/styles/variables" as *;
+
+$clients-accent: #2f6fad;
+$clients-surface: rgba($clients-accent, 0.02);
+$clients-panel-bg: rgba($white, 0.94);
+$clients-shadow:
+  0 2px 8px rgba($clients-accent, 0.035),
+  0 12px 36px rgba($clients-accent, 0.07),
+  0 24px 56px rgba($clients-accent, 0.035);
+
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: clamp(0.75rem, 2vw, 1.25rem);
+  overflow: hidden;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.85rem;
+  overflow: hidden;
+}
+
+.contentLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15.5rem, 19.5rem);
+  gap: 0.85rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+
+  @media (max-width: 1180px) {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+}
+
+.tableColumn {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.comprobantesLayout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+.insightsColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.insightPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  flex-shrink: 0;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $clients-panel-bg;
+}
+
+.insightDebtPanel {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.insightDebtPanelLink {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgba($blue, 0.4);
+      box-shadow: 0 8px 22px rgba($navy, 0.08);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.insightDebtListWrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.insightDebtEmpty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.25rem 0.75rem;
+  border: 1px dashed rgba($navy, 0.14);
+  border-radius: $radius-sm;
+  background: rgba($navy, 0.015);
+  text-align: center;
+}
+
+.insightDebtEmptyIcon {
+  width: 4.05rem;
+  height: 4.05rem;
+  color: rgba($navy, 0.35);
+}
+
+.insightDebtEmptyText {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: rgba($navy, 0.62);
+}
+
+.insightDebtScrollHint {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1.1rem 0 0.25rem;
+  background: linear-gradient(
+    to bottom,
+    rgba($clients-panel-bg, 0) 0%,
+    rgba($clients-panel-bg, 0.72) 55%,
+    rgba($clients-panel-bg, 0.92) 100%
+  );
+  pointer-events: none;
+}
+
+.insightDebtScrollHintIcon {
+  width: 1rem;
+  height: 1rem;
+  color: rgba($navy, 0.55);
+}
+
+.insightRankCard {
+  flex-shrink: 0;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $clients-panel-bg;
+  box-shadow: none;
+}
+
+.insightRankCardFill {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.insightPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.insightPanelHeading {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.insightDebtHeaderIconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgba(#dc2626, 0.1);
+  color: #dc2626;
+}
+
+.insightDebtHeaderIcon {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.insightRubroHeaderIconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgba($green, 0.14);
+  color: $green;
+}
+
+.insightRubroHeaderIcon {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.insightSalesBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.insightSalesTotal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-sm;
+  background: rgba($navy, 0.02);
+}
+
+.insightSalesTotalLabel {
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.5);
+}
+
+.insightSalesTotalValue {
+  font-family: $font-sans;
+  font-size: 1.02rem;
+  font-weight: 750;
+  line-height: 1.2;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+}
+
+.insightSalesBreakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.insightSalesRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+}
+
+.insightSalesRowHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.insightSalesRowLabel {
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: rgba($navy, 0.78);
+}
+
+.insightSalesRowStats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.05rem;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.insightSalesRowCount {
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+}
+
+.insightSalesRowAmount {
+  font-family: $font-sans;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba($navy, 0.52);
+  font-variant-numeric: tabular-nums;
+}
+
+.insightSalesBarTrack {
+  display: flex;
+  align-items: stretch;
+  height: 6px;
+  min-height: 6px;
+  border-radius: 999px;
+  background: rgba($navy, 0.06);
+  overflow: hidden;
+}
+
+.insightSalesBarFill {
+  display: block;
+  height: 6px;
+  min-height: 6px;
+  border-radius: 999px;
+}
+
+.insightPanelTitle {
+  margin: 0;
+  min-width: 0;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: $navy;
+}
+
+.insightPanelMeta {
+  margin: 0;
+  flex-shrink: 0;
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba($navy, 0.55);
+}
+
+.insightDebtList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.insightDebtItem {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba($navy, 0.07);
+  border-radius: $radius-sm;
+  background: rgba($navy, 0.015);
+}
+
+.insightDebtBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.insightDebtName {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: $navy;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insightDebtMeta {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.68rem;
+  color: rgba($navy, 0.52);
+}
+
+.insightDebtAmount {
+  flex-shrink: 0;
+  font-family: $font-sans;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionIntro {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sectionHeaderText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.sectionHint {
+  margin: 0;
+  max-width: 38rem;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba($navy, 0.62);
+}
+
+.sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: $navy;
+  white-space: nowrap;
+}
+
+.sectionTitleIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: $blue;
+  flex-shrink: 0;
+}
+
+.sectionTitleIconRed {
+  color: #dc2626;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.headerSearchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 8rem;
+  flex: 1;
+  padding: 3px;
+}
+
+.headerSearchIcon {
+  position: absolute;
+  left: 1rem;
+  width: 1rem;
+  height: 1rem;
+  color: $blue;
+  pointer-events: none;
+}
+
+.headerSearch {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem 0.55rem 2.5rem;
+  border: 1.5px solid $blue;
+  border-radius: 999px;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: $navy;
+
+  &::placeholder {
+    color: rgba($navy, 0.45);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba($blue, 0.15);
+  }
+
+  &::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+
+  &::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  &::-ms-clear {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+.filtersRow {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding-block: 3px;
+}
+
+.filterSelect {
+  min-width: 9rem;
+}
+
+.filterSelectPayment {
+  width: 11rem;
+  min-width: 11rem;
+  flex: 0 0 11rem;
+}
+
+.filterSelectWide {
+  min-width: 13.5rem;
+}
+
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $white;
+  background: $blue;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $blue 92%, black);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid rgba($navy, 0.16);
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $navy;
+  background: $white;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: rgba($blue, 0.06);
+      border-color: rgba($blue, 0.28);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.movementCreateGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.movementCreateCredit {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: rgba(#b45309, 0.12);
+      border-color: rgba(#b45309, 0.28);
+      color: #b45309;
+    }
+  }
+
+  &:focus-visible {
+    outline-color: #b45309;
+  }
+}
+
+.movementCreateDebit {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: rgba($green, 0.12);
+      border-color: rgba($green, 0.28);
+      color: $green;
+    }
+  }
+
+  &:focus-visible {
+    outline-color: $green;
+  }
+}
+
+.libroIvaCard.libroIvaCard {
+  width: min(100%, 32rem);
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  padding: 0;
+  background: $white;
+}
+
+.libroIvaCard .invoiceDetailHeader {
+  border-radius: $radius-lg $radius-lg 0 0;
+}
+
+.libroIvaSheet {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  background: $white;
+  border-radius: 0 0 $radius-lg $radius-lg;
+}
+
+.libroIvaFields {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  margin: 0;
+  padding: 1.1rem 1.35rem 0.35rem;
+}
+
+.libroIvaFooter {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 0;
+  padding: 0.85rem 1.35rem 1.15rem;
+  border-top: none;
+  background: $white;
+  border-radius: 0 0 $radius-lg $radius-lg;
+
+  > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex-shrink: 0;
+  }
+}
+
+.cardActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: $navy;
+  background: rgba($white, 0.9);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.06);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.cardActionButtonDanger {
+  color: #c0392b;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(#c0392b, 0.35);
+    background: rgba(#c0392b, 0.06);
+    color: #c0392b;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #c0392b;
+    outline-offset: 2px;
+  }
+}
+
+.inlineError {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: $radius-md;
+  font-size: 0.875rem;
+  color: #8b1e1e;
+  background: rgba(220, 53, 69, 0.08);
+}
+
+.formErrorPill {
+  margin: 0;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid rgba(#c0392b, 0.22);
+  border-radius: 999px;
+  background: rgba(#c0392b, 0.08);
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #9b2c2c;
+}
+
+.tablePanel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tableWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $clients-panel-bg;
+}
+
+.tableWrapEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tableEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+.tableEmptyIcon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: rgba($navy, 0.35);
+}
+
+.tableEmptyText {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba($navy, 0.65);
+}
+
+.clientsTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+
+  th,
+  td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba($navy, 0.08);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    font-weight: 600;
+    color: rgba($navy, 0.75);
+    background: color-mix(in srgb, $clients-accent 4.5%, $white);
+    box-shadow: 0 1px 0 rgba($navy, 0.08);
+    white-space: nowrap;
+  }
+
+  tbody tr:nth-child(odd) {
+    background: $white;
+  }
+
+  tbody tr:nth-child(even) {
+    background: rgba($navy, 0.035);
+  }
+
+  tbody tr:has(.shareMenuWrapOpen) {
+    position: relative;
+    z-index: 5;
+  }
+
+  tbody tr:hover {
+    background: rgba($navy, 0.06);
+  }
+
+  tbody tr.movementRowCredit {
+    background: rgba(#b45309, 0.07);
+
+    &:hover {
+      background: rgba(#b45309, 0.13);
+    }
+  }
+
+  tbody tr.movementRowDebit {
+    background: rgba($green, 0.07);
+
+    &:hover {
+      background: rgba($green, 0.13);
+    }
+  }
+}
+
+.codeCell {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba($navy, 0.75);
+  white-space: nowrap;
+}
+
+.nameCell {
+  min-width: 12rem;
+  font-weight: 600;
+  color: $navy;
+}
+
+.copyValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($blue, 0.45);
+    outline-offset: 2px;
+  }
+}
+
+// When copyValue is used inside a details item (e.g. long email addresses),
+// truncate with ellipsis instead of breaking layout.
+.detailsItem .copyValue {
+  // Override the generic overflow-wrap:anywhere from .detailsValue so the
+  // button itself clips and the inner span handles the visible text.
+  overflow-wrap: normal;
+  overflow: hidden;
+
+  .copyValueText {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.copyValue.copyValueCopied,
+.copyValue.copyValueCopied:hover {
+  color: $green;
+}
+
+.locationLine {
+  display: block;
+}
+
+.locationLineSecondary {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: rgba($navy, 0.6);
+}
+
+.locationCell,
+.contactCell {
+  color: rgba($navy, 0.8);
+}
+
+.contactLine {
+  display: block;
+  font-size: 0.82rem;
+}
+
+.identificationCell {
+  white-space: nowrap;
+  color: rgba($navy, 0.8);
+}
+
+.identificationNumber {
+  display: block;
+  margin-top: 0.1rem;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 0.8rem;
+  color: rgba($navy, 0.65);
+}
+
+.emptyValue {
+  color: rgba($navy, 0.35);
+}
+
+.ivaBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: $blue;
+  background: rgba($blue, 0.12);
+  white-space: nowrap;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.statusBadgeOk {
+  color: $green;
+  background: rgba($green, 0.12);
+}
+
+.statusBadgeDebt {
+  color: #b45309;
+  background: rgba(#b45309, 0.12);
+}
+
+.statusBadgeInactive {
+  color: #c0392b;
+  background: rgba(#c0392b, 0.1);
+}
+
+th.actionsCell,
+td.actionsCell {
+  vertical-align: middle;
+  text-align: right;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.actionsGroup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.rowActionWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.rowActionTooltip {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  left: auto;
+  z-index: 30;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-sm;
+  background: $navy;
+  box-shadow: 0 4px 12px rgba($navy, 0.18);
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: $white;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.15s ease,
+    visibility 0.15s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    right: 0.65rem;
+    width: 0;
+    height: 0;
+    border-left: 0.35rem solid transparent;
+    border-right: 0.35rem solid transparent;
+    border-bottom: 0.35rem solid $navy;
+  }
+}
+
+.rowActionTooltipDanger {
+  border-color: rgba(#c0392b, 0.2);
+  background: #c0392b;
+  box-shadow: 0 4px 12px rgba(#c0392b, 0.22);
+
+  &::after {
+    border-bottom-color: #c0392b;
+  }
+}
+
+.rowActionTooltipSuccess {
+  border-color: rgba($green, 0.22);
+  background: $green;
+  box-shadow: 0 4px 12px rgba($green, 0.22);
+
+  &::after {
+    border-bottom-color: $green;
+  }
+}
+
+.rowActionWrap:hover .rowActionTooltip,
+.rowActionWrap:focus-within .rowActionTooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.editActionButton,
+.toggleActionButton,
+.deleteActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: rgba($white, 0.9);
+  font-family: $font-sans;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  color: $navy;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.06);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.deleteActionButton {
+  color: #c0392b;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(#c0392b, 0.35);
+    background: rgba(#c0392b, 0.06);
+    color: #c0392b;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #c0392b;
+    outline-offset: 2px;
+  }
+}
+
+.toggleActionButtonDanger {
+  color: #c0392b;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(#c0392b, 0.35);
+    background: rgba(#c0392b, 0.06);
+    color: #c0392b;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #c0392b;
+    outline-offset: 2px;
+  }
+}
+
+.toggleActionButtonSuccess {
+  color: $green;
+
+  &:hover:not(:disabled) {
+    border-color: rgba($green, 0.35);
+    background: rgba($green, 0.08);
+    color: $green;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $green;
+    outline-offset: 2px;
+  }
+}
+
+.iconActionButton {
+  width: 2rem;
+  padding: 0.35rem;
+}
+
+.detailsModalCard.detailsModalCard {
+  width: min(100%, 88rem);
+  height: min(84dvh, 48rem);
+  max-height: calc(100dvh - 2.5rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detailsModalChrome {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  margin: -0.25rem -0.15rem 0.55rem 0;
+}
+
+.detailsModalProfileHeader {
+  min-width: 0;
+  max-width: 19rem;
+}
+
+.detailsModalOverlayClosing {
+  pointer-events: none;
+  animation: invoiceDetailOverlayExit 0.22s ease-in forwards;
+
+  .detailsModalCard {
+    animation: invoiceDetailCardExit 0.22s ease-in forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detailsModalOverlayClosing,
+  .detailsModalOverlayClosing .detailsModalCard {
+    animation: none;
+  }
+}
+
+.clientCreditPill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin: 0;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  background: rgba($green, 0.12);
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: $green;
+}
+
+.clientCreditPillEmpty {
+  background: rgba($navy, 0.08);
+  color: rgba($navy, 0.45);
+}
+
+.detailsModalLayout {
+  display: grid;
+  grid-template-columns: minmax(16.5rem, 19rem) minmax(0, 1fr);
+  gap: 1.15rem 1.35rem;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+
+  .historySection {
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+    padding-top: 0;
+    padding-left: 1.2rem;
+    border-top: none;
+    border-left: 1px solid rgba($navy, 0.08);
+    overflow: hidden;
+  }
+
+  .historyEmpty {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .historyTableWrap {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+
+  .historyTable {
+    min-width: 40rem;
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+  }
+}
+
+.detailsModalProfile {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 1.1rem;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.detailsModalProfileHeader.detailsModalProfileHeader {
+  flex: none;
+}
+
+.detailsCodeValue {
+  font-weight: 700;
+  color: $navy;
+  white-space: nowrap;
+  vertical-align: baseline;
+
+  &:hover,
+  &:focus-visible {
+    color: $blue;
+  }
+}
+
+.detailsGridStack.detailsGridStack {
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+  margin-bottom: 0;
+}
+
+.detailsProfileFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: auto;
+}
+
+.detailsTopRubros {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.detailsTopRubroItem {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.55rem 0.65rem 0.55rem 0;
+  border: none;
+  border-radius: 0.7rem;
+  background: rgba($white, 0.72);
+}
+
+.detailsTopRubroMedal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.5rem;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.detailsTopRubroMedalGold {
+  color: #c9a227;
+  background: #fff3b0;
+}
+
+.detailsTopRubroMedalSilver {
+  color: #8a9199;
+  background: #e6eaee;
+}
+
+.detailsTopRubroMedalBronze {
+  color: #b87333;
+  background: rgba(#b87333, 0.16);
+}
+
+.detailsTopRubroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.detailsTopRubroName {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: $navy;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detailsTopRubroMeta {
+  font-size: 0.76rem;
+  color: rgba($navy, 0.55);
+  font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  .detailsModalCard.detailsModalCard {
+    height: auto;
+    max-height: calc(100dvh - 2rem);
+    overflow: auto;
+  }
+
+  .detailsModalProfileHeader {
+    max-width: none;
+    min-width: 0;
+  }
+
+  .detailsModalLayout {
+    grid-template-columns: 1fr;
+    overflow: visible;
+
+    .historySection {
+      padding: 0.9rem 0 0;
+      border-left: none;
+      border-top: 1px solid rgba($navy, 0.08);
+      overflow: visible;
+    }
+
+    .historyTableWrap {
+      flex: 1 0 auto;
+      max-height: min(28rem, 52dvh);
+    }
+
+    .historyTable {
+      min-width: 0;
+    }
+  }
+
+  .detailsModalProfile {
+    overflow: visible;
+  }
+}
+
+.detailsModalActions {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem 1.5rem;
+  margin-bottom: 1.1rem;
+
+  @media (max-width: 860px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detailsItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.detailsItemWide {
+  grid-column: 1 / -1;
+}
+
+.detailsLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.5);
+}
+
+.detailsValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $navy;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.detailsValueSecondary {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba($navy, 0.55);
+}
+
+.detailsValueEmpty {
+  font-size: 0.9rem;
+  color: rgba($navy, 0.45);
+}
+
+.detailsContactIcon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+}
+
+.detailsContactIconMail {
+  color: $blue;
+}
+
+.detailsContactIconWhatsapp {
+  color: $green;
+}
+
+.detailsLocationCopy {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  white-space: normal;
+}
+
+.historySection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba($navy, 0.08);
+}
+
+.historySectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.historySectionHeading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.noteIssueActions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  width: 100%;
+
+  .cardActionButton {
+    width: 100%;
+  }
+}
+
+.historySectionTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.55);
+}
+
+.historyDateFilters {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.historyDateField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 10.5rem;
+}
+
+.historySortField {
+  min-width: 0;
+  width: auto;
+}
+
+.historyPaymentStatusField {
+  width: 10.5rem;
+  min-width: 10.5rem;
+  flex: 0 0 10.5rem;
+}
+
+.historyDateControl {
+  width: 100%;
+}
+
+@media (max-width: 700px) {
+  .historySectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .historyDateFilters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+  }
+
+  .historyDateField {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .historyPaymentStatusField {
+    flex: none;
+  }
+}
+
+.historyDateLabel {
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.5);
+}
+
+.historyEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 1.25rem 1rem;
+  border: 1px dashed rgba($navy, 0.16);
+  border-radius: $radius-md;
+  background: rgba($navy, 0.015);
+  text-align: center;
+}
+
+.historyEmptyIcon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: rgba($navy, 0.35);
+}
+
+.historyEmptyText {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba($navy, 0.7);
+}
+
+.historyEmptyHint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba($navy, 0.5);
+}
+
+.historyTableWrap {
+  flex-shrink: 0;
+  min-height: min-content;
+  overflow-x: auto;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: rgba($white, 0.7);
+}
+
+.historyTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.82rem;
+
+  th,
+  td {
+    padding: 0.55rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid rgba($navy, 0.08);
+    vertical-align: middle;
+  }
+
+  th {
+    font-weight: 650;
+    color: rgba($navy, 0.65);
+    background: rgba($navy, 0.03);
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.amountCell {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.clientIdentityCell {
+  min-width: 12rem;
+  font-weight: 600;
+  color: $navy;
+}
+
+td.clientIdentityCell {
+  white-space: normal;
+}
+
+.invoiceTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.invoiceTypeBadgeA {
+  color: #9a4112;
+  background: rgba(#ea6a1f, 0.12);
+}
+
+.invoiceTypeBadgeB {
+  color: $blue;
+  background: rgba($blue, 0.12);
+}
+
+.movementKindBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.movementKindBadgeReceipt {
+  color: $blue;
+  background: rgba($blue, 0.12);
+}
+
+.movementKindBadgeCredit {
+  color: #b45309;
+  background: rgba(#b45309, 0.12);
+}
+
+.movementKindBadgeDebit {
+  color: $green;
+  background: rgba($green, 0.12);
+}
+
+.totalsStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  flex-shrink: 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $clients-panel-bg;
+}
+
+.totalsItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.totalsLabel {
+  font-family: $font-sans;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.5);
+}
+
+.totalsValue {
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: $navy;
+}
+
+.filterDateField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 10.5rem;
+}
+
+.filterDateControl {
+  width: 100%;
+  min-height: 2.5rem;
+  height: 2.5rem;
+  box-sizing: border-box;
+}
+
+.invoiceNumberCell {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: rgba($navy, 0.8);
+  white-space: normal;
+}
+
+.movementInvoicesCell {
+  max-width: 16rem;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.4;
+  color: rgba($navy, 0.8);
+  white-space: normal;
+}
+
+.clientsTable td.movementInvoicesCell {
+  white-space: normal;
+  vertical-align: middle;
+}
+
+.movementInvoiceList {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.movementInvoiceLink {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover,
+  &:focus-visible {
+    color: $blue;
+    outline: none;
+  }
+}
+
+.invoiceMeta {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba($navy, 0.5);
+}
+
+.debtorsOutstandingTotal {
+  margin: 0.2rem 0 0;
+  font-family: $font-sans;
+  font-size: 1.45rem;
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #dc2626;
+}
+
+.paymentCell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  overflow: visible;
+}
+
+.paymentCellCopy {
+  min-width: 0;
+}
+
+.paymentCellAction {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding-left: 0.7rem;
+  border-left: 1px solid rgba($navy, 0.12);
+}
+
+.issueReceiptButton {
+  color: $blue;
+  border-color: rgba($blue, 0.28);
+  background: rgba($blue, 0.08);
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.45);
+    background: rgba($blue, 0.16);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.segmentGroup {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.segmentGroupTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.segmentButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgba($navy, 0.15);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: rgba($navy, 0.7);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.4);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.segmentButtonActive {
+  border-color: $blue;
+  background: rgba($blue, 0.08);
+  color: $blue;
+}
+
+.ivaOptionsGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ivaOptionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.15rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid rgba($navy, 0.15);
+  border-radius: 999px;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba($navy, 0.7);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.4);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.ivaOptionButtonActive {
+  border-color: $blue;
+  background: rgba($blue, 0.08);
+  color: $blue;
+}
+
+.ivaOptionShort {
+  font-weight: 700;
+}
+
+.ivaOptionLabel {
+  font-weight: 500;
+  color: $navy;
+  white-space: nowrap;
+}
+
+.filterOptionShort {
+  font-weight: 700;
+  color: $blue;
+}
+
+.formModalCard.formModalCard {
+  width: min(100%, 58rem);
+}
+
+.notesTextarea {
+  min-height: 4.5rem;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.45;
+}
+
+.formColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.formColumn {
+  min-width: 0;
+}
+
+.formColumnDivided {
+  padding-left: 1.5rem;
+  border-left: 1px solid rgba($navy, 0.08);
+}
+
+.identityGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.identityColumn {
+  min-width: 0;
+}
+
+.formSectionTitle {
+  margin: 0 0 0.75rem;
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.55);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 0.75rem;
+}
+
+.formHint {
+  margin: 0.3rem 0 0;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  color: rgba($navy, 0.55);
+}
+
+.uppercaseInput {
+  text-transform: uppercase;
+}
+
+.mobileList {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .desktopTable {
+    display: none;
+  }
+
+  .mobileList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .clientCard {
+    padding: 1rem;
+    border: 1px solid rgba($navy, 0.08);
+    border-radius: $radius-md;
+    background: $white;
+  }
+
+  .clientCard:nth-child(even) {
+    background: rgba($navy, 0.035);
+  }
+
+  .clientCard.movementRowCredit {
+    background: rgba(#b45309, 0.07);
+  }
+
+  .clientCard.movementRowDebit {
+    background: rgba($green, 0.07);
+  }
+
+  .clientCardHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .clientCardCode {
+    margin: 0 0 0.2rem;
+    font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba($navy, 0.55);
+  }
+
+  .clientCardName {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: $navy;
+  }
+
+  .clientCardBadges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+  }
+
+  .clientCardMeta {
+    display: grid;
+    gap: 0.3rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: rgba($navy, 0.7);
+    word-break: break-word;
+  }
+
+  .clientCardActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .cardActionButton,
+  .cardActionButtonDanger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 2.4rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid rgba($navy, 0.12);
+    border-radius: $radius-md;
+    font-family: $font-sans;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: $navy;
+    background: rgba($white, 0.9);
+    cursor: pointer;
+    transition:
+      border-color 0.18s ease,
+      background-color 0.18s ease,
+      color 0.18s ease;
+
+    svg {
+      width: 0.95rem;
+      height: 0.95rem;
+      flex-shrink: 0;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: rgba($blue, 0.35);
+      background: rgba($blue, 0.06);
+      color: $blue;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $blue;
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+
+  .cardActionButtonDanger {
+    color: #c0392b;
+
+    &:hover:not(:disabled) {
+      border-color: rgba(#c0392b, 0.35);
+      background: rgba(#c0392b, 0.06);
+      color: #c0392b;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #c0392b;
+      outline-offset: 2px;
+    }
+  }
+}
+
+@media (max-width: 860px) {
+  .formColumns {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .formColumnDivided {
+    padding-left: 0;
+    padding-top: 0.85rem;
+    border-left: none;
+    border-top: 1px solid rgba($navy, 0.08);
+  }
+}
+
+@media (max-width: 560px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .segmentGroup {
+    grid-template-columns: 1fr;
+  }
+}
+
+.invoiceDetailOverlay.invoiceDetailOverlay {
+  z-index: 1100;
+  background: transparent;
+  animation: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba($navy, 0.45);
+    pointer-events: none;
+    animation: invoiceDetailOverlayEnter 0.22s ease-out;
+  }
+}
+
+.invoiceDetailOverlay.invoiceDetailOverlayClosing {
+  pointer-events: none;
+
+  &::before {
+    animation: invoiceDetailOverlayExit 0.22s ease-in forwards;
+  }
+
+  .invoiceDetailCard {
+    animation: invoiceDetailCardExit 0.22s ease-in forwards;
+  }
+}
+
+@keyframes invoiceDetailOverlayEnter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes invoiceDetailOverlayExit {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes invoiceDetailCardEnter {
+  from {
+    transform: translateY(8px);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes invoiceDetailCardExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invoiceDetailOverlay::before,
+  .invoiceDetailOverlay.invoiceDetailOverlayClosing::before,
+  .invoiceDetailOverlay .invoiceDetailCard,
+  .invoiceDetailOverlay.invoiceDetailOverlayClosing .invoiceDetailCard {
+    animation: none;
+  }
+}
+
+.invoiceDetailOverlay .invoiceDetailCard {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 74rem);
+  min-height: min(78dvh, 42rem);
+  max-height: calc(100dvh - 2.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  background: $navy-light;
+  animation: invoiceDetailCardEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modalSheet {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: $white;
+  border-radius: 0 0 $radius-lg $radius-lg;
+
+  .invoiceDetailFooter,
+  .receiptModalFooter {
+    border-top: none;
+  }
+}
+
+.invoiceDetailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  padding: 1rem 1.35rem;
+  background: linear-gradient(180deg, $navy-light 0%, $navy 55%, $navy 100%);
+  color: $white;
+
+  > div:first-child {
+    min-width: 0;
+    flex: 1;
+  }
+}
+
+.invoiceDetailClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-top: 0.05rem;
+  padding: 0;
+  border: 1px solid rgba($white, 0.28);
+  border-radius: $radius-md;
+  background: transparent;
+  color: $white;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+
+  svg {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($white, 0.55);
+    background: rgba($white, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $white;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.invoiceDetailTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.2rem;
+}
+
+.invoiceDetailTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: $white;
+}
+
+.invoicePaymentPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 1.55rem;
+  padding: 0.15rem 0.6rem 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+
+  svg {
+    width: 0.9rem;
+    height: 0.9rem;
+    flex-shrink: 0;
+  }
+}
+
+.invoicePaymentPillPaid {
+  color: $white;
+  background: $green;
+
+  svg {
+    color: $white;
+  }
+}
+
+.invoicePaymentPillUnpaid {
+  color: $white;
+  background: #c0392b;
+
+  svg {
+    color: $white;
+  }
+}
+
+.invoicePaymentPillAnulada {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.invoiceFiscalPill {
+  color: #0277bd;
+  background: #c8eaf8;
+
+  svg {
+    color: #0277bd;
+  }
+}
+
+.invoiceFiscalPillPlain {
+  padding-left: 0.6rem;
+}
+
+.invoiceFiscalPillAdjusted {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.invoiceFiscalPillAnulada {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.invoiceDetailSubtitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: rgba($white, 0.78);
+}
+
+.invoiceDetailBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 1.15rem 1.35rem 0;
+  background: $white;
+  overflow: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.invoiceDetailOverlay .invoiceDetailFooter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+  flex-shrink: 0;
+  z-index: 6;
+  margin-top: 0;
+  padding: 0.85rem 1.35rem 1.15rem;
+  border-top: none;
+  background: $white;
+  overflow: visible;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: rgba($navy, 0.12);
+    pointer-events: none;
+  }
+}
+
+.invoiceFooterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  width: 100%;
+}
+
+.invoiceDetailLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14.5rem, 16.75rem);
+  gap: 1.15rem 1.25rem;
+  align-items: start;
+  flex: 1;
+  min-height: 0;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.invoiceDetailMain,
+.invoiceDetailSide {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.invoiceDetailMain {
+  gap: 0.85rem;
+
+  .detailsGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 0;
+
+    @media (max-width: 1100px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (max-width: 520px) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.invoiceTotals {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem 0.85rem 0.8rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: rgba($navy, 0.015);
+}
+
+.invoiceTotalsLine {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.65rem 1rem;
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.invoiceTotalsItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.invoiceTotalsValue,
+.invoiceTotalsTotalValue {
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: $navy;
+}
+
+.invoiceTotalsDivider {
+  height: 1px;
+  background: rgba($navy, 0.12);
+}
+
+.invoiceTotalsTotal {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.invoiceTotalsTotalValue {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.invoiceDetailItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.receiptInvoiceBlocks {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  min-width: 0;
+}
+
+.receiptInvoiceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.receiptInvoiceBlockHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.85rem;
+}
+
+.receiptInvoiceBlockTitle,
+.receiptInvoiceBlockTitleButton {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: rgba($navy, 0.72);
+  text-align: left;
+}
+
+.receiptInvoiceBlockTitleButton {
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: $blue;
+    outline: none;
+  }
+}
+
+.receiptInvoiceBlockMeta {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: rgba($navy, 0.55);
+  white-space: nowrap;
+}
+
+.invoiceFooterStart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.invoiceFooterBalanceCol,
+.invoiceFooterEnd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.invoiceFooterBalanceCol {
+  margin-left: auto;
+}
+
+.invoiceDetailSide {
+  gap: 0.85rem;
+
+  .proofPanel {
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .historySectionHeader {
+    align-items: center;
+  }
+
+  .cardActionButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 2.4rem;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid rgba($navy, 0.12);
+    border-radius: $radius-md;
+    font-family: $font-sans;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: $navy;
+    background: rgba($white, 0.9);
+    cursor: pointer;
+    transition:
+      border-color 0.18s ease,
+      background-color 0.18s ease,
+      color 0.18s ease;
+
+    svg {
+      width: 0.95rem;
+      height: 0.95rem;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: rgba($blue, 0.35);
+      background: rgba($blue, 0.06);
+      color: $blue;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .proofPanel {
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+    }
+  }
+}
+
+.invoiceActionsStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+
+  .clientCardActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .cardActionButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 2.4rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid rgba($navy, 0.12);
+    border-radius: $radius-md;
+    font-family: $font-sans;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: $navy;
+    background: rgba($white, 0.9);
+    cursor: pointer;
+
+    svg {
+      width: 0.95rem;
+      height: 0.95rem;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: rgba($blue, 0.35);
+      background: rgba($blue, 0.06);
+      color: $blue;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+
+  .cardActionButtonSuccess {
+    min-height: 2.8rem;
+    height: 2.8rem;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-radius: 999px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+}
+
+.invoiceActionsStackNowrap {
+  .clientCardActions {
+    flex-wrap: nowrap;
+    justify-content: center;
+  }
+
+  @media (max-width: 1023px) {
+    .clientCardActions {
+      flex-wrap: wrap;
+    }
+  }
+}
+
+.invoiceDetailActions {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.invoiceFooterActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.invoiceFooterAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: rgba($white, 0.9);
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1;
+  color: $navy;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.06);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 900px) {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.45rem;
+
+    svg {
+      width: 1.35rem;
+      height: 1.35rem;
+    }
+  }
+}
+
+.invoiceActionLabel {
+  white-space: nowrap;
+
+  @media (max-width: 900px) {
+    display: none;
+  }
+}
+
+.shareMenuWrap {
+  position: relative;
+  display: inline-flex;
+  overflow: visible;
+}
+
+.shareMenuWrapOpen {
+  z-index: 50;
+}
+
+.shareMenu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 40;
+  min-width: 15rem;
+  width: max-content;
+  max-width: min(36rem, calc(100vw - 2rem));
+  padding: 0.35rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  background: $white;
+  box-shadow: 0 10px 28px rgba($navy, 0.16);
+}
+
+.shareMenuUp {
+  top: auto;
+  right: auto;
+  left: 0;
+  bottom: calc(100% + 0.4rem);
+}
+
+.shareMenuItem {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  border-radius: $radius-sm;
+  background: transparent;
+  text-align: left;
+  text-decoration: none;
+  font-family: $font-sans;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $navy;
+  cursor: pointer;
+  white-space: nowrap;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba($blue, 0.06);
+    color: $blue;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.proofPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0;
+  padding: 0;
+}
+
+.proofHint,
+.proofLocked {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: rgba($navy, 0.58);
+}
+
+.proofLocked {
+  color: #92400e;
+}
+
+.proofFileCard {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-md;
+  background: rgba($navy, 0.02);
+}
+
+.proofFileIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: $blue;
+  flex-shrink: 0;
+}
+
+.proofFileMeta {
+  min-width: 0;
+  flex: 1;
+}
+
+.proofFileName {
+  display: inline-block;
+  font-family: $font-sans;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: $navy;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+
+  &:hover {
+    color: $blue;
+  }
+}
+
+.proofDropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 5.5rem;
+  padding: 0.9rem;
+  border: 1px dashed rgba($navy, 0.22);
+  border-radius: $radius-md;
+  background: rgba($blue, 0.03);
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba($navy, 0.7);
+  cursor: pointer;
+
+  svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    color: $blue;
+  }
+
+  &:hover {
+    border-color: rgba($blue, 0.4);
+    background: rgba($blue, 0.06);
+  }
+}
+
+.receiptList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.receiptListItem {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+}
+
+.receiptListItemBody {
+  min-width: 0;
+  width: 100%;
+
+  > .proofFileName {
+    display: block;
+    margin: 0.2rem 0 0;
+  }
+}
+
+.receiptDownloadButton {
+  width: 100%;
+}
+
+.receiptListItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  .proofFileName {
+    margin: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+}
+
+.receiptListItemDate {
+  margin: 0;
+  flex-shrink: 0;
+  font-family: $font-sans;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba($navy, 0.5);
+  white-space: nowrap;
+}
+
+.noteListItemTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1;
+
+  .proofFileName {
+    min-width: 0;
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.receiptAllocationList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.receiptAllocationRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-family: $font-sans;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba($navy, 0.72);
+}
+
+.receiptAllocationAmount {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  color: $navy;
+}
+
+.proofBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: rgba($green, 0.12);
+  color: $green;
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  svg {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+}
+
+.receiptFormOverlay.receiptFormOverlay {
+  z-index: 1200;
+  animation: invoiceDetailOverlayEnter 0.22s ease-out;
+}
+
+.receiptFormOverlay .receiptModalCard.receiptModalCard {
+  background: $white;
+}
+
+.receiptFormOverlay .invoiceDetailHeader {
+  background: $white;
+  color: $navy;
+}
+
+.receiptFormOverlay .invoiceDetailTitle {
+  color: $navy;
+}
+
+.receiptFormOverlay .invoiceDetailSubtitle {
+  margin-top: 0.2rem;
+  color: rgba($navy, 0.62);
+}
+
+.receiptFormOverlay .invoiceDetailClose {
+  border-color: rgba($navy, 0.18);
+  color: $navy;
+
+  &:hover:not(:disabled) {
+    border-color: rgba($navy, 0.4);
+    background: rgba($navy, 0.06);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($blue, 0.45);
+    outline-offset: 2px;
+  }
+}
+
+.receiptFormOverlayClosing.receiptFormOverlayClosing {
+  pointer-events: none;
+  z-index: 1200;
+  animation: invoiceDetailOverlayExit 0.18s ease-in forwards;
+
+  .receiptModalCard,
+  .issueSuccessCard {
+    animation: invoiceDetailCardExit 0.18s ease-in forwards;
+  }
+}
+
+.issueSuccessCard.issueSuccessCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(100%, 36rem);
+  max-height: calc(100dvh - 2.5rem);
+  padding: 2rem 1.75rem 1.75rem;
+  overflow: auto;
+  background: $white;
+  text-align: center;
+}
+
+.issueSuccessClose.issueSuccessClose {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+.issueSuccessIcon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: $green;
+}
+
+.issueSuccessTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: $navy;
+}
+
+.issueSuccessNumber {
+  margin: 0;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: $blue;
+  overflow-wrap: anywhere;
+}
+
+.issueSuccessMeta {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba($navy, 0.7);
+}
+
+.issueSuccessHint {
+  margin: 0 0 0.75rem;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  color: rgba($navy, 0.55);
+}
+
+.issueSuccessActions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+.issueSuccessDocActions,
+.issueSuccessNavActions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.issueSuccessDocActions {
+  > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .shareMenuWrap {
+    display: flex;
+  }
+
+  .issueSuccessSecondary {
+    width: 100%;
+    padding-inline: 0.55rem;
+  }
+}
+
+.issueSuccessNavActions {
+  .issueSuccessSecondary,
+  .issueSuccessPrimary {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+.issueSuccessSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.6rem;
+  padding: 0.55rem 1.15rem;
+  border: 1px solid rgba($navy, 0.16);
+  border-radius: 999px;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: $navy;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    border-color: rgba($blue, 0.4);
+    background: rgba($blue, 0.06);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.issueSuccessPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.6rem;
+  padding: 0.55rem 1.15rem;
+  border: none;
+  border-radius: 999px;
+  background: $blue;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: $white;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, $blue 92%, black);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .receiptFormOverlay,
+  .receiptFormOverlayClosing,
+  .receiptFormOverlayClosing .receiptModalCard,
+  .receiptFormOverlayClosing .issueSuccessCard {
+    animation: none;
+  }
+}
+
+.receiptModalCard.receiptModalCard {
+  width: min(100%, 42rem);
+  max-height: calc(100dvh - 2.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  background: $navy-light;
+}
+
+@media (min-width: 1024px) {
+  .receiptModalCard.receiptModalCard {
+    width: min(100%, 64rem);
+  }
+}
+
+.receiptModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 1.15rem 1.35rem 0.35rem;
+  background: $white;
+}
+
+.receiptFormOverlay .receiptModalFooter {
+  margin-top: 0;
+  padding: 0.85rem 1.35rem 1.15rem;
+  border-top: none;
+  background: $white;
+  flex-shrink: 0;
+  border-radius: 0 0 $radius-lg $radius-lg;
+}
+
+.receiptAmountRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.receiptField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.receiptClientField {
+  position: relative;
+  z-index: 6;
+}
+
+.receiptSelectedClient {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.55rem 0.4rem 0.8rem;
+  border: 1.5px solid rgba($blue, 0.55);
+  border-radius: $radius-md;
+  background: $white;
+}
+
+.receiptSelectedClientBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.receiptSelectedClientName,
+.receiptSelectedClientMeta {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receiptSelectedClientName {
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: $navy;
+}
+
+.receiptSelectedClientMeta {
+  font-family: $font-sans;
+  font-size: 0.74rem;
+  color: rgba($navy, 0.55);
+}
+
+.receiptSelectedClientClear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba($navy, 0.14);
+  border-radius: 999px;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba($navy, 0.7);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  svg {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    outline: none;
+    border-color: $blue;
+    color: $blue;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.receiptAmountInputRow {
+  display: flex;
+  align-items: stretch;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.receiptAmountInputGrow {
+  flex: 1;
+  min-width: 0;
+}
+
+.receiptCreditInputEmpty,
+.receiptCreditInputEmpty:hover,
+.receiptCreditInputEmpty:focus {
+  cursor: default;
+  caret-color: transparent;
+  user-select: none;
+}
+
+.receiptFillAllButton {
+  flex-shrink: 0;
+  min-width: 3.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid rgba($blue, 0.35);
+  border-radius: $radius-sm;
+  background: rgba($blue, 0.08);
+  color: $blue;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: rgba($blue, 0.14);
+      border-color: rgba($blue, 0.5);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.receiptUseCredit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  min-height: 2.4rem;
+  padding: 0 0.75rem;
+  border: 1px solid rgba($navy, 0.16);
+  border-radius: $radius-sm;
+  background: $white;
+  color: $navy;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:has(input:disabled)) {
+      border-color: rgba($blue, 0.45);
+      background: rgba($blue, 0.06);
+    }
+  }
+
+  &:has(input:disabled) {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &:has(input:focus-visible) {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.receiptUseCreditOn {
+  border-color: rgba($blue, 0.45);
+  background: rgba($blue, 0.12);
+  color: $blue;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .receiptFillAllButton {
+    transition: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .receiptAmountRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.receiptSummary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: $radius-sm;
+  background: rgba($blue, 0.06);
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: $navy;
+}
+
+.allocationTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.allocationTable th,
+.allocationTable td {
+  padding: 0.45rem 0.4rem;
+  text-align: left;
+  border-bottom: 1px solid rgba($navy, 0.08);
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .allocationTable th,
+  .allocationTable td {
+    padding: 0.55rem 0.7rem;
+  }
+}
+
+.allocationTable th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba($navy, 0.55);
+  text-transform: uppercase;
+}
+
+.allocationTotalRow td {
+  border-bottom: none;
+  border-top: 1px solid rgba($blue, 0.18);
+  background: rgba($blue, 0.14);
+  font-weight: 700;
+  color: $navy;
+  cursor: default;
+}
+
+.allocationCreditRow td {
+  border-bottom: none;
+  background: rgba($blue, 0.08);
+  font-weight: 650;
+  color: $blue;
+  cursor: default;
+}
+
+.allocationDueRow td {
+  border-bottom: none;
+  background: rgba($blue, 0.18);
+  font-weight: 700;
+  color: $navy;
+  cursor: default;
+}
+
+.allocationRow {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  user-select: none;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(.allocationRowBusy) {
+      background: rgba($blue, 0.08);
+    }
+  }
+}
+
+.allocationRowSelected {
+  background: rgba($blue, 0.1);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgba($blue, 0.14);
+    }
+  }
+}
+
+.allocationRowBusy {
+  cursor: not-allowed;
+}
+
+.allocationRowBusy .allocationCheck {
+  cursor: not-allowed;
+}
+
+.allocationCheckCell {
+  width: 2.4rem;
+  text-align: center;
+}
+
+.allocationCheck {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  cursor: pointer;
+}
+
+.allocationCheckbox {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+
+  &:focus-visible + .allocationCheckBox {
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba($blue, 0.18);
+  }
+
+  &:checked + .allocationCheckBox {
+    border-color: $blue;
+    background: $blue;
+    box-shadow: 0 1px 2px rgba($blue, 0.28);
+
+    &::after {
+      opacity: 1;
+      transform: scale(1) rotate(45deg);
+    }
+  }
+
+  &:disabled + .allocationCheckBox {
+    opacity: 0.55;
+  }
+}
+
+.allocationCheckBox {
+  position: relative;
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1.5px solid rgba($navy, 0.22);
+  border-radius: 0.3rem;
+  background: $white;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0.1rem;
+    left: 0.32rem;
+    width: 0.26rem;
+    height: 0.48rem;
+    border: solid $white;
+    border-width: 0 2px 2px 0;
+    opacity: 0;
+    transform: scale(0.7) rotate(45deg);
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s ease;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .allocationRow:hover:not(.allocationRowBusy) .allocationCheckBox {
+    border-color: rgba($blue, 0.55);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .allocationRow,
+  .allocationCheckBox,
+  .allocationCheckBox::after {
+    transition: none;
+  }
+}
+
+.allocationAmountInput {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgba($navy, 0.15);
+  border-radius: $radius-sm;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  user-select: text;
+}
+
+.statusBadgePartial {
+  background: rgba(180, 120, 20, 0.12);
+  color: #92400e;
+}
+
+.statusBadgeAnulada {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.activityBadges {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.35rem;
+}
+
+.activityBadges .rowActionWrap:hover,
+.activityBadges .rowActionWrap:focus-within {
+  z-index: 8;
+}
+
+.activityBadges .rowActionTooltip {
+  right: auto;
+  left: 0;
+
+  &::after {
+    right: auto;
+    left: 0.45rem;
+  }
+}
+
+.activityChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border-radius: 999px;
+
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+
+.activityChipOn {
+  background: rgba($green, 0.12);
+  color: $green;
+}
+
+.activityChipOff {
+  background: rgba($navy, 0.06);
+  color: rgba($navy, 0.45);
+}
+
+.invoiceBalanceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: $radius-md;
+}
+
+.invoiceBalanceCardDue {
+  border: 1px solid rgba(#dc2626, 0.22);
+  background: rgba(#dc2626, 0.08);
+}
+
+.invoiceBalanceCardPaid {
+  border: 1px solid rgba($green, 0.22);
+  background: rgba($green, 0.08);
+}
+
+.invoiceBalanceKicker {
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.6);
+}
+
+.invoiceBalanceValue {
+  font-family: $font-sans;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: $navy;
+}
+
+.invoiceBalanceCardDue .invoiceBalanceValue {
+  color: #b91c1c;
+}
+
+.invoiceFooterBalance {
+  margin: 0;
+  padding: 0.5rem 0.85rem;
+  max-width: 22rem;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.invoiceFooterBalance .invoiceBalanceValue {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.historySortButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  box-sizing: border-box;
+  width: auto;
+  height: 2.65rem;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.55rem;
+  border: 1px solid rgba($navy, 0.16);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: $navy;
+  white-space: nowrap;
+  cursor: pointer;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    border-color: rgba($blue, 0.4);
+    background: rgba($blue, 0.05);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.libroIvaPeriodToggle {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.libroIvaPeriodButton {
+  flex: 1;
+  min-height: 2.4rem;
+  border: 1px solid rgba($navy, 0.16);
+  border-radius: 999px;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  font-weight: 650;
+  color: $navy;
+  cursor: pointer;
+}
+
+.libroIvaPeriodButtonActive {
+  border-color: rgba($blue, 0.45);
+  background: rgba($blue, 0.1);
+  color: $blue;
+}
+
+.shortcutKbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.28rem;
+  border: 1px solid rgba($navy, 0.16);
+  border-radius: 0.3rem;
+  background: rgba($navy, 0.04);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba($navy, 0.55);
+}
+
+.issueSuccessShortcuts {
+  margin: 0.65rem 0 0;
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  color: rgba($navy, 0.5);
+}

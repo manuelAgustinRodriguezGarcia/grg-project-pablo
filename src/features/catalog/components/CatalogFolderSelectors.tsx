@@ -53,6 +53,8 @@ export function CatalogFolderSelectors({
           catalog.sectionCount === 1
             ? "1 carpeta"
             : `${catalog.sectionCount} carpetas`,
+        showImage: Boolean(catalog.coverImageUrl),
+        imageUrl: catalog.coverImageUrl,
       })),
     [sortedCatalogs],
   );
@@ -66,6 +68,8 @@ export function CatalogFolderSelectors({
           folder.productCount === 1
             ? "1 producto"
             : `${folder.productCount} productos`,
+        showImage: true,
+        imageUrl: folder.coverImageUrl,
       })),
     [sortedFolders],
   );

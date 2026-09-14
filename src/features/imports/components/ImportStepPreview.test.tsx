@@ -52,6 +52,7 @@ describe("ImportStepPreview", () => {
         preview={createPreview(["DETALLE", "MARCA"])}
         catalogName="Catálogo"
         folderName="Carpeta"
+        priceListName=""
         sheetName="Hoja1"
         selectedAction={null}
         onSelectAction={vi.fn()}
@@ -70,6 +71,7 @@ describe("ImportStepPreview", () => {
         preview={createPreview([])}
         catalogName="Catálogo"
         folderName="Carpeta"
+        priceListName=""
         sheetName="Hoja1"
         selectedAction={null}
         onSelectAction={vi.fn()}
@@ -80,7 +82,7 @@ describe("ImportStepPreview", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("muestra combinar y reemplazar cuando la lista de precios tiene ítems", () => {
+  it("muestra reemplazar y oculta combinar cuando la lista de precios tiene ítems", () => {
     render(
       <ImportStepPreview
         preview={{
@@ -105,11 +107,11 @@ describe("ImportStepPreview", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Combinar/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Combinar/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Reemplazar/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/Mantiene los 80 ítems actuales y agrega solo los nuevos/),
-    ).toBeInTheDocument();
+      screen.queryByText(/Mantiene los 80 ítems actuales y agrega solo los nuevos/),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByText(/Borra los 80 ítems actuales y los sustituye por la nueva lista/),
     ).toBeInTheDocument();

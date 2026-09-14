@@ -9,12 +9,19 @@ const ROTATION_MS = 9000;
 
 export function HeroBannerCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [canTransition, setCanTransition] = useState(false);
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setCanTransition(true);
+    });
     for (const src of HERO_BANNER_IMAGES) {
       const image = new window.Image();
       image.src = src;
     }
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   useEffect(() => {
@@ -33,26 +40,25 @@ export function HeroBannerCarousel() {
   }, []);
 
   return (
-    <div className={styles.bannerCarousel} aria-hidden="true">
-      {HERO_BANNER_IMAGES.map((src, index) => {
-        const isActive = index === activeIndex;
-
-        return (
-          <Image
-            key={src}
-            src={src}
-            alt=""
-            fill
-            unoptimized
-            sizes="(max-width: 900px) 100vw, 50vw"
-            className={`${styles.bannerImage} ${isActive ? styles.bannerImageActive : ""}`}
-            loading="eager"
-            priority={index === 0}
-            fetchPriority={index === 0 ? "high" : "auto"}
-            draggable={false}
-          />
-        );
-      })}
+    <div
+      className={`${styles.bannerCarousel} ${canTransition ? styles.bannerCarouselReady : ""}`}
+      aria-hidden="true"
+    >
+      {HERO_BANNER_IMAGES.map((src, index) => (
+        <Image
+          key={src}
+          src={src}
+          alt=""
+          fill
+          unoptimized
+          sizes="(max-width: 900px) 100vw, 50vw"
+          className={`${styles.bannerImage} ${index === activeIndex ? styles.bannerImageActive : ""}`}
+          loading="eager"
+          priority={index === 0}
+          fetchPriority={index === 0 ? "high" : "auto"}
+          draggable={false}
+        />
+      ))}
     </div>
   );
 }

@@ -51,6 +51,15 @@ export class PriceListRepository {
     }));
   }
 
+  async findLatestUpdated(
+    where: Prisma.PriceListWhereInput = {},
+  ): Promise<PriceList | null> {
+    return prisma.priceList.findFirst({
+      where: { status: "ACTIVE", ...where },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    });
+  }
+
   async findById(id: string): Promise<PriceList | null> {
     return prisma.priceList.findUnique({ where: { id } });
   }

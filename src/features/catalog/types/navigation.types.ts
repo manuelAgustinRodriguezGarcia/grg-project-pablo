@@ -2,6 +2,7 @@ export type CatalogNavigationFolderItem = {
   id: string;
   name: string;
   description: string | null;
+  coverImageUrl: string | null;
   order: number;
   visibleToNormalUser: boolean;
   productCount: number;

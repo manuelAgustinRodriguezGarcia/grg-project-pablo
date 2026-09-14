@@ -1,9 +1,19 @@
+import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  pgPool: Pool | undefined;
 };
+
+function getPgPool(connectionString: string): Pool {
+  if (!globalForPrisma.pgPool) {
+    globalForPrisma.pgPool = new Pool({ connectionString });
+  }
+
+  return globalForPrisma.pgPool;
+}
 
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
@@ -12,15 +22,17 @@ function createPrismaClient(): PrismaClient {
     throw new Error("DATABASE_URL no está definida en las variables de entorno.");
   }
 
-  const adapter = new PrismaPg({ connectionString });
+  const adapter = new PrismaPg(getPgPool(connectionString));
 
   return new PrismaClient({ adapter });
 }
 
 function isPrismaClientCurrent(client: PrismaClient): boolean {
-  // Probe the newest delegates so a HMR-cached client from a previous generate
-  // is discarded instead of serving stale model accessors as undefined.
-  return typeof client.offlineSyncManifest?.aggregate === "function";
+  return (
+    typeof client.billingInvoice?.aggregate === "function" &&
+    typeof client.billingReceiptAllocation?.groupBy === "function" &&
+    typeof client.billingNote?.findMany === "function"
+  );
 }
 
 function resolvePrismaClient(): PrismaClient {
@@ -35,8 +47,6 @@ function resolvePrismaClient(): PrismaClient {
   }
 
   const client = createPrismaClient();
-  // Always cache on globalThis so serverless/prod warm invocations reuse the
-  // same PrismaClient + pg pool instead of opening a new connection set.
   globalForPrisma.prisma = client;
 
   return client;

@@ -727,6 +727,7 @@ export function ImportWizard({
         id: result.data.id,
         name: result.data.name,
         description: result.data.description,
+        coverImageUrl: null,
         order: result.data.order,
         visibleToNormalUser: result.data.visibleToNormalUser,
         productCount: result.data.productCount,
@@ -1509,7 +1510,7 @@ export function ImportWizard({
             title="Editar catálogo"
             message={
               <>
-                ¿Confirmás el cambio de nombre del catálogo{" "}
+                ¿Confirma el cambio de nombre del catálogo{" "}
                 <strong className={catalogStyles.confirmHighlight}>
                   {editCatalogTarget.name}
                 </strong>

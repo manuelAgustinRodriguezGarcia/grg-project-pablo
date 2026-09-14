@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, X, ICON_STROKE } from "@/shared/icons";
+import { Archive, Search, X, ICON_STROKE } from "@/shared/icons";
 import styles from "@/features/files/styles/FilesManager.module.scss";
 
 type FilesPageIntroProps = {
@@ -12,7 +12,14 @@ export function FilesPageIntro({ query, onQueryChange }: FilesPageIntroProps) {
   return (
     <section className={styles.sectionIntro} aria-label="Archivos subidos">
       <div className={styles.sectionHeader}>
-        <h1 className={styles.sectionTitle}>Archivos</h1>
+        <h1 className={styles.sectionTitle}>
+          <Archive
+            className={styles.sectionTitleIcon}
+            strokeWidth={ICON_STROKE}
+            aria-hidden
+          />
+          Archivos
+        </h1>
         <div className={styles.headerSearchWrap}>
           <Search
             className={styles.headerSearchIcon}

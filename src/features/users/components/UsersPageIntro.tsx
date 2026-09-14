@@ -1,7 +1,7 @@
 "use client";
 
 import { CustomSelect } from "@/shared/components/CustomSelect";
-import { ICON_STROKE, Plus, Search } from "@/shared/icons";
+import { ICON_STROKE, Plus, Search, Users } from "@/shared/icons";
 import type { UserRole } from "@/generated/prisma/client";
 import { USER_ROLE_LABELS } from "@/features/users/types/user.types";
 import styles from "@/features/users/styles/UsersManager.module.scss";
@@ -32,7 +32,14 @@ export function UsersPageIntro({
   return (
     <section className={styles.sectionIntro} aria-label="Gestión de usuarios">
       <div className={styles.sectionHeader}>
-        <h1 className={styles.sectionTitle}>Usuarios</h1>
+        <h1 className={styles.sectionTitle}>
+          <Users
+            className={styles.sectionTitleIcon}
+            strokeWidth={ICON_STROKE}
+            aria-hidden
+          />
+          Usuarios
+        </h1>
         <div className={styles.headerActions}>
           <div className={styles.headerSearchWrap}>
             <Search

@@ -14,12 +14,18 @@ import {
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import styles from "./AdminSectionTransition.module.scss";
+import {
+  clipOverlayBoxToViewport,
+  shouldUseScopedOverlayTarget,
+} from "@/features/admin/utils/overlay-box";
 
 const FADE_OUT_MS = 380;
 const MIN_VISIBLE_MS = 320;
 const SAFETY_TIMEOUT_MS = 12_000;
 const LOGO_SRC = "/logos/logo-blue.svg";
 const ADMIN_CONTENT_SELECTOR = "[data-admin-content]";
+const ADMIN_OVERLAY_TARGET_SELECTOR = "[data-admin-overlay-target]";
+const ADMIN_MOBILE_DOCK_SELECTOR = "[data-admin-mobile-dock]";
 
 type TransitionPhase = "idle" | "visible" | "exiting";
 
@@ -30,10 +36,15 @@ type ContentBox = {
   height: number;
 };
 
+type BeginNavigationOptions = {
+  exact?: boolean;
+};
+
 type AdminSectionTransitionContextValue = {
-  beginNavigation: (href: string) => void;
+  beginNavigation: (href: string, options?: BeginNavigationOptions) => void;
   reportSectionReady: () => void;
   phase: TransitionPhase;
+  pendingHref: string | null;
   /** True while the brand overlay is covering content (before fade-out). */
   isCoveringContent: boolean;
 };
@@ -58,10 +69,11 @@ export function useReportAdminSectionReady(isReady: boolean): void {
 }
 
 function normalizeAdminPath(path: string): string {
-  if (path.length > 1 && path.endsWith("/")) {
-    return path.slice(0, -1);
+  const withoutQuery = path.split(/[?#]/, 1)[0] ?? path;
+  if (withoutQuery.length > 1 && withoutQuery.endsWith("/")) {
+    return withoutQuery.slice(0, -1);
   }
-  return path;
+  return withoutQuery;
 }
 
 function isSameAdminSection(pathname: string, href: string): boolean {
@@ -70,22 +82,59 @@ function isSameAdminSection(pathname: string, href: string): boolean {
   return current === target || current.startsWith(`${target}/`);
 }
 
-function readAdminContentBox(): ContentBox | null {
-  const element = document.querySelector(ADMIN_CONTENT_SELECTOR);
+function readViewportClipBottom(): number {
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  const dock = document.querySelector(ADMIN_MOBILE_DOCK_SELECTOR);
+
+  if (!(dock instanceof HTMLElement)) {
+    return viewportHeight;
+  }
+
+  const dockRect = dock.getBoundingClientRect();
+  if (dockRect.height <= 0) {
+    return viewportHeight;
+  }
+
+  return Math.min(viewportHeight, dockRect.top);
+}
+
+function readAdminContentBox(pendingHref: string | null): ContentBox | null {
+  const overlayTarget = document.querySelector(ADMIN_OVERLAY_TARGET_SELECTOR);
+  const adminContent = document.querySelector(ADMIN_CONTENT_SELECTOR);
+  const overlayScope =
+    overlayTarget instanceof HTMLElement
+      ? overlayTarget.getAttribute("data-admin-overlay-scope")
+      : null;
+  const useInnerTarget =
+    overlayTarget instanceof HTMLElement &&
+    shouldUseScopedOverlayTarget(pendingHref, overlayScope);
+  const element = useInnerTarget
+    ? overlayTarget
+    : adminContent instanceof HTMLElement
+      ? adminContent
+      : overlayTarget instanceof HTMLElement
+        ? overlayTarget
+        : null;
+
   if (!(element instanceof HTMLElement)) {
     return null;
   }
 
   const rect = element.getBoundingClientRect();
-  return {
-    top: rect.top,
-    left: rect.left,
-    width: rect.width,
-    height: rect.height,
-  };
+  const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+
+  return clipOverlayBoxToViewport(rect, {
+    top: 0,
+    left: 0,
+    right: viewportWidth,
+    bottom: readViewportClipBottom(),
+  });
 }
 
-function useAdminContentBox(active: boolean): ContentBox | null {
+function useAdminContentBox(
+  active: boolean,
+  pendingHref: string | null,
+): ContentBox | null {
   const [box, setBox] = useState<ContentBox | null>(null);
 
   useEffect(() => {
@@ -93,28 +142,75 @@ function useAdminContentBox(active: boolean): ContentBox | null {
       return;
     }
 
-    const update = () => {
-      setBox(readAdminContentBox());
+    const resizeObserver = new ResizeObserver(() => {
+      setBox(readAdminContentBox(pendingHref));
+    });
+
+    const observeTargets = () => {
+      resizeObserver.disconnect();
+      const overlayTarget = document.querySelector(ADMIN_OVERLAY_TARGET_SELECTOR);
+      const adminContent = document.querySelector(ADMIN_CONTENT_SELECTOR);
+
+      if (overlayTarget instanceof HTMLElement) {
+        resizeObserver.observe(overlayTarget);
+      }
+
+      if (adminContent instanceof HTMLElement) {
+        resizeObserver.observe(adminContent);
+      }
+
+      const mobileDock = document.querySelector(ADMIN_MOBILE_DOCK_SELECTOR);
+      if (mobileDock instanceof HTMLElement) {
+        resizeObserver.observe(mobileDock);
+      }
+
+      setBox(readAdminContentBox(pendingHref));
     };
 
-    update();
+    observeTargets();
 
-    const element = document.querySelector(ADMIN_CONTENT_SELECTOR);
-    const observer =
-      element instanceof HTMLElement ? new ResizeObserver(update) : null;
-    if (element instanceof HTMLElement && observer) {
-      observer.observe(element);
+    const mutationObserver = new MutationObserver((mutations) => {
+      const shouldRetarget = mutations.some((mutation) => {
+        const nodes = [...mutation.addedNodes, ...mutation.removedNodes];
+        return nodes.some((node) => {
+          if (!(node instanceof HTMLElement)) {
+            return false;
+          }
+
+          return (
+            node.hasAttribute("data-admin-overlay-target") ||
+            Boolean(node.querySelector(ADMIN_OVERLAY_TARGET_SELECTOR))
+          );
+        });
+      });
+
+      if (shouldRetarget) {
+        observeTargets();
+      }
+    });
+    const adminContent = document.querySelector(ADMIN_CONTENT_SELECTOR);
+
+    if (adminContent instanceof HTMLElement) {
+      mutationObserver.observe(adminContent, {
+        childList: true,
+        subtree: true,
+      });
     }
 
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", observeTargets);
+    window.addEventListener("scroll", observeTargets, true);
+    window.visualViewport?.addEventListener("resize", observeTargets);
+    window.visualViewport?.addEventListener("scroll", observeTargets);
 
     return () => {
-      observer?.disconnect();
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      window.removeEventListener("resize", observeTargets);
+      window.removeEventListener("scroll", observeTargets, true);
+      window.visualViewport?.removeEventListener("resize", observeTargets);
+      window.visualViewport?.removeEventListener("scroll", observeTargets);
     };
-  }, [active]);
+  }, [active, pendingHref]);
 
   return box;
 }
@@ -129,6 +225,7 @@ export function AdminSectionTransitionProvider({
   const pathname = usePathname();
   const [phase, setPhase] = useState<TransitionPhase>("idle");
   const [contentReady, setContentReady] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const targetHrefRef = useRef<string | null>(null);
   const shownAtRef = useRef(0);
   const safetyTimerRef = useRef<number | null>(null);
@@ -146,13 +243,19 @@ export function AdminSectionTransitionProvider({
   }, []);
 
   const beginNavigation = useCallback(
-    (href: string) => {
-      if (isSameAdminSection(pathname, href)) {
+    (href: string, options?: BeginNavigationOptions) => {
+      const alreadyThere = options?.exact
+        ? normalizeAdminPath(pathname) === normalizeAdminPath(href)
+        : isSameAdminSection(pathname, href);
+
+      if (alreadyThere) {
         return;
       }
 
       clearSafetyTimer();
-      targetHrefRef.current = normalizeAdminPath(href);
+      const nextHref = normalizeAdminPath(href);
+      targetHrefRef.current = nextHref;
+      setPendingHref(nextHref);
       shownAtRef.current = Date.now();
       setContentReady(false);
       setPhase("visible");
@@ -206,6 +309,7 @@ export function AdminSectionTransitionProvider({
     const timer = window.setTimeout(() => {
       setPhase("idle");
       setContentReady(false);
+      setPendingHref(null);
       targetHrefRef.current = null;
     }, FADE_OUT_MS);
 
@@ -225,9 +329,10 @@ export function AdminSectionTransitionProvider({
       beginNavigation,
       reportSectionReady,
       phase,
+      pendingHref,
       isCoveringContent: phase === "visible",
     }),
-    [beginNavigation, phase, reportSectionReady],
+    [beginNavigation, pendingHref, phase, reportSectionReady],
   );
 
   return (
@@ -242,7 +347,10 @@ export function AdminSectionLoadingOverlay() {
   const phase = transition?.phase ?? "idle";
   const isActive = phase !== "idle";
   const [mounted, setMounted] = useState(false);
-  const contentBox = useAdminContentBox(isActive);
+  const contentBox = useAdminContentBox(
+    isActive,
+    transition?.pendingHref ?? null,
+  );
 
   useEffect(() => {
     setMounted(true);

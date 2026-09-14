@@ -20,6 +20,7 @@ export type CreateFolderData = {
 export type UpdateFolderData = Partial<{
   name: string;
   description: string | null;
+  coverImagePath: string | null;
   status: FolderStatus;
   order: number;
   visibleToNormalUser: boolean;

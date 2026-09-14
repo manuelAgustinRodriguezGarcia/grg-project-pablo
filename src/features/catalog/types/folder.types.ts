@@ -10,6 +10,7 @@ export type FolderListItem = {
   catalogId: string;
   name: string;
   description: string | null;
+  coverImagePath: string | null;
   status: "ACTIVE" | "INACTIVE";
   order: number;
   visibleToNormalUser: boolean;
@@ -53,6 +54,7 @@ export function toFolderListItem(folder: FolderWithProductCount): FolderListItem
     catalogId: folder.catalogId,
     name: folder.name,
     description: folder.description,
+    coverImagePath: folder.coverImagePath,
     status: folder.status,
     order: folder.order,
     visibleToNormalUser: folder.visibleToNormalUser,

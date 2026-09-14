@@ -1,5 +1,16 @@
 @use "../styles/variables" as *;
 
+.item {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.itemCollapsed:hover,
+.itemCollapsed:has(.link:focus-visible) {
+  z-index: 80;
+}
+
 .link {
   display: flex;
   align-items: center;
@@ -28,26 +39,54 @@
   }
 }
 
+.linkPending {
+  color: $white;
+}
+
+.linkPending:not(.linkDock):not(.linkSheet) {
+  background: transparent;
+}
+
+.link:not(.linkDock):not(.linkSheet) {
+  width: calc(100% + 2rem);
+  margin-inline: -1rem;
+  padding-inline: 2rem;
+  border-radius: 0;
+}
+
 .linkActive {
-  background: $blue;
   color: $white;
   box-shadow: $shadow-active;
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: $blue;
       color: $white;
     }
   }
 }
 
+.linkActive:not(.linkDock):not(.linkSheet) {
+  background: transparent;
+  box-shadow: none;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: transparent;
+    }
+  }
+}
+
 .icon {
+  position: relative;
+  z-index: 1;
   width: 1.15rem;
   height: 1.15rem;
   flex-shrink: 0;
 }
 
 .label {
+  position: relative;
+  z-index: 1;
   font-weight: 700;
   line-height: 1.2;
   overflow: hidden;
@@ -62,11 +101,68 @@
   gap: 0;
   width: 2.75rem;
   height: 2.75rem;
+  margin-inline: 0;
   padding: 0;
 
   .label {
     display: none;
   }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .linkCollapsed:hover {
+    width: calc(100% + 1rem);
+    height: auto;
+    min-height: 2.75rem;
+    margin-inline: -0.5rem;
+    padding: 0.8rem 0;
+    border-radius: 0;
+  }
+}
+
+.collapsedTooltip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 0.85rem);
+  z-index: 90;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-sm;
+  background: $navy;
+  box-shadow: 0 4px 12px rgba($navy, 0.18);
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: $white;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition:
+    opacity 0.15s ease,
+    visibility 0.15s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    width: 0;
+    height: 0;
+    border-top: 0.35rem solid transparent;
+    border-bottom: 0.35rem solid transparent;
+    border-right: 0.35rem solid $navy;
+    transform: translateY(-50%);
+  }
+}
+
+.itemCollapsed:hover .collapsedTooltip,
+.itemCollapsed:has(.link:focus-visible) .collapsedTooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .linkDock {
@@ -100,5 +196,41 @@
     background: rgba($blue, 0.2);
     color: $white;
     box-shadow: none;
+  }
+
+  &.linkPending {
+    background: rgba($white, 0.08);
+  }
+}
+
+.linkSheet {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: $radius-sm;
+  font-size: 1rem;
+
+  .icon {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .label {
+    font-weight: 650;
+  }
+
+  &.linkActive {
+    background: $blue;
+    color: $white;
+    box-shadow: none;
+  }
+
+  &.linkPending {
+    background: rgba($white, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapsedTooltip {
+    transition: none;
   }
 }

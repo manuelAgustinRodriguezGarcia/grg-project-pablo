@@ -11,6 +11,7 @@ import {
   type TransitionEvent,
 } from "react";
 import { ICON_STROKE, Pencil, Trash2 } from "@/shared/icons";
+import { CATALOG_COVER_FALLBACK_SRC } from "@/features/catalog/utils/catalog-cover";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 export type DropdownOptionBadge = {
@@ -24,6 +25,8 @@ export type DropdownOption = {
   description?: string;
   meta?: string;
   badge?: DropdownOptionBadge;
+  imageUrl?: string | null;
+  showImage?: boolean;
 };
 
 type CustomDropdownProps = {
@@ -192,32 +195,62 @@ function DropdownIconAction({
 
 function DropdownOptionRow({
   option,
+  optionId,
   isSelected,
+  isHighlighted,
   hasOptionActions,
   onSelect,
   onOptionEdit,
   onOptionDelete,
   onRequestClose,
+  onHighlight,
 }: {
   option: DropdownOption;
+  optionId: string;
   isSelected: boolean;
+  isHighlighted: boolean;
   hasOptionActions: boolean;
   onSelect: (id: string) => void;
   onOptionEdit?: (id: string) => void;
   onOptionDelete?: (id: string) => void;
   onRequestClose: () => void;
+  onHighlight: () => void;
 }) {
+  const rowRef = useRef<HTMLLIElement>(null);
   const [isActive, setIsActive] = useState(false);
+
+  useEffect(() => {
+    if (!isHighlighted) {
+      return;
+    }
+    rowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [isHighlighted]);
+
+  const revealActive = isActive || isHighlighted;
 
   return (
     <li
+      ref={rowRef}
+      id={optionId}
       role="option"
       aria-selected={isSelected}
       tabIndex={0}
-      className={`${styles.dropdownOption} ${isSelected ? styles.dropdownOptionSelected : ""}`}
-      onMouseEnter={() => setIsActive(true)}
+      className={[
+        styles.dropdownOption,
+        isSelected ? styles.dropdownOptionSelected : "",
+        isHighlighted ? styles.dropdownOptionHighlighted : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      onMouseEnter={() => {
+        setIsActive(true);
+        onHighlight();
+      }}
       onMouseLeave={() => setIsActive(false)}
-      onFocus={() => setIsActive(true)}
+      onFocus={() => {
+        setIsActive(true);
+        onHighlight();
+      }}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
           setIsActive(false);
@@ -232,28 +265,42 @@ function DropdownOptionRow({
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
+          event.stopPropagation();
           onSelect(option.id);
         }
       }}
     >
+      {option.showImage ? (
+        <span className={styles.dropdownOptionThumb} aria-hidden>
+          <img
+            src={option.imageUrl || CATALOG_COVER_FALLBACK_SRC}
+            alt=""
+            className={
+              option.imageUrl
+                ? styles.dropdownOptionThumbImage
+                : styles.dropdownOptionThumbFallback
+            }
+          />
+        </span>
+      ) : null}
       <span className={styles.dropdownOptionContent}>
         <DropdownRevealText
           text={option.label}
           className={styles.dropdownOptionLabel}
-          active={isActive}
+          active={revealActive}
         />
         {option.description ? (
           <DropdownRevealText
             text={option.description}
             className={styles.dropdownOptionDescription}
-            active={isActive}
+            active={revealActive}
           />
         ) : null}
         {option.meta ? (
           <DropdownRevealText
             text={option.meta}
             className={styles.dropdownOptionMeta}
-            active={isActive}
+            active={revealActive}
           />
         ) : null}
       </span>
@@ -307,6 +354,8 @@ export function CustomDropdown({
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isPointerInside, setIsPointerInside] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const selectedOption =
     selectedId !== ""
@@ -332,6 +381,16 @@ export function CustomDropdown({
 
   useEffect(() => {
     if (!isOpen) {
+      setActiveIndex(-1);
+      return;
+    }
+
+    const selectedIndex = options.findIndex((option) => option.id === selectedId);
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [isOpen, options, selectedId]);
+
+  useEffect(() => {
+    if (!isOpen) {
       return;
     }
 
@@ -341,20 +400,70 @@ export function CustomDropdown({
       }
     }
 
-    function handleEscape(event: globalThis.KeyboardEvent) {
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      const root = rootRef.current;
+      if (!root) {
+        return;
+      }
+
+      const focusInside = root.contains(document.activeElement);
+      const menuActive = isPointerInside || focusInside;
+      if (!menuActive) {
+        return;
+      }
+
       if (event.key === "Escape") {
+        event.preventDefault();
+        setIsOpen(false);
+        return;
+      }
+
+      if (options.length === 0) {
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveIndex((current) =>
+          current < options.length - 1 ? current + 1 : 0,
+        );
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveIndex((current) =>
+          current <= 0 ? options.length - 1 : current - 1,
+        );
+        return;
+      }
+
+      if (event.key === "Enter") {
+        if (activeIndex < 0 || activeIndex >= options.length) {
+          return;
+        }
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('li[role="option"] button')) {
+          return;
+        }
+        const option = options[activeIndex];
+        if (!option) {
+          return;
+        }
+        event.preventDefault();
+        onSelect(option.id);
         setIsOpen(false);
       }
     }
 
     document.addEventListener("mousedown", handlePointerDown, true);
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("mousedown", handlePointerDown, true);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, isPointerInside, options, activeIndex, onSelect]);
 
   function handleSelect(optionId: string) {
     onSelect(optionId);
@@ -364,9 +473,18 @@ export function CustomDropdown({
   const isTriggerDisabled = disabled || options.length === 0;
   const isAddDisabled = addDisabled ?? disabled;
   const hasOptionActions = Boolean(onOptionEdit ?? onOptionDelete);
+  const activeOptionId =
+    isOpen && activeIndex >= 0
+      ? `${listboxId}-option-${activeIndex}`
+      : undefined;
 
   return (
-    <div ref={rootRef} className={styles.dropdown}>
+    <div
+      ref={rootRef}
+      className={styles.dropdown}
+      onMouseEnter={() => setIsPointerInside(true)}
+      onMouseLeave={() => setIsPointerInside(false)}
+    >
       <div className={styles.dropdownLabelRow}>
         <label className={styles.dropdownLabel} htmlFor={`${listboxId}-trigger`}>
           {label}
@@ -398,6 +516,7 @@ export function CustomDropdown({
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           aria-controls={listboxId}
+          aria-activedescendant={activeOptionId}
           disabled={isTriggerDisabled}
           onClick={() => setIsOpen((open) => !open)}
         >
@@ -441,19 +560,23 @@ export function CustomDropdown({
           role="listbox"
           aria-label={label}
         >
-          {options.map((option) => {
+          {options.map((option, index) => {
             const isSelected = selectedId !== "" && option.id === selectedId;
+            const optionId = `${listboxId}-option-${index}`;
 
             return (
               <DropdownOptionRow
                 key={option.id}
                 option={option}
+                optionId={optionId}
                 isSelected={isSelected}
+                isHighlighted={index === activeIndex}
                 hasOptionActions={hasOptionActions}
                 onSelect={handleSelect}
                 onOptionEdit={onOptionEdit}
                 onOptionDelete={onOptionDelete}
                 onRequestClose={() => setIsOpen(false)}
+                onHighlight={() => setActiveIndex(index)}
               />
             );
           })}

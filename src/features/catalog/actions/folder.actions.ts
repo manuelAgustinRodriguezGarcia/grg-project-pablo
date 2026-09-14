@@ -208,6 +208,65 @@ export async function clearFolderAction(
   }
 }
 
+export async function setFolderCoverImageAction(
+  formData: FormData,
+): Promise<FolderActionResult<FolderListItem>> {
+  const folderId = formData.get("folderId");
+  const file = formData.get("file");
+
+  const parsedId = folderIdSchema.safeParse({ folderId });
+
+  if (!parsedId.success) {
+    return {
+      success: false,
+      error: parsedId.error.issues[0]?.message ?? "Datos inválidos.",
+      code: "VALIDATION_ERROR",
+    };
+  }
+
+  if (!(file instanceof File) || file.size === 0) {
+    return {
+      success: false,
+      error: "Debes seleccionar una imagen válida.",
+      code: "VALIDATION_ERROR",
+    };
+  }
+
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const folder = await folderService.setCoverImage({
+      folderId: parsedId.data.folderId,
+      body: buffer,
+      contentType: file.type || "application/octet-stream",
+      originalFilename: file.name,
+    });
+    return { success: true, data: toFolderListItem(folder) };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function removeFolderCoverImageAction(
+  input: unknown,
+): Promise<FolderActionResult<FolderListItem>> {
+  const parsed = folderIdSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
+      code: "VALIDATION_ERROR",
+    };
+  }
+
+  try {
+    const folder = await folderService.removeCoverImage(parsed.data.folderId);
+    return { success: true, data: toFolderListItem(folder) };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
 export async function setFolderSearchConfigAction(
   input: unknown,
 ): Promise<FolderActionResult<FolderListItem>> {

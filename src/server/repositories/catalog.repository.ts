@@ -69,6 +69,15 @@ export class CatalogRepository {
     });
   }
 
+  async findLatestUpdated(
+    where: Prisma.CatalogWhereInput = {},
+  ): Promise<Catalog | null> {
+    return prisma.catalog.findFirst({
+      where: { status: "ACTIVE", ...where },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    });
+  }
+
   async findAllOrdered(): Promise<Catalog[]> {
     return prisma.catalog.findMany({
       orderBy: [{ order: "asc" }, { name: "asc" }],

@@ -14,6 +14,7 @@ export function createFolderFixture(
     catalogId: CATALOG_ID,
     name: "Rodamientos",
     description: "Carpeta de rodamientos",
+    coverImagePath: null,
     status: "ACTIVE",
     order: 0,
     visibleToNormalUser: true,

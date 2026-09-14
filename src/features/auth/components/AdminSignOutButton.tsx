@@ -8,7 +8,7 @@ import styles from "./AdminSignOutButton.module.scss";
 const LOGOUT_PATH = "/api/auth/logout";
 
 type AdminSignOutButtonProps = {
-  variant?: "default" | "sidebar" | "dock";
+  variant?: "default" | "sidebar" | "dock" | "sheet";
   isCollapsed?: boolean;
 };
 
@@ -22,6 +22,7 @@ export function AdminSignOutButton({
   const titleId = useId();
   const isSidebar = variant === "sidebar";
   const isDock = variant === "dock";
+  const isSheet = variant === "sheet";
 
   const openConfirm = useCallback(() => {
     setIsConfirmOpen(true);
@@ -93,12 +94,16 @@ export function AdminSignOutButton({
         action={LOGOUT_PATH}
         method="POST"
         className={
-          isDock ? styles.formDock : isSidebar ? styles.formSidebar : styles.form
+          isDock
+            ? styles.formDock
+            : isSheet || isSidebar
+              ? styles.formSidebar
+              : styles.form
         }
       >
         <button
           type="button"
-          className={`${isDock ? styles.buttonDock : isSidebar ? styles.buttonSidebar : styles.button} ${isSidebar && isCollapsed ? styles.buttonSidebarCollapsed : ""}`}
+          className={`${isDock ? styles.buttonDock : isSheet ? styles.buttonSheet : isSidebar ? styles.buttonSidebar : styles.button} ${isSidebar && isCollapsed ? styles.buttonSidebarCollapsed : ""}`}
           title={isSidebar && isCollapsed ? "Cerrar sesión" : undefined}
           onClick={openConfirm}
         >

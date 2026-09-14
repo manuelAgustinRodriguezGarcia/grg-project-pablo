@@ -4,9 +4,9 @@ import { prisma } from "@/server/database/prisma";
 import { parseBetweenFilterValue } from "@/server/filters/column-filter-range";
 import { buildJsonTextContainsCondition } from "@/server/filters/column-filter-text-contains";
 import type { JsonTextColumnFilter } from "@/server/filters/column-filter.types";
+import { VALID_JSON_COLUMN_KEY } from "@/server/filters/json-column-key";
 import { PRODUCT_LIST_ORDER_BY } from "@/server/repositories/product-list-order";
 
-const VALID_JSON_COLUMN_KEY = /^[a-zA-Z0-9_]+$/;
 const NUMERIC_TEXT_PATTERN = "^-?[0-9]+([.,][0-9]+)?$";
 
 type ProductDbClient = Prisma.TransactionClient | typeof prisma;

@@ -8,9 +8,7 @@ export function HeroSection() {
   return (
     <section className={styles.hero} aria-labelledby="hero-heading">
       <div className={styles.inner}>
-        <div
-          className={`${styles.content} ${landingStyles.animateSlideUp}`}
-        >
+        <div className={`${styles.content} ${landingStyles.animateSlideUp}`}>
           <h1 id="hero-heading" className={styles.heading}>
             <span className={styles.headingLine}>Repuestos pesados</span>{" "}
             <span className={styles.headingLine}>para camiones, acoplados</span>{" "}
@@ -34,9 +32,7 @@ export function HeroSection() {
         </div>
       </div>
 
-      <div
-        className={`${styles.visual} ${landingStyles.animateSlideUp} ${landingStyles.animateDelay1}`}
-      >
+      <div className={styles.visual}>
         <HeroBannerCarousel />
       </div>
     </section>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import type { ImportActionType } from "@/generated/prisma/client";
 import type { ImportPreviewResponse } from "@/features/imports/types/import-job.types";
 import { FileDown, ICON_STROKE, RefreshCcw } from "@/shared/icons";
@@ -38,6 +39,12 @@ export function ImportStepPreview({
   const existingCount = isPriceMode
     ? (summary.priceListItemCount ?? 0)
     : (summary.folderProductCount ?? 0);
+
+  useEffect(() => {
+    if (!destinationIsEmpty && selectedAction === "COMBINAR_LISTA") {
+      onSelectAction("REEMPLAZAR_LISTA");
+    }
+  }, [destinationIsEmpty, onSelectAction, selectedAction]);
 
   return (
     <div>
@@ -159,20 +166,6 @@ export function ImportStepPreview({
         </div>
       ) : (
         <div className={styles.actionChoices}>
-          <button
-            type="button"
-            className={`${styles.actionChoice} ${selectedAction === "COMBINAR_LISTA" ? styles.actionChoiceActive : ""}`}
-            onClick={() => onSelectAction("COMBINAR_LISTA")}
-          >
-            <span className={styles.actionChoiceContent}>
-              <span className={styles.actionChoiceTitle}>Combinar</span>
-              <span className={styles.actionChoiceText}>
-                {isPriceMode
-                  ? `Mantiene los ${existingCount} ítems actuales y agrega solo los nuevos.`
-                  : `Mantiene los ${existingCount} productos actuales y agrega solo los nuevos.`}
-              </span>
-            </span>
-          </button>
           <button
             type="button"
             className={`${styles.actionChoice} ${selectedAction === "REEMPLAZAR_LISTA" ? styles.actionChoiceActive : ""}`}

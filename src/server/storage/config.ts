@@ -60,6 +60,18 @@ export const BUCKET_CONFIGS: Record<StorageBucketName, BucketConfig> = {
       ".webp",
     ],
   },
+  [STORAGE_BUCKETS.BILLING_PAYMENT_PROOFS]: {
+    name: STORAGE_BUCKETS.BILLING_PAYMENT_PROOFS,
+    public: false,
+    maxSizeBytes: 10 * MB,
+    allowedMimeTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+    ],
+    allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".pdf"],
+  },
 };
 
 export const ALL_STORAGE_BUCKETS = Object.values(STORAGE_BUCKETS);

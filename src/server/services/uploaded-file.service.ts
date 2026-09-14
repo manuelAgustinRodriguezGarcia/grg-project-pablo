@@ -72,6 +72,8 @@ export class UploadedFileService {
     const signed = await createSignedDownloadUrl(
       STORAGE_BUCKETS.EXCEL_ORIGINALS,
       file.storagePath,
+      undefined,
+      { downloadFilename: file.originalName },
     );
 
     return {

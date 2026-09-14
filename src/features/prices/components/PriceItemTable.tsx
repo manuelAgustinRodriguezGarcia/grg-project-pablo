@@ -221,7 +221,7 @@ export const PriceItemTable = memo(function PriceItemTable({
     return (
       <section className={styles.tablePanel} aria-label="Ítems de precios">
         <div className={styles.tableStatePanel}>
-          <p className={styles.tableStateText}>Seleccioná una lista de precios para ver sus ítems.</p>
+          <p className={styles.tableStateText}>Seleccione una lista de precios para ver sus ítems.</p>
         </div>
       </section>
     );
@@ -302,7 +302,7 @@ export const PriceItemTable = memo(function PriceItemTable({
             </h2>
             {hasSearchOrFilters ? (
               <p className={styles.tableStateText}>
-                Probá con otro término o limpiá la búsqueda y los filtros.
+                Pruebe con otro término o limpie la búsqueda y los filtros.
               </p>
             ) : null}
           </div>

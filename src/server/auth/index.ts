@@ -1,4 +1,5 @@
 export {
+  ADMIN_DASHBOARD_PATH,
   ADMIN_HOME_PATH,
   AUTH_CALLBACK_PATH,
   AUTH_LOGIN_PATH,
@@ -6,6 +7,7 @@ export {
   AUTH_RESET_PASSWORD_PATH,
   OFFLINE_DATA_CLEAR_SIGNAL,
   PROTECTED_PATH_PREFIXES,
+  USER_HOME_PATH,
 } from "./config";
 export { isSafeRedirectPath, resolveSafeRedirectPath } from "./safe-redirect";
 export { getAppOrigin, getSupabasePublicEnv } from "./env";
