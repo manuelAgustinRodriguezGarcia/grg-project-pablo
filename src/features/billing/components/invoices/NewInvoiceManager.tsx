@@ -855,6 +855,7 @@ export function NewInvoiceManager({
       totals ? (
         <InvoiceCreateConfirmModal
           clientName={selectedClient.name}
+          clientCode={selectedClient.code}
           invoiceType={invoiceType}
           rows={rows}
           totals={totals}

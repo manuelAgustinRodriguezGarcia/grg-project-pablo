@@ -10,9 +10,7 @@ import type { InvoiceTotals } from "@/shared/utils/billing-invoice-totals";
 import {
   INVOICE_TYPE_LABELS,
   PAYMENT_METHOD_LABELS,
-  PAYMENT_STATUS_LABELS,
 } from "@/features/billing/types/billing-invoice.types";
-import { paymentStatusForMethod } from "@/shared/utils/billing-invoice-rules";
 import { isTypingTarget } from "@/features/billing/hooks/useBillingModalKeyboard";
 import type { InvoiceItemRow } from "./InvoiceItemsSection";
 import { isCompleteRow } from "./InvoiceItemsSection";
@@ -30,6 +28,7 @@ function formatCents(cents: number): string {
 
 type InvoiceCreateConfirmModalProps = {
   clientName: string;
+  clientCode: string;
   invoiceType: BillingInvoiceType;
   rows: InvoiceItemRow[];
   totals: InvoiceTotals;
@@ -43,6 +42,7 @@ type InvoiceCreateConfirmModalProps = {
 
 export function InvoiceCreateConfirmModal({
   clientName,
+  clientCode,
   invoiceType,
   rows,
   totals,
@@ -56,7 +56,6 @@ export function InvoiceCreateConfirmModal({
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const completeRows = rows.filter(isCompleteRow);
   const netSubtotalCents = totals.subtotalCents - totals.discountCents;
-  const paymentStatus = paymentStatusForMethod(paymentMethod);
 
   useEffect(() => {
     confirmButtonRef.current?.focus({ preventScroll: true });
@@ -137,16 +136,12 @@ export function InvoiceCreateConfirmModal({
             <dd>{clientName}</dd>
           </div>
           <div>
-            <dt>Ítems</dt>
-            <dd>{completeRows.length}</dd>
+            <dt>Código</dt>
+            <dd>{clientCode}</dd>
           </div>
-          <div>
+          <div className={styles.createConfirmMetaPayment}>
             <dt>Método de pago</dt>
             <dd>{PAYMENT_METHOD_LABELS[paymentMethod]}</dd>
-          </div>
-          <div>
-            <dt>Estado de pago</dt>
-            <dd>{PAYMENT_STATUS_LABELS[paymentStatus]}</dd>
           </div>
         </dl>
 
@@ -154,8 +149,7 @@ export function InvoiceCreateConfirmModal({
           {completeRows.map((row) => (
             <li key={row.key}>
               <span className={styles.createConfirmItemName}>
-                {row.rubroCode ? `${row.rubroCode} · ` : ""}
-                {row.description || row.rubroName}
+                {row.rubroCode || row.rubroName}
               </span>
               <span className={styles.createConfirmItemQty}>
                 ×{row.quantity}
@@ -215,7 +209,7 @@ export function InvoiceCreateConfirmModal({
             disabled={isSubmitting}
             aria-keyshortcuts="C"
           >
-            {isSubmitting ? "Creando…" : "Confirmar creación"}
+            {isSubmitting ? "Creando…" : "Confirmar factura"}
             {isSubmitting ? null : (
               <kbd className={styles.shortcutKbd}>C</kbd>
             )}

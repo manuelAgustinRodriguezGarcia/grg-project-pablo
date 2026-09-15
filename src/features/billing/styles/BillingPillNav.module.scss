@@ -227,16 +227,12 @@
 }
 
 .newInvoiceButtonCurrent {
-  background: $navy;
+  background: $blue;
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: $navy;
+      background: color-mix(in srgb, $blue 92%, black);
     }
-  }
-
-  &:focus-visible {
-    outline-color: $white;
   }
 }
 

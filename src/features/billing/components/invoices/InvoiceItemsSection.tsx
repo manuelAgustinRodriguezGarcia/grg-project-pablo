@@ -303,7 +303,7 @@ export function InvoiceItemsSection({
           <span>Cant.</span>
           <span>P. unit. c/IVA</span>
           {isTypeA ? <span>P. unitario S/IVA</span> : null}
-          <span>{isTypeA ? "TOTAL S/IVA" : "Total neto s/IVA"}</span>
+          <span>TOTAL S/IVA</span>
           <span />
         </div>
 
