@@ -1303,6 +1303,30 @@
     padding-inline: 0.9rem;
     font-size: 0.88rem;
   }
+
+  .primaryButton {
+    border-color: rgba($blue, 0.45);
+    background: $white;
+    color: $blue;
+
+    &:hover:not(:disabled) {
+      border-color: $blue;
+      background: $blue;
+      color: $white;
+    }
+  }
+
+  .dangerButton {
+    border-color: rgba(#c0392b, 0.45);
+    background: $white;
+    color: #c0392b;
+
+    &:hover:not(:disabled) {
+      border-color: #c0392b;
+      background: #c0392b;
+      color: $white;
+    }
+  }
 }
 
 /* ---------- Step: Result ---------- */

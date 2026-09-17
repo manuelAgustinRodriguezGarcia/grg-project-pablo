@@ -79,4 +79,16 @@ export const adminQueryKeys = {
 
     return ["admin", "users", roleFilter, query] as const;
   },
+
+  billingClients: () => ["admin", "billing-clients"] as const,
+
+  billingRubros: () => ["admin", "billing-rubros"] as const,
+
+  billingInvoices: () => ["admin", "billing-invoices"] as const,
+
+  billingReceipts: () => ["admin", "billing-receipts"] as const,
+
+  billingNotes: () => ["admin", "billing-notes"] as const,
+
+  billingFiscalSettings: () => ["admin", "billing-fiscal-settings"] as const,
 } as const;

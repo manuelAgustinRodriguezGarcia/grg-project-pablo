@@ -41,6 +41,15 @@ export function formatIsoDateOnlyForDisplay(
   });
 }
 
+export function formatIsoDateOnlyNumeric(iso: string): string {
+  if (!isIsoDateOnly(iso)) {
+    return iso;
+  }
+
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
+}
+
 export function parseIsoDateOnly(iso: string): {
   year: number;
   month: number;
@@ -60,4 +69,39 @@ export function getDaysInMonth(year: number, month: number): number {
 
 export function getWeekdayIndex(year: number, month: number, day: number): number {
   return new Date(year, month - 1, day).getDay();
+}
+
+const ISO_YEAR_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export function isIsoYearMonth(value: string): boolean {
+  return ISO_YEAR_MONTH_PATTERN.test(value);
+}
+
+export function buildIsoYearMonth(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+export function getTodayIsoYearMonth(): string {
+  const now = new Date();
+  return buildIsoYearMonth(now.getFullYear(), now.getMonth() + 1);
+}
+
+export function parseIsoYearMonth(iso: string): { year: number; month: number } {
+  const [year, month] = iso.split("-").map(Number);
+  return { year, month };
+}
+
+export function formatIsoYearMonthForDisplay(
+  iso: string,
+  locale = "es-AR",
+): string {
+  if (!isIsoYearMonth(iso)) {
+    return iso;
+  }
+
+  const { year, month } = parseIsoYearMonth(iso);
+  return new Date(year, month - 1, 1).toLocaleDateString(locale, {
+    month: "long",
+    year: "numeric",
+  });
 }

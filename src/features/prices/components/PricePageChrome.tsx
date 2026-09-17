@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
+import { CircleDollarSign, FileSpreadsheet, ICON_STROKE } from "@/shared/icons";
 import catalogStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
@@ -50,7 +50,14 @@ export function PricePageChrome({
   return (
     <section className={styles.sectionIntro} aria-label="Precios">
       <div className={styles.sectionHeader}>
-        <h1 className={styles.sectionTitle}>Precios</h1>
+        <h1 className={styles.sectionTitle}>
+          <CircleDollarSign
+            className={styles.sectionTitleIcon}
+            strokeWidth={ICON_STROKE}
+            aria-hidden
+          />
+          Precios
+        </h1>
       </div>
 
       {showToolbarColumn || children ? (

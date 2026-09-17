@@ -32,7 +32,7 @@ async function resolveCoverImageUrl(
 function toDirectoryCatalogItem(
   catalog: Catalog,
   coverImageUrl: string | null,
-  sectionCount: number,
+  sectionNames: string[],
   lastServerVersion: number,
 ): DirectoryCatalogItem {
   return {
@@ -40,7 +40,8 @@ function toDirectoryCatalogItem(
     name: catalog.name,
     description: catalog.description,
     coverImageUrl,
-    sectionCount,
+    sectionCount: sectionNames.length,
+    sectionNames,
     updatedAt: catalog.updatedAt.toISOString(),
     order: catalog.order,
     offlineSync: {
@@ -62,12 +63,12 @@ export class DirectoryService {
     const items = await Promise.all(
       visibleCatalogs.map(async (catalog) => {
         const coverImageUrl = await resolveCoverImageUrl(catalog.coverImagePath);
-        const sectionCount = await folderRepository.countByCatalogId(
+        const sectionNames = await folderRepository.findNamesByCatalogIdOrdered(
           catalog.id,
           visibilityService.folderWhereForRole(role),
         );
 
-        return toDirectoryCatalogItem(catalog, coverImageUrl, sectionCount, lastServerVersion);
+        return toDirectoryCatalogItem(catalog, coverImageUrl, sectionNames, lastServerVersion);
       }),
     );
 

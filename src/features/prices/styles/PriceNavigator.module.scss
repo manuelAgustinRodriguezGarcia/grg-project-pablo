@@ -1,3 +1,4 @@
+@use "sass:color";
 @use "./variables" as *;
 
 $price-surface: rgba($green, 0.02);
@@ -225,12 +226,22 @@ $price-shadow:
 }
 
 .sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   margin: 0;
   font-family: $font-sans;
   font-size: clamp(1.35rem, 2.5vw, 1.65rem);
   font-weight: 700;
   line-height: 1.2;
   color: $navy;
+}
+
+.sectionTitleIcon {
+  width: 1.55rem;
+  height: 1.55rem;
+  flex-shrink: 0;
+  color: $blue;
 }
 
 .toolbar {
@@ -781,7 +792,7 @@ $price-shadow:
   min-width: 4.5rem;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  color: darken($amber, 6%);
+  color: color.adjust($amber, $lightness: -6%);
 }
 
 .cellPriceSymbol {
@@ -799,7 +810,7 @@ $price-shadow:
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  color: darken($amber, 6%);
+  color: color.adjust($amber, $lightness: -6%);
 }
 
 .cellText {

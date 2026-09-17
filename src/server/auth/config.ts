@@ -10,8 +10,22 @@ export const AUTH_LOGIN_PATH = "/auth/login";
 export const AUTH_CALLBACK_PATH = "/auth/callback";
 export const AUTH_RESET_PASSWORD_PATH = "/auth/reset-password";
 
-/** Ruta principal del panel tras iniciar sesión. */
-export const ADMIN_HOME_PATH = "/admin/catalogos";
+/** Ruta principal del panel tras iniciar sesión (redirige por rol). */
+export const ADMIN_HOME_PATH = "/admin";
+
+/** Destino de home para administradores. */
+export const ADMIN_DASHBOARD_PATH = "/admin/inicio";
+
+/** Destino de home para usuarios no admin. */
+export const USER_HOME_PATH = "/admin/catalogos";
+
+export function getRoleHomePath(role: "ADMIN" | "USUARIO"): string {
+  return role === "ADMIN" ? ADMIN_DASHBOARD_PATH : USER_HOME_PATH;
+}
+
+export function isAdminEntryPath(pathname: string): boolean {
+  return pathname === ADMIN_HOME_PATH || pathname === `${ADMIN_HOME_PATH}/`;
+}
 
 /** Prefijos protegidos por middleware (requieren sesión Supabase válida). */
 export const PROTECTED_PATH_PREFIXES = ["/admin", "/api/admin"] as const;

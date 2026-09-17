@@ -1,5 +1,12 @@
 import type { LucideIcon } from "lucide-react";
-import { Archive, Receipt, TableProperties, Users } from "@/shared/icons";
+import {
+  Archive,
+  CircleDollarSign,
+  House,
+  ReceiptText,
+  TableProperties,
+  Users,
+} from "@/shared/icons";
 
 export type AdminNavItemConfig = {
   href: string;
@@ -9,7 +16,21 @@ export type AdminNavItemConfig = {
   adminOnly?: boolean;
 };
 
+/** Hrefs visibles en el dock móvil (el resto vive en el sheet “Más”). */
+export const ADMIN_MOBILE_DOCK_HREFS = [
+  "/admin/inicio",
+  "/admin/catalogos",
+  "/admin/precios",
+  "/admin/facturacion",
+] as const;
+
 export const ADMIN_NAV_ITEMS: AdminNavItemConfig[] = [
+  {
+    href: "/admin/inicio",
+    label: "Inicio",
+    icon: House,
+    adminOnly: true,
+  },
   {
     href: "/admin/catalogos",
     label: "Catálogos",
@@ -18,7 +39,13 @@ export const ADMIN_NAV_ITEMS: AdminNavItemConfig[] = [
   {
     href: "/admin/precios",
     label: "Precios",
-    icon: Receipt,
+    icon: CircleDollarSign,
+  },
+  {
+    href: "/admin/facturacion",
+    label: "Facturación",
+    icon: ReceiptText,
+    adminOnly: true,
   },
   {
     href: "/admin/archivos",

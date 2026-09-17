@@ -14,10 +14,13 @@ import {
   deleteCatalogAction,
   updateCatalogAction,
 } from "@/features/catalog/actions/catalog.actions";
-import { createFolderAction, deleteFolderAction, updateFolderAction } from "@/features/catalog/actions/folder.actions";
+import { deleteFolderAction } from "@/features/catalog/actions/folder.actions";
 import { CatalogFolderSelectors } from "@/features/catalog/components/CatalogFolderSelectors";
+import { CatalogPickerScreen } from "@/features/catalog/components/CatalogPickerScreen";
+import { ChangeCoverImageModal } from "@/features/catalog/components/ChangeCoverImageModal";
 import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import { CatalogPageIntro } from "@/features/catalog/components/CatalogPageChrome";
+import { FolderPickerScreen } from "@/features/catalog/components/FolderPickerScreen";
 import { LazyProductFormModal } from "@/features/catalog/components/LazyProductFormModal";
 import { ProductTable } from "@/features/catalog/components/ProductTable";
 import { LazyImportWizard } from "@/features/imports/components/LazyImportWizard";
@@ -133,24 +136,32 @@ function patchProductInTableCaches(
   );
 }
 
-function toDirectoryCatalogItem(catalog: CatalogListItem): DirectoryCatalogItem {
+function toDirectoryCatalogItem(
+  catalog: CatalogListItem,
+  previous?: DirectoryCatalogItem | null,
+): DirectoryCatalogItem {
   return {
     id: catalog.id,
     name: catalog.name,
     description: catalog.description,
-    coverImageUrl: null,
+    coverImageUrl: previous?.coverImageUrl ?? null,
     sectionCount: catalog.folderCount,
+    sectionNames: previous?.sectionNames ?? [],
     updatedAt: catalog.updatedAt,
     order: catalog.order,
-    offlineSync: { status: "unavailable" },
+    offlineSync: previous?.offlineSync ?? { status: "unavailable" },
   };
 }
 
-function toNavigationFolderItem(folder: FolderListItem): CatalogNavigationFolderItem {
+function toNavigationFolderItem(
+  folder: FolderListItem,
+  previous?: CatalogNavigationFolderItem | null,
+): CatalogNavigationFolderItem {
   return {
     id: folder.id,
     name: folder.name,
     description: folder.description,
+    coverImageUrl: previous?.coverImageUrl ?? null,
     order: folder.order,
     visibleToNormalUser: folder.visibleToNormalUser,
     productCount: folder.productCount,
@@ -167,10 +178,7 @@ type CatalogNavigatorProps = {
   enableColumnFilters?: boolean;
 };
 
-function getInitialCatalogId(catalogs: DirectoryCatalogItem[]): string {
-  const sortedCatalogs = sortByName(catalogs);
-  return sortedCatalogs[0]?.id ?? "";
-}
+type CatalogView = "catalog-picker" | "folder-picker" | "products";
 
 function resolveCatalogId(
   catalogs: DirectoryCatalogItem[],
@@ -181,7 +189,7 @@ function resolveCatalogId(
   }
 
   const exists = catalogs.some((catalog) => catalog.id === selectedCatalogId);
-  return exists ? selectedCatalogId : getInitialCatalogId(catalogs);
+  return exists ? selectedCatalogId : "";
 }
 
 function resolveFolderId(
@@ -189,11 +197,9 @@ function resolveFolderId(
   selectedFolderId: string,
   options?: { allowFallback?: boolean },
 ): string {
-  const allowFallback = options?.allowFallback ?? true;
+  const allowFallback = options?.allowFallback ?? false;
 
   if (folders.length === 0) {
-    // While loading, preserve a deep-link target. Once navigation is ready
-    // (allowFallback), an empty catalog has no active folder.
     return allowFallback ? "" : selectedFolderId;
   }
 
@@ -203,7 +209,7 @@ function resolveFolderId(
   }
 
   if (!allowFallback) {
-    return selectedFolderId;
+    return "";
   }
 
   return sortByName(folders)[0]?.id ?? "";
@@ -284,13 +290,11 @@ export function CatalogNavigator({
   const [isCreateCatalogOpen, setIsCreateCatalogOpen] = useState(false);
   const [createCatalogNameDraft, setCreateCatalogNameDraft] = useState("");
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
-  const [createFolderNameDraft, setCreateFolderNameDraft] = useState("");
   const [isFolderActionBusy, setIsFolderActionBusy] = useState(false);
   const [folderActionError, setFolderActionError] = useState<string | null>(null);
 
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<CatalogTarget | null>(null);
   const [editFolderTarget, setEditFolderTarget] = useState<CatalogTarget | null>(null);
-  const [editFolderNameDraft, setEditFolderNameDraft] = useState("");
 
   const activeCatalogId = useMemo(
     () => resolveCatalogId(sortedCatalogs, selectedCatalogId),
@@ -386,7 +390,14 @@ export function CatalogNavigator({
           setCatalogList((current) =>
             current.map((catalog) =>
               catalog.id === change.catalogId
-                ? { ...catalog, sectionCount: catalog.sectionCount + 1 }
+                ? {
+                    ...catalog,
+                    sectionCount: catalog.sectionCount + 1,
+                    sectionNames: sortByName([
+                      ...catalog.sectionNames.map((name) => ({ name })),
+                      { name: change.folder.name },
+                    ]).map((item) => item.name),
+                  }
                 : catalog,
             ),
           );
@@ -410,6 +421,31 @@ export function CatalogNavigator({
               queryKey: adminQueryKeys.navigation(change.catalogId),
             });
           }
+          setCatalogList((current) =>
+            current.map((catalog) => {
+              if (catalog.id !== change.catalogId) {
+                return catalog;
+              }
+
+              const previousName = currentFolders?.find(
+                (folder) => folder.id === change.folder.id,
+              )?.name;
+              const nextNames = previousName
+                ? catalog.sectionNames.map((name) =>
+                    name === previousName ? change.folder.name : name,
+                  )
+                : catalog.sectionNames.includes(change.folder.name)
+                  ? catalog.sectionNames
+                  : [...catalog.sectionNames, change.folder.name];
+
+              return {
+                ...catalog,
+                sectionNames: sortByName(
+                  nextNames.map((name) => ({ name })),
+                ).map((item) => item.name),
+              };
+            }),
+          );
           break;
         }
         case "folder-deleted": {
@@ -427,14 +463,23 @@ export function CatalogNavigator({
             });
           }
           setCatalogList((current) =>
-            current.map((catalog) =>
-              catalog.id === change.catalogId
-                ? {
-                    ...catalog,
-                    sectionCount: Math.max(0, catalog.sectionCount - 1),
-                  }
-                : catalog,
-            ),
+            current.map((catalog) => {
+              if (catalog.id !== change.catalogId) {
+                return catalog;
+              }
+
+              const deletedName = currentFolders?.find(
+                (folder) => folder.id === change.folderId,
+              )?.name;
+
+              return {
+                ...catalog,
+                sectionCount: Math.max(0, catalog.sectionCount - 1),
+                sectionNames: deletedName
+                  ? catalog.sectionNames.filter((name) => name !== deletedName)
+                  : catalog.sectionNames,
+              };
+            }),
           );
           if (selectedFolderId === change.folderId) {
             setSelectedFolderId("");
@@ -485,16 +530,27 @@ export function CatalogNavigator({
   const foldersError =
     navigationQuery.error instanceof Error ? navigationQuery.error.message : null;
 
-  const activeFolderId = useMemo(
-    () =>
-      resolveFolderId(folders, selectedFolderId, {
-        // While folders for the target catalog are still loading (or showing
-        // keepPreviousData from another catalog), never fall back to the first
-        // folder — that would wipe a global-search handoff mid-flight.
-        allowFallback: isNavigationReady,
-      }),
-    [folders, isNavigationReady, selectedFolderId],
-  );
+  const activeFolderId = useMemo(() => {
+    if (!isNavigationReady) {
+      return resolveFolderId(folders, selectedFolderId, { allowFallback: false });
+    }
+
+    if (folders.some((folder) => folder.id === selectedFolderId)) {
+      return selectedFolderId;
+    }
+
+    return "";
+  }, [folders, isNavigationReady, selectedFolderId]);
+
+  const catalogView: CatalogView = useMemo(() => {
+    if (!activeCatalogId) {
+      return "catalog-picker";
+    }
+    if (!activeFolderId) {
+      return "folder-picker";
+    }
+    return "products";
+  }, [activeCatalogId, activeFolderId]);
 
   const canLoadFolderProducts =
     Boolean(activeFolderId) &&
@@ -748,6 +804,16 @@ export function CatalogNavigator({
     [resetFolderSearch],
   );
 
+  const handleBackToCatalogs = useCallback(() => {
+    setSelectedCatalogId("");
+    setSelectedFolderId("");
+    setColumnFilters([]);
+    setPage(1);
+    resetFolderSearch();
+    setDebouncedSearch("");
+    setSearchResetKey((token) => token + 1);
+  }, [resetFolderSearch]);
+
   const handlePageChange = useCallback((nextPage: number) => {
     setPage(nextPage);
   }, []);
@@ -780,17 +846,17 @@ export function CatalogNavigator({
     setProductActionError(null);
 
     if (!activeCatalogId) {
-      setProductActionError("Seleccioná un catálogo para agregar productos.");
+      setProductActionError("Seleccione un catálogo para agregar productos.");
       return;
     }
 
     if (!activeFolderId) {
-      setProductActionError("Seleccioná una carpeta para agregar productos.");
+      setProductActionError("Seleccione una carpeta para agregar productos.");
       return;
     }
 
     if (isLoadingProducts || !productTable) {
-      setProductActionError("Esperá a que carguen los datos de la carpeta seleccionada.");
+      setProductActionError("Espere a que carguen los datos de la carpeta seleccionada.");
       return;
     }
 
@@ -845,7 +911,6 @@ export function CatalogNavigator({
 
   const handleAddFolder = useCallback(() => {
     setFolderActionError(null);
-    setCreateFolderNameDraft("");
     setIsCreateFolderOpen(true);
   }, []);
 
@@ -885,63 +950,37 @@ export function CatalogNavigator({
     }
   }, [createCatalogNameDraft, queryClient, router]);
 
-  const handleConfirmCreateFolder = useCallback(async () => {
-    if (!activeCatalogId) {
-      return;
-    }
-
-    const nextName = createFolderNameDraft.trim();
-    if (!nextName) {
-      setFolderActionError("El nombre no puede estar vacío.");
-      return;
-    }
-
-    setIsFolderActionBusy(true);
-    setFolderActionError(null);
-
-    try {
-      const result = await createFolderAction({
-        catalogId: activeCatalogId,
-        name: nextName,
-      });
-      if (!result.success) {
-        setFolderActionError(result.error);
+  const handleFolderCreateSaved = useCallback(
+    async (payload: { name: string; folderId: string }) => {
+      if (!activeCatalogId) {
         return;
       }
 
-      const created = toNavigationFolderItem(result.data);
-      const currentFolders =
-        queryClient.getQueryData<CatalogNavigationFolderItem[]>(
-          adminQueryKeys.navigation(activeCatalogId),
-        ) ?? folders;
-      const nextFolders = sortByName([...currentFolders, created]);
+      await queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.navigation(activeCatalogId),
+      });
 
-      queryClient.setQueryData(
-        adminQueryKeys.navigation(activeCatalogId),
-        nextFolders,
-      );
       setCatalogList((current) =>
         current.map((catalog) =>
           catalog.id === activeCatalogId
-            ? { ...catalog, sectionCount: catalog.sectionCount + 1 }
+            ? {
+                ...catalog,
+                sectionCount: catalog.sectionCount + 1,
+                sectionNames: sortByName([
+                  ...catalog.sectionNames.map((name) => ({ name })),
+                  { name: payload.name },
+                ]).map((item) => item.name),
+              }
             : catalog,
         ),
       );
-      setSelectedFolderId(created.id);
+      setSelectedFolderId(payload.folderId);
       setPage(1);
       setIsCreateFolderOpen(false);
-      setCreateFolderNameDraft("");
       router.refresh();
-    } finally {
-      setIsFolderActionBusy(false);
-    }
-  }, [
-    activeCatalogId,
-    createFolderNameDraft,
-    folders,
-    queryClient,
-    router,
-  ]);
+    },
+    [activeCatalogId, queryClient, router],
+  );
 
   const handleEditCatalog = useCallback(
     (catalogId: string) => {
@@ -976,7 +1015,6 @@ export function CatalogNavigator({
       }
       setFolderActionError(null);
       setEditFolderTarget({ id: folder.id, name: folder.name });
-      setEditFolderNameDraft(folder.name);
     },
     [folders],
   );
@@ -1025,21 +1063,21 @@ export function CatalogNavigator({
             ? {
                 ...catalog,
                 sectionCount: Math.max(0, catalog.sectionCount - 1),
+                sectionNames: catalog.sectionNames.filter(
+                  (name) => name !== deleteFolderTarget.name,
+                ),
               }
             : catalog,
         ),
       );
 
       if (selectedFolderId === deleteFolderTarget.id) {
-        const nextFolderId = sortByName(nextFolders)[0]?.id ?? "";
-        setSelectedFolderId(nextFolderId);
+        setSelectedFolderId("");
         setPage(1);
-        if (!nextFolderId) {
-          stableTableDataRef.current = null;
-          void queryClient.removeQueries({
-            queryKey: adminQueryKeys.products(deleteFolderTarget.id),
-          });
-        }
+        stableTableDataRef.current = null;
+        void queryClient.removeQueries({
+          queryKey: adminQueryKeys.products(deleteFolderTarget.id),
+        });
       }
 
       setDeleteFolderTarget(null);
@@ -1058,59 +1096,40 @@ export function CatalogNavigator({
     selectedFolderId,
   ]);
 
-  const handleConfirmEditFolder = useCallback(async () => {
-    if (!editFolderTarget) {
-      return;
-    }
-
-    const nextName = editFolderNameDraft.trim();
-    if (!nextName) {
-      setFolderActionError("El nombre no puede estar vacío.");
-      return;
-    }
-
-    setIsFolderActionBusy(true);
-    setFolderActionError(null);
-
-    try {
-      const result = await updateFolderAction({
-        id: editFolderTarget.id,
-        name: nextName,
-      });
-      if (!result.success) {
-        setFolderActionError(result.error);
-        return;
+  const handleFolderEditSaved = useCallback(
+    async (payload: { previousName: string; name: string }) => {
+      if (activeCatalogId) {
+        await queryClient.invalidateQueries({
+          queryKey: adminQueryKeys.navigation(activeCatalogId),
+        });
       }
 
-      const updated = toNavigationFolderItem(result.data);
-      if (activeCatalogId) {
-        const currentFolders =
-          queryClient.getQueryData<CatalogNavigationFolderItem[]>(
-            adminQueryKeys.navigation(activeCatalogId),
-          ) ?? folders;
-        queryClient.setQueryData(
-          adminQueryKeys.navigation(activeCatalogId),
-          sortByName(
-            currentFolders.map((folder) =>
-              folder.id === updated.id ? updated : folder,
-            ),
-          ),
+      if (payload.previousName !== payload.name) {
+        setCatalogList((current) =>
+          current.map((catalog) => {
+            if (catalog.id !== activeCatalogId) {
+              return catalog;
+            }
+
+            return {
+              ...catalog,
+              sectionNames: sortByName(
+                catalog.sectionNames
+                  .map((name) =>
+                    name === payload.previousName ? payload.name : name,
+                  )
+                  .map((name) => ({ name })),
+              ).map((item) => item.name),
+            };
+          }),
         );
       }
+
       setEditFolderTarget(null);
-      setEditFolderNameDraft("");
       router.refresh();
-    } finally {
-      setIsFolderActionBusy(false);
-    }
-  }, [
-    activeCatalogId,
-    editFolderNameDraft,
-    editFolderTarget,
-    folders,
-    queryClient,
-    router,
-  ]);
+    },
+    [activeCatalogId, queryClient, router],
+  );
 
   const handleConfirmDeleteCatalog = useCallback(async () => {
     if (!deleteCatalogTarget) {
@@ -1133,8 +1152,7 @@ export function CatalogNavigator({
       setCatalogList(nextCatalogs);
 
       if (selectedCatalogId === deleteCatalogTarget.id) {
-        const nextCatalogId = sortByName(nextCatalogs)[0]?.id ?? "";
-        setSelectedCatalogId(nextCatalogId);
+        setSelectedCatalogId("");
         setSelectedFolderId("");
         setPage(1);
       }
@@ -1170,7 +1188,8 @@ export function CatalogNavigator({
         return;
       }
 
-      const updated = toDirectoryCatalogItem(result.data);
+      const previous = catalogList.find((catalog) => catalog.id === result.data.id);
+      const updated = toDirectoryCatalogItem(result.data, previous);
       setCatalogList((current) =>
         current.map((catalog) =>
           catalog.id === updated.id ? updated : catalog,
@@ -1182,20 +1201,14 @@ export function CatalogNavigator({
     } finally {
       setIsCatalogActionBusy(false);
     }
-  }, [editCatalogNameDraft, editCatalogTarget, router]);
+  }, [catalogList, editCatalogNameDraft, editCatalogTarget, router]);
 
   const editNameUnchanged =
     editCatalogTarget !== null &&
     editCatalogNameDraft.trim() === editCatalogTarget.name.trim();
   const editNameEmpty = editCatalogNameDraft.trim().length === 0;
 
-  const editFolderNameUnchanged =
-    editFolderTarget !== null &&
-    editFolderNameDraft.trim() === editFolderTarget.name.trim();
-  const editFolderNameEmpty = editFolderNameDraft.trim().length === 0;
-
   const createCatalogNameEmpty = createCatalogNameDraft.trim().length === 0;
-  const createFolderNameEmpty = createFolderNameDraft.trim().length === 0;
 
   const importWizard = isImportOpen ? (
     <LazyImportWizard
@@ -1211,96 +1224,156 @@ export function CatalogNavigator({
   const visibleFolders = activeCatalogId ? folders : [];
   const activeFolderName =
     folders.find((folder) => folder.id === activeFolderId)?.name ?? "";
+  const activeCatalogName =
+    sortedCatalogs.find((catalog) => catalog.id === activeCatalogId)?.name ?? "";
+  const activeCatalogSectionCount =
+    sortedCatalogs.find((catalog) => catalog.id === activeCatalogId)?.sectionCount ??
+    0;
+  const editFolderImageUrl =
+    editFolderTarget
+      ? folders.find((folder) => folder.id === editFolderTarget.id)?.coverImageUrl ??
+        null
+      : null;
+
+  const handleEditFolderCover = useCallback(
+    (folderId: string) => {
+      handleEditFolder(folderId);
+    },
+    [handleEditFolder],
+  );
 
   return (
     <>
       <div className={styles.page}>
         <div className={styles.body}>
-          <CatalogPageIntro
-            isAdmin={isAdmin}
-            onDebouncedSearchChange={handleDebouncedSearchChange}
-            searchResetKey={searchResetKey}
-            searchResults={globalSearchQuery.data ?? null}
-            isSearchLoading={globalSearchQuery.isFetching}
-            searchError={globalSearchError}
-            onSelectSearchProductFolder={handleSelectProductFolderSearchResult}
-            onSelectSearchFolder={handleSelectFolderSearchResult}
-            onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
-            onAddProductClick={isAdmin ? handleAddProductClick : undefined}
-          >
-            <CatalogFolderSelectors
+          {catalogView === "catalog-picker" ? (
+            <CatalogPickerScreen
               catalogs={sortedCatalogs}
-              folders={visibleFolders}
-              selectedCatalogId={activeCatalogId}
-              selectedFolderId={activeFolderId}
-              isLoadingFolders={isLoadingFolders}
+              isAdmin={isAdmin}
               onSelectCatalog={handleSelectCatalog}
+              onAddCatalog={isAdmin ? handleAddCatalog : undefined}
+            />
+          ) : null}
+
+          {catalogView === "folder-picker" ? (
+            <FolderPickerScreen
+              catalogName={activeCatalogName}
+              folders={visibleFolders}
+              isLoading={isLoadingFolders}
+              expectedFolderCount={activeCatalogSectionCount}
+              isAdmin={isAdmin}
+              error={foldersError}
+              onBack={handleBackToCatalogs}
               onSelectFolder={handleSelectFolder}
-              onEditCatalog={isAdmin ? handleEditCatalog : undefined}
-              onDeleteCatalog={isAdmin ? handleDeleteCatalog : undefined}
               onEditFolder={isAdmin ? handleEditFolder : undefined}
               onDeleteFolder={isAdmin ? handleDeleteFolder : undefined}
-              onAddCatalog={isAdmin ? handleAddCatalog : undefined}
               onAddFolder={isAdmin ? handleAddFolder : undefined}
+              onEditFolderCover={isAdmin ? handleEditFolderCover : undefined}
             />
-          </CatalogPageIntro>
+          ) : null}
 
-        {foldersError ? <p className={styles.inlineError}>{foldersError}</p> : null}
-        {catalogActionError ? (
-          <p className={styles.inlineError}>{catalogActionError}</p>
-        ) : null}
-        {folderActionError ? (
-          <p className={styles.inlineError}>{folderActionError}</p>
-        ) : null}
-        {productActionError ? (
-          <p className={styles.inlineError}>{productActionError}</p>
-        ) : null}
+          {catalogView === "products" ? (
+            <>
+              <CatalogPageIntro
+                isAdmin={isAdmin}
+                onDebouncedSearchChange={handleDebouncedSearchChange}
+                searchResetKey={searchResetKey}
+                searchResults={globalSearchQuery.data ?? null}
+                isSearchLoading={globalSearchQuery.isFetching}
+                searchError={globalSearchError}
+                onSelectSearchProductFolder={handleSelectProductFolderSearchResult}
+                onSelectSearchFolder={handleSelectFolderSearchResult}
+                onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
+                onAddProductClick={isAdmin ? handleAddProductClick : undefined}
+              >
+                <CatalogFolderSelectors
+                  catalogs={sortedCatalogs}
+                  folders={visibleFolders}
+                  selectedCatalogId={activeCatalogId}
+                  selectedFolderId={activeFolderId}
+                  isLoadingFolders={isLoadingFolders}
+                  onSelectCatalog={handleSelectCatalog}
+                  onSelectFolder={handleSelectFolder}
+                  onBackToCatalogs={handleBackToCatalogs}
+                  onEditCatalog={isAdmin ? handleEditCatalog : undefined}
+                  onDeleteCatalog={isAdmin ? handleDeleteCatalog : undefined}
+                  onEditFolder={isAdmin ? handleEditFolder : undefined}
+                  onDeleteFolder={isAdmin ? handleDeleteFolder : undefined}
+                  onAddCatalog={isAdmin ? handleAddCatalog : undefined}
+                  onAddFolder={isAdmin ? handleAddFolder : undefined}
+                />
+              </CatalogPageIntro>
 
-          <ProductTable
-            data={tableData}
-            isLoading={
-              hideInternalLoaders
-                ? false
-                : isInitialTableLoading || isFolderContextLoading
-            }
-            isRefreshing={hideInternalLoaders ? false : isTableRefreshing}
-            isFilterRefreshing={hideInternalLoaders ? false : isFilterRefreshing}
-            error={productsError}
-            emptyTitle={
-              catalogHasNoFolders
-                ? "Este catálogo no tiene carpetas"
-                : !activeCatalogId
-                  ? "Seleccioná un catálogo y una carpeta"
-                  : "Seleccioná una carpeta"
-            }
-            emptyDescription={
-              catalogHasNoFolders
-                ? "Creá una carpeta o importá un Excel para comenzar."
-                : null
-            }
-            onImportExcel={
-              isAdmin && catalogHasNoFolders ? handleImportExcelClick : undefined
-            }
-            onAddFolder={isAdmin && catalogHasNoFolders ? handleAddFolder : undefined}
-            onPageChange={handlePageChange}
-            enableColumnFilters={enableColumnFilters}
-            columnFilters={columnFilters}
-            onColumnFilterChange={handleColumnFilterChange}
-            onClearColumnFilters={handleClearColumnFilters}
-            isAdmin={isAdmin}
-            canEdit={canEdit}
-            onColumnsChanged={isAdmin ? handleColumnsChanged : undefined}
-            onEditProduct={isAdmin ? handleEditProduct : undefined}
-            onDeleteProduct={isAdmin ? handleDeleteProduct : undefined}
-            folderId={activeFolderId || undefined}
-            folderName={activeFolderName}
-            folderSearchQuery={folderSearch}
-            onFolderSearchChange={
-              activeFolderId ? handleFolderSearchChange : undefined
-            }
-            folderSearchResetKey={folderSearchResetKey}
-            folderSearchSeedValue={folderSearchSeedValue}
-          />
+              {foldersError ? <p className={styles.inlineError}>{foldersError}</p> : null}
+              {catalogActionError ? (
+                <p className={styles.inlineError}>{catalogActionError}</p>
+              ) : null}
+              {folderActionError ? (
+                <p className={styles.inlineError}>{folderActionError}</p>
+              ) : null}
+              {productActionError ? (
+                <p className={styles.inlineError}>{productActionError}</p>
+              ) : null}
+
+              <ProductTable
+                data={tableData}
+                isLoading={
+                  hideInternalLoaders
+                    ? false
+                    : isInitialTableLoading || isFolderContextLoading
+                }
+                isRefreshing={hideInternalLoaders ? false : isTableRefreshing}
+                isFilterRefreshing={hideInternalLoaders ? false : isFilterRefreshing}
+                error={productsError}
+                emptyTitle={
+                  catalogHasNoFolders
+                    ? "Este catálogo no tiene carpetas"
+                    : !activeCatalogId
+                      ? "Seleccione un catálogo y una carpeta"
+                      : "Seleccione una carpeta"
+                }
+                emptyDescription={
+                  catalogHasNoFolders
+                    ? "Cree una carpeta o importe un Excel para comenzar."
+                    : null
+                }
+                onImportExcel={
+                  isAdmin && catalogHasNoFolders ? handleImportExcelClick : undefined
+                }
+                onAddFolder={isAdmin && catalogHasNoFolders ? handleAddFolder : undefined}
+                onPageChange={handlePageChange}
+                enableColumnFilters={enableColumnFilters}
+                columnFilters={columnFilters}
+                onColumnFilterChange={handleColumnFilterChange}
+                onClearColumnFilters={handleClearColumnFilters}
+                isAdmin={isAdmin}
+                canEdit={canEdit}
+                onColumnsChanged={isAdmin ? handleColumnsChanged : undefined}
+                onEditProduct={isAdmin ? handleEditProduct : undefined}
+                onDeleteProduct={isAdmin ? handleDeleteProduct : undefined}
+                folderId={activeFolderId || undefined}
+                folderName={activeFolderName}
+                folderSearchQuery={folderSearch}
+                onFolderSearchChange={
+                  activeFolderId ? handleFolderSearchChange : undefined
+                }
+                folderSearchResetKey={folderSearchResetKey}
+                folderSearchSeedValue={folderSearchSeedValue}
+              />
+            </>
+          ) : null}
+
+          {catalogView !== "products" ? (
+            <>
+              {foldersError ? <p className={styles.inlineError}>{foldersError}</p> : null}
+              {catalogActionError ? (
+                <p className={styles.inlineError}>{catalogActionError}</p>
+              ) : null}
+              {folderActionError ? (
+                <p className={styles.inlineError}>{folderActionError}</p>
+              ) : null}
+            </>
+          ) : null}
       </div>
       </div>
       {importWizard}
@@ -1407,7 +1480,7 @@ export function CatalogNavigator({
           title="Editar catálogo"
           message={
             <>
-              ¿Confirmás el cambio de nombre del catálogo{" "}
+              ¿Confirma el cambio de nombre del catálogo{" "}
               <strong className={styles.confirmHighlight}>
                 {editCatalogTarget.name}
               </strong>
@@ -1450,7 +1523,7 @@ export function CatalogNavigator({
       {isCreateCatalogOpen ? (
         <ConfirmDialog
           title="Nuevo catálogo"
-          message="Ingresá el nombre del catálogo que querés crear."
+          message="Ingrese el nombre del catálogo que desea crear."
           confirmLabel="Crear catálogo"
           isBusy={isCatalogActionBusy}
           confirmDisabled={createCatalogNameEmpty}
@@ -1483,41 +1556,12 @@ export function CatalogNavigator({
           />
         </ConfirmDialog>
       ) : null}
-      {isCreateFolderOpen ? (
-        <ConfirmDialog
-          title="Nueva carpeta"
-          message="Ingresá el nombre de la carpeta que querés crear en este catálogo."
-          confirmLabel="Crear carpeta"
-          isBusy={isFolderActionBusy}
-          confirmDisabled={createFolderNameEmpty}
-          onConfirm={() => void handleConfirmCreateFolder()}
-          onCancel={() => {
-            if (!isFolderActionBusy) {
-              setIsCreateFolderOpen(false);
-              setCreateFolderNameDraft("");
-            }
-          }}
-        >
-          <input
-            className={styles.confirmInput}
-            value={createFolderNameDraft}
-            onChange={(event) => setCreateFolderNameDraft(event.target.value)}
-            maxLength={200}
-            autoFocus
-            disabled={isFolderActionBusy}
-            aria-label="Nombre de la carpeta"
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !createFolderNameEmpty &&
-                !isFolderActionBusy
-              ) {
-                event.preventDefault();
-                void handleConfirmCreateFolder();
-              }
-            }}
-          />
-        </ConfirmDialog>
+      {isCreateFolderOpen && activeCatalogId ? (
+        <ChangeCoverImageModal
+          createCatalogId={activeCatalogId}
+          onClose={() => setIsCreateFolderOpen(false)}
+          onSaved={handleFolderCreateSaved}
+        />
       ) : null}
       {deleteFolderTarget ? (
         <ConfirmDialog
@@ -1544,49 +1588,14 @@ export function CatalogNavigator({
         />
       ) : null}
       {editFolderTarget ? (
-        <ConfirmDialog
-          title="Editar carpeta"
-          message={
-            <>
-              ¿Confirmás el cambio de nombre de la carpeta{" "}
-              <strong className={styles.confirmHighlight}>
-                {editFolderTarget.name}
-              </strong>
-              ?
-            </>
-          }
-          confirmLabel="Guardar cambios"
-          isBusy={isFolderActionBusy}
-          confirmDisabled={editFolderNameEmpty || editFolderNameUnchanged}
-          onConfirm={() => void handleConfirmEditFolder()}
-          onCancel={() => {
-            if (!isFolderActionBusy) {
-              setEditFolderTarget(null);
-              setEditFolderNameDraft("");
-            }
-          }}
-        >
-          <input
-            className={styles.confirmInput}
-            value={editFolderNameDraft}
-            onChange={(event) => setEditFolderNameDraft(event.target.value)}
-            maxLength={200}
-            autoFocus
-            disabled={isFolderActionBusy}
-            aria-label="Nuevo nombre de la carpeta"
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !editFolderNameEmpty &&
-                !editFolderNameUnchanged &&
-                !isFolderActionBusy
-              ) {
-                event.preventDefault();
-                void handleConfirmEditFolder();
-              }
-            }}
-          />
-        </ConfirmDialog>
+        <ChangeCoverImageModal
+          folderId={editFolderTarget.id}
+          folderName={editFolderTarget.name}
+          currentImageUrl={editFolderImageUrl}
+          allowRename
+          onClose={() => setEditFolderTarget(null)}
+          onSaved={handleFolderEditSaved}
+        />
       ) : null}
     </>
   );

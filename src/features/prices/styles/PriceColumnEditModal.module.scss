@@ -51,6 +51,66 @@
   color: $navy;
 }
 
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.modalHeaderText {
+  min-width: 0;
+  flex: 1;
+
+  .modalTitle {
+    margin: 0;
+  }
+
+  .modalSubtitle {
+    margin: 0.2rem 0 0;
+  }
+}
+
+.modalCloseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-top: 0;
+  padding: 0;
+  border: 1px solid rgba($navy, 0.18);
+  border-radius: $radius-md;
+  background: transparent;
+  color: $navy;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+
+  svg {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($navy, 0.4);
+    background: rgba($navy, 0.06);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($blue, 0.45);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
 .modalSubtitle {
   margin: 0 0 1rem;
   font-family: $font-sans;

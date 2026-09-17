@@ -43,6 +43,7 @@ export function setupFolderRepositoryMocks(): void {
   vi.mocked(folderRepository.findManyByIds).mockResolvedValue([]);
   vi.mocked(folderRepository.countByCatalogAndName).mockResolvedValue(0);
   vi.mocked(folderRepository.countByCatalogId).mockResolvedValue(0);
+  vi.mocked(folderRepository.findNamesByCatalogIdOrdered).mockResolvedValue([]);
   vi.mocked(folderRepository.isUniqueConstraintError).mockReturnValue(false);
 }
 

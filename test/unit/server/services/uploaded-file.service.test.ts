@@ -135,6 +135,8 @@ describe("UploadedFileService", () => {
     expect(createSignedDownloadUrl).toHaveBeenCalledWith(
       STORAGE_BUCKETS.EXCEL_ORIGINALS,
       baseFile.storagePath,
+      undefined,
+      { downloadFilename: baseFile.originalName },
     );
     expect(result.url).toBe("https://signed.example/file");
     expect(result.originalName).toBe("Rulemanes.xlsx");

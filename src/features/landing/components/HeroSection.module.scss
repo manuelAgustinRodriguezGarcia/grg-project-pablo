@@ -138,6 +138,10 @@ $hero-height: clamp(30rem, 60vh, 38rem);
   height: 100%;
 }
 
+.bannerCarouselReady .bannerImage {
+  transition: opacity 1.2s ease;
+}
+
 .bannerImage {
   position: absolute;
   inset: 0;
@@ -146,7 +150,6 @@ $hero-height: clamp(30rem, 60vh, 38rem);
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 1.2s ease;
   pointer-events: none;
   user-select: none;
 }

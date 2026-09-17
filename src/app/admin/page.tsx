@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
-import { ADMIN_HOME_PATH } from "@/server/auth/config";
+import { getRoleHomePath, requireAuthOrRedirect } from "@/server/auth";
 
-export default function AdminPage() {
-  redirect(ADMIN_HOME_PATH);
+export default async function AdminPage() {
+  const auth = await requireAuthOrRedirect("/admin");
+  redirect(getRoleHomePath(auth.profile.role));
 }

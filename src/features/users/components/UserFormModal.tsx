@@ -76,8 +76,8 @@ export function UserFormModal({
   const title = mode === "create" ? "Nuevo usuario" : "Editar usuario";
   const subtitle =
     mode === "create"
-      ? "Creá una cuenta con correo, contraseña y rol."
-      : "Actualizá los datos del usuario. Dejá la contraseña vacía para no cambiarla.";
+      ? "Cree una cuenta con correo, contraseña y rol."
+      : "Actualice los datos del usuario. Deje la contraseña vacía para no cambiarla.";
 
   return createPortal(
     <div
@@ -149,7 +149,7 @@ export function UserFormModal({
             />
             {isSelf && mode === "edit" ? (
               <p className={modalStyles.modalSubtitle}>
-                No podés cambiar tu propio rol de administrador.
+                No puede cambiar su propio rol de administrador.
               </p>
             ) : null}
           </div>

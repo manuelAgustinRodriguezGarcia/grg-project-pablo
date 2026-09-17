@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  ADMIN_HOME_PATH,
-} from "@/server/auth/config";
+import { ADMIN_HOME_PATH } from "@/server/auth/config";
 import { updateSession } from "@/server/auth/supabase-middleware";
 import { proxy } from "@/proxy";
 

@@ -147,12 +147,18 @@ export async function createSignedDownloadUrl(
   bucket: StorageBucketName,
   path: string,
   expiresInSeconds: number = DEFAULT_SIGNED_URL_EXPIRY_SECONDS,
+  options?: { downloadFilename?: string },
 ): Promise<SignedUrlResult> {
   const normalizedPath = normalizeStoragePath(path);
+  const downloadFilename = options?.downloadFilename;
   const cache = getSignedUrlCache();
 
   if (cache) {
-    const cacheKey = buildSignedUrlCacheKey(bucket, normalizedPath);
+    const cacheKey = buildSignedUrlCacheKey(
+      bucket,
+      normalizedPath,
+      downloadFilename,
+    );
     const cached = cache.get(cacheKey);
 
     if (cached) {
@@ -162,9 +168,11 @@ export async function createSignedDownloadUrl(
 
   const client = getSupabaseAdminClient();
 
-  const { data, error } = await client.storage
-    .from(bucket)
-    .createSignedUrl(normalizedPath, expiresInSeconds);
+  const { data, error } = await client.storage.from(bucket).createSignedUrl(
+    normalizedPath,
+    expiresInSeconds,
+    downloadFilename ? { download: downloadFilename } : undefined,
+  );
 
   if (error || !data?.signedUrl) {
     throw new StorageError(
@@ -180,7 +188,10 @@ export async function createSignedDownloadUrl(
   };
 
   if (cache) {
-    cache.set(buildSignedUrlCacheKey(bucket, normalizedPath), result);
+    cache.set(
+      buildSignedUrlCacheKey(bucket, normalizedPath, downloadFilename),
+      result,
+    );
   }
 
   return result;

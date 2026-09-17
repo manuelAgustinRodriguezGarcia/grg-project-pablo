@@ -1,0 +1,1044 @@
+@use "../../admin/styles/variables" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.15rem 1.25rem 1.6rem;
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pageTitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: $navy;
+  letter-spacing: -0.01em;
+}
+
+.pageSubtitle {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: rgba($navy, 0.62);
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+
+  .realCard {
+    gap: 0.35rem;
+    min-height: 100%;
+  }
+
+  .realName {
+    font-size: 0.95rem;
+  }
+
+  .realFooter {
+    margin-top: auto;
+  }
+}
+
+.kpiCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.kpiCardLink {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgba($navy, 0.16);
+      background: rgba($navy, 0.02);
+      box-shadow: 0 4px 14px rgba($navy, 0.06);
+
+      .cardLink {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.kpiToneRed.kpiCardLink {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgba(#dc2626, 0.28);
+      background: rgba(#dc2626, 0.03);
+    }
+  }
+
+  &:focus-visible {
+    outline-color: #dc2626;
+  }
+}
+
+.kpiTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.kpiLabel {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: rgba($navy, 0.62);
+}
+
+.kpiIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.kpiValue {
+  margin: 0;
+  font-size: clamp(1.2rem, 1.6vw, 1.45rem);
+  font-weight: 750;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.kpiSecondary {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba($navy, 0.55);
+  min-width: 0;
+}
+
+.kpiCard .realFooter {
+  margin-top: auto;
+}
+
+.kpiToneBlue {
+  .kpiIcon {
+    background: rgba($blue, 0.12);
+    color: $blue;
+  }
+
+  .kpiSecondaryPositive {
+    color: $green;
+  }
+}
+
+.kpiToneGreen {
+  .kpiIcon {
+    background: rgba($green, 0.12);
+    color: $green;
+  }
+
+  .kpiSecondaryPositive {
+    color: $green;
+  }
+}
+
+.kpiToneAmber {
+  .kpiIcon {
+    background: rgba(#d97706, 0.12);
+    color: #d97706;
+  }
+}
+
+.kpiToneRed {
+  background: $white;
+
+  .kpiIcon {
+    background: rgba(#dc2626, 0.1);
+    color: #dc2626;
+  }
+
+  .kpiSecondary {
+    color: rgba(#b91c1c, 0.75);
+  }
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.actionsCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 100%;
+}
+
+.actionsStack {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 0;
+
+  .realCard,
+  .realCardLink {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .realFooter {
+    margin-top: auto;
+  }
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex: 1;
+  min-height: 4.25rem;
+  padding: 0.95rem 1.05rem;
+  border: 1px solid transparent;
+  border-radius: $radius-md;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba($navy, 0.08);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.actionToneBlue {
+  background: rgba($blue, 0.1);
+  border-color: rgba($blue, 0.18);
+  color: $navy;
+
+  .actionIcon {
+    background: rgba($blue, 0.16);
+    color: $blue;
+  }
+}
+
+.actionToneBlueLight {
+  background: $white;
+  border-color: rgba($navy, 0.08);
+  color: $navy;
+
+  .actionIconBlue {
+    background: rgba($blue, 0.14);
+    color: $blue;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgba($blue, 0.2);
+      background: rgba($blue, 0.02);
+
+      .actionIconBlue {
+        background: rgba($blue, 0.13);
+        color: $blue;
+      }
+    }
+  }
+
+  &:focus-visible {
+    outline-color: $blue;
+  }
+}
+
+.actionToneGreenLight {
+  background: $white;
+  border-color: rgba($navy, 0.08);
+  color: $navy;
+
+  .actionIconGreen {
+    background: rgba($green, 0.14);
+    color: $green;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgba($green, 0.2);
+      background: rgba($green, 0.02);
+
+      .actionIconGreen {
+        background: rgba($green, 0.15);
+        color: $green;
+      }
+    }
+  }
+
+  &:focus-visible {
+    outline-color: $green;
+  }
+}
+
+.actionToneSky {
+  background: #e8f3fc;
+  border-color: rgba(#0284c7, 0.16);
+  color: #0c4a6e;
+
+  .actionIcon {
+    background: rgba(#0284c7, 0.14);
+    color: #0284c7;
+  }
+}
+
+.actionToneNavy {
+  background: rgba($navy, 0.06);
+  border-color: rgba($navy, 0.12);
+  color: $navy;
+
+  .actionIcon {
+    background: rgba($navy, 0.1);
+    color: $navy;
+  }
+}
+
+.actionIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: 12px;
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+.actionIconBlue {
+  background: rgba($blue, 0.14);
+  color: $blue;
+}
+
+.actionIconGreen {
+  background: rgba($green, 0.14);
+  color: $green;
+}
+
+.actionIconSky {
+  background: rgba(#0284c7, 0.14);
+  color: #0284c7;
+}
+
+.actionLabel {
+  font-size: 1.02rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.realRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: $navy;
+}
+
+.cardHeading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.cardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 8px;
+  flex-shrink: 0;
+
+  svg {
+    width: 0.92rem;
+    height: 0.92rem;
+  }
+}
+
+.cardIconBlue {
+  background: rgba($blue, 0.12);
+  color: $blue;
+}
+
+.cardIconGreen {
+  background: rgba($green, 0.14);
+  color: $green;
+}
+
+.cardIconRed {
+  background: rgba(#dc2626, 0.1);
+  color: #dc2626;
+}
+
+.cardIconAmber {
+  background: rgba(#d97706, 0.12);
+  color: #d97706;
+}
+
+.chartBody {
+  width: 100%;
+  height: 15rem;
+  min-height: 15rem;
+}
+
+.donutLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 0.65rem;
+  align-items: center;
+
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.donutChart {
+  position: relative;
+  width: 100%;
+  height: 11.5rem;
+  min-height: 11.5rem;
+
+  :global(.recharts-responsive-container) {
+    position: relative;
+    z-index: 2;
+  }
+
+  :global(.recharts-tooltip-wrapper) {
+    z-index: 10;
+  }
+}
+
+.donutCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 56%;
+  height: 56%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  text-align: center;
+}
+
+.donutTotal {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+}
+
+.donutTotalLabel {
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
+  color: rgba($navy, 0.55);
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.legendSwatch {
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: 0.28rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.legendText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.legendLabel {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: rgba($navy, 0.72);
+}
+
+.legendValue {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+}
+
+.legendPercent {
+  font-weight: 600;
+  color: rgba($navy, 0.5);
+}
+
+.cardMeta {
+  margin: 0;
+  flex-shrink: 0;
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba($navy, 0.55);
+}
+
+.invoiceTypeBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.invoiceTypeTotal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-sm;
+  background: rgba($navy, 0.02);
+}
+
+.invoiceTypeTotalLabel {
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.5);
+}
+
+.invoiceTypeTotalValue {
+  font-family: $font-sans;
+  font-size: 1.02rem;
+  font-weight: 750;
+  line-height: 1.2;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+}
+
+.invoiceTypeBreakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.invoiceTypeRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+}
+
+.invoiceTypeRowHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.invoiceTypeRowLabel {
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: rgba($navy, 0.78);
+}
+
+.invoiceTypeRowStats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.05rem;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.invoiceTypeRowCount {
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+}
+
+.invoiceTypeRowAmount {
+  font-family: $font-sans;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba($navy, 0.52);
+  font-variant-numeric: tabular-nums;
+}
+
+.invoiceTypeBarTrack {
+  display: flex;
+  align-items: stretch;
+  height: 6px;
+  min-height: 6px;
+  border-radius: 999px;
+  background: rgba($navy, 0.06);
+  overflow: hidden;
+}
+
+.invoiceTypeBarFill {
+  display: block;
+  height: 6px;
+  min-height: 6px;
+  border-radius: 999px;
+}
+
+.realCard {
+  gap: 0.4rem;
+  min-height: 100%;
+}
+
+.realCardLink {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgba($navy, 0.16);
+      background: rgba($navy, 0.02);
+      box-shadow: 0 4px 14px rgba($navy, 0.06);
+
+      .cardLink {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.realName {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 750;
+  color: $navy;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.realMeta {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba($navy, 0.58);
+}
+
+.realFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.cardLink {
+  width: fit-content;
+  flex-shrink: 0;
+  color: $blue;
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-decoration: none;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.cardLinkGreen {
+  color: $green;
+}
+
+.rankList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rankListScrollable {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.rankListWrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rankScrollHint {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1.1rem 0 0.25rem;
+  background: linear-gradient(
+    to bottom,
+    rgba($white, 0) 0%,
+    rgba($white, 0.72) 55%,
+    rgba($white, 0.92) 100%
+  );
+  pointer-events: none;
+}
+
+.rankScrollHintIcon {
+  width: 1rem;
+  height: 1rem;
+  color: rgba($navy, 0.55);
+}
+
+.rankItem {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr) auto;
+  gap: 0.45rem 0.55rem;
+  align-items: center;
+}
+
+.rankItemPlain {
+  grid-template-columns: minmax(0, 1fr) auto;
+
+  .rankBarTrack {
+    grid-column: 1 / -1;
+  }
+}
+
+.rankIndex {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba($navy, 0.45);
+}
+
+.rankName {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: $navy;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankAmount {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+}
+
+.rankAmountStacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.05rem;
+}
+
+.rankInvoiceCount {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+}
+
+.rankAmountMuted {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba($navy, 0.52);
+}
+
+.rankBarTrack {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: stretch;
+  height: 6px;
+  min-height: 6px;
+  border-radius: 999px;
+  background: rgba($navy, 0.06);
+  overflow: hidden;
+}
+
+.rankBarFill {
+  display: block;
+  height: 6px;
+  min-height: 6px;
+  border-radius: 999px;
+  background: rgba($blue, 0.7);
+}
+
+.rankBarFillGreen {
+  background: rgba($green, 0.75);
+}
+
+.cardFooterLink {
+  margin-top: auto;
+  width: fit-content;
+  color: $blue;
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-decoration: none;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.cardFooterLinkGreen {
+  color: $green;
+}
+
+.unpaidCard {
+  border-color: rgba($navy, 0.08);
+  background: $white;
+}
+
+.unpaidList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unpaidItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid rgba(#dc2626, 0.14);
+  border-radius: $radius-sm;
+  background: $white;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgba(#dc2626, 0.18);
+      background: rgba(#dc2626, 0.015);
+      box-shadow: 0 3px 10px rgba($navy, 0.05);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid #dc2626;
+    outline-offset: 2px;
+  }
+}
+
+.unpaidNumber {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: $navy;
+}
+
+.unpaidMeta {
+  margin: 0.12rem 0 0;
+  font-size: 0.75rem;
+  color: rgba($navy, 0.58);
+}
+
+.unpaidAmount {
+  flex-shrink: 0;
+  font-size: 0.84rem;
+  font-weight: 750;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+}
+
+.emptyHint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 1.1rem 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: rgba($navy, 0.58);
+  text-align: center;
+}
+
+.emptyHintIcon {
+  width: 2.6rem;
+  height: 2.6rem;
+  color: rgba($navy, 0.32);
+}
+
+.emptyHintText {
+  margin: 0;
+}
+
+.tooltip {
+  position: relative;
+  z-index: 6;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: 8px;
+  background: $white;
+  box-shadow: 0 6px 18px rgba($navy, 0.08);
+  font-size: 0.78rem;
+  color: $navy;
+}
+
+.tooltipLabel {
+  margin: 0 0 0.15rem;
+  font-weight: 650;
+  color: rgba($navy, 0.6);
+}
+
+.tooltipValue {
+  margin: 0;
+  font-weight: 750;
+}

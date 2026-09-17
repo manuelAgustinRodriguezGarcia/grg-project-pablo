@@ -5,9 +5,10 @@ import {
 } from "@/features/admin/components/AdminSectionTransition";
 import { AdminSidebar } from "@/features/admin/components/AdminSidebar";
 import { AdminQueryProvider } from "@/features/admin/providers/AdminQueryProvider";
+import { UnsavedInvoiceDraftProvider } from "@/features/billing/components/invoices/UnsavedInvoiceDraftContext";
 import { ADMIN_USER_EMAIL_FALLBACK } from "@/features/admin/data/adminNav";
 import layoutStyles from "@/features/admin/styles/adminLayout.module.scss";
-import { requireAuthOrRedirect } from "@/server/auth";
+import { getRoleHomePath, requireAuthOrRedirect } from "@/server/auth";
 
 export const metadata: Metadata = {
   robots: {
@@ -26,17 +27,20 @@ export default async function AdminLayout({
     auth.supabaseUser.email ??
     auth.profile.email ??
     ADMIN_USER_EMAIL_FALLBACK;
+  const entryHomeHref = getRoleHomePath(auth.profile.role);
 
   return (
     <AdminQueryProvider>
-      <AdminSectionTransitionProvider>
-        <div className={layoutStyles.shell}>
-          <AdminSidebar userEmail={userEmail} userRole={auth.profile.role} />
-          <main className={layoutStyles.content} data-admin-content>
-            <div className={layoutStyles.contentBody}>{children}</div>
-            <AdminSectionLoadingOverlay />
-          </main>
-        </div>
+      <AdminSectionTransitionProvider entryHomeHref={entryHomeHref}>
+        <UnsavedInvoiceDraftProvider>
+          <div className={layoutStyles.shell}>
+            <AdminSidebar userEmail={userEmail} userRole={auth.profile.role} />
+            <main className={layoutStyles.content} data-admin-content>
+              <div className={layoutStyles.contentBody}>{children}</div>
+              <AdminSectionLoadingOverlay />
+            </main>
+          </div>
+        </UnsavedInvoiceDraftProvider>
       </AdminSectionTransitionProvider>
     </AdminQueryProvider>
   );

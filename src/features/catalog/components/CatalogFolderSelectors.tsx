@@ -7,6 +7,7 @@ import type {
   DirectoryCatalogItem,
 } from "@/features/catalog/types/catalog-navigator.types";
 import { sortByName } from "@/features/catalog/utils/sortByName";
+import { Blocks, ICON_STROKE } from "@/shared/icons";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 type CatalogFolderSelectorsProps = {
@@ -17,6 +18,7 @@ type CatalogFolderSelectorsProps = {
   isLoadingFolders: boolean;
   onSelectCatalog: (catalogId: string) => void;
   onSelectFolder: (folderId: string) => void;
+  onBackToCatalogs: () => void;
   onEditCatalog?: (catalogId: string) => void;
   onDeleteCatalog?: (catalogId: string) => void;
   onEditFolder?: (folderId: string) => void;
@@ -33,6 +35,7 @@ export function CatalogFolderSelectors({
   isLoadingFolders,
   onSelectCatalog,
   onSelectFolder,
+  onBackToCatalogs,
   onEditCatalog,
   onDeleteCatalog,
   onEditFolder,
@@ -53,6 +56,8 @@ export function CatalogFolderSelectors({
           catalog.sectionCount === 1
             ? "1 carpeta"
             : `${catalog.sectionCount} carpetas`,
+        showImage: Boolean(catalog.coverImageUrl),
+        imageUrl: catalog.coverImageUrl,
       })),
     [sortedCatalogs],
   );
@@ -66,6 +71,8 @@ export function CatalogFolderSelectors({
           folder.productCount === 1
             ? "1 producto"
             : `${folder.productCount} productos`,
+        showImage: true,
+        imageUrl: folder.coverImageUrl,
       })),
     [sortedFolders],
   );
@@ -73,6 +80,22 @@ export function CatalogFolderSelectors({
   return (
     <section className={styles.selectionPanel} aria-label="Selección de catálogo y carpeta">
       <div className={styles.dropdownRow}>
+        <button
+          type="button"
+          className={styles.viewAllCatalogsButton}
+          onClick={onBackToCatalogs}
+        >
+          <Blocks
+            className={styles.viewAllCatalogsIcon}
+            strokeWidth={ICON_STROKE}
+            aria-hidden
+          />
+          <span className={styles.viewAllCatalogsText}>
+            <span>Ver todos</span>
+            <span>los catálogos</span>
+          </span>
+        </button>
+
         <CustomDropdown
           label="Catálogo"
           options={catalogOptions}

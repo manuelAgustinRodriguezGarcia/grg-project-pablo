@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { UserRole } from "@/generated/prisma/client";
 import { userRepository } from "@/server/repositories/user.repository";
-import { AUTH_LOGIN_PATH } from "./config";
+import { AUTH_LOGIN_PATH, USER_HOME_PATH } from "./config";
 import { AuthError, AuthForbiddenError } from "./errors";
 import { createSupabaseServerClient } from "./supabase-server";
 import { resolveSupabaseAuthUser } from "./supabase-user";
@@ -41,7 +41,7 @@ async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
   if (profile.status === "INACTIVE") {
     await supabase.auth.signOut();
     throw new AuthError(
-      "Tu cuenta está desactivada. Contacta al administrador.",
+      "Su cuenta está desactivada. Contacte al administrador.",
       "USER_INACTIVE",
     );
   }
@@ -134,7 +134,7 @@ export async function requireAdminOrRedirect(
   const auth = await requireAuthOrRedirect(redirectTo);
 
   if (auth.profile.role !== "ADMIN") {
-    redirect("/admin/catalogos");
+    redirect(USER_HOME_PATH);
   }
 
   return auth;

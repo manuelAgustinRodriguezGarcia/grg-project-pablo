@@ -376,8 +376,8 @@ export function ColumnEditModal({
                 />
                 <span className={styles.columnEditDropzoneTitle}>
                   {isDragging
-                    ? "Soltá la imagen aquí"
-                    : "Arrastrá una imagen o hacé clic para buscarla"}
+                    ? "Suelte la imagen aquí"
+                    : "Arrastre una imagen o haga clic para buscarla"}
                 </span>
                 <span className={styles.columnEditDropzoneHint}>JPG, PNG o WebP</span>
               </button>

@@ -28,6 +28,7 @@ vi.mock("@/server/repositories/catalog.repository", () => ({
 vi.mock("@/server/repositories/folder.repository", () => ({
   folderRepository: {
     countByCatalogId: vi.fn(),
+    findNamesByCatalogIdOrdered: vi.fn(),
   },
 }));
 vi.mock("@/server/services/offline-sync.service", () => ({
@@ -51,6 +52,7 @@ describe("DirectoryService", () => {
     });
     vi.mocked(catalogRepository.findActiveOrdered).mockResolvedValue([]);
     vi.mocked(folderRepository.countByCatalogId).mockResolvedValue(0);
+    vi.mocked(folderRepository.findNamesByCatalogIdOrdered).mockResolvedValue([]);
     vi.mocked(offlineSyncService.getLastServerVersion).mockResolvedValue(0);
   });
 
@@ -67,7 +69,11 @@ describe("DirectoryService", () => {
       coverImagePath: "catalogs/embragues/cover.jpg",
     });
     vi.mocked(catalogRepository.findActiveOrdered).mockResolvedValue([catalog]);
-    vi.mocked(folderRepository.countByCatalogId).mockResolvedValue(3);
+    vi.mocked(folderRepository.findNamesByCatalogIdOrdered).mockResolvedValue([
+      "Disco",
+      "Prensa",
+      "Ruleman",
+    ]);
 
     const result = await directoryService.getDirectory();
 
@@ -76,11 +82,12 @@ describe("DirectoryService", () => {
       id: catalog.id,
       name: "Embragues",
       sectionCount: 3,
+      sectionNames: ["Disco", "Prensa", "Ruleman"],
       coverImageUrl: "https://example.com/signed-url",
       offlineSync: { status: "unavailable" },
     });
     expect(offlineSyncService.getLastServerVersion).toHaveBeenCalled();
-    expect(folderRepository.countByCatalogId).toHaveBeenCalledWith(catalog.id, {
+    expect(folderRepository.findNamesByCatalogIdOrdered).toHaveBeenCalledWith(catalog.id, {
       visibleToNormalUser: true,
       status: "ACTIVE",
     });
@@ -111,7 +118,7 @@ describe("DirectoryService", () => {
 
     await directoryService.getDirectory();
 
-    expect(folderRepository.countByCatalogId).toHaveBeenCalledWith(catalog.id, {});
+    expect(folderRepository.findNamesByCatalogIdOrdered).toHaveBeenCalledWith(catalog.id, {});
   });
 
   it("usa coverImageUrl null si falla la URL firmada", async () => {

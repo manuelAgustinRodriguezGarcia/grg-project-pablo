@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { useAdminSectionTransition } from "@/features/admin/components/AdminSectionTransition";
+import { useUnsavedInvoiceDraft } from "@/features/billing/components/invoices/UnsavedInvoiceDraftContext";
 import { ICON_STROKE } from "@/shared/icons";
 import styles from "./AdminNavItem.module.scss";
 
@@ -11,8 +12,10 @@ type AdminNavItemProps = {
   label: string;
   icon: LucideIcon;
   isActive: boolean;
+  isPending?: boolean;
   isCollapsed?: boolean;
-  variant?: "sidebar" | "dock";
+  variant?: "sidebar" | "dock" | "sheet";
+  onNavigate?: () => void;
 };
 
 export function AdminNavItem({
@@ -20,26 +23,48 @@ export function AdminNavItem({
   label,
   icon: Icon,
   isActive,
+  isPending = false,
   isCollapsed = false,
   variant = "sidebar",
+  onNavigate,
 }: AdminNavItemProps) {
   const sectionTransition = useAdminSectionTransition();
+  const unsavedDraft = useUnsavedInvoiceDraft();
   const isDock = variant === "dock";
+  const isSheet = variant === "sheet";
+  const showCollapsedTooltip = !isDock && !isSheet && isCollapsed;
 
   return (
-    <Link
-      href={href}
-      className={`${styles.link} ${isActive ? styles.linkActive : ""} ${isDock ? styles.linkDock : ""} ${!isDock && isCollapsed ? styles.linkCollapsed : ""}`}
-      aria-current={isActive ? "page" : undefined}
-      title={!isDock && isCollapsed ? label : undefined}
-      onClick={() => {
-        if (!isActive) {
-          sectionTransition?.beginNavigation(href);
-        }
-      }}
+    <span
+      className={`${styles.item} ${showCollapsedTooltip ? styles.itemCollapsed : ""}`}
     >
-      <Icon className={styles.icon} strokeWidth={ICON_STROKE} aria-hidden />
-      <span className={styles.label}>{label}</span>
-    </Link>
+      <Link
+        href={href}
+        data-nav-href={href}
+        className={`${styles.link} ${isActive ? styles.linkActive : ""} ${!isActive && isPending ? styles.linkPending : ""} ${isDock ? styles.linkDock : ""} ${isSheet ? styles.linkSheet : ""} ${showCollapsedTooltip ? styles.linkCollapsed : ""}`}
+        aria-current={isActive ? "page" : undefined}
+        aria-label={showCollapsedTooltip ? label : undefined}
+        onClick={(event) => {
+          if (isActive) {
+            return;
+          }
+
+          if (unsavedDraft?.interceptLeave(event, href)) {
+            return;
+          }
+
+          onNavigate?.();
+          sectionTransition?.beginNavigation(href);
+        }}
+      >
+        <Icon className={styles.icon} strokeWidth={ICON_STROKE} aria-hidden />
+        <span className={styles.label}>{label}</span>
+      </Link>
+      {showCollapsedTooltip ? (
+        <span className={styles.collapsedTooltip} role="tooltip">
+          {label}
+        </span>
+      ) : null}
+    </span>
   );
 }

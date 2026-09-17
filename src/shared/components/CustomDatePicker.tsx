@@ -4,10 +4,11 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Calendar, ChevronLeft, ChevronRight, ICON_STROKE } from "@/shared/icons";
 import {
   buildIsoDateOnly,
-  formatIsoDateOnlyForDisplay,
+  formatIsoDateOnlyNumeric,
   getDaysInMonth,
   getTodayIsoDateOnly,
   getWeekdayIndex,
+  isIsoDateOnly,
   parseIsoDateOnly,
 } from "@/shared/utils/date-only";
 import styles from "@/shared/components/CustomDatePicker.module.scss";
@@ -20,6 +21,10 @@ type CustomDatePickerProps = {
   disabled?: boolean;
   ariaLabel?: string;
   triggerClassName?: string;
+  placeholder?: string;
+  min?: string;
+  max?: string;
+  allowEmpty?: boolean;
 };
 
 type CalendarCell = {
@@ -55,12 +60,20 @@ export function CustomDatePicker({
   disabled = false,
   ariaLabel = "Seleccionar fecha",
   triggerClassName,
+  placeholder = "Seleccione una fecha",
+  min,
+  max,
+  allowEmpty = false,
 }: CustomDatePickerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
-  const parsedValue = parseIsoDateOnly(value);
+  const hasValue = isIsoDateOnly(value);
+  const parsedValue = parseIsoDateOnly(hasValue ? value : getTodayIsoDateOnly());
   const todayIso = getTodayIsoDateOnly();
   const todayParts = parseIsoDateOnly(todayIso);
+  const isTodayDisabled =
+    (min !== undefined && todayIso < min) ||
+    (max !== undefined && todayIso > max);
 
   const [isOpen, setIsOpen] = useState(false);
   const [viewYear, setViewYear] = useState(parsedValue.year);
@@ -140,7 +153,11 @@ export function CustomDatePicker({
         aria-controls={listboxId}
       >
         <Calendar className={styles.triggerIcon} strokeWidth={ICON_STROKE} aria-hidden />
-        <span className={styles.triggerLabel}>{formatIsoDateOnlyForDisplay(value)}</span>
+        <span
+          className={`${styles.triggerLabel} ${hasValue ? "" : styles.triggerPlaceholder}`}
+        >
+          {hasValue ? formatIsoDateOnlyNumeric(value) : placeholder}
+        </span>
       </button>
 
       <div
@@ -190,18 +207,22 @@ export function CustomDatePicker({
             }
 
             const cellIso = buildIsoDateOnly(cell.year, cell.month, cell.day);
-            const isSelected = cellIso === value;
+            const isSelected = hasValue && cellIso === value;
             const isToday =
               cell.day === todayParts.day &&
               cell.month === todayParts.month &&
               cell.year === todayParts.year;
+            const isOutOfRange =
+              (min !== undefined && cellIso < min) ||
+              (max !== undefined && cellIso > max);
 
             return (
               <button
                 key={cellIso}
                 type="button"
-                className={`${styles.dayButton} ${isSelected ? styles.dayButtonSelected : ""} ${isToday ? styles.dayButtonToday : ""}`}
+                className={`${styles.dayButton} ${isSelected ? styles.dayButtonSelected : ""} ${isToday ? styles.dayButtonToday : ""} ${isOutOfRange ? styles.dayButtonDisabled : ""}`}
                 onClick={() => selectDay(cell)}
+                disabled={isOutOfRange}
               >
                 {cell.day}
               </button>
@@ -210,6 +231,21 @@ export function CustomDatePicker({
         </div>
 
         <div className={styles.popoverFooter}>
+          {allowEmpty ? (
+            <button
+              type="button"
+              className={styles.clearButton}
+              onClick={() => {
+                onChange("");
+                setIsOpen(false);
+              }}
+              disabled={!hasValue}
+            >
+              Limpiar
+            </button>
+          ) : (
+            <span />
+          )}
           <button
             type="button"
             className={styles.todayButton}
@@ -219,6 +255,7 @@ export function CustomDatePicker({
               setViewMonth(todayParts.month);
               setIsOpen(false);
             }}
+            disabled={isTodayDisabled}
           >
             Hoy
           </button>

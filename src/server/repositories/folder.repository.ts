@@ -20,6 +20,7 @@ export type CreateFolderData = {
 export type UpdateFolderData = Partial<{
   name: string;
   description: string | null;
+  coverImagePath: string | null;
   status: FolderStatus;
   order: number;
   visibleToNormalUser: boolean;
@@ -247,6 +248,19 @@ export class FolderRepository {
     return prisma.catalogFolder.count({
       where: { catalogId, ...where },
     });
+  }
+
+  async findNamesByCatalogIdOrdered(
+    catalogId: string,
+    where: Prisma.CatalogFolderWhereInput = {},
+  ): Promise<string[]> {
+    const folders = await prisma.catalogFolder.findMany({
+      where: { catalogId, ...where },
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      select: { name: true },
+    });
+
+    return folders.map((folder) => folder.name);
   }
 
   async countByCatalogAndName(

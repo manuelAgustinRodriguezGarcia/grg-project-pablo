@@ -5,6 +5,7 @@ import {
   requireAuth,
   requireEditor,
 } from "@/server/auth/guards";
+import { USER_HOME_PATH } from "@/server/auth/config";
 import { userRepository } from "@/server/repositories/user.repository";
 import { createSupabaseServerClient } from "@/server/auth/supabase-server";
 import { AuthForbiddenError } from "@/server/auth/errors";
@@ -195,6 +196,6 @@ describe("requireAdminOrRedirect", () => {
     });
 
     await expect(requireAdminOrRedirect("/admin")).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirectMock).toHaveBeenCalledWith("/admin/catalogos");
+    expect(redirectMock).toHaveBeenCalledWith(USER_HOME_PATH);
   });
 });

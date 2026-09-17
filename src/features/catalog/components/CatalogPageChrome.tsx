@@ -27,7 +27,6 @@ type ActionCardId = "add-product" | "import-excel";
 type ActionCardConfig = {
   id: ActionCardId;
   title: string;
-  subtitle: string;
   icon: LucideIcon;
   variant: "blue" | "green";
 };
@@ -36,14 +35,12 @@ const ACTION_CARDS: ActionCardConfig[] = [
   {
     id: "add-product",
     title: "Agregar producto",
-    subtitle: "Agregar producto a catálogo",
     icon: Plus,
     variant: "blue",
   },
   {
     id: "import-excel",
     title: "Importar Excel",
-    subtitle: "Subir lista de productos",
     icon: FileSpreadsheet,
     variant: "green",
   },
@@ -364,7 +361,6 @@ export function CatalogPageIntro({
                   </span>
                   <span className={styles.actionCardText}>
                     <span className={styles.actionCardTitle}>{card.title}</span>
-                    <span className={styles.actionCardSubtitle}>{card.subtitle}</span>
                   </span>
                 </button>
               );

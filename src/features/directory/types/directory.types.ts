@@ -11,6 +11,7 @@ export type DirectoryCatalogItem = {
   description: string | null;
   coverImageUrl: string | null;
   sectionCount: number;
+  sectionNames: string[];
   updatedAt: string;
   order: number;
   offlineSync: DirectoryOfflineSync;

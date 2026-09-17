@@ -4,28 +4,42 @@
   position: relative;
   z-index: 60;
   flex-shrink: 0;
+  width: $sidebar-collapsed-width;
+  transition: width 0.25s ease;
+}
+
+.sidebarShell[data-collapsed="false"] {
+  width: $sidebar-width;
 }
 
 .sidebar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   width: $sidebar-width;
-  min-height: 100vh;
   padding: 1.5rem 1rem 1.25rem;
   background: linear-gradient(180deg, $navy-light 0%, $navy 55%, $navy 100%);
   border-right: 1px solid $border;
   color: $white;
   overflow: hidden;
   transition:
-    width 0.3s ease,
-    padding 0.3s ease;
+    width 0.25s ease,
+    padding 0.25s ease;
+}
+
+.expandStrip {
+  display: none;
 }
 
 .sidebarShell[data-collapsed="true"] .sidebar {
   width: $sidebar-collapsed-width;
   padding-inline: 0.5rem;
   align-items: center;
+  overflow: visible;
 }
 
 .sidebarShell[data-collapsed="true"] .top {
@@ -55,12 +69,52 @@
 }
 
 .navList {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   margin: 0;
   padding: 0;
   list-style: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -1rem;
+    z-index: 0;
+    width: calc(100% + 2rem);
+    height: var(--nav-indicator-height, 0px);
+    background: $blue;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(0, var(--nav-indicator-top, 0px), 0);
+    transition:
+      transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+      height 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+      left 0.25s ease,
+      width 0.25s ease;
+  }
+
+  &[data-indicator="placed"]::before,
+  &[data-indicator="ready"]::before {
+    opacity: 1;
+  }
+
+  &[data-indicator="placed"]::before,
+  &[data-indicator="off"]::before {
+    transition: none;
+  }
+}
+
+.navList > li {
+  position: relative;
+  z-index: 1;
+}
+
+.sidebarShell[data-collapsed="true"] .navList > li:hover,
+.sidebarShell[data-collapsed="true"] .navList > li:has(:focus-visible) {
+  z-index: 80;
 }
 
 .userArea {
@@ -88,10 +142,6 @@
   justify-content: center;
   gap: 0;
   width: 100%;
-}
-
-.collapseToggle {
-  display: none;
 }
 
 .top {
@@ -215,15 +265,11 @@
 
 .mobileDockInner {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--dock-cols, 5), minmax(0, 1fr));
   gap: 0.45rem;
   align-items: stretch;
   width: 100%;
   margin: 0 auto;
-}
-
-.mobileDock[data-admin-extra="true"] .mobileDockInner {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .mobileDockList {
@@ -231,6 +277,153 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.moreDockButton {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0.28rem 0.2rem;
+  border: none;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $text-light;
+  font-family: $font-sans;
+  font-size: 0.62rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+
+  &:focus-visible {
+    outline: 2px solid $white;
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgba($white, 0.08);
+      color: $white;
+    }
+  }
+}
+
+.moreDockButtonActive {
+  background: rgba($blue, 0.2);
+  color: $white;
+}
+
+.moreDockIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.moreDockLabel {
+  display: block;
+  max-width: 100%;
+  font-size: 0.62rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.moreOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: flex;
+  align-items: flex-end;
+  justify-content: stretch;
+  background: rgba($navy, 0.42);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+
+  &[data-open="true"] {
+    opacity: 1;
+  }
+}
+
+.moreSheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-height: min(78vh, 34rem);
+  padding: 0.65rem 0.9rem calc(0.95rem + env(safe-area-inset-bottom, 0px));
+  border-radius: 1.1rem 1.1rem 0 0;
+  background: linear-gradient(180deg, $navy-light 0%, $navy 55%, $navy 100%);
+  border-top: 1px solid $border;
+  box-shadow: 0 -12px 36px rgba($navy, 0.28);
+  color: $white;
+  transform: translateY(110%);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: auto;
+
+  &[data-open="true"] {
+    transform: translateY(0);
+  }
+}
+
+.moreCloseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 1px solid rgba($white, 0.16);
+  border-radius: $radius-sm;
+  background: rgba($white, 0.08);
+  color: $white;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+  svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $white;
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgba($white, 0.16);
+      border-color: rgba($white, 0.28);
+    }
+  }
+}
+
+.moreList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.moreFooter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba($white, 0.12);
 }
 
 @media (max-width: 1023px) {
@@ -243,78 +436,70 @@
   }
 }
 
-@media (min-width: 769px) {
-  .collapseToggle {
+@media (min-width: 1024px) {
+  .expandStrip {
     position: absolute;
-    top: 50%;
-    right: 0;
-    z-index: 61;
-    display: inline-flex;
+    top: 0;
+    bottom: 0;
+    left: $sidebar-collapsed-width;
+    z-index: 70;
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 30px;
     padding: 0;
-    border: 1px solid transparent;
-    border-radius: 50%;
-    background: $blue;
-    color: $white;
-    box-shadow: $shadow-active;
+    border: none;
+    background: #eef4fd;
+    color: $navy;
     cursor: pointer;
     opacity: 0;
-    pointer-events: none;
-    transform: translate(50%, -50%);
     appearance: none;
     -webkit-tap-highlight-color: transparent;
-    transition: opacity 0.2s ease;
-
-    // Amplía el hit-target sin cambiar el círculo visual.
-    &::before {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 3.5rem;
-      height: 4.5rem;
-      transform: translate(-50%, -50%);
-    }
+    transition:
+      left 0.25s ease,
+      opacity 0.2s ease,
+      color 0.2s ease,
+      background-color 0.2s ease;
 
     svg {
-      position: relative;
-      z-index: 1;
-      width: 1.45rem;
-      height: 1.45rem;
+      width: 1.5rem;
+      height: 1.5rem;
     }
 
-    &:hover,
-    &:active {
-      background: $blue;
-      color: $white;
-      border-color: transparent;
+    &:hover {
+      background: #e0ecfc;
+      color: $navy;
     }
 
     &:focus-visible {
       opacity: 1;
-      pointer-events: auto;
-      outline: 2px solid $white;
-      outline-offset: 2px;
+      outline: 2px solid rgba($blue, 0.45);
+      outline-offset: -2px;
     }
   }
 
-  .sidebarShell:hover .collapseToggle {
+  .sidebarShell[data-collapsed="false"] .expandStrip {
+    left: $sidebar-width;
+  }
+
+  .sidebarShell:hover .expandStrip {
     opacity: 1;
-    pointer-events: auto;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .sidebarShell,
   .sidebar,
   .logoWrap,
   .userArea,
   .userRow,
   .userMeta,
   .userEmail,
-  .collapseToggle {
+  .expandStrip,
+  .moreOverlay,
+  .moreSheet,
+  .moreDockButton,
+  .navList::before {
     transition: none;
   }
 }

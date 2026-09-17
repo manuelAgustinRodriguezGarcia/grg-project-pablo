@@ -162,7 +162,7 @@ export function PriceItemFormModal({
           {isEditMode ? "Editar ítem" : "Agregar ítem"}
         </h2>
         <p className={modalStyles.modalSubtitle}>
-          Completá los campos disponibles según la configuración de columnas.
+          Complete los campos disponibles según la configuración de columnas.
         </p>
 
         {editableColumns.length === 0 ? (

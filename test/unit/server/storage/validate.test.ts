@@ -85,6 +85,17 @@ describe("validateUpload", () => {
     ).not.toThrow();
   });
 
+  it("acepta un upload válido en billing-payment-proofs", () => {
+    expect(() =>
+      validateUpload(
+        STORAGE_BUCKETS.BILLING_PAYMENT_PROOFS,
+        Buffer.from("pdf-data"),
+        "application/pdf",
+        "comprobante.pdf",
+      ),
+    ).not.toThrow();
+  });
+
   it("acepta Uint8Array y ArrayBuffer", () => {
     expect(() =>
       validateUpload(

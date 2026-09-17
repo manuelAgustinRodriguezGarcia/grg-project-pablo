@@ -87,8 +87,8 @@ export function PriceListFormModal({
         </h2>
         <p className={modalStyles.modalSubtitle}>
           {mode === "create"
-            ? "Definí el nombre y la visibilidad de la nueva lista."
-            : "Actualizá los datos de la lista seleccionada."}
+            ? "Defina el nombre y la visibilidad de la nueva lista."
+            : "Actualice los datos de la lista seleccionada."}
         </p>
 
         <form onSubmit={handleSubmit}>

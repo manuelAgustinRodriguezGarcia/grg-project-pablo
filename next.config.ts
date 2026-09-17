@@ -30,7 +30,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-      "frame-src 'self' https://www.google.com https://maps.google.com",
+      "frame-src 'self' blob: https://www.google.com https://maps.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -61,6 +61,25 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
     ];
+  },
+  async redirects() {
+    return [
+      {
+        source: "/admin/facturacion/comprobantes",
+        destination: "/admin/facturacion/facturas",
+        permanent: true,
+      },
+    ];
+  },
+  async rewrites() {
+    return {
+      afterFiles: [
+        {
+          source: "/admin/facturacion/facturas",
+          destination: "/admin/facturacion/comprobantes",
+        },
+      ],
+    };
   },
 };
 

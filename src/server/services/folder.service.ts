@@ -6,6 +6,9 @@ import {
   type FolderColumnKeysConfig,
   type FolderWithProductCount,
 } from "@/server/repositories/folder.repository";
+import { deleteFile, uploadFile } from "@/server/storage";
+import { StorageError } from "@/server/storage/errors";
+import { STORAGE_BUCKETS } from "@/server/storage/types";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { FolderError } from "./folder.errors";
@@ -40,6 +43,13 @@ export type UpdateFolderInput = {
 export type ReorderFoldersInput = {
   catalogId: string;
   items: Array<{ id: string; order: number }>;
+};
+
+export type SetFolderCoverImageInput = {
+  folderId: string;
+  body: Buffer;
+  contentType: string;
+  originalFilename: string;
 };
 
 function assertFolderStatus(status: FolderStatus): void {
@@ -102,6 +112,23 @@ async function requireFolder(id: string): Promise<FolderWithProductCount> {
     throw new FolderError("Carpeta no encontrada.", "FOLDER_NOT_FOUND");
   }
   return folder;
+}
+
+async function deleteCoverImageBestEffort(
+  coverImagePath: string | null,
+): Promise<void> {
+  if (!coverImagePath) {
+    return;
+  }
+
+  try {
+    await deleteFile(STORAGE_BUCKETS.PRODUCT_IMAGES, coverImagePath);
+  } catch (error) {
+    console.error(
+      "[FolderService] No se pudo eliminar la imagen de portada:",
+      error,
+    );
+  }
 }
 
 async function assertUniqueFolderName(
@@ -336,8 +363,9 @@ export class FolderService {
   async deleteFolder(id: string): Promise<void> {
     const { profile: admin } = await requireAdmin();
 
-    await requireFolder(id);
+    const existing = await requireFolder(id);
 
+    await deleteCoverImageBestEffort(existing.coverImagePath);
     await uploadedFileRetentionService.purgeFilesForFolder(id);
     await folderRepository.delete(id);
 
@@ -347,6 +375,85 @@ export class FolderService {
       entityType: AUDIT_ENTITY_TYPES.FOLDER,
       entityId: id,
     });
+  }
+
+  async setCoverImage(
+    input: SetFolderCoverImageInput,
+  ): Promise<FolderWithProductCount> {
+    const { profile: admin } = await requireAdmin();
+
+    const existing = await requireFolder(input.folderId);
+    const previousPath = existing.coverImagePath;
+
+    let uploadedPath: string;
+
+    try {
+      const uploaded = await uploadFile({
+        bucket: STORAGE_BUCKETS.PRODUCT_IMAGES,
+        path: `folders/${input.folderId}/cover-${crypto.randomUUID()}`,
+        body: input.body,
+        contentType: input.contentType,
+        originalFilename: input.originalFilename,
+        upsert: false,
+        auditContext: {
+          userId: admin.id,
+        },
+      });
+      uploadedPath = uploaded.path;
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw new FolderError(error.message, "VALIDATION_ERROR");
+      }
+      throw error;
+    }
+
+    const folder = await folderRepository.update(input.folderId, {
+      coverImagePath: uploadedPath,
+    });
+
+    if (previousPath && previousPath !== uploadedPath) {
+      await deleteCoverImageBestEffort(previousPath);
+    }
+
+    auditService.logOperationSafe({
+      userId: admin.id,
+      action: AUDIT_ACTIONS.FOLDER_UPDATED,
+      entityType: AUDIT_ENTITY_TYPES.FOLDER,
+      entityId: folder.id,
+    });
+
+    return {
+      ...folder,
+      productCount: existing.productCount,
+    };
+  }
+
+  async removeCoverImage(id: string): Promise<FolderWithProductCount> {
+    const { profile: admin } = await requireAdmin();
+
+    const existing = await requireFolder(id);
+
+    if (!existing.coverImagePath) {
+      return existing;
+    }
+
+    await deleteCoverImageBestEffort(existing.coverImagePath);
+
+    const folder = await folderRepository.update(id, {
+      coverImagePath: null,
+    });
+
+    auditService.logOperationSafe({
+      userId: admin.id,
+      action: AUDIT_ACTIONS.FOLDER_UPDATED,
+      entityType: AUDIT_ENTITY_TYPES.FOLDER,
+      entityId: folder.id,
+    });
+
+    return {
+      ...folder,
+      productCount: existing.productCount,
+    };
   }
 
   async clearFolder(id: string): Promise<{ deletedProductCount: number }> {

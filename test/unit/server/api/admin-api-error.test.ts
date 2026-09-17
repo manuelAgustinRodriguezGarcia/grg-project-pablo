@@ -37,7 +37,10 @@ describe("admin-api-error", () => {
     });
   });
 
-  it("relanza errores desconocidos", () => {
-    expect(() => handleAdminApiError(new Error("boom"))).toThrow("boom");
+  it("mapea errores desconocidos a 500 JSON", async () => {
+    const response = handleAdminApiError(new Error("boom"));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ error: "boom" });
   });
 });

@@ -1,0 +1,233 @@
+@use "../../admin/styles/variables" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 2rem;
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 42rem;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2vw, 1.7rem);
+  font-weight: 750;
+  color: $navy;
+}
+
+.subtitle {
+  margin: 0;
+  color: rgba($navy, 0.65);
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-items: stretch;
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.05rem 1.1rem 1.15rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+  min-width: 0;
+}
+
+.wideCard {
+  grid-column: 1 / -1;
+}
+
+.cardHeading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.cardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba($blue, 0.1);
+  color: $blue;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: $navy;
+}
+
+.cardHint {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: rgba($navy, 0.58);
+}
+
+.currentValue {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 750;
+  color: $navy;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: rgba($navy, 0.6);
+}
+
+.inputWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba($navy, 0.16);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.95rem;
+  color: $navy;
+  appearance: textfield;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba($blue, 0.14);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.suffix {
+  flex-shrink: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: rgba($navy, 0.55);
+}
+
+.submit {
+  align-self: flex-start;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.95rem;
+  border: 0;
+  border-radius: $radius-md;
+  background: $blue;
+  color: $white;
+  font-family: $font-sans;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $blue 92%, black);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.error {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba($navy, 0.07);
+  border-radius: $radius-sm;
+  background: rgba($navy, 0.02);
+}
+
+.metaLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba($navy, 0.55);
+}
+
+.metaValue {
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: $navy;
+}
+
+.metaNote {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: rgba($navy, 0.58);
+}

@@ -131,7 +131,7 @@ export class AuthService {
     if (existing?.status === "INACTIVE") {
       await supabase.auth.signOut();
       throw new AuthError(
-        "Tu cuenta está desactivada. Contacta al administrador.",
+        "Su cuenta está desactivada. Contacte al administrador.",
         "USER_INACTIVE",
       );
     }

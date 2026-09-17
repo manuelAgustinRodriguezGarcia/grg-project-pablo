@@ -145,7 +145,7 @@ export const CatalogGlobalSearchDropdown = memo(function CatalogGlobalSearchDrop
         role="status"
       >
         <p className={styles.globalSearchDropdownHint}>
-          Escribí al menos {minChars} caracteres para buscar.
+          Escriba al menos {minChars} caracteres para buscar.
         </p>
       </div>
     );
