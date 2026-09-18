@@ -31,4 +31,18 @@ describe("useBillingSuccessShortcuts", () => {
 
     expect(onPrint).toHaveBeenCalledTimes(1);
   });
+
+  it("F2 crea nueva factura e I imprime", () => {
+    const onPrint = vi.fn();
+    const onCreateNew = vi.fn();
+
+    render(<Harness onPrint={onPrint} onCreateNew={onCreateNew} />);
+
+    fireEvent.keyDown(document, { key: "F2" });
+    fireEvent.keyDown(document, { key: "I", code: "KeyI" });
+    fireEvent.keyDown(document, { key: "N" });
+
+    expect(onCreateNew).toHaveBeenCalledTimes(1);
+    expect(onPrint).toHaveBeenCalledTimes(1);
+  });
 });

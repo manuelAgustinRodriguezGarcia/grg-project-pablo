@@ -343,8 +343,23 @@ export class BillingClientService {
 
   async updateClient(input: UpdateBillingClientInput): Promise<BillingClient> {
     const { profile: admin } = await requireAdmin();
-    await requireBillingClient(input.id);
+    const existing = await requireBillingClient(input.id);
     const sanitized = sanitizeBillingClientInput(input);
+    const hasHistory = await billingClientRepository.hasHistory(input.id);
+
+    if (hasHistory) {
+      const identificationChanged =
+        sanitized.identificationType !== existing.identificationType ||
+        sanitized.identificationNumber !== existing.identificationNumber;
+
+      if (identificationChanged) {
+        throw new BillingClientError(
+          "No se puede modificar el CUIT/DNI de un cliente con historial.",
+          "CLIENT_HAS_HISTORY",
+        );
+      }
+    }
+
     await ensureUniqueIdentification(
       sanitized.identificationType,
       sanitized.identificationNumber,
@@ -384,6 +399,14 @@ export class BillingClientService {
   async deleteClient(id: string): Promise<void> {
     const { profile: admin } = await requireAdmin();
     await requireBillingClient(id);
+
+    if (await billingClientRepository.hasHistory(id)) {
+      throw new BillingClientError(
+        "No se puede eliminar un cliente con historial de facturación.",
+        "CLIENT_HAS_HISTORY",
+      );
+    }
+
     await billingClientRepository.delete(id);
 
     auditService.logOperationSafe({

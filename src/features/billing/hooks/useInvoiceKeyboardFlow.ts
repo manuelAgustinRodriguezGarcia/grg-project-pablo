@@ -29,6 +29,7 @@ type UseInvoiceKeyboardFlowOptions = {
   rows: InvoiceItemRow[];
   addEmptyRow: () => string;
   discardTrailingEmptyRows: () => void;
+  commitQuantity?: (rowKey: string, quantity: string) => void;
   focusClientPickerWhen: boolean;
   enabled?: boolean;
 };
@@ -47,6 +48,7 @@ export function useInvoiceKeyboardFlow({
   rows,
   addEmptyRow,
   discardTrailingEmptyRows,
+  commitQuantity,
   focusClientPickerWhen,
   enabled = true,
 }: UseInvoiceKeyboardFlowOptions) {
@@ -138,13 +140,22 @@ export function useInvoiceKeyboardFlow({
 
       const row = rows.find((candidate) => candidate.key === rowKey);
       const quantityValid = row ? parseRowQuantity(row) !== null : false;
-      if (resolveQuantityEnter(quantityValid) === "stay") {
+      const result = resolveQuantityEnter({
+        quantityRaw: row?.quantity ?? "",
+        quantityValid,
+      });
+
+      if (result === "stay") {
         return;
+      }
+
+      if (result === "commit-default") {
+        commitQuantity?.(rowKey, "1");
       }
 
       focusInvoiceField(invoiceItemFieldId("price", rowKey));
     },
-    [rows],
+    [commitQuantity, rows],
   );
 
   const handlePriceKeyDown = useCallback(

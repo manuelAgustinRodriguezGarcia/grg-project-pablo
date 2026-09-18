@@ -330,11 +330,24 @@ describe("isInvoiceItemDeleteKey", () => {
 
 describe("resolveQuantityEnter", () => {
   it("avanza a precio si la cantidad es válida", () => {
-    expect(resolveQuantityEnter(true)).toBe("price");
+    expect(
+      resolveQuantityEnter({ quantityRaw: "2", quantityValid: true }),
+    ).toBe("price");
   });
 
   it("se queda en cantidad si no es válida", () => {
-    expect(resolveQuantityEnter(false)).toBe("stay");
+    expect(
+      resolveQuantityEnter({ quantityRaw: "0", quantityValid: false }),
+    ).toBe("stay");
+  });
+
+  it("trata cantidad vacía como 1 y avanza a precio", () => {
+    expect(
+      resolveQuantityEnter({ quantityRaw: "", quantityValid: false }),
+    ).toBe("commit-default");
+    expect(
+      resolveQuantityEnter({ quantityRaw: "  ", quantityValid: false }),
+    ).toBe("commit-default");
   });
 });
 

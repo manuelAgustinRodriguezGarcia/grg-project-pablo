@@ -74,7 +74,6 @@ $invoice-panel-bg: rgba($white, 0.94);
     border-color 180ms ease,
     background-color 180ms ease;
 
-  &:hover,
   &:focus-within {
     border-color: $blue;
     background: color-mix(in srgb, $blue 6%, $invoice-panel-bg);
@@ -1103,6 +1102,12 @@ $item-columns-a: minmax(10rem, 1.35fr) minmax(8rem, 1.35fr) 4.5rem 7.2rem 7.2rem
     opacity: 0.5;
     cursor: not-allowed;
   }
+
+  .shortcutKbd {
+    background: $white;
+    border-color: rgba($navy, 0.12);
+    color: $navy;
+  }
 }
 
 // ---------- Éxito ----------
@@ -1113,7 +1118,7 @@ $item-columns-a: minmax(10rem, 1.35fr) minmax(8rem, 1.35fr) 4.5rem 7.2rem 7.2rem
   align-items: stretch;
   width: fit-content;
   min-width: min(32rem, 100%);
-  max-width: min(52rem, calc(100% - 2.5rem));
+  max-width: min(52rem, calc(100% - 3.5rem));
   margin: 2.5rem auto;
   overflow: visible;
   border: 1px solid rgba($green, 0.2);
@@ -1127,7 +1132,7 @@ $item-columns-a: minmax(10rem, 1.35fr) minmax(8rem, 1.35fr) 4.5rem 7.2rem 7.2rem
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding: 2rem 1.75rem 1.5rem;
+  padding: 2rem 2.25rem 1.75rem;
 }
 
 .successIcon {
@@ -1174,7 +1179,10 @@ $item-columns-a: minmax(10rem, 1.35fr) minmax(8rem, 1.35fr) 4.5rem 7.2rem 7.2rem
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
+  box-sizing: border-box;
+  width: 100%;
   margin-top: 0.35rem;
+  padding: 0.15rem 0.35rem 0.25rem;
 
   > button,
   > a,
@@ -1216,6 +1224,7 @@ $item-columns-a: minmax(10rem, 1.35fr) minmax(8rem, 1.35fr) 4.5rem 7.2rem 7.2rem
   color: $navy;
   text-decoration: none;
   text-transform: none;
+  cursor: pointer;
   transition:
     border-color 0.18s ease,
     background-color 0.18s ease,

@@ -4,9 +4,14 @@ import {
   buildBillingDashboardMetrics,
   buildCollectionSlices,
   formatAmountTrend,
+  formatDateRangePeriodLabel,
+  formatIsoDateDisplay,
   invoicesInCalendarMonth,
   listTopRubrosByBilling,
   listUnpaidInvoicesForDashboard,
+  resolveActivityCardPeriod,
+  resolveCurrentMonthCardPeriod,
+  resolveUnpaidCardPeriod,
 } from "@/features/billing/utils/billing-metrics";
 
 function invoice(
@@ -74,6 +79,66 @@ describe("invoicesInCalendarMonth", () => {
         (item) => item.id,
       ),
     ).toEqual(["sep"]);
+  });
+});
+
+describe("period card labels", () => {
+  it("formatea fechas ISO a DD/MM/YYYY", () => {
+    expect(formatIsoDateDisplay("2026-09-01")).toBe("01/09/2026");
+    expect(formatIsoDateDisplay("2026-09-15")).toBe("15/09/2026");
+  });
+
+  it("arma el rango filtrado con guión", () => {
+    expect(formatDateRangePeriodLabel("2026-09-01", "2026-09-15")).toBe(
+      "01/09/2026 - 15/09/2026",
+    );
+  });
+
+  it("resuelve mes en curso con label en español", () => {
+    expect(resolveCurrentMonthCardPeriod(new Date("2026-09-17T12:00:00"))).toEqual(
+      {
+        label: "Septiembre 2026",
+        fromDate: "2026-09-01",
+        toDate: "2026-09-30",
+      },
+    );
+  });
+
+  it("usa total histórico para impagas sin filtro de período", () => {
+    expect(resolveUnpaidCardPeriod("", "")).toEqual({
+      label: "Total histórico",
+      fromDate: "",
+      toDate: "",
+    });
+  });
+
+  it("respeta el período filtrado en impagas", () => {
+    expect(resolveUnpaidCardPeriod("2026-09-01", "2026-09-15")).toEqual({
+      label: "01/09/2026 - 15/09/2026",
+      fromDate: "2026-09-01",
+      toDate: "2026-09-15",
+    });
+  });
+
+  it("usa mes en curso para actividad sin filtro y el rango si hay filtro", () => {
+    expect(
+      resolveActivityCardPeriod("", "", new Date("2026-09-17T12:00:00")),
+    ).toEqual({
+      label: "Septiembre 2026",
+      fromDate: "2026-09-01",
+      toDate: "2026-09-30",
+    });
+    expect(
+      resolveActivityCardPeriod(
+        "2026-08-01",
+        "2026-08-31",
+        new Date("2026-09-17T12:00:00"),
+      ),
+    ).toEqual({
+      label: "01/08/2026 - 31/08/2026",
+      fromDate: "2026-08-01",
+      toDate: "2026-08-31",
+    });
   });
 });
 
@@ -275,6 +340,7 @@ describe("buildBillingDashboardMetrics", () => {
         outstanding: 400,
         invoicesCount: 1,
         code: "",
+        identificationType: "NINGUNO",
         identification: null,
         whatsapp: null,
         email: null,

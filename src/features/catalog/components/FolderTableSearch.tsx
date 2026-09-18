@@ -27,10 +27,7 @@ export function FolderTableSearch({
   useEffect(() => {
     skipDebounceRef.current = true;
     setSearchInput(seedValue);
-    // Sync parent immediately on handoff/reset so a pending debounce from the
-    // previous input cannot overwrite the seeded query.
     onDebouncedSearchChange(seedValue.trim());
-    // Re-seed only when the parent bumps resetKey (manual clear or global handoff).
     // eslint-disable-next-line react-hooks/exhaustive-deps -- seedValue is paired with resetKey
   }, [resetKey]);
 
@@ -40,12 +37,23 @@ export function FolderTableSearch({
       return;
     }
 
+    if (!searchInput.trim()) {
+      onDebouncedSearchChange("");
+      return;
+    }
+
     const timeout = window.setTimeout(() => {
       onDebouncedSearchChange(searchInput.trim());
     }, SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeout);
   }, [onDebouncedSearchChange, searchInput]);
+
+  const clearSearch = () => {
+    skipDebounceRef.current = true;
+    setSearchInput("");
+    onDebouncedSearchChange("");
+  };
 
   return (
     <div className={styles.folderSearchWrap}>
@@ -62,7 +70,7 @@ export function FolderTableSearch({
         onChange={(event) => setSearchInput(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
-            setSearchInput("");
+            clearSearch();
           }
         }}
         disabled={disabled}
@@ -72,7 +80,7 @@ export function FolderTableSearch({
         <button
           type="button"
           className={styles.folderSearchClear}
-          onClick={() => setSearchInput("")}
+          onClick={clearSearch}
           aria-label="Limpiar búsqueda interna"
         >
           <X strokeWidth={ICON_STROKE} aria-hidden />

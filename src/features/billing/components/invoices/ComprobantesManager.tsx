@@ -25,6 +25,10 @@ import { useBillingInvoicesQuery } from "@/features/billing/hooks/useBillingInvo
 import { useBillingReceiptsQuery } from "@/features/billing/hooks/useBillingReceiptsQuery";
 import type { BillingClientListItem } from "@/features/billing/types/billing-client.types";
 import type { BillingInvoiceListItem } from "@/features/billing/types/billing-invoice.types";
+import {
+  resolveCurrentMonthCardPeriod,
+  resolveUnpaidCardPeriod,
+} from "@/features/billing/utils/billing-metrics";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import { filterInvoiceList, invoiceCanIssueReceipt, parsePaymentStatusFilter } from "@/features/billing/utils/invoice-list";
 import type { BillingPaymentStatus } from "@/generated/prisma/client";
@@ -98,20 +102,33 @@ export function ComprobantesManager({
     [invoicesQuery.data, query, invoiceType, paymentStatus, fromDate, toDate],
   );
 
+  const monthPeriod = resolveCurrentMonthCardPeriod();
+  const unpaidPeriod = resolveUnpaidCardPeriod(fromDate, toDate);
+
   const totals = useMemo(() => {
+    const source = invoicesQuery.data ?? [];
+    const monthInvoices = filterInvoiceList(source, {
+      query,
+      invoiceType,
+      paymentStatus,
+      fromDate: monthPeriod.fromDate,
+      toDate: monthPeriod.toDate,
+    });
+    const unpaidInvoices = filterInvoiceList(source, {
+      query,
+      invoiceType,
+      paymentStatus,
+      fromDate: unpaidPeriod.fromDate,
+      toDate: unpaidPeriod.toDate,
+    });
+
     let billed = 0;
     let unpaid = 0;
     let countA = 0;
     let countB = 0;
 
-    for (const invoice of filteredInvoices) {
+    for (const invoice of monthInvoices) {
       billed += invoice.totalVisualRounded;
-      if (
-        invoice.paymentMethod === "CUENTA_CORRIENTE" &&
-        invoice.outstandingAmount > 0
-      ) {
-        unpaid += invoice.outstandingAmount;
-      }
       if (invoice.invoiceType === "A") {
         countA += 1;
       } else {
@@ -119,8 +136,32 @@ export function ComprobantesManager({
       }
     }
 
-    return { billed, unpaid, countA, countB };
-  }, [filteredInvoices]);
+    for (const invoice of unpaidInvoices) {
+      if (
+        invoice.paymentMethod === "CUENTA_CORRIENTE" &&
+        invoice.outstandingAmount > 0
+      ) {
+        unpaid += invoice.outstandingAmount;
+      }
+    }
+
+    return {
+      billed,
+      unpaid,
+      countA,
+      countB,
+      invoiceCount: monthInvoices.length,
+    };
+  }, [
+    invoicesQuery.data,
+    query,
+    invoiceType,
+    paymentStatus,
+    monthPeriod.fromDate,
+    monthPeriod.toDate,
+    unpaidPeriod.fromDate,
+    unpaidPeriod.toDate,
+  ]);
 
   const listError =
     invoicesQuery.error instanceof Error ? invoicesQuery.error.message : null;
@@ -153,9 +194,14 @@ export function ComprobantesManager({
         />
 
         <div className={styles.comprobantesLayout}>
-          <div className={styles.totalsStrip} aria-label="Totales filtrados">
+          <div className={styles.totalsStrip} aria-label="Totales del período">
             <div className={styles.totalsItem}>
-              <span className={styles.totalsLabel}>Total facturado</span>
+              <span className={styles.totalsLabel}>
+                Total facturado{" "}
+                <span className={styles.totalsPeriod}>
+                  ({monthPeriod.label})
+                </span>
+              </span>
               <span
                 className={`${styles.totalsValue} ${styles.totalsValueAccent}`}
               >
@@ -163,19 +209,32 @@ export function ComprobantesManager({
               </span>
             </div>
             <div className={styles.totalsItem}>
-              <span className={styles.totalsLabel}>Facturas</span>
-              <span className={styles.totalsValue}>
-                {filteredInvoices.length}
+              <span className={styles.totalsLabel}>
+                Cantidad de facturas{" "}
+                <span className={styles.totalsPeriod}>
+                  ({monthPeriod.label})
+                </span>
               </span>
+              <span className={styles.totalsValue}>{totals.invoiceCount}</span>
             </div>
             <div className={styles.totalsItem}>
-              <span className={styles.totalsLabel}>Tipo A / B</span>
+              <span className={styles.totalsLabel}>
+                Tipo A / B{" "}
+                <span className={styles.totalsPeriod}>
+                  ({monthPeriod.label})
+                </span>
+              </span>
               <span className={styles.totalsValue}>
                 {totals.countA} / {totals.countB}
               </span>
             </div>
             <div className={styles.totalsItem}>
-              <span className={styles.totalsLabel}>Impagas</span>
+              <span className={styles.totalsLabel}>
+                Facturas impagas{" "}
+                <span className={styles.totalsPeriod}>
+                  ({unpaidPeriod.label})
+                </span>
+              </span>
               <span
                 className={`${styles.totalsValue} ${styles.totalsValueDanger}`}
               >

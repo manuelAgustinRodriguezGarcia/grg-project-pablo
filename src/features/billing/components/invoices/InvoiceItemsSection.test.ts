@@ -22,7 +22,7 @@ describe("itemRowPatchForRubroQuery", () => {
       rubroName: "",
       rubroQuery: "",
       description: "",
-      quantity: "1",
+      quantity: "",
       unitPrice: "",
     });
   });
@@ -45,7 +45,7 @@ describe("withoutTrailingEmptyDraftRows", () => {
     rubroName: "",
     rubroQuery: "",
     description: "",
-    quantity: "1",
+    quantity: "",
     unitPrice: "",
   };
   const filled: InvoiceItemRow = {

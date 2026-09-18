@@ -132,7 +132,6 @@ export function InvoiceDocumentActions({
             <>
               {downloadButton}
               {shareMenu}
-              {printButton}
             </>
           );
           break;

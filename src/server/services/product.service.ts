@@ -23,6 +23,7 @@ import {
 } from "./product-field.builder";
 import { equivalenceService } from "./equivalence.service";
 import { getProductTableColumns, getAdminFilterableColumnKeys } from "@/features/catalog/utils/product-table-columns";
+import { pageForProductIndex } from "@/features/catalog/utils/product-page";
 import type { EquivalenceListItem } from "./equivalence.service";
 import { columnHelpService } from "./column-help.service";
 import {
@@ -102,6 +103,20 @@ export type ListProductsInput = {
   query?: string;
   filters?: ColumnFilterInput[] | unknown;
   includeFullUrls?: boolean;
+};
+
+export type LocateProductPageInput = {
+  folderId: string;
+  productId: string;
+  pageSize?: number;
+  filters?: ColumnFilterInput[] | unknown;
+};
+
+export type LocateProductPageResult = {
+  page: number;
+  pageSize: number;
+  total: number;
+  index: number;
 };
 
 export type MutateProductInput = {
@@ -692,6 +707,128 @@ export class ProductService {
     });
 
     return this.getProduct(duplicate.id);
+  }
+
+  async locateProductPageInFolder(
+    input: LocateProductPageInput,
+  ): Promise<LocateProductPageResult> {
+    const { profile } = await requireAuth();
+    const role = profile.role;
+
+    const folder = await folderRepository.findById(input.folderId);
+    if (!folder) {
+      throw new ProductError("Carpeta no encontrada.", "FOLDER_NOT_FOUND");
+    }
+
+    const catalog = await catalogRepository.findById(folder.catalogId);
+    if (!catalog) {
+      throw new ProductError("Catálogo no encontrado.", "CATALOG_NOT_FOUND");
+    }
+
+    try {
+      visibilityService.assertCatalogVisibleForRole(catalog, role);
+      visibilityService.assertFolderVisibleForRole(folder, role);
+    } catch (error) {
+      if (error instanceof VisibilityError) {
+        throw new ProductError(error.message, "FOLDER_NOT_FOUND");
+      }
+      throw error;
+    }
+
+    const pageSize = input.pageSize ?? 50;
+    if (pageSize < 1) {
+      throw new ProductError("Parámetros de paginación inválidos.", "VALIDATION_ERROR");
+    }
+
+    const columns = await columnRepository.findByFolderIdOrdered(
+      folder.id,
+      visibilityService.columnWhereForRole(role),
+    );
+
+    const parsedFilters = columnFilterService.parseFilters(input.filters);
+    const filterableKeys = getAdminFilterableColumnKeys(columns);
+    columnFilterService.validateFiltersForColumns(
+      parsedFilters,
+      columns,
+      filterableKeys,
+      { requireFilterableColumn: false },
+    );
+
+    const { prismaFilters, jsonTextFilters } = columnFilterService.partitionFilters(
+      parsedFilters,
+      columns,
+    );
+
+    let where: Parameters<typeof productRepository.findOrderedIds>[0] =
+      parsedFilters.length > 0
+        ? buildFolderProductWhere({
+            folderId: folder.id,
+            searchableKeys: resolveSearchableKeys(folder, columns),
+            filters: prismaFilters,
+            columns,
+          })
+        : { folderId: folder.id };
+
+    let restrictToIds: string[] | undefined;
+    if (jsonTextFilters.length > 0) {
+      restrictToIds = await productRepository.findIdsMatchingJsonTextFilters(
+        folder.id,
+        jsonTextFilters,
+      );
+
+      where = {
+        AND: [
+          where,
+          restrictToIds.length > 0
+            ? { id: { in: restrictToIds } }
+            : { id: { in: [] } },
+        ],
+      };
+    }
+
+    const canUseRankQuery =
+      parsedFilters.length === 0 ||
+      (prismaFilters.length === 0 && jsonTextFilters.length > 0);
+
+    let index: number;
+    let total: number;
+
+    if (canUseRankQuery) {
+      const [rankIndex, counted] = await Promise.all([
+        productRepository.findIndexInFolderByRank(
+          folder.id,
+          input.productId,
+          restrictToIds,
+        ),
+        restrictToIds
+          ? Promise.resolve(restrictToIds.length)
+          : productRepository.count(where),
+      ]);
+
+      if (rankIndex === null) {
+        throw new ProductError("Producto no encontrado.", "PRODUCT_NOT_FOUND");
+      }
+
+      index = rankIndex;
+      total = counted;
+    } else {
+      const orderedIds = await productRepository.findOrderedIds(where);
+      index = orderedIds.indexOf(input.productId);
+      total = orderedIds.length;
+    }
+
+    const page = pageForProductIndex(index, pageSize);
+
+    if (page === null) {
+      throw new ProductError("Producto no encontrado.", "PRODUCT_NOT_FOUND");
+    }
+
+    return {
+      page,
+      pageSize,
+      total,
+      index,
+    };
   }
 
   async syncEquivalencesForFolder(folderId: string): Promise<void> {

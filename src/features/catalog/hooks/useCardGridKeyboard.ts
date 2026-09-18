@@ -137,6 +137,7 @@ export function useCardGridKeyboard({
         return;
       }
       card.focus({ preventScroll: true });
+      card.scrollIntoView({ block: "nearest", inline: "nearest" });
     });
   }, []);
 

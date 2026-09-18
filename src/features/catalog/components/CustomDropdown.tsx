@@ -12,6 +12,7 @@ import {
 } from "react";
 import { ICON_STROKE, Pencil, Trash2 } from "@/shared/icons";
 import { CATALOG_COVER_FALLBACK_SRC } from "@/features/catalog/utils/catalog-cover";
+import { scrollOptionIntoMenu } from "@/features/catalog/utils/catalog-view";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 export type DropdownOptionBadge = {
@@ -223,7 +224,19 @@ function DropdownOptionRow({
     if (!isHighlighted) {
       return;
     }
-    rowRef.current?.scrollIntoView({ block: "nearest" });
+
+    const row = rowRef.current;
+    if (!row) {
+      return;
+    }
+
+    const menu = row.closest('[role="listbox"]') as HTMLElement | null;
+    if (!menu) {
+      row.scrollIntoView({ block: "nearest" });
+      return;
+    }
+
+    scrollOptionIntoMenu(row, menu);
   }, [isHighlighted]);
 
   const revealActive = isActive || isHighlighted;

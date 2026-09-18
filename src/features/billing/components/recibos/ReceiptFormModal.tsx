@@ -20,11 +20,14 @@ import {
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import { useEscapeToClose } from "@/features/billing/hooks/useBillingModalKeyboard";
 import {
+  allocateCreditFifo,
+  cashNeededForInvoice,
   clientAvailableCreditCents,
   formatPesosInput,
   maskPesosInput,
   parsePesosInput,
   redistributeFifo,
+  remainingAfterAllocation,
   selectedAllocationCents,
   splitApplyWithCredit,
   type ReceiptAllocationRow,
@@ -98,6 +101,7 @@ type AllocationEdit = {
   selected: boolean;
   applyCents: number;
   applyLocked: boolean;
+  cashCents: number;
 };
 
 function baseRowsForMode(
@@ -112,7 +116,7 @@ function baseRowsForMode(
     case "allocate":
       return nextRows.map((row) => ({ ...row, selected: true }));
     case "create":
-      return nextRows;
+      return nextRows.map((row) => ({ ...row, selected: true }));
     default: {
       const _exhaustive: never = mode;
       return _exhaustive;
@@ -136,13 +140,9 @@ export function ReceiptFormModal({
         ? mode.receipt.clientId
         : null;
   const [clientId, setClientId] = useState(lockedClientId ?? "");
-  const [amountPesos, setAmountPesos] = useState(
-    isAllocate ? String(mode.receipt.remainingAmount) : "",
-  );
   const [paymentMethod, setPaymentMethod] =
     useState<BillingReceiptPaymentMethod>("EFECTIVO");
   const [notes, setNotes] = useState("");
-  const [useCredit, setUseCredit] = useState(false);
   const [edits, setEdits] = useState<Record<string, AllocationEdit>>({});
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -188,10 +188,8 @@ export function ReceiptFormModal({
   useEscapeToClose(requestClose, !isBusy && createdReceipt === null);
 
   function resetCreateForm() {
-    setAmountPesos("");
     setPaymentMethod("EFECTIVO");
     setNotes("");
-    setUseCredit(false);
     setEdits({});
     setError(null);
     setFocusedApplyInvoiceId(null);
@@ -202,43 +200,92 @@ export function ReceiptFormModal({
     }
   }
 
-  const amountCents = isAllocate
-    ? pesosToCents(mode.receipt.remainingAmount)
-    : (parsePesosInput(amountPesos) ?? 0);
-
-  const excludeReceiptId = isAllocate ? mode.receipt.id : null;
+  const excludeReceiptId = mode.kind === "allocate" ? mode.receipt.id : null;
   const creditCents = clientAvailableCreditCents(
     receipts,
     invoices,
     clientId,
     excludeReceiptId,
   );
-  const usedCreditCents = !isAllocate && useCredit ? creditCents : 0;
-  const applyPoolCents = amountCents + usedCreditCents;
 
   const rows = useMemo(() => {
     if (!clientId) {
-      return [];
+      return [] as Array<
+        ReceiptAllocationRow & {
+          creditAppliedCents: number;
+          cashCents: number;
+          invoiceTotal: number;
+        }
+      >;
     }
 
-    const merged = baseRowsForMode(mode, invoices, clientId).map((row) => {
+    const base = baseRowsForMode(mode, invoices, clientId);
+    const creditByInvoice =
+      mode.kind === "allocate"
+        ? new Map<string, number>()
+        : allocateCreditFifo(base, creditCents);
+    const totalById = new Map(
+      invoices.map((invoice) => [invoice.id, invoice.totalVisualRounded]),
+    );
+
+    if (mode.kind === "allocate") {
+      const allocateAmount = pesosToCents(mode.receipt.remainingAmount);
+      const merged = base.map((row) => {
+        const edit = edits[row.invoiceId];
+        if (!edit) {
+          return {
+            ...row,
+            creditAppliedCents: 0,
+            cashCents: 0,
+            invoiceTotal: totalById.get(row.invoiceId) ?? 0,
+          };
+        }
+        return {
+          ...row,
+          selected: edit.selected,
+          applyCents: edit.selected ? edit.applyCents : 0,
+          applyLocked: edit.selected ? edit.applyLocked : false,
+          creditAppliedCents: 0,
+          cashCents: edit.selected ? edit.applyCents : 0,
+          invoiceTotal: totalById.get(row.invoiceId) ?? 0,
+        };
+      });
+      return redistributeFifo(merged, allocateAmount).map((row) => ({
+        ...row,
+        creditAppliedCents: 0,
+        cashCents: row.applyCents,
+        invoiceTotal: totalById.get(row.invoiceId) ?? 0,
+      }));
+    }
+
+    return base.map((row) => {
+      const creditAppliedCents = creditByInvoice.get(row.invoiceId) ?? 0;
       const edit = edits[row.invoiceId];
-      const selected =
-        applyPoolCents > 0 && (edit ? edit.selected : row.selected);
-      if (!edit) {
-        return { ...row, selected };
-      }
+      const maxCash = cashNeededForInvoice(
+        row.outstandingCents,
+        creditAppliedCents,
+      );
+      const cashCents = Math.min(edit?.cashCents ?? 0, maxCash);
+      const applyCents = creditAppliedCents + cashCents;
       return {
         ...row,
-        selected,
-        applyCents: selected ? edit.applyCents : 0,
-        applyLocked: selected ? edit.applyLocked : false,
+        selected: applyCents > 0,
+        applyCents,
+        applyLocked: Boolean(edit?.applyLocked),
+        creditAppliedCents,
+        cashCents,
+        invoiceTotal: totalById.get(row.invoiceId) ?? 0,
       };
     });
+  }, [clientId, creditCents, edits, invoices, mode]);
 
-    return redistributeFifo(merged, applyPoolCents);
-  }, [applyPoolCents, clientId, edits, invoices, mode]);
-
+  const amountCents =
+    mode.kind === "allocate"
+      ? pesosToCents(mode.receipt.remainingAmount)
+      : rows.reduce((sum, row) => sum + row.cashCents, 0);
+  const usedCreditCents = isAllocate
+    ? 0
+    : rows.reduce((sum, row) => sum + row.creditAppliedCents, 0);
   const allocatedCents = selectedAllocationCents(rows);
   const creditAppliedCents = Math.min(usedCreditCents, allocatedCents);
   const cashAppliedCents = Math.max(0, allocatedCents - creditAppliedCents);
@@ -247,13 +294,14 @@ export function ReceiptFormModal({
     (sum, row) => sum + row.outstandingCents,
     0,
   );
-  const cashNeededCents = Math.max(0, outstandingTotalCents - usedCreditCents);
 
-  const canSelectInvoices = applyPoolCents > 0;
-  const canUseCredit = !isAllocate && creditCents > 0;
+  const canSelectInvoices = isAllocate ? amountCents > 0 : true;
   const hasClientCredit = Boolean(clientId && creditCents > 0);
 
   function toggleInvoiceSelected(invoiceId: string, selected: boolean) {
+    if (!isAllocate) {
+      return;
+    }
     if (selected && !canSelectInvoices) {
       return;
     }
@@ -263,29 +311,36 @@ export function ReceiptFormModal({
         selected,
         applyLocked: false,
         applyCents: 0,
+        cashCents: 0,
       },
     }));
   }
 
-  function fillAllOutstanding() {
-    if (isAllocate || isBusy || outstandingTotalCents <= 0) {
+  function setRowCash(invoiceId: string, cashCents: number) {
+    const row = rows.find((candidate) => candidate.invoiceId === invoiceId);
+    const maxCash = row
+      ? cashNeededForInvoice(row.outstandingCents, row.creditAppliedCents)
+      : Math.max(0, cashCents);
+    const nextCash = Math.min(Math.max(0, cashCents), maxCash);
+    setEdits((current) => ({
+      ...current,
+      [invoiceId]: {
+        selected: true,
+        applyLocked: true,
+        applyCents: nextCash,
+        cashCents: nextCash,
+      },
+    }));
+  }
+
+  function fillRowOneHundred(invoiceId: string) {
+    const row = rows.find((candidate) => candidate.invoiceId === invoiceId);
+    if (!row) {
       return;
     }
-
-    setAmountPesos(
-      cashNeededCents > 0 ? formatPesosInput(cashNeededCents) : "",
-    );
-    setEdits(
-      Object.fromEntries(
-        rows.map((row) => [
-          row.invoiceId,
-          {
-            selected: true,
-            applyLocked: false,
-            applyCents: 0,
-          },
-        ]),
-      ),
+    setRowCash(
+      invoiceId,
+      cashNeededForInvoice(row.outstandingCents, row.creditAppliedCents),
     );
   }
 
@@ -307,7 +362,6 @@ export function ReceiptFormModal({
     setClientId(nextClientId);
     setClientQuery("");
     setEdits({});
-    setUseCredit(false);
   }
 
   async function handleSubmit() {
@@ -606,99 +660,20 @@ export function ReceiptFormModal({
                 />
               )}
             </div>
-            <div className={styles.receiptField}>
-              <label className={modalStyles.formLabel} htmlFor="receipt-credit">
-                Saldo a favor
-              </label>
-              <div className={styles.receiptAmountInputRow}>
-                <div className={styles.receiptAmountInputGrow}>
-                  <input
-                    id="receipt-credit"
-                    className={`${modalStyles.formInput}${
-                      hasClientCredit ? "" : ` ${styles.receiptCreditInputEmpty}`
-                    }`}
-                    readOnly
-                    tabIndex={-1}
-                    placeholder="0,00"
-                    value={
-                      hasClientCredit
-                        ? formatArsExact(centsToPesos(creditCents))
-                        : ""
-                    }
-                  />
-                </div>
-                {isAllocate ? null : (
-                  <label
-                    className={[
-                      styles.receiptUseCredit,
-                      useCredit ? styles.receiptUseCreditOn : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                  >
-                    <input
-                      className={styles.allocationCheckbox}
-                      type="checkbox"
-                      checked={useCredit}
-                      disabled={isBusy || !canUseCredit}
-                      onChange={() => {
-                        if (!canUseCredit) {
-                          return;
-                        }
-                        setUseCredit((current) => !current);
-                      }}
-                    />
-                    <span className={styles.allocationCheckBox} aria-hidden />
-                    <span>Utilizar saldo</span>
-                  </label>
-                )}
+            {isAllocate && mode.kind === "allocate" ? (
+              <div className={styles.receiptField}>
+                <label className={modalStyles.formLabel} htmlFor="receipt-amount">
+                  Importe a imputar
+                </label>
+                <input
+                  id="receipt-amount"
+                  className={modalStyles.formInput}
+                  readOnly
+                  tabIndex={-1}
+                  value={formatArsExact(mode.receipt.remainingAmount)}
+                />
               </div>
-            </div>
-          </div>
-
-          <div
-            className={
-              isAllocate ? styles.receiptField : styles.receiptAmountRow
-            }
-          >
-            <div className={styles.receiptField}>
-              <label className={modalStyles.formLabel} htmlFor="receipt-amount">
-                Importe cobrado
-              </label>
-              <div className={styles.receiptAmountInputRow}>
-                <div className={styles.receiptAmountInputGrow}>
-                  <input
-                    id="receipt-amount"
-                    className={modalStyles.formInput}
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={
-                      isAllocate
-                        ? formatArsExact(mode.receipt.remainingAmount)
-                        : amountPesos
-                    }
-                    onChange={(event) =>
-                      setAmountPesos(maskPesosInput(event.target.value))
-                    }
-                    disabled={isAllocate || isBusy}
-                  />
-                </div>
-                {isAllocate ? null : (
-                  <button
-                    type="button"
-                    className={styles.receiptFillAllButton}
-                    onClick={fillAllOutstanding}
-                    disabled={isBusy || outstandingTotalCents <= 0}
-                    aria-label="Cargar el 100% del saldo impago y seleccionar todas las facturas"
-                  >
-                    100%
-                  </button>
-                )}
-              </div>
-            </div>
-            {isAllocate ? null : (
+            ) : (
               <div className={styles.receiptField}>
                 <label className={modalStyles.formLabel} htmlFor="receipt-method">
                   Forma de pago
@@ -737,6 +712,13 @@ export function ReceiptFormModal({
           </div>
 
           <p className={modalStyles.formLabel}>Facturas impagas</p>
+          {hasClientCredit && !isAllocate ? (
+            <p className={styles.proofHint}>
+              Saldo a favor disponible:{" "}
+              {formatArsExact(centsToPesos(creditCents))}. Se aplica
+              automáticamente a la factura más antigua.
+            </p>
+          ) : null}
           {rows.length === 0 ? (
             <p className={styles.proofHint}>
               Este cliente no tiene facturas con saldo. El recibo queda a
@@ -747,11 +729,20 @@ export function ReceiptFormModal({
               <table className={styles.allocationTable}>
                 <thead>
                   <tr>
-                    <th scope="col"> </th>
-                    <th scope="col">Factura</th>
+                    {isAllocate ? <th scope="col"> </th> : null}
+                    <th scope="col">Número factura</th>
                     <th scope="col">Fecha</th>
-                    <th scope="col">Saldo</th>
-                    <th scope="col">Aplica</th>
+                    <th scope="col">Importe factura</th>
+                    {isAllocate ? null : (
+                      <th scope="col">Saldo a favor aplicado</th>
+                    )}
+                    <th scope="col">{isAllocate ? "Aplica" : "Importe cobrado"}</th>
+                    {isAllocate ? null : <th scope="col"> </th>}
+                    {isAllocate ? (
+                      <th scope="col">Saldo</th>
+                    ) : (
+                      <th scope="col">Saldo restante</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -760,53 +751,79 @@ export function ReceiptFormModal({
                     if (!invoice) {
                       return null;
                     }
+                    const remainingCents = remainingAfterAllocation(
+                      row.outstandingCents,
+                      row.creditAppliedCents,
+                      row.cashCents,
+                    );
                     return (
                       <tr
                         key={row.invoiceId}
                         className={[
                           styles.allocationRow,
                           row.selected ? styles.allocationRowSelected : "",
-                          isBusy || !canSelectInvoices
+                          isBusy || (isAllocate && !canSelectInvoices)
                             ? styles.allocationRowBusy
                             : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
-                        onClick={() => {
-                          if (isBusy || !canSelectInvoices) {
-                            return;
-                          }
-                          toggleInvoiceSelected(row.invoiceId, !row.selected);
-                        }}
-                      >
-                        <td className={styles.allocationCheckCell}>
-                          <label
-                            className={styles.allocationCheck}
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <input
-                              className={styles.allocationCheckbox}
-                              type="checkbox"
-                              checked={row.selected}
-                              disabled={isBusy || !canSelectInvoices}
-                              aria-label={`Imputar ${invoice.invoiceNumber}`}
-                              onChange={(event) => {
+                        onClick={
+                          isAllocate
+                            ? () => {
+                                if (isBusy || !canSelectInvoices) {
+                                  return;
+                                }
                                 toggleInvoiceSelected(
                                   row.invoiceId,
-                                  event.target.checked,
+                                  !row.selected,
                                 );
-                              }}
-                            />
-                            <span className={styles.allocationCheckBox} aria-hidden />
-                          </label>
-                        </td>
+                              }
+                            : undefined
+                        }
+                      >
+                        {isAllocate ? (
+                          <td className={styles.allocationCheckCell}>
+                            <label
+                              className={styles.allocationCheck}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <input
+                                className={styles.allocationCheckbox}
+                                type="checkbox"
+                                checked={row.selected}
+                                disabled={isBusy || !canSelectInvoices}
+                                aria-label={`Imputar ${invoice.invoiceNumber}`}
+                                onChange={(event) => {
+                                  toggleInvoiceSelected(
+                                    row.invoiceId,
+                                    event.target.checked,
+                                  );
+                                }}
+                              />
+                              <span
+                                className={styles.allocationCheckBox}
+                                aria-hidden
+                              />
+                            </label>
+                          </td>
+                        ) : null}
                         <td>
                           {invoice.invoiceType} {invoice.invoiceNumber}
                         </td>
                         <td>
                           {DATE_FORMATTER.format(new Date(invoice.issuedAt))}
                         </td>
-                        <td>{formatArsExact(invoice.outstandingAmount)}</td>
+                        <td>{formatArsExact(row.invoiceTotal)}</td>
+                        {isAllocate ? null : (
+                          <td>
+                            {row.creditAppliedCents > 0
+                              ? formatArsExact(
+                                  centsToPesos(row.creditAppliedCents),
+                                )
+                              : "—"}
+                          </td>
+                        )}
                         <td>
                           <input
                             className={styles.allocationAmountInput}
@@ -814,23 +831,32 @@ export function ReceiptFormModal({
                             autoComplete="off"
                             spellCheck={false}
                             placeholder="0,00"
-                            disabled={!row.selected || isBusy}
+                            disabled={
+                              isBusy || (isAllocate && !row.selected)
+                            }
                             value={
-                              !row.selected
-                                ? ""
+                              isAllocate
+                                ? !row.selected
+                                  ? ""
+                                  : focusedApplyInvoiceId === row.invoiceId
+                                    ? focusedApplyDraft
+                                    : row.applyCents === 0
+                                      ? ""
+                                      : formatPesosInput(row.applyCents)
                                 : focusedApplyInvoiceId === row.invoiceId
                                   ? focusedApplyDraft
-                                  : row.applyCents === 0
+                                  : row.cashCents === 0
                                     ? ""
-                                    : formatPesosInput(row.applyCents)
+                                    : formatPesosInput(row.cashCents)
                             }
                             onClick={(event) => event.stopPropagation()}
                             onFocus={() => {
                               setFocusedApplyInvoiceId(row.invoiceId);
+                              const cents = isAllocate
+                                ? row.applyCents
+                                : row.cashCents;
                               setFocusedApplyDraft(
-                                row.applyCents === 0
-                                  ? ""
-                                  : formatPesosInput(row.applyCents),
+                                cents === 0 ? "" : formatPesosInput(cents),
                               );
                             }}
                             onBlur={() => {
@@ -842,20 +868,49 @@ export function ReceiptFormModal({
                                 event.target.value,
                               );
                               setFocusedApplyDraft(nextValue);
-                              const parsed = parsePesosInput(nextValue);
-                              setEdits((current) => ({
-                                ...current,
-                                [row.invoiceId]: {
-                                  selected: true,
-                                  applyLocked: true,
-                                  applyCents: Math.min(
-                                    parsed ?? 0,
-                                    row.outstandingCents,
-                                  ),
-                                },
-                              }));
+                              const parsed = parsePesosInput(nextValue) ?? 0;
+                              if (isAllocate) {
+                                setEdits((current) => ({
+                                  ...current,
+                                  [row.invoiceId]: {
+                                    selected: true,
+                                    applyLocked: true,
+                                    applyCents: Math.min(
+                                      parsed,
+                                      row.outstandingCents,
+                                    ),
+                                    cashCents: Math.min(
+                                      parsed,
+                                      row.outstandingCents,
+                                    ),
+                                  },
+                                }));
+                                return;
+                              }
+                              setRowCash(row.invoiceId, parsed);
                             }}
                           />
+                        </td>
+                        {isAllocate ? null : (
+                          <td>
+                            <button
+                              type="button"
+                              className={styles.receiptFillAllButton}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                fillRowOneHundred(row.invoiceId);
+                              }}
+                              disabled={isBusy}
+                              aria-label={`Cargar el 100% de ${invoice.invoiceNumber}`}
+                            >
+                              100%
+                            </button>
+                          </td>
+                        )}
+                        <td>
+                          {isAllocate
+                            ? formatArsExact(invoice.outstandingAmount)
+                            : formatArsExact(centsToPesos(remainingCents))}
                         </td>
                       </tr>
                     );
@@ -863,33 +918,24 @@ export function ReceiptFormModal({
                 </tbody>
                 <tfoot>
                   <tr className={styles.allocationTotalRow}>
-                    <td />
-                    <td colSpan={2}>Total</td>
+                    {isAllocate ? <td /> : null}
+                    <td colSpan={isAllocate ? 2 : 3}>Total</td>
                     <td>
                       {formatArsExact(centsToPesos(outstandingTotalCents))}
                     </td>
+                    {isAllocate ? null : (
+                      <td>
+                        {usedCreditCents > 0
+                          ? formatArsExact(centsToPesos(usedCreditCents))
+                          : "—"}
+                      </td>
+                    )}
+                    <td>
+                      {formatArsExact(centsToPesos(amountCents))}
+                    </td>
+                    {isAllocate ? null : <td />}
                     <td />
                   </tr>
-                  {usedCreditCents > 0 ? (
-                    <>
-                      <tr className={styles.allocationCreditRow}>
-                        <td />
-                        <td colSpan={2}>Saldo a favor</td>
-                        <td>
-                          −{formatArsExact(centsToPesos(usedCreditCents))}
-                        </td>
-                        <td />
-                      </tr>
-                      <tr className={styles.allocationDueRow}>
-                        <td />
-                        <td colSpan={2}>A cobrar</td>
-                        <td>
-                          {formatArsExact(centsToPesos(cashNeededCents))}
-                        </td>
-                        <td />
-                      </tr>
-                    </>
-                  ) : null}
                 </tfoot>
               </table>
             </div>
@@ -902,6 +948,9 @@ export function ReceiptFormModal({
                 Saldo a favor {formatArsExact(centsToPesos(creditAppliedCents))}
               </span>
             ) : null}
+            <span>
+              Cobrado {formatArsExact(centsToPesos(amountCents))}
+            </span>
             <span>A cuenta {formatArsExact(centsToPesos(remainingToAccount))}</span>
           </p>
 

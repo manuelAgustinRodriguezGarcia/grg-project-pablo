@@ -79,49 +79,56 @@ export function useBillingSuccessShortcuts(
         return;
       }
 
+      if (event.key === "F2") {
+        if (!onCreateNew) {
+          return;
+        }
+        event.preventDefault();
+        onCreateNew();
+        return;
+      }
+
       if (isTypingTarget(event.target)) {
         return;
       }
 
-      const key = event.key.toLowerCase();
-      switch (key) {
-        case "i":
-          if (!onPrint) {
-            return;
-          }
-          event.preventDefault();
-          onPrint();
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      const code = event.code;
+
+      if (key === "i" || code === "KeyI") {
+        if (!onPrint) {
           return;
-        case "d":
-          if (!onDownload) {
-            return;
-          }
-          event.preventDefault();
-          onDownload();
+        }
+        event.preventDefault();
+        onPrint();
+        return;
+      }
+
+      if (key === "d" || code === "KeyD") {
+        if (!onDownload) {
           return;
-        case "c":
-          if (!onShare) {
-            return;
-          }
-          event.preventDefault();
-          onShare();
+        }
+        event.preventDefault();
+        onDownload();
+        return;
+      }
+
+      if (key === "c" || code === "KeyC") {
+        if (!onShare) {
           return;
-        case "n":
-          if (!onCreateNew) {
-            return;
-          }
-          event.preventDefault();
-          onCreateNew();
+        }
+        event.preventDefault();
+        onShare();
+        return;
+      }
+
+      if (key === "l" || code === "KeyL") {
+        if (!onList) {
           return;
-        case "l":
-          if (!onList) {
-            return;
-          }
-          event.preventDefault();
-          onList();
-          return;
-        default:
-          return;
+        }
+        event.preventDefault();
+        onList();
+        return;
       }
     }
 

@@ -49,7 +49,7 @@ import {
   pesosToCents,
   type InvoiceTotals,
 } from "@/shared/utils/billing-invoice-totals";
-import { AlertTriangle, CheckCircle2, ICON_STROKE, Info, ReceiptText } from "@/shared/icons";
+import { AlertTriangle, CheckCircle2, ICON_STROKE, Info, Printer, ReceiptText } from "@/shared/icons";
 import { InvoiceClientSection } from "./InvoiceClientSection";
 import {
   InvoiceItemsSection,
@@ -87,7 +87,7 @@ function createEmptyRow(): InvoiceItemRow {
     rubroName: "",
     rubroQuery: "",
     description: "",
-    quantity: "1",
+    quantity: "",
     unitPrice: "",
   };
 }
@@ -318,6 +318,13 @@ export function NewInvoiceManager({
     rows,
     addEmptyRow,
     discardTrailingEmptyRows,
+    commitQuantity: (rowKey, quantity) => {
+      setRows((current) =>
+        current.map((row) =>
+          row.key === rowKey ? { ...row, quantity } : row,
+        ),
+      );
+    },
     focusClientPickerWhen:
       createdInvoice === null &&
       selectedClient === null &&
@@ -675,7 +682,6 @@ export function NewInvoiceManager({
                 cardActionOrder="success"
                 shareOpen={successShareOpen}
                 onShareOpenChange={setSuccessShareOpen}
-                showPrintShortcut
                 onPrinted={() => setHasPrintedInvoice(true)}
               />
               <Link
@@ -703,11 +709,26 @@ export function NewInvoiceManager({
               </Link>
               <button
                 type="button"
-                className={styles.submitButton}
+                className={styles.successSecondaryLink}
                 onClick={() => requestLeaveIfUnprinted({ type: "reset" })}
               >
-                Crear nueva
-                <kbd className={styles.shortcutKbd}>N</kbd>
+                Nueva factura
+                <kbd className={styles.shortcutKbd}>F2</kbd>
+              </button>
+              <button
+                type="button"
+                className={styles.submitButton}
+                onClick={() => {
+                  void printCreatedInvoice();
+                }}
+                disabled={isLeavePrinting}
+                aria-keyshortcuts="I"
+              >
+                <Printer strokeWidth={ICON_STROKE} aria-hidden />
+                {isLeavePrinting ? "Abriendo…" : "Imprimir"}
+                {!isLeavePrinting ? (
+                  <kbd className={styles.shortcutKbd}>I</kbd>
+                ) : null}
               </button>
             </div>
           </div>

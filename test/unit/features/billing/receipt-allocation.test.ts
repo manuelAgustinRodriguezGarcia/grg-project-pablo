@@ -3,12 +3,15 @@ import { pesosToCents } from "@/shared/utils/billing-invoice-totals";
 import { buildReceiptNumber, formatReceiptNumber } from "@/features/billing/utils/receipt-number";
 import { toWinAnsi } from "@/features/billing/utils/win-ansi";
 import {
+  allocateCreditFifo,
+  cashNeededForInvoice,
   formatPesosInput,
   maskPesosInput,
   parsePesosInput,
   paymentStatusFromSaldoCents,
   receiptAllocationStatus,
   redistributeFifo,
+  remainingAfterAllocation,
   remainingCents,
   clientCreditCents,
   clientAvailableCreditCents,
@@ -32,6 +35,31 @@ function row(
     applyLocked: false,
   };
 }
+
+describe("allocateCreditFifo", () => {
+  it("aplica el saldo a favor a la factura más antigua primero", () => {
+    const applied = allocateCreditFifo(
+      [
+        row("nueva", 800, 10),
+        row("vieja", 500, 1),
+        row("media", 400, 5),
+      ],
+      pesosToCents(700),
+    );
+
+    expect(applied.get("vieja")).toBe(pesosToCents(500));
+    expect(applied.get("media")).toBe(pesosToCents(200));
+    expect(applied.get("nueva")).toBe(0);
+  });
+});
+
+describe("cashNeededForInvoice / remainingAfterAllocation", () => {
+  it("completa el 100% considerando saldo a favor", () => {
+    expect(cashNeededForInvoice(100_000, 30_000)).toBe(70_000);
+    expect(remainingAfterAllocation(100_000, 30_000, 70_000)).toBe(0);
+    expect(remainingAfterAllocation(100_000, 30_000, 20_000)).toBe(50_000);
+  });
+});
 
 describe("paymentStatusFromSaldoCents", () => {
   it("marca paga, impaga y parcial", () => {

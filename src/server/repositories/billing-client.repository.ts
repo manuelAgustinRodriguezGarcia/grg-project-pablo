@@ -99,6 +99,16 @@ export class BillingClientRepository {
     return prisma.billingClient.delete({ where: { id } });
   }
 
+  async hasHistory(clientId: string): Promise<boolean> {
+    const [invoiceCount, receiptCount, noteCount] = await Promise.all([
+      prisma.billingInvoice.count({ where: { clientId } }),
+      prisma.billingReceipt.count({ where: { clientId } }),
+      prisma.billingNote.count({ where: { clientId } }),
+    ]);
+
+    return invoiceCount > 0 || receiptCount > 0 || noteCount > 0;
+  }
+
   async getNextCodeNumber(): Promise<number> {
     const result = await prisma.billingClient.aggregate({
       _max: { codeNumber: true },

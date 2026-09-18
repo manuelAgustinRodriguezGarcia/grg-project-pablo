@@ -24,6 +24,7 @@ import type { BillingNoteListItem } from "@/features/billing/types/billing-note.
 import type { BillingReceiptListItem } from "@/features/billing/types/billing-receipt.types";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import { invoiceCanIssueReceipt } from "@/features/billing/utils/invoice-list";
+import { resolveActivityCardPeriod } from "@/features/billing/utils/billing-metrics";
 import {
   buildBillingMovements,
   filterMovementList,
@@ -88,7 +89,16 @@ export function MovimientosManager({
     [movements, query, kind, fromDate, toDate],
   );
 
+  const activityPeriod = resolveActivityCardPeriod(fromDate, toDate);
+
   const totals = useMemo(() => {
+    const scopedMovements = filterMovementList(movements, {
+      query,
+      kind,
+      fromDate: activityPeriod.fromDate,
+      toDate: activityPeriod.toDate,
+    });
+
     let receiptCount = 0;
     let receiptAmount = 0;
     let creditCount = 0;
@@ -96,7 +106,7 @@ export function MovimientosManager({
     let debitCount = 0;
     let debitAmount = 0;
 
-    for (const movement of filteredMovements) {
+    for (const movement of scopedMovements) {
       switch (movement.kind) {
         case "RECEIPT":
           receiptCount += 1;
@@ -125,7 +135,13 @@ export function MovimientosManager({
       debits: debitCount,
       debitAmount,
     };
-  }, [filteredMovements]);
+  }, [
+    movements,
+    query,
+    kind,
+    activityPeriod.fromDate,
+    activityPeriod.toDate,
+  ]);
 
   const listError =
     (invoicesQuery.error instanceof Error
@@ -171,25 +187,45 @@ export function MovimientosManager({
         />
 
         <div className={styles.comprobantesLayout}>
-          <div className={styles.totalsStrip} aria-label="Totales filtrados">
+          <div className={styles.totalsStrip} aria-label="Totales del período">
             <div className={styles.totalsItem}>
-              <span className={styles.totalsLabel}>Recibos</span>
+              <span className={styles.totalsLabel}>
+                Recibos{" "}
+                <span className={styles.totalsPeriod}>
+                  ({activityPeriod.label})
+                </span>
+              </span>
               <span className={styles.totalsValue}>{totals.receipts}</span>
             </div>
             <div className={styles.totalsItem}>
-              <span className={styles.totalsLabel}>Cobrados</span>
+              <span className={styles.totalsLabel}>
+                Cobrados{" "}
+                <span className={styles.totalsPeriod}>
+                  ({activityPeriod.label})
+                </span>
+              </span>
               <span className={styles.totalsValue}>
                 {formatArsExact(totals.receiptAmount)}
               </span>
             </div>
             <div className={styles.totalsItem}>
-              <span className={styles.totalsLabel}>N.C</span>
+              <span className={styles.totalsLabel}>
+                N.C{" "}
+                <span className={styles.totalsPeriod}>
+                  ({activityPeriod.label})
+                </span>
+              </span>
               <span className={styles.totalsValue}>
                 {totals.credits} · {formatArsExact(totals.creditAmount)}
               </span>
             </div>
             <div className={styles.totalsItem}>
-              <span className={styles.totalsLabel}>N.D</span>
+              <span className={styles.totalsLabel}>
+                N.D{" "}
+                <span className={styles.totalsPeriod}>
+                  ({activityPeriod.label})
+                </span>
+              </span>
               <span className={styles.totalsValue}>
                 {totals.debits} · {formatArsExact(totals.debitAmount)}
               </span>

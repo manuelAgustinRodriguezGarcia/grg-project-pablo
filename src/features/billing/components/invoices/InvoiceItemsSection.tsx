@@ -75,11 +75,12 @@ export function isCompleteRow(row: InvoiceItemRow): boolean {
 }
 
 export function isEmptyDraftRow(row: InvoiceItemRow): boolean {
+  const quantity = row.quantity.trim();
   return (
     row.rubroId === null &&
     row.rubroQuery.trim() === "" &&
     row.description.trim() === "" &&
-    row.quantity.trim() === "1" &&
+    (quantity === "" || quantity === "1") &&
     row.unitPrice.trim() === ""
   );
 }
@@ -114,7 +115,7 @@ export function itemRowPatchForRubroQuery(
       rubroName: "",
       rubroQuery: "",
       description: "",
-      quantity: "1",
+      quantity: "",
       unitPrice: "",
     };
   }

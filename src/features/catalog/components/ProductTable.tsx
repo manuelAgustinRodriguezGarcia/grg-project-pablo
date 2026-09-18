@@ -37,6 +37,7 @@ type ProductTableProps = {
   onImportExcel?: () => void;
   onAddFolder?: () => void;
   onPageChange: (page: number) => void;
+  page?: number;
   enableColumnFilters?: boolean;
   columnFilters?: ColumnFilterInput[];
   onColumnFilterChange?: (
@@ -55,6 +56,9 @@ type ProductTableProps = {
   onFolderSearchChange?: (value: string) => void;
   folderSearchResetKey?: number;
   folderSearchSeedValue?: string;
+  highlightProductId?: string | null;
+  onRevealPinnedProduct?: (productId: string) => void;
+  onPrefetchPinnedProduct?: (productId: string) => void;
 };
 
 function formatTableHeaderLines(displayName: string): string[] {
@@ -185,6 +189,7 @@ export const ProductTable = memo(function ProductTable({
   onImportExcel,
   onAddFolder,
   onPageChange,
+  page: requestedPage,
   enableColumnFilters = false,
   columnFilters = [],
   onColumnFilterChange,
@@ -200,9 +205,16 @@ export const ProductTable = memo(function ProductTable({
   onFolderSearchChange,
   folderSearchResetKey = 0,
   folderSearchSeedValue = "",
+  highlightProductId = null,
+  onRevealPinnedProduct,
+  onPrefetchPinnedProduct,
 }: ProductTableProps) {
   const showActionsColumn = isAdmin && Boolean(onEditProduct || onDeleteProduct);
   const tableWrapRef = useRef<HTMLDivElement>(null);
+  const [pinnedProductId, setPinnedProductId] = useState<string | null>(null);
+  const pinSearchQueryRef = useRef("");
+  const previousFolderSearchRef = useRef(folderSearchQuery);
+  const lastRevealKeyRef = useRef<string | null>(null);
   const [previewImage, setPreviewImage] = useState<{
     url: string;
     alt: string;
@@ -260,6 +272,111 @@ export const ProductTable = memo(function ProductTable({
   useEffect(() => {
     resetTableScroll();
   }, [data?.pagination.page, folderId, resetTableScroll]);
+
+  useEffect(() => {
+    setPinnedProductId(null);
+    pinSearchQueryRef.current = "";
+    lastRevealKeyRef.current = null;
+  }, [folderId]);
+
+  useEffect(() => {
+    if (!highlightProductId) {
+      return;
+    }
+    setPinnedProductId(highlightProductId);
+    pinSearchQueryRef.current = folderSearchQuery.trim();
+    // Capture the search query at the moment the highlight is handed off.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-pin when highlight id changes
+  }, [highlightProductId]);
+
+  useEffect(() => {
+    const query = folderSearchQuery.trim();
+    if (
+      query !== "" &&
+      pinSearchQueryRef.current !== "" &&
+      query !== pinSearchQueryRef.current
+    ) {
+      setPinnedProductId(null);
+      pinSearchQueryRef.current = "";
+      lastRevealKeyRef.current = null;
+    }
+  }, [folderSearchQuery]);
+
+  const requestRevealPinnedProduct = useCallback(
+    (productId: string) => {
+      const key = `${folderId ?? ""}:${productId}`;
+      if (lastRevealKeyRef.current === key) {
+        return;
+      }
+      lastRevealKeyRef.current = key;
+      onRevealPinnedProduct?.(productId);
+    },
+    [folderId, onRevealPinnedProduct],
+  );
+
+  useEffect(() => {
+    const previous = previousFolderSearchRef.current.trim();
+    const next = folderSearchQuery.trim();
+    previousFolderSearchRef.current = folderSearchQuery;
+
+    if (previous && !next && pinnedProductId) {
+      requestRevealPinnedProduct(pinnedProductId);
+    }
+
+    if (next) {
+      lastRevealKeyRef.current = null;
+    }
+  }, [folderSearchQuery, pinnedProductId, requestRevealPinnedProduct]);
+
+  useEffect(() => {
+    if (!pinnedProductId || folderSearchQuery.trim() || !data) {
+      return;
+    }
+
+    const row = tableWrapRef.current?.querySelector<HTMLElement>(
+      `[data-product-id="${pinnedProductId}"]`,
+    );
+    if (!row) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      row.scrollIntoView({ block: "center", behavior: "auto" });
+    });
+  }, [pinnedProductId, folderSearchQuery, data]);
+
+  const handleProductRowClick = useCallback(
+    (productId: string) => {
+      if (!folderSearchQuery.trim()) {
+        return;
+      }
+
+      setPinnedProductId(productId);
+      pinSearchQueryRef.current = folderSearchQuery.trim();
+      lastRevealKeyRef.current = null;
+      onPrefetchPinnedProduct?.(productId);
+    },
+    [folderSearchQuery, onPrefetchPinnedProduct],
+  );
+
+  const handleFolderSearchChange = useCallback(
+    (value: string) => {
+      const previous = folderSearchQuery.trim();
+      const next = value.trim();
+
+      if (previous && !next && pinnedProductId) {
+        requestRevealPinnedProduct(pinnedProductId);
+      }
+
+      onFolderSearchChange?.(value);
+    },
+    [
+      folderSearchQuery,
+      onFolderSearchChange,
+      pinnedProductId,
+      requestRevealPinnedProduct,
+    ],
+  );
 
   useEffect(() => {
     if (lockTableScroll) {
@@ -343,7 +460,7 @@ export const ProductTable = memo(function ProductTable({
         {showFolderSearch ? (
           <FolderTableSearch
             folderName={folderName ?? ""}
-            onDebouncedSearchChange={onFolderSearchChange!}
+            onDebouncedSearchChange={handleFolderSearchChange}
             resetKey={folderSearchResetKey}
             seedValue={folderSearchSeedValue}
           />
@@ -422,7 +539,10 @@ export const ProductTable = memo(function ProductTable({
 
   const { from, to } = getPaginationRange(data.pagination);
   const { pagination } = data;
+  const activePage = requestedPage ?? pagination.page;
+  const totalPages = Math.max(pagination.totalPages, 1);
   const trimmedFolderSearch = folderSearchQuery.trim();
+  const canPinProductRows = trimmedFolderSearch.length > 0;
 
   return (
     <section
@@ -523,9 +643,30 @@ export const ProductTable = memo(function ProductTable({
           <tbody>
             {data.products.map((product) => {
                 const previewUrl = getProductImagePreviewUrl(product.primaryImage);
+                const isPinned = pinnedProductId === product.id;
 
                 return (
-                <tr key={product.id}>
+                <tr
+                  key={product.id}
+                  data-product-id={product.id}
+                  className={[
+                    isPinned ? styles.productRowPinned : "",
+                    canPinProductRows ? styles.productRowSelectable : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ") || undefined}
+                  aria-selected={isPinned || undefined}
+                  onClick={
+                    canPinProductRows
+                      ? (event) => {
+                          if ((event.target as HTMLElement).closest("button")) {
+                            return;
+                          }
+                          handleProductRowClick(product.id);
+                        }
+                      : undefined
+                  }
+                >
                   {showImageColumn ? (
                     <td className={styles.tableThumbCell}>
                       {previewUrl ? (
@@ -759,26 +900,22 @@ export const ProductTable = memo(function ProductTable({
           <button
             type="button"
             className={styles.paginationButton}
-            disabled={pagination.page <= 1 || isLoading || lockTableScroll}
-            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={activePage <= 1}
+            onClick={() => handlePageChange(activePage - 1)}
             aria-label="Página anterior"
           >
             <ChevronLeft strokeWidth={ICON_STROKE} aria-hidden />
           </button>
 
           <span className={styles.paginationLabel}>
-            Página {pagination.page} de {Math.max(pagination.totalPages, 1)}
+            Página {activePage} de {totalPages}
           </span>
 
           <button
             type="button"
             className={styles.paginationButton}
-            disabled={
-              pagination.page >= pagination.totalPages ||
-              isLoading ||
-              lockTableScroll
-            }
-            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={activePage >= totalPages}
+            onClick={() => handlePageChange(activePage + 1)}
             aria-label="Página siguiente"
           >
             <ChevronRight strokeWidth={ICON_STROKE} aria-hidden />

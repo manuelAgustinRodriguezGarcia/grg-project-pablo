@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProductTableResponse } from "@/features/catalog/types/product-table.types";
 
@@ -676,6 +677,54 @@ describe("ProductTable", () => {
     expect(screen.getByLabelText("Ver imagen de ayuda de Anclaje frente")).toBeInTheDocument();
   });
 
+  it("permite avanzar varias páginas sin esperar a que cargue", () => {
+    const data = createTableData([
+      {
+        id: "product-1",
+        primaryCode: "6205",
+        description: "Ruleman",
+        dynamicData: {},
+        primaryImage: null,
+        extraImages: [],
+        imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
+      },
+    ]);
+    data.pagination = {
+      page: 4,
+      pageSize: 100,
+      total: 1100,
+      totalPages: 11,
+    };
+
+    function PaginationHarness() {
+      const [page, setPage] = useState(4);
+      return (
+        <ProductTable
+          data={data}
+          isLoading
+          isFilterRefreshing
+          error={null}
+          onPageChange={setPage}
+          page={page}
+        />
+      );
+    }
+
+    render(<PaginationHarness />);
+
+    const next = screen.getByRole("button", { name: "Página siguiente" });
+    expect(next).not.toBeDisabled();
+    expect(screen.getByText("Página 4 de 11")).toBeInTheDocument();
+
+    fireEvent.click(next);
+    fireEvent.click(next);
+    fireEvent.click(next);
+
+    expect(screen.getByText("Página 7 de 11")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Página siguiente" })).not.toBeDisabled();
+  });
+
   it("resetea el scroll de la tabla al cambiar de página", () => {
     const data = createTableData([
       {
@@ -709,5 +758,145 @@ describe("ProductTable", () => {
 
     expect(tableWrap.scrollTop).toBe(0);
     expect(tableWrap.scrollLeft).toBe(0);
+  });
+
+  it("mantiene el producto seleccionado resaltado al limpiar la búsqueda interna", async () => {
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    const onRevealPinnedProduct = vi.fn();
+
+    const searched = createTableData([
+      {
+        id: "product-2",
+        primaryCode: "6305",
+        description: "Ruleman grande",
+        dynamicData: {},
+        primaryImage: null,
+        extraImages: [],
+        imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
+      },
+    ]);
+    const fullList = createTableData([
+      {
+        id: "product-1",
+        primaryCode: "6205",
+        description: "Ruleman",
+        dynamicData: {},
+        primaryImage: null,
+        extraImages: [],
+        imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
+      },
+      {
+        id: "product-2",
+        primaryCode: "6305",
+        description: "Ruleman grande",
+        dynamicData: {},
+        primaryImage: null,
+        extraImages: [],
+        imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
+      },
+    ]);
+
+    const { rerender } = render(
+      <ProductTable
+        data={searched}
+        isLoading={false}
+        error={null}
+        onPageChange={vi.fn()}
+        folderId="folder-1"
+        folderName="Rodamientos"
+        folderSearchQuery="6305"
+        onFolderSearchChange={vi.fn()}
+        onRevealPinnedProduct={onRevealPinnedProduct}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("6305"));
+
+    const pinnedWhileSearching = document.querySelector(
+      '[data-product-id="product-2"]',
+    );
+    expect(pinnedWhileSearching).toHaveClass("productRowPinned");
+    expect(pinnedWhileSearching).toHaveAttribute("aria-selected", "true");
+
+    rerender(
+      <ProductTable
+        data={fullList}
+        isLoading={false}
+        error={null}
+        onPageChange={vi.fn()}
+        folderId="folder-1"
+        folderName="Rodamientos"
+        folderSearchQuery=""
+        onFolderSearchChange={vi.fn()}
+        onRevealPinnedProduct={onRevealPinnedProduct}
+      />,
+    );
+
+    const pinnedAfterClear = document.querySelector(
+      '[data-product-id="product-2"]',
+    );
+    expect(pinnedAfterClear).toHaveClass("productRowPinned");
+    expect(pinnedAfterClear).toHaveAttribute("aria-selected", "true");
+    expect(onRevealPinnedProduct).toHaveBeenCalledWith("product-2");
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        block: "center",
+        behavior: "auto",
+      });
+    });
+  });
+
+  it("limpia el resaltado al iniciar una nueva búsqueda interna", () => {
+    const searched = createTableData([
+      {
+        id: "product-2",
+        primaryCode: "6305",
+        description: "Ruleman grande",
+        dynamicData: {},
+        primaryImage: null,
+        extraImages: [],
+        imagesByColumnKey: {},
+        fieldAnnotationsByColumnKey: {},
+      },
+    ]);
+
+    const { rerender } = render(
+      <ProductTable
+        data={searched}
+        isLoading={false}
+        error={null}
+        onPageChange={vi.fn()}
+        folderId="folder-1"
+        folderName="Rodamientos"
+        folderSearchQuery="6305"
+        onFolderSearchChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("6305"));
+    expect(document.querySelector('[data-product-id="product-2"]')).toHaveClass(
+      "productRowPinned",
+    );
+
+    rerender(
+      <ProductTable
+        data={searched}
+        isLoading={false}
+        error={null}
+        onPageChange={vi.fn()}
+        folderId="folder-1"
+        folderName="Rodamientos"
+        folderSearchQuery="otro"
+        onFolderSearchChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      document.querySelector('[data-product-id="product-2"]'),
+    ).not.toHaveClass("productRowPinned");
   });
 });

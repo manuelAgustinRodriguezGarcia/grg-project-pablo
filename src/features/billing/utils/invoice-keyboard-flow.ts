@@ -390,33 +390,35 @@ function prefersReducedMotion(): boolean {
 export function scrollInvoiceFocusIntoView(element: HTMLElement): void {
   const target = invoiceFocusScrollTarget(element);
   const container = findScrollableAncestor(target);
+  const topOffset = 72;
+  const behavior = prefersReducedMotion() ? "auto" : "smooth";
 
   if (!container) {
-    if (typeof target.scrollIntoView === "function") {
-      target.scrollIntoView({
-        block: "nearest",
-        inline: "nearest",
-        behavior: prefersReducedMotion() ? "auto" : "smooth",
-      });
+    if (typeof window === "undefined") {
+      return;
     }
+
+    const targetRect = target.getBoundingClientRect();
+    const nextTop = Math.max(0, window.scrollY + targetRect.top - topOffset);
+
+    if (Math.abs(nextTop - window.scrollY) < 2) {
+      return;
+    }
+
+    window.scrollTo({ top: nextTop, behavior });
     return;
   }
 
-  const padding = 16;
   const containerRect = container.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
-  const nextTop = nextOverflowScrollTop(
-    {
-      scrollTop: container.scrollTop,
-      top: containerRect.top + padding,
-      bottom: containerRect.bottom - padding,
-    },
-    targetRect,
-  );
+  const desiredTop = containerRect.top + topOffset;
+  const delta = targetRect.top - desiredTop;
 
-  if (nextTop === container.scrollTop) {
+  if (Math.abs(delta) < 2) {
     return;
   }
+
+  const nextTop = Math.max(0, container.scrollTop + delta);
 
   if (prefersReducedMotion() || typeof container.scrollTo !== "function") {
     container.scrollTop = nextTop;
@@ -545,10 +547,15 @@ export function firstIncompleteItemField(
   return null;
 }
 
-export function resolveQuantityEnter(
-  quantityValid: boolean,
-): "stay" | "price" {
-  return quantityValid ? "price" : "stay";
+export function resolveQuantityEnter(input: {
+  quantityRaw: string;
+  quantityValid: boolean;
+}): "stay" | "price" | "commit-default" {
+  if (input.quantityRaw.trim() === "") {
+    return "commit-default";
+  }
+
+  return input.quantityValid ? "price" : "stay";
 }
 
 export function resolvePriceEnter(

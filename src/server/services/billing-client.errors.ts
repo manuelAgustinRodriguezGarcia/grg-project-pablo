@@ -7,7 +7,8 @@ export type BillingClientErrorCode =
   | "CODE_GENERATION_FAILED"
   | "DUPLICATE_CODE"
   | "DUPLICATE_CUIT"
-  | "DUPLICATE_DNI";
+  | "DUPLICATE_DNI"
+  | "CLIENT_HAS_HISTORY";
 
 export class BillingClientError extends Error {
   readonly code: BillingClientErrorCode;

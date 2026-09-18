@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
   BillingIdentificationType,
@@ -13,9 +13,16 @@ import {
   IVA_CONDITION_ORDER,
   IVA_CONDITION_SHORT_LABELS,
 } from "@/features/billing/types/billing-client.types";
+import {
+  findClientFormMatches,
+  formatClientFormMatchLine,
+  hasExactIdentificationDuplicate,
+} from "@/features/billing/utils/client-form-matches";
 import { CustomSelect } from "@/shared/components/CustomSelect";
 import { ARGENTINE_PROVINCES, isArgentineProvince } from "@/shared/utils/argentine-provinces";
 import {
+  formatCuit,
+  formatDni,
   isValidCuit,
   isValidDni,
   normalizeIdentificationDigits,
@@ -51,6 +58,8 @@ export type ClientFormValues = {
 type ClientFormModalProps = {
   mode: "create" | "edit";
   initialClient?: BillingClientListItem | null;
+  existingClients?: BillingClientListItem[];
+  identificationLocked?: boolean;
   isBusy: boolean;
   error: string | null;
   onClearError: () => void;
@@ -58,15 +67,27 @@ type ClientFormModalProps = {
   onSubmit: (values: ClientFormValues) => void;
 };
 
+const CREATE_DEFAULT_IDENTIFICATION: BillingIdentificationType = "CUIT";
+const CREATE_DEFAULT_IVA: BillingIvaCondition = "RESPONSABLE_INSCRIPTO";
+
 export function ClientFormModal({
   mode,
   initialClient,
+  existingClients = [],
+  identificationLocked = false,
   isBusy,
   error,
   onClearError,
   onClose,
   onSubmit,
 }: ClientFormModalProps) {
+  const defaultIdentificationType =
+    initialClient?.identificationType ??
+    (mode === "create" ? CREATE_DEFAULT_IDENTIFICATION : "NINGUNO");
+  const defaultIvaCondition =
+    initialClient?.ivaCondition ??
+    (mode === "create" ? CREATE_DEFAULT_IVA : "CONSUMIDOR_FINAL");
+
   const [name, setName] = useState(initialClient?.name ?? "");
   const [code, setCode] = useState(initialClient?.code ?? "");
   const [address, setAddress] = useState(initialClient?.address ?? "");
@@ -75,19 +96,18 @@ export function ClientFormModal({
   const [email, setEmail] = useState(initialClient?.email ?? "");
   const [whatsapp, setWhatsapp] = useState(initialClient?.whatsapp ?? "");
   const [identificationType, setIdentificationType] =
-    useState<BillingIdentificationType>(
-      initialClient?.identificationType ?? "NINGUNO",
-    );
+    useState<BillingIdentificationType>(defaultIdentificationType);
   const [identificationNumber, setIdentificationNumber] = useState(
     initialClient?.identificationNumber ?? "",
   );
-  const [ivaCondition, setIvaCondition] = useState<BillingIvaCondition>(
-    initialClient?.ivaCondition ?? "CONSUMIDOR_FINAL",
-  );
+  const [ivaCondition, setIvaCondition] =
+    useState<BillingIvaCondition>(defaultIvaCondition);
   const [notes, setNotes] = useState(initialClient?.notes ?? "");
   const [localError, setLocalError] = useState<string | null>(null);
   const [provinceError, setProvinceError] = useState<string | null>(null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [pendingSubmitValues, setPendingSubmitValues] =
+    useState<ClientFormValues | null>(null);
 
   const isDirty =
     name !== (initialClient?.name ?? "") ||
@@ -97,14 +117,19 @@ export function ClientFormModal({
     province !== (initialClient?.province ?? "") ||
     email !== (initialClient?.email ?? "") ||
     whatsapp !== (initialClient?.whatsapp ?? "") ||
-    identificationType !== (initialClient?.identificationType ?? "NINGUNO") ||
+    identificationType !== defaultIdentificationType ||
     identificationNumber !== (initialClient?.identificationNumber ?? "") ||
-    ivaCondition !== (initialClient?.ivaCondition ?? "CONSUMIDOR_FINAL") ||
+    ivaCondition !== defaultIvaCondition ||
     notes !== (initialClient?.notes ?? "");
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape" || isBusy) {
+        return;
+      }
+
+      if (pendingSubmitValues) {
+        setPendingSubmitValues(null);
         return;
       }
 
@@ -123,7 +148,65 @@ export function ClientFormModal({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isBusy, isDirty, showDiscardConfirm, onClose]);
+  }, [isBusy, isDirty, pendingSubmitValues, showDiscardConfirm, onClose]);
+
+  const excludeId = mode === "edit" ? initialClient?.id ?? null : null;
+
+  const nameMatches = useMemo(
+    () =>
+      mode === "create"
+        ? findClientFormMatches(existingClients, "name", name, { excludeId })
+        : [],
+    [excludeId, existingClients, mode, name],
+  );
+
+  const emailMatches = useMemo(
+    () =>
+      mode === "create"
+        ? findClientFormMatches(existingClients, "email", email, { excludeId })
+        : [],
+    [email, excludeId, existingClients, mode],
+  );
+
+  const whatsappMatches = useMemo(
+    () =>
+      mode === "create"
+        ? findClientFormMatches(existingClients, "whatsapp", whatsapp, {
+            excludeId,
+          })
+        : [],
+    [excludeId, existingClients, mode, whatsapp],
+  );
+
+  const identificationMatches = useMemo(
+    () =>
+      mode === "create" && identificationType !== "NINGUNO"
+        ? findClientFormMatches(
+            existingClients,
+            "identification",
+            identificationNumber,
+            { excludeId, identificationType },
+          )
+        : [],
+    [
+      excludeId,
+      existingClients,
+      identificationNumber,
+      identificationType,
+      mode,
+    ],
+  );
+
+  const hasIdentificationDuplicate = useMemo(
+    () =>
+      hasExactIdentificationDuplicate(
+        existingClients,
+        identificationType,
+        identificationNumber,
+        excludeId,
+      ),
+    [excludeId, existingClients, identificationNumber, identificationType],
+  );
 
   if (typeof document === "undefined") {
     return null;
@@ -134,6 +217,11 @@ export function ClientFormModal({
 
   function requestClose() {
     if (isBusy) {
+      return;
+    }
+
+    if (pendingSubmitValues) {
+      setPendingSubmitValues(null);
       return;
     }
 
@@ -152,7 +240,7 @@ export function ClientFormModal({
   }
 
   function handleIdentificationTypeChange(next: BillingIdentificationType) {
-    if (next === identificationType) {
+    if (identificationLocked || next === identificationType) {
       return;
     }
 
@@ -162,12 +250,37 @@ export function ClientFormModal({
 
     if (next !== "CUIT") {
       setIvaCondition("CONSUMIDOR_FINAL");
+    } else if (mode === "create") {
+      setIvaCondition(CREATE_DEFAULT_IVA);
     }
   }
 
   function handleIdentificationNumberChange(value: string) {
+    if (identificationLocked) {
+      return;
+    }
+
     setIdentificationNumber(value.replace(isCuit ? /[^\d-]/g : /\D/g, ""));
     clearVisibleError();
+  }
+
+  function buildSubmitValues(): ClientFormValues {
+    return {
+      name: name.trim().toLocaleUpperCase("es-AR"),
+      code: code.trim().toLocaleUpperCase("es-AR"),
+      address: address.trim(),
+      city: city.trim(),
+      province: province.trim(),
+      email: email.trim(),
+      whatsapp: whatsapp.trim(),
+      identificationType,
+      identificationNumber:
+        identificationType === "NINGUNO"
+          ? ""
+          : normalizeIdentificationDigits(identificationNumber),
+      ivaCondition: isCuit ? ivaCondition : "CONSUMIDOR_FINAL",
+      notes: notes.trim(),
+    };
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -199,6 +312,22 @@ export function ClientFormModal({
       }
     }
 
+    if (
+      mode === "create" &&
+      hasExactIdentificationDuplicate(
+        existingClients,
+        identificationType,
+        identificationNumber,
+      )
+    ) {
+      setLocalError(
+        identificationType === "CUIT"
+          ? "Ya existe un cliente registrado con este CUIT."
+          : "Ya existe un cliente registrado con este DNI.",
+      );
+      return;
+    }
+
     if (mode === "edit") {
       const normalizedCode = code.trim().toUpperCase().replace(/\s+/g, "");
       if (!/^[A-Z0-9]{2,10}-\d{1,8}$/.test(normalizedCode)) {
@@ -216,23 +345,55 @@ export function ClientFormModal({
       return;
     }
 
-    onSubmit({
-      name: name.trim().toLocaleUpperCase("es-AR"),
-      code: code.trim().toLocaleUpperCase("es-AR"),
-      address: address.trim(),
-      city: city.trim(),
-      province: province.trim(),
-      email: email.trim(),
-      whatsapp: whatsapp.trim(),
-      identificationType,
-      identificationNumber:
-        identificationType === "NINGUNO"
-          ? ""
-          : normalizeIdentificationDigits(identificationNumber),
-      ivaCondition: isCuit ? ivaCondition : "CONSUMIDOR_FINAL",
-      notes: notes.trim(),
-    });
+    const values = buildSubmitValues();
+
+    if (
+      mode === "create" &&
+      (values.identificationType === "CUIT" ||
+        values.identificationType === "DNI")
+    ) {
+      setPendingSubmitValues(values);
+      return;
+    }
+
+    onSubmit(values);
   }
+
+  function renderMatchDropdown(
+    matches: BillingClientListItem[],
+    tone: "warn" | "block",
+  ) {
+    if (matches.length === 0) {
+      return null;
+    }
+
+    return (
+      <div
+        className={`${styles.matchDropdown} ${
+          tone === "block"
+            ? styles.matchDropdownBlock
+            : styles.matchDropdownWarn
+        }`}
+        aria-live="polite"
+      >
+        <p className={styles.matchDropdownTitle}>Clientes encontrados:</p>
+        <ul className={styles.matchDropdownList}>
+          {matches.map((client) => (
+            <li key={client.id} className={styles.matchDropdownItem}>
+              {formatClientFormMatchLine(client)}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  const identificationConfirmLabel =
+    pendingSubmitValues?.identificationType === "CUIT"
+      ? formatCuit(pendingSubmitValues.identificationNumber)
+      : pendingSubmitValues?.identificationType === "DNI"
+        ? formatDni(pendingSubmitValues.identificationNumber)
+        : "";
 
   const title = mode === "create" ? "Nuevo cliente" : "Editar cliente";
   const subtitle =
@@ -314,7 +475,7 @@ export function ClientFormModal({
                 </div>
               ) : null}
 
-              <div className={modalStyles.formField}>
+              <div className={`${modalStyles.formField} ${styles.formFieldWithMatches}`}>
                 <label
                   className={modalStyles.formLabel}
                   htmlFor="client-name"
@@ -323,7 +484,9 @@ export function ClientFormModal({
                 </label>
                 <input
                   id="client-name"
-                  className={`${modalStyles.formInput} ${styles.uppercaseInput}`}
+                  className={`${modalStyles.formInput} ${styles.uppercaseInput}${
+                    nameMatches.length > 0 ? ` ${styles.formInputWarn}` : ""
+                  }`}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="TRANSPORTES DEL SUR S.A."
@@ -332,6 +495,7 @@ export function ClientFormModal({
                   autoFocus={mode === "create"}
                   disabled={isBusy}
                 />
+                {renderMatchDropdown(nameMatches, "warn")}
               </div>
 
               <div className={modalStyles.formField}>
@@ -407,7 +571,7 @@ export function ClientFormModal({
               </div>
 
               <div className={styles.formGrid}>
-                <div className={modalStyles.formField}>
+                <div className={`${modalStyles.formField} ${styles.formFieldWithMatches}`}>
                   <label
                     className={modalStyles.formLabel}
                     htmlFor="client-email"
@@ -417,16 +581,19 @@ export function ClientFormModal({
                   <input
                     id="client-email"
                     type="email"
-                    className={modalStyles.formInput}
+                    className={`${modalStyles.formInput}${
+                      emailMatches.length > 0 ? ` ${styles.formInputWarn}` : ""
+                    }`}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="cliente@correo.com"
                     maxLength={160}
                     disabled={isBusy}
                   />
+                  {renderMatchDropdown(emailMatches, "warn")}
                 </div>
 
-                <div className={modalStyles.formField}>
+                <div className={`${modalStyles.formField} ${styles.formFieldWithMatches}`}>
                   <label
                     className={modalStyles.formLabel}
                     htmlFor="client-whatsapp"
@@ -436,13 +603,18 @@ export function ClientFormModal({
                   <input
                     id="client-whatsapp"
                     type="tel"
-                    className={modalStyles.formInput}
+                    className={`${modalStyles.formInput}${
+                      whatsappMatches.length > 0
+                        ? ` ${styles.formInputWarn}`
+                        : ""
+                    }`}
                     value={whatsapp}
                     onChange={(event) => setWhatsapp(event.target.value)}
                     placeholder="3492 123456"
                     maxLength={30}
                     disabled={isBusy}
                   />
+                  {renderMatchDropdown(whatsappMatches, "warn")}
                 </div>
               </div>
 
@@ -500,17 +672,25 @@ export function ClientFormModal({
                             onClick={() =>
                               handleIdentificationTypeChange(option.value)
                             }
-                            disabled={isBusy}
+                            disabled={isBusy || identificationLocked}
                           >
                             {option.label}
                           </button>
                         );
                       })}
                     </div>
+                    {identificationLocked ? (
+                      <p className={styles.formHint}>
+                        El CUIT/DNI no se puede modificar porque el cliente
+                        tiene historial.
+                      </p>
+                    ) : null}
                   </div>
 
                   {showDocumentInput ? (
-                    <div className={modalStyles.formField}>
+                    <div
+                      className={`${modalStyles.formField} ${styles.formFieldWithMatches}`}
+                    >
                       <label
                         className={modalStyles.formLabel}
                         htmlFor="client-identification"
@@ -519,7 +699,13 @@ export function ClientFormModal({
                       </label>
                       <input
                         id="client-identification"
-                        className={modalStyles.formInput}
+                        className={`${modalStyles.formInput}${
+                          hasIdentificationDuplicate
+                            ? ` ${styles.formInputBlock}`
+                            : identificationMatches.length > 0
+                              ? ` ${styles.formInputWarn}`
+                              : ""
+                        }`}
                         value={identificationNumber}
                         onChange={(event) =>
                           handleIdentificationNumberChange(event.target.value)
@@ -528,8 +714,12 @@ export function ClientFormModal({
                         placeholder={isCuit ? "20-12345678-3" : "12345678"}
                         maxLength={20}
                         required
-                        disabled={isBusy}
+                        disabled={isBusy || identificationLocked}
                       />
+                      {renderMatchDropdown(
+                        identificationMatches,
+                        hasIdentificationDuplicate ? "block" : "warn",
+                      )}
                       <p className={styles.formHint}>
                         {isCuit
                           ? "Se guarda sin guiones y se valida con el dígito verificador."
@@ -601,7 +791,11 @@ export function ClientFormModal({
             <button
               type="submit"
               className={modalStyles.modalSaveButton}
-              disabled={isBusy || name.trim().length === 0}
+              disabled={
+                isBusy ||
+                name.trim().length === 0 ||
+                (mode === "create" && hasIdentificationDuplicate)
+              }
             >
               {isBusy
                 ? "Guardando…"
@@ -612,6 +806,64 @@ export function ClientFormModal({
           </div>
         </form>
       </div>
+
+      {pendingSubmitValues ? (
+        <div className={wizardStyles.confirmOverlay}>
+          <div
+            className={`${wizardStyles.confirmCard} ${wizardStyles.closeConfirmCard}`}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="client-id-confirm-title"
+            aria-describedby="client-id-confirm-text"
+            onMouseDown={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <div className={wizardStyles.closeConfirmIcon} aria-hidden>
+              <AlertTriangle strokeWidth={ICON_STROKE} />
+            </div>
+            <h3
+              id="client-id-confirm-title"
+              className={wizardStyles.closeConfirmTitle}
+            >
+              Confirmar{" "}
+              {pendingSubmitValues.identificationType === "CUIT"
+                ? "CUIT"
+                : "DNI"}
+            </h3>
+            <p
+              id="client-id-confirm-text"
+              className={wizardStyles.closeConfirmText}
+            >
+              {pendingSubmitValues.identificationType === "CUIT"
+                ? `Está por crear un cliente con el CUIT ${identificationConfirmLabel}. ¿Confirma que el CUIT ingresado es correcto?`
+                : `Está por crear un cliente con el DNI ${identificationConfirmLabel}. ¿Confirma que el DNI ingresado es correcto?`}
+            </p>
+            <div className={wizardStyles.closeConfirmActions}>
+              <button
+                type="button"
+                className={wizardStyles.primaryButton}
+                disabled={isBusy}
+                onClick={() => {
+                  const values = pendingSubmitValues;
+                  setPendingSubmitValues(null);
+                  onSubmit(values);
+                }}
+              >
+                Confirmar
+              </button>
+              <button
+                type="button"
+                className={wizardStyles.secondaryButton}
+                disabled={isBusy}
+                onClick={() => setPendingSubmitValues(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showDiscardConfirm ? (
         <div className={wizardStyles.confirmOverlay}>

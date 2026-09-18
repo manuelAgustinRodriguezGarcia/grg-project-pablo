@@ -50,6 +50,49 @@ export function remainingCents(amountCents: number, allocatedCents: number): num
  * Reparte `amountCents` entre las filas seleccionadas, de la más antigua
  * a la más nueva. Las filas con `applyLocked` conservan su monto.
  */
+export function allocateCreditFifo(
+  rows: Array<{
+    invoiceId: string;
+    outstandingCents: number;
+    issuedAt: Date;
+  }>,
+  creditCents: number,
+): Map<string, number> {
+  const ordered = [...rows].sort(
+    (left, right) =>
+      new Date(left.issuedAt).getTime() - new Date(right.issuedAt).getTime(),
+  );
+
+  let leftover = Math.max(0, creditCents);
+  const applied = new Map<string, number>();
+
+  for (const row of ordered) {
+    const take = Math.max(0, Math.min(row.outstandingCents, leftover));
+    applied.set(row.invoiceId, take);
+    leftover -= take;
+  }
+
+  return applied;
+}
+
+export function cashNeededForInvoice(
+  outstandingCents: number,
+  creditAppliedCents: number,
+): number {
+  return Math.max(0, outstandingCents - Math.max(0, creditAppliedCents));
+}
+
+export function remainingAfterAllocation(
+  outstandingCents: number,
+  creditAppliedCents: number,
+  cashCents: number,
+): number {
+  return Math.max(
+    0,
+    outstandingCents - Math.max(0, creditAppliedCents) - Math.max(0, cashCents),
+  );
+}
+
 export function redistributeFifo(
   rows: ReceiptAllocationRow[],
   amountCents: number,

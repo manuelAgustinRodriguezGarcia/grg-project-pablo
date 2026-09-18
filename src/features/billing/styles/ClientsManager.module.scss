@@ -1310,14 +1310,23 @@ td.actionsCell {
   min-height: 0;
 
   .historySection {
+    isolation: isolate;
     min-width: 0;
     min-height: 0;
     flex: 1;
+    gap: 0.9rem;
     padding-top: 0;
     padding-left: 1.2rem;
     border-top: none;
     border-left: 1px solid rgba($navy, 0.08);
     overflow: hidden;
+  }
+
+  .historySectionHeader {
+    position: relative;
+    z-index: 3;
+    flex-shrink: 0;
+    background: $white;
   }
 
   .historyEmpty {
@@ -1326,6 +1335,8 @@ td.actionsCell {
   }
 
   .historyTableWrap {
+    position: relative;
+    z-index: 1;
     flex: 1;
     min-height: 0;
     overflow: auto;
@@ -1335,10 +1346,22 @@ td.actionsCell {
   .historyTable {
     min-width: 40rem;
 
+    thead {
+      position: relative;
+      z-index: 2;
+    }
+
     th {
       position: sticky;
       top: 0;
-      z-index: 1;
+      z-index: 2;
+      background: color-mix(in srgb, $clients-accent 4.5%, $white);
+      box-shadow: 0 1px 0 rgba($navy, 0.08);
+    }
+
+    tbody {
+      position: relative;
+      z-index: 0;
     }
   }
 }
@@ -1575,7 +1598,7 @@ td.actionsCell {
 .historySection {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.9rem;
   padding-top: 0.9rem;
   border-top: 1px solid rgba($navy, 0.08);
 }
@@ -1737,7 +1760,7 @@ td.actionsCell {
   th {
     font-weight: 650;
     color: rgba($navy, 0.65);
-    background: rgba($navy, 0.03);
+    background: color-mix(in srgb, $clients-accent 4.5%, $white);
     white-space: nowrap;
   }
 
@@ -1826,6 +1849,18 @@ td.clientIdentityCell {
   }
 }
 
+.totalsStripThree {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .totalsItem {
   display: flex;
   flex-direction: column;
@@ -1844,6 +1879,11 @@ td.clientIdentityCell {
   letter-spacing: 0;
   text-transform: none;
   color: rgba($navy, 0.6);
+}
+
+.totalsPeriod {
+  font-weight: 500;
+  color: rgba($navy, 0.45);
 }
 
 .totalsValue {
@@ -1935,21 +1975,6 @@ td.clientIdentityCell {
   font-size: 0.75rem;
   font-weight: 500;
   color: rgba($navy, 0.5);
-}
-
-.debtorsOutstandingTotal {
-  margin: 0.2rem 0 0;
-  font-family: $font-sans;
-  font-size: 1.45rem;
-  font-weight: 750;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  color: $navy;
-}
-
-.debtorsOutstandingAmount {
-  color: #dc2626;
 }
 
 .paymentCell {
@@ -2165,6 +2190,80 @@ td.clientIdentityCell {
   font-family: $font-sans;
   font-size: 0.78rem;
   color: rgba($navy, 0.55);
+}
+
+.formFieldWithMatches {
+  position: relative;
+}
+
+.formInputWarn {
+  border-color: rgba(#b45309, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(#b45309, 0.12);
+}
+
+.formInputBlock {
+  border-color: rgba(#c0392b, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(#c0392b, 0.12);
+}
+
+.matchDropdown {
+  margin: 0.4rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: rgba($navy, 0.03);
+  user-select: none;
+  pointer-events: none;
+}
+
+.matchDropdownWarn {
+  border-color: rgba(#b45309, 0.28);
+  background: rgba(#b45309, 0.08);
+}
+
+.matchDropdownBlock {
+  border-color: rgba(#c0392b, 0.28);
+  background: rgba(#c0392b, 0.08);
+}
+
+.matchDropdownTitle {
+  margin: 0 0 0.35rem;
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba($navy, 0.55);
+}
+
+.matchDropdownWarn .matchDropdownTitle {
+  color: #92400e;
+}
+
+.matchDropdownBlock .matchDropdownTitle {
+  color: #9b2c2c;
+}
+
+.matchDropdownList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.matchDropdownItem {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: rgba($navy, 0.78);
+}
+
+.matchDropdownItem::before {
+  content: "- ";
 }
 
 .uppercaseInput {

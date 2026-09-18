@@ -34,9 +34,11 @@ import {
 } from "@/features/billing/data/billingNav";
 import { useBillingClientsQuery } from "@/features/billing/hooks/useBillingClientsQuery";
 import { useBillingInvoicesQuery } from "@/features/billing/hooks/useBillingInvoicesQuery";
+import { useBillingNotesQuery } from "@/features/billing/hooks/useBillingNotesQuery";
 import { useBillingReceiptsQuery } from "@/features/billing/hooks/useBillingReceiptsQuery";
 import type { BillingClientListItem } from "@/features/billing/types/billing-client.types";
 import type { BillingInvoiceListItem } from "@/features/billing/types/billing-invoice.types";
+import { buildClientHistoryIdSet } from "@/features/billing/utils/client-form-matches";
 import {
   applyLiveClientNames,
   buildClientInvoiceSummaryMap,
@@ -108,6 +110,17 @@ export function ClientsManager({
 
   const invoicesQuery = useBillingInvoicesQuery(initialInvoices);
   const receiptsQuery = useBillingReceiptsQuery();
+  const notesQuery = useBillingNotesQuery();
+
+  const clientsWithHistory = useMemo(
+    () =>
+      buildClientHistoryIdSet(
+        invoicesQuery.data ?? [],
+        receiptsQuery.data ?? [],
+        notesQuery.data ?? [],
+      ),
+    [invoicesQuery.data, notesQuery.data, receiptsQuery.data],
+  );
 
   useEffect(() => {
     if (!openClientId) {
@@ -349,6 +362,7 @@ export function ClientsManager({
               <ClientsTable
                 clients={filteredClients}
                 invoiceSummaries={invoiceSummaries}
+                clientsWithHistory={clientsWithHistory}
                 isLoading={hideInternalLoaders ? false : isLoading}
                 error={listError}
                 busyClientId={busyClientId}
@@ -420,6 +434,12 @@ export function ClientsManager({
         <ClientFormModal
           mode={formMode}
           initialClient={editingClient}
+          existingClients={clientsQuery.data ?? []}
+          identificationLocked={
+            formMode === "edit" &&
+            editingClient != null &&
+            clientsWithHistory.has(editingClient.id)
+          }
           isBusy={isFormBusy}
           error={formError}
           onClearError={() => setFormError(null)}

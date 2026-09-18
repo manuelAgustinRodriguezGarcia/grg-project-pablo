@@ -16,6 +16,7 @@ import styles from "@/features/billing/styles/ClientsManager.module.scss";
 type ClientsTableProps = {
   clients: BillingClientListItem[];
   invoiceSummaries: Map<string, ClientInvoiceSummary>;
+  clientsWithHistory: Set<string>;
   isLoading: boolean;
   error: string | null;
   busyClientId: string | null;
@@ -40,6 +41,7 @@ function PaymentStatusBadge({ hasDebt }: { hasDebt: boolean }) {
 export function ClientsTable({
   clients,
   invoiceSummaries,
+  clientsWithHistory,
   isLoading,
   error,
   busyClientId,
@@ -117,6 +119,7 @@ export function ClientsTable({
               {clients.map((client) => {
                 const isBusy = busyClientId === client.id;
                 const hasDebt = clientHasDebt(invoiceSummaries, client.id);
+                const canDelete = !clientsWithHistory.has(client.id);
 
                 return (
                   <tr key={client.id}>
@@ -160,23 +163,25 @@ export function ClientsTable({
                             Editar
                           </span>
                         </span>
-                        <span className={styles.rowActionWrap}>
-                          <button
-                            type="button"
-                            className={`${styles.deleteActionButton} ${styles.iconActionButton}`}
-                            onClick={() => onDelete(client)}
-                            aria-label={`Eliminar ${client.name}`}
-                            disabled={isBusy}
-                          >
-                            <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
-                          </button>
-                          <span
-                            className={`${styles.rowActionTooltip} ${styles.rowActionTooltipDanger}`}
-                            role="tooltip"
-                          >
-                            Eliminar
+                        {canDelete ? (
+                          <span className={styles.rowActionWrap}>
+                            <button
+                              type="button"
+                              className={`${styles.deleteActionButton} ${styles.iconActionButton}`}
+                              onClick={() => onDelete(client)}
+                              aria-label={`Eliminar ${client.name}`}
+                              disabled={isBusy}
+                            >
+                              <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+                            </button>
+                            <span
+                              className={`${styles.rowActionTooltip} ${styles.rowActionTooltipDanger}`}
+                              role="tooltip"
+                            >
+                              Eliminar
+                            </span>
                           </span>
-                        </span>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -190,6 +195,7 @@ export function ClientsTable({
           {clients.map((client) => {
             const isBusy = busyClientId === client.id;
             const hasDebt = clientHasDebt(invoiceSummaries, client.id);
+            const canDelete = !clientsWithHistory.has(client.id);
 
             return (
               <article key={client.id} className={styles.clientCard}>
@@ -227,15 +233,17 @@ export function ClientsTable({
                     <Pencil strokeWidth={ICON_STROKE} aria-hidden />
                     <span>Editar</span>
                   </button>
-                  <button
-                    type="button"
-                    className={styles.cardActionButtonDanger}
-                    onClick={() => onDelete(client)}
-                    disabled={isBusy}
-                  >
-                    <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
-                    <span>Eliminar</span>
-                  </button>
+                  {canDelete ? (
+                    <button
+                      type="button"
+                      className={styles.cardActionButtonDanger}
+                      onClick={() => onDelete(client)}
+                      disabled={isBusy}
+                    >
+                      <Trash2 strokeWidth={ICON_STROKE} aria-hidden />
+                      <span>Eliminar</span>
+                    </button>
+                  ) : null}
                 </div>
               </article>
             );

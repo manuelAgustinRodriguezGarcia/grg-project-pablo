@@ -6,6 +6,7 @@ import {
   useAdminSectionTransition,
   useReportAdminSectionReady,
 } from "@/features/admin/components/AdminSectionTransition";
+import { DeudoresPeriodDialog } from "@/features/billing/components/deudores/DeudoresPeriodDialog";
 import { useUnsavedInvoiceDraft } from "@/features/billing/components/invoices/UnsavedInvoiceDraftContext";
 import {
   billingClientHistoryHref,
@@ -13,21 +14,21 @@ import {
 } from "@/features/billing/data/billingNav";
 import { useBillingInvoicesQuery } from "@/features/billing/hooks/useBillingInvoicesQuery";
 import type { BillingInvoiceListItem } from "@/features/billing/types/billing-invoice.types";
+import type { DeudoresPeriodSelection } from "@/features/billing/utils/deudores-period";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import {
   buildDebtorClients,
+  debtorCuitColumnValue,
   filterDebtorClients,
   invoiceMatchesDateRange,
   type DebtorSortOrder,
 } from "@/features/billing/utils/invoice-list";
-import { CustomDatePicker } from "@/shared/components/CustomDatePicker";
 import { CustomSelect } from "@/shared/components/CustomSelect";
 import {
   Eye,
   FileSpreadsheet,
   FileText,
   ICON_STROKE,
-  Printer,
   Search,
 } from "@/shared/icons";
 import styles from "@/features/billing/styles/ClientsManager.module.scss";
@@ -81,11 +82,14 @@ export function DeudoresManager({
   const sectionTransition = useAdminSectionTransition();
   const unsavedDraft = useUnsavedInvoiceDraft();
   const [query, setQuery] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [period, setPeriod] = useState<DeudoresPeriodSelection | null>(null);
+  const [periodOpen, setPeriodOpen] = useState(false);
   const [sort, setSort] = useState<DebtorSortOrder>("desc");
   const [busy, setBusy] = useState<"xlsx" | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const fromDate = period?.fromDate ?? "";
+  const toDate = period?.toDate ?? "";
 
   useReportAdminSectionReady(true);
 
@@ -119,14 +123,27 @@ export function DeudoresManager({
     0,
   );
 
-  async function downloadExcel(): Promise<void> {
+  function debtorsForPeriod(selection: DeudoresPeriodSelection | null) {
+    const ranged = (invoicesQuery.data ?? []).filter((invoice) =>
+      invoiceMatchesDateRange(
+        invoice,
+        selection?.fromDate ?? "",
+        selection?.toDate ?? "",
+      ),
+    );
+    return filterDebtorClients(buildDebtorClients(ranged), query, sort);
+  }
+
+  async function downloadExcel(
+    selection: DeudoresPeriodSelection | null = period,
+  ): Promise<void> {
     setBusy("xlsx");
     setError(null);
     try {
       const params = new URLSearchParams({
         query,
-        from: fromDate,
-        to: toDate,
+        from: selection?.fromDate ?? "",
+        to: selection?.toDate ?? "",
         sort,
       });
       const response = await fetch(
@@ -154,33 +171,37 @@ export function DeudoresManager({
     }
   }
 
-  function printList(): void {
-    const rows = debtors
+  function printList(
+    selection: DeudoresPeriodSelection | null = period,
+  ): void {
+    const list = debtorsForPeriod(selection);
+    const outstanding = list.reduce((sum, debtor) => sum + debtor.outstanding, 0);
+    const invoicesCount = list.reduce(
+      (sum, debtor) => sum + debtor.invoicesCount,
+      0,
+    );
+    const periodLine = selection
+      ? `<p>Período: ${selection.label}</p>`
+      : "";
+    const rows = list
       .map(
         (debtor) =>
           `<tr>
-            <td>${debtor.code}</td>
+            <td>${debtorCuitColumnValue(debtor)}</td>
             <td>${debtor.name}</td>
-            <td class="num">${debtor.invoicesCount}</td>
             <td class="num">${formatArsExact(debtor.outstanding)}</td>
-            <td>${
-              debtor.lastPendingInvoiceDate
-                ? DATE_FORMATTER.format(new Date(debtor.lastPendingInvoiceDate))
-                : "—"
-            }</td>
-            <td>${debtor.lastPendingInvoiceNumber ?? "—"}</td>
           </tr>`,
       )
       .join("");
     printDebtorsTable(
       "Clientes con deuda",
       `<h1>Clientes con deuda — Rothamel Repuestos S.H</h1>
-       <p>${debtors.length} clientes · ${pendingInvoices} facturas pendientes · Total ${formatArsExact(totalOutstanding)}</p>
+       ${periodLine}
+       <p>${list.length} clientes · ${invoicesCount} facturas pendientes · Total ${formatArsExact(outstanding)}</p>
        <table>
          <thead>
            <tr>
-             <th>Código</th><th>Cliente</th><th>Pendientes</th>
-             <th>Total adeudado</th><th>Fecha</th><th>Última factura</th>
+             <th>CUIT</th><th>Cliente</th><th>Total adeudado</th>
            </tr>
          </thead>
          <tbody>${rows}</tbody>
@@ -201,49 +222,28 @@ export function DeudoresManager({
               />
               Clientes con deuda
             </h2>
-            <p className={styles.debtorsOutstandingTotal}>
-              <span className={styles.debtorsOutstandingAmount}>
-                {debtors.length}
-              </span>{" "}
-              {debtors.length === 1 ? "cliente" : "clientes"} |{" "}
-              <span className={styles.debtorsOutstandingAmount}>
-                {pendingInvoices}
-              </span>{" "}
-              {pendingInvoices === 1 ? "factura" : "facturas"} | Total:{" "}
-              <span className={styles.debtorsOutstandingAmount}>
-                {formatArsExact(totalOutstanding)}
-              </span>
-            </p>
-          </div>
-          <div className={styles.headerActions}>
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={printList}
-            >
-              <Printer strokeWidth={ICON_STROKE} aria-hidden />
-              Imprimir
-            </button>
-            <button
-              type="button"
-              className={styles.primaryButton}
-              onClick={() => {
-                void downloadExcel();
-              }}
-              disabled={busy !== null}
-            >
-              {busy === "xlsx" ? (
-                "Generando…"
-              ) : (
-                <>
-                  <FileSpreadsheet strokeWidth={ICON_STROKE} aria-hidden />
-                  Excel
-                </>
-              )}
-            </button>
           </div>
         </div>
         <div className={styles.filtersRow}>
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={() => setPeriodOpen(true)}
+          >
+            <FileSpreadsheet strokeWidth={ICON_STROKE} aria-hidden />
+            Imprimir/Excel
+          </button>
+          <div className={styles.filterSelect}>
+            <CustomSelect
+              value={sort}
+              onChange={(value) => setSort(value as DebtorSortOrder)}
+              ariaLabel="Ordenar por deuda"
+              options={[
+                { value: "desc", label: "Mayor a menor" },
+                { value: "asc", label: "Menor a mayor" },
+              ]}
+            />
+          </div>
           <div className={styles.headerSearchWrap}>
             <Search
               className={styles.headerSearchIcon}
@@ -258,38 +258,40 @@ export function DeudoresManager({
               spellCheck={false}
             />
           </div>
-          <div className={styles.filterDateField}>
-            <CustomDatePicker
-              value={fromDate}
-              onChange={setFromDate}
-              allowEmpty
-              ariaLabel="Desde"
-              placeholder="Desde"
-              triggerClassName={styles.filterDateControl}
-              max={toDate || undefined}
-            />
+        </div>
+        <div className={`${styles.totalsStrip} ${styles.totalsStripThree}`} aria-label="Resumen de deuda">
+          <div className={styles.totalsItem}>
+            <span className={styles.totalsLabel}>
+              Clientes
+              {period ? (
+                <span className={styles.totalsPeriod}> ({period.label})</span>
+              ) : null}
+            </span>
+            <span className={styles.totalsValue}>{debtors.length}</span>
           </div>
-          <div className={styles.filterDateField}>
-            <CustomDatePicker
-              value={toDate}
-              onChange={setToDate}
-              allowEmpty
-              ariaLabel="Hasta"
-              placeholder="Hasta"
-              triggerClassName={styles.filterDateControl}
-              min={fromDate || undefined}
-            />
+          <div className={styles.totalsItem}>
+            <span className={styles.totalsLabel}>
+              Facturas
+              {period ? (
+                <span className={styles.totalsPeriod}> ({period.label})</span>
+              ) : null}
+            </span>
+            <span className={styles.totalsValue}>{pendingInvoices}</span>
           </div>
-          <div className={styles.filterSelect}>
-            <CustomSelect
-              value={sort}
-              onChange={(value) => setSort(value as DebtorSortOrder)}
-              ariaLabel="Ordenar por deuda"
-              options={[
-                { value: "desc", label: "Mayor a menor" },
-                { value: "asc", label: "Menor a mayor" },
-              ]}
-            />
+          <div className={styles.totalsItem}>
+            <span className={styles.totalsLabel}>
+              Total adeudado
+              {period ? (
+                <span className={styles.totalsPeriod}> ({period.label})</span>
+              ) : (
+                <span className={styles.totalsPeriod}> (Total histórico)</span>
+              )}
+            </span>
+            <span
+              className={`${styles.totalsValue} ${styles.totalsValueDanger}`}
+            >
+              {formatArsExact(totalOutstanding)}
+            </span>
           </div>
         </div>
       </section>
@@ -390,6 +392,26 @@ export function DeudoresManager({
           </div>
         </section>
       )}
+
+      {periodOpen ? (
+        <DeudoresPeriodDialog
+          initial={period}
+          onApply={(selection) => {
+            setPeriod(selection);
+            setPeriodOpen(false);
+          }}
+          onPrint={(selection) => {
+            setPeriod(selection);
+            printList(selection);
+          }}
+          onExcel={async (selection) => {
+            setPeriod(selection);
+            await downloadExcel(selection);
+          }}
+          excelBusy={busy === "xlsx"}
+          onClose={() => setPeriodOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

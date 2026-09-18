@@ -10,6 +10,7 @@ import {
   applyLiveClientNames,
   listDebtorClients,
   buildDebtorClients,
+  debtorCuitColumnValue,
   filterDebtorClients,
   listTopClientsByBilling,
   parsePaymentStatusFilter,
@@ -282,6 +283,7 @@ describe("listTopClientsByBilling y listDebtorClients", () => {
         outstanding: 120,
         invoicesCount: 1,
         code: "",
+        identificationType: "NINGUNO",
         identification: null,
         whatsapp: null,
         email: null,
@@ -451,10 +453,42 @@ describe("buildDebtorClients", () => {
       invoicesCount: 2,
       lastPendingInvoiceNumber: "0007-PRUEBA-000000009",
       code: "C-0001",
+      identificationType: "CUIT",
     });
     expect(
       filterDebtorClients(debtors, "C-0001", "asc")[0]?.outstanding,
     ).toBe(150);
+  });
+
+  it("usa CUIT, DNI o guion para la columna de exportación", () => {
+    const withCuit = buildDebtorClients([
+      invoice({
+        paymentStatus: "IMPAGA",
+        outstandingAmount: 10,
+        clientIdentificationType: "CUIT",
+        clientIdentificationNumber: "30500010912",
+      }),
+    ])[0]!;
+    const withDni = buildDebtorClients([
+      invoice({
+        paymentStatus: "IMPAGA",
+        outstandingAmount: 10,
+        clientIdentificationType: "DNI",
+        clientIdentificationNumber: "30111222",
+      }),
+    ])[0]!;
+    const withoutId = buildDebtorClients([
+      invoice({
+        paymentStatus: "IMPAGA",
+        outstandingAmount: 10,
+        clientIdentificationType: "NINGUNO",
+        clientIdentificationNumber: null,
+      }),
+    ])[0]!;
+
+    expect(debtorCuitColumnValue(withCuit)).toMatch(/\d/);
+    expect(debtorCuitColumnValue(withDni)).toMatch(/\d/);
+    expect(debtorCuitColumnValue(withoutId)).toBe("—");
   });
 });
 

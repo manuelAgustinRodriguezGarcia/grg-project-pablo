@@ -85,6 +85,91 @@ export function formatMonthLabel(yearMonth: CalendarYearMonth): string {
   return `${formatMonthName(yearMonth)} ${yearMonth.year}`;
 }
 
+export function hasPeriodFilter(fromDate: string, toDate: string): boolean {
+  return Boolean(fromDate || toDate);
+}
+
+export function formatIsoDateDisplay(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-");
+  if (!year || !month || !day) {
+    return isoDate;
+  }
+  return `${day}/${month}/${year}`;
+}
+
+export function formatDateRangePeriodLabel(
+  fromDate: string,
+  toDate: string,
+): string {
+  if (fromDate && toDate) {
+    return `${formatIsoDateDisplay(fromDate)} - ${formatIsoDateDisplay(toDate)}`;
+  }
+  if (fromDate) {
+    return `Desde ${formatIsoDateDisplay(fromDate)}`;
+  }
+  if (toDate) {
+    return `Hasta ${formatIsoDateDisplay(toDate)}`;
+  }
+  return "Total histórico";
+}
+
+export function resolveCurrentMonthCardPeriod(now: Date = new Date()): {
+  label: string;
+  fromDate: string;
+  toDate: string;
+} {
+  const yearMonth = yearMonthFromDate(now);
+  const range = calendarMonthDateRange(yearMonth);
+  return {
+    label: formatMonthLabel(yearMonth),
+    fromDate: range.fromDate,
+    toDate: range.toDate,
+  };
+}
+
+export function resolveUnpaidCardPeriod(
+  fromDate: string,
+  toDate: string,
+): {
+  label: string;
+  fromDate: string;
+  toDate: string;
+} {
+  if (!hasPeriodFilter(fromDate, toDate)) {
+    return {
+      label: "Total histórico",
+      fromDate: "",
+      toDate: "",
+    };
+  }
+
+  return {
+    label: formatDateRangePeriodLabel(fromDate, toDate),
+    fromDate,
+    toDate,
+  };
+}
+
+export function resolveActivityCardPeriod(
+  fromDate: string,
+  toDate: string,
+  now: Date = new Date(),
+): {
+  label: string;
+  fromDate: string;
+  toDate: string;
+} {
+  if (!hasPeriodFilter(fromDate, toDate)) {
+    return resolveCurrentMonthCardPeriod(now);
+  }
+
+  return {
+    label: formatDateRangePeriodLabel(fromDate, toDate),
+    fromDate,
+    toDate,
+  };
+}
+
 export function calendarMonthDateRange(yearMonth: CalendarYearMonth): {
   fromDate: string;
   toDate: string;

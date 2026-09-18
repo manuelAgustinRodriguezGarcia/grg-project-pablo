@@ -22,6 +22,7 @@ export type ClientDebtItem = {
   outstanding: number;
   invoicesCount: number;
   code: string;
+  identificationType: BillingIdentificationType;
   identification: string | null;
   whatsapp: string | null;
   email: string | null;
@@ -83,6 +84,20 @@ export function formatInvoiceIdentification(
       return _exhaustive;
     }
   }
+}
+
+export function debtorCuitColumnValue(
+  debtor: Pick<ClientDebtItem, "identificationType" | "identification">,
+): string {
+  if (
+    (debtor.identificationType === "CUIT" ||
+      debtor.identificationType === "DNI") &&
+    debtor.identification
+  ) {
+    return debtor.identification;
+  }
+
+  return "—";
 }
 
 export function invoiceMatchesSearch(
@@ -272,6 +287,7 @@ export function listDebtorClients(
       outstanding: summary.unpaidAmount,
       invoicesCount: summary.unpaidCount,
       code: "",
+      identificationType: "NINGUNO" as const,
       identification: null,
       whatsapp: null,
       email: null,
@@ -323,6 +339,7 @@ export function buildDebtorClients(
           outstanding: invoice.outstandingAmount,
           invoicesCount: 1,
           code: invoice.clientCode,
+          identificationType: invoice.clientIdentificationType,
           identification,
           whatsapp: invoice.clientWhatsapp,
           email: invoice.clientEmail,

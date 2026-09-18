@@ -28,6 +28,7 @@ vi.mock("@/server/repositories/billing-client.repository", () => ({
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    hasHistory: vi.fn(),
     getNextCodeNumber: vi.fn(),
     isUniqueConstraintError: vi.fn(),
   },
@@ -82,6 +83,7 @@ describe("BillingClientService", () => {
     vi.mocked(billingClientRepository.findCanonicalGeneric).mockResolvedValue(
       null,
     );
+    vi.mocked(billingClientRepository.hasHistory).mockResolvedValue(false);
   });
 
   describe("createClient", () => {
@@ -348,6 +350,70 @@ describe("BillingClientService", () => {
         }),
       ).rejects.toMatchObject({ code: "BILLING_CLIENT_NOT_FOUND" });
     });
+
+    it("bloquea cambiar CUIT/DNI si el cliente tiene historial", async () => {
+      vi.mocked(billingClientRepository.findById).mockResolvedValue(
+        createBillingClientFixture({
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition: "RESPONSABLE_INSCRIPTO",
+        }),
+      );
+      vi.mocked(billingClientRepository.hasHistory).mockResolvedValue(true);
+
+      await expect(
+        billingClientService.updateClient({
+          id: BILLING_CLIENT_ID,
+          name: "GOMEZ SRL",
+          identificationType: "CUIT",
+          identificationNumber: "30500000003",
+          ivaCondition: "RESPONSABLE_INSCRIPTO",
+        }),
+      ).rejects.toMatchObject({
+        code: "CLIENT_HAS_HISTORY",
+        message: "No se puede modificar el CUIT/DNI de un cliente con historial.",
+      });
+
+      expect(billingClientRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("permite editar IVA y otros datos con historial sin tocar CUIT/DNI", async () => {
+      vi.mocked(billingClientRepository.findById).mockResolvedValue(
+        createBillingClientFixture({
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition: "RESPONSABLE_INSCRIPTO",
+        }),
+      );
+      vi.mocked(billingClientRepository.hasHistory).mockResolvedValue(true);
+      vi.mocked(billingClientRepository.update).mockResolvedValue(
+        createBillingClientFixture({
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition: "MONOTRIBUTISTA",
+          email: "nuevo@correo.com",
+        }),
+      );
+
+      await billingClientService.updateClient({
+        id: BILLING_CLIENT_ID,
+        name: "GOMEZ SRL",
+        email: "nuevo@correo.com",
+        identificationType: "CUIT",
+        identificationNumber: "30500010912",
+        ivaCondition: "MONOTRIBUTISTA",
+      });
+
+      expect(billingClientRepository.update).toHaveBeenCalledWith(
+        BILLING_CLIENT_ID,
+        expect.objectContaining({
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition: "MONOTRIBUTISTA",
+          email: "nuevo@correo.com",
+        }),
+      );
+    });
   });
 
   describe("deleteClient", () => {
@@ -366,6 +432,19 @@ describe("BillingClientService", () => {
           action: AUDIT_ACTIONS.BILLING_CLIENT_DELETED,
         }),
       );
+    });
+
+    it("bloquea eliminar un cliente con historial", async () => {
+      vi.mocked(billingClientRepository.hasHistory).mockResolvedValue(true);
+
+      await expect(
+        billingClientService.deleteClient(BILLING_CLIENT_ID),
+      ).rejects.toMatchObject({
+        code: "CLIENT_HAS_HISTORY",
+        message: "No se puede eliminar un cliente con historial de facturación.",
+      });
+
+      expect(billingClientRepository.delete).not.toHaveBeenCalled();
     });
   });
 });

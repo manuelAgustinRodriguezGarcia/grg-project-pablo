@@ -192,6 +192,88 @@ export class ProductRepository {
     };
   }
 
+  async findOrderedIds(where: Prisma.ProductWhereInput): Promise<string[]> {
+    const items = await prisma.product.findMany({
+      where,
+      orderBy: PRODUCT_LIST_ORDER_BY,
+      select: { id: true },
+    });
+
+    return items.map((item) => item.id);
+  }
+
+  async count(where: Prisma.ProductWhereInput): Promise<number> {
+    return prisma.product.count({ where });
+  }
+
+  async findIndexInFolderByRank(
+    folderId: string,
+    productId: string,
+    restrictToIds?: string[],
+  ): Promise<number | null> {
+    if (restrictToIds && restrictToIds.length === 0) {
+      return null;
+    }
+
+    if (restrictToIds && !restrictToIds.includes(productId)) {
+      return null;
+    }
+
+    const target = await prisma.product.findFirst({
+      where: {
+        id: productId,
+        folderId,
+      },
+      select: { id: true, sourceRow: true, updatedAt: true },
+    });
+
+    if (!target) {
+      return null;
+    }
+
+    const idScope = restrictToIds
+      ? Prisma.sql`AND id IN (${Prisma.join(restrictToIds)})`
+      : Prisma.empty;
+
+    const rows =
+      target.sourceRow === null
+        ? await prisma.$queryRaw<Array<{ index: number }>>`
+            SELECT COUNT(*)::int AS index
+            FROM "Product"
+            WHERE "folderId" = ${folderId}
+            ${idScope}
+            AND (
+              "sourceRow" IS NOT NULL
+              OR (
+                "sourceRow" IS NULL
+                AND (
+                  "updatedAt" > ${target.updatedAt}
+                  OR ("updatedAt" = ${target.updatedAt} AND id < ${target.id})
+                )
+              )
+            )
+          `
+        : await prisma.$queryRaw<Array<{ index: number }>>`
+            SELECT COUNT(*)::int AS index
+            FROM "Product"
+            WHERE "folderId" = ${folderId}
+            ${idScope}
+            AND (
+              ("sourceRow" IS NOT NULL AND "sourceRow" < ${target.sourceRow})
+              OR (
+                "sourceRow" IS NOT DISTINCT FROM ${target.sourceRow}
+                AND (
+                  "updatedAt" > ${target.updatedAt}
+                  OR ("updatedAt" = ${target.updatedAt} AND id < ${target.id})
+                )
+              )
+            )
+          `;
+
+    const index = rows[0]?.index;
+    return typeof index === "number" ? index : null;
+  }
+
   async findIdsMatchingJsonTextFilters(
     folderId: string,
     filters: JsonTextColumnFilter[],

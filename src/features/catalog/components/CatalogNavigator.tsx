@@ -45,6 +45,11 @@ import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
 import type { CatalogListItem } from "@/features/catalog/types/catalog.types";
 import type { FolderListItem } from "@/features/catalog/types/folder.types";
 import { sortByName } from "@/features/catalog/utils/sortByName";
+import {
+  resolveActiveFolderId,
+  resolveCatalogView,
+  type CatalogView,
+} from "@/features/catalog/utils/catalog-view";
 import { useReplaceSearchParams } from "@/shared/hooks/useReplaceSearchParams";
 import { normalizeMultilineText } from "@/shared/text/normalize-multiline-text";
 import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
@@ -53,6 +58,75 @@ const PAGE_SIZE = 100;
 const MIN_GLOBAL_SEARCH_CHARS = 2;
 const GLOBAL_SEARCH_DROPDOWN_PAGE_SIZE = 8;
 const DELETE_PRODUCT_PREVIEW_COLUMN_COUNT = 3;
+
+async function fetchFolderProductsPage(
+  folderId: string,
+  page: number,
+  options: {
+    pageSize?: number;
+    filters?: ColumnFilterInput[];
+    search?: string;
+  } = {},
+): Promise<ProductTableResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    pageSize: String(options.pageSize ?? PAGE_SIZE),
+    includeFullUrls: "false",
+  });
+
+  if (options.filters && options.filters.length > 0) {
+    params.set("filters", JSON.stringify(options.filters));
+  }
+
+  if (options.search) {
+    params.set("q", options.search);
+  }
+
+  const response = await fetch(
+    `/api/admin/folders/${folderId}/products?${params.toString()}`,
+    { cache: "no-store" },
+  );
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(payload?.error ?? "No se pudieron cargar los productos.");
+  }
+
+  return (await response.json()) as ProductTableResponse;
+}
+
+async function locateProductPage(
+  folderId: string,
+  productId: string,
+  options: {
+    pageSize?: number;
+    serializedFilters?: string;
+  } = {},
+): Promise<number | null> {
+  const params = new URLSearchParams({
+    productId,
+    pageSize: String(options.pageSize ?? PAGE_SIZE),
+  });
+
+  if (options.serializedFilters) {
+    params.set("filters", options.serializedFilters);
+  }
+
+  const response = await fetch(
+    `/api/admin/folders/${folderId}/products/locate?${params.toString()}`,
+  );
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = (await response.json()) as { page?: number };
+  return typeof payload.page === "number" && payload.page >= 1
+    ? payload.page
+    : null;
+}
 
 type CatalogTarget = {
   id: string;
@@ -178,8 +252,6 @@ type CatalogNavigatorProps = {
   enableColumnFilters?: boolean;
 };
 
-type CatalogView = "catalog-picker" | "folder-picker" | "products";
-
 function resolveCatalogId(
   catalogs: DirectoryCatalogItem[],
   selectedCatalogId: string,
@@ -190,29 +262,6 @@ function resolveCatalogId(
 
   const exists = catalogs.some((catalog) => catalog.id === selectedCatalogId);
   return exists ? selectedCatalogId : "";
-}
-
-function resolveFolderId(
-  folders: CatalogNavigationFolderItem[],
-  selectedFolderId: string,
-  options?: { allowFallback?: boolean },
-): string {
-  const allowFallback = options?.allowFallback ?? false;
-
-  if (folders.length === 0) {
-    return allowFallback ? "" : selectedFolderId;
-  }
-
-  const exists = folders.some((folder) => folder.id === selectedFolderId);
-  if (exists) {
-    return selectedFolderId;
-  }
-
-  if (!allowFallback) {
-    return "";
-  }
-
-  return sortByName(folders)[0]?.id ?? "";
 }
 
 export function CatalogNavigator({
@@ -227,6 +276,10 @@ export function CatalogNavigator({
   const queryClient = useQueryClient();
   const replaceParams = useReplaceSearchParams();
   const stableTableDataRef = useRef<ProductTableResponse | null>(null);
+  const pinnedLocatePagesRef = useRef(new Map<string, number>());
+  const pinnedLocateInflightRef = useRef(
+    new Map<string, Promise<number | null>>(),
+  );
   const [catalogList, setCatalogList] = useState(catalogs);
   const [prevCatalogs, setPrevCatalogs] = useState(catalogs);
 
@@ -261,6 +314,12 @@ export function CatalogNavigator({
   const [folderSearch, setFolderSearch] = useState("");
   const [folderSearchSeedValue, setFolderSearchSeedValue] = useState("");
   const [folderSearchResetKey, setFolderSearchResetKey] = useState(0);
+  const [preferProductsShell, setPreferProductsShell] = useState(
+    () => Boolean(initialCatalogId && initialFolderId),
+  );
+  const [highlightedProductId, setHighlightedProductId] = useState<string | null>(
+    null,
+  );
 
   const isSearchActive = debouncedSearch.length >= MIN_GLOBAL_SEARCH_CHARS;
 
@@ -519,7 +578,12 @@ export function CatalogNavigator({
     placeholderData: keepPreviousData,
   });
 
-  const folders = useMemo(() => navigationQuery.data ?? [], [navigationQuery.data]);
+  const folders = useMemo(() => {
+    if (navigationQuery.isPlaceholderData) {
+      return [];
+    }
+    return navigationQuery.data ?? [];
+  }, [navigationQuery.data, navigationQuery.isPlaceholderData]);
   const isNavigationReady =
     Boolean(activeCatalogId) &&
     navigationQuery.isFetched &&
@@ -530,27 +594,31 @@ export function CatalogNavigator({
   const foldersError =
     navigationQuery.error instanceof Error ? navigationQuery.error.message : null;
 
-  const activeFolderId = useMemo(() => {
-    if (!isNavigationReady) {
-      return resolveFolderId(folders, selectedFolderId, { allowFallback: false });
-    }
+  const activeFolderId = useMemo(
+    () =>
+      resolveActiveFolderId({
+        activeCatalogId,
+        selectedFolderId,
+        isNavigationReady,
+        folderIds: folders.map((folder) => folder.id),
+      }),
+    [activeCatalogId, folders, isNavigationReady, selectedFolderId],
+  );
 
-    if (folders.some((folder) => folder.id === selectedFolderId)) {
-      return selectedFolderId;
-    }
+  useEffect(() => {
+    pinnedLocatePagesRef.current.clear();
+    pinnedLocateInflightRef.current.clear();
+  }, [activeFolderId]);
 
-    return "";
-  }, [folders, isNavigationReady, selectedFolderId]);
-
-  const catalogView: CatalogView = useMemo(() => {
-    if (!activeCatalogId) {
-      return "catalog-picker";
-    }
-    if (!activeFolderId) {
-      return "folder-picker";
-    }
-    return "products";
-  }, [activeCatalogId, activeFolderId]);
+  const catalogView: CatalogView = useMemo(
+    () =>
+      resolveCatalogView({
+        activeCatalogId,
+        activeFolderId,
+        preferProductsShell,
+      }),
+    [activeCatalogId, activeFolderId, preferProductsShell],
+  );
 
   const canLoadFolderProducts =
     Boolean(activeFolderId) &&
@@ -598,35 +666,15 @@ export function CatalogNavigator({
       serializedColumnFilters,
       folderSearch,
     ),
-    queryFn: async (): Promise<ProductTableResponse> => {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: String(PAGE_SIZE),
-        includeFullUrls: "false",
-      });
-
-      if (enableColumnFilters && columnFilters.length > 0) {
-        params.set("filters", JSON.stringify(columnFilters));
-      }
-
-      if (folderSearch) {
-        params.set("q", folderSearch);
-      }
-
-      const response = await fetch(
-        `/api/admin/folders/${activeFolderId}/products?${params.toString()}`,
-        { cache: "no-store" },
-      );
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(payload?.error ?? "No se pudieron cargar los productos.");
-      }
-
-      return (await response.json()) as ProductTableResponse;
-    },
+    queryFn: (): Promise<ProductTableResponse> =>
+      fetchFolderProductsPage(activeFolderId, page, {
+        pageSize: PAGE_SIZE,
+        filters:
+          enableColumnFilters && columnFilters.length > 0
+            ? columnFilters
+            : undefined,
+        search: folderSearch || undefined,
+      }),
     enabled: canLoadFolderProducts,
     placeholderData: keepPreviousData,
     staleTime: 0,
@@ -749,6 +797,8 @@ export function CatalogNavigator({
   const handleSelectProductFolderSearchResult = useCallback(
     (group: ProductFolderSearchGroup) => {
       const seed = debouncedSearch.trim();
+      setPreferProductsShell(true);
+      setHighlightedProductId(group.items[0]?.productId ?? null);
       setSelectedCatalogId(group.catalogId);
       setSelectedFolderId(group.folderId);
       setPage(1);
@@ -764,6 +814,8 @@ export function CatalogNavigator({
 
   const handleSelectFolderSearchResult = useCallback(
     (catalogId: string, folderId: string) => {
+      setPreferProductsShell(true);
+      setHighlightedProductId(null);
       setSelectedCatalogId(catalogId);
       setSelectedFolderId(folderId);
       setPage(1);
@@ -785,17 +837,21 @@ export function CatalogNavigator({
 
   const handleSelectCatalog = useCallback(
     (catalogId: string) => {
+      setPreferProductsShell((current) => current || Boolean(selectedCatalogId));
+      setHighlightedProductId(null);
       setSelectedCatalogId(catalogId);
       setSelectedFolderId("");
       setColumnFilters([]);
       setPage(1);
       resetFolderSearch();
     },
-    [resetFolderSearch],
+    [resetFolderSearch, selectedCatalogId],
   );
 
   const handleSelectFolder = useCallback(
     (folderId: string) => {
+      setPreferProductsShell(true);
+      setHighlightedProductId(null);
       setSelectedFolderId(folderId);
       setColumnFilters([]);
       setPage(1);
@@ -805,6 +861,8 @@ export function CatalogNavigator({
   );
 
   const handleBackToCatalogs = useCallback(() => {
+    setPreferProductsShell(false);
+    setHighlightedProductId(null);
     setSelectedCatalogId("");
     setSelectedFolderId("");
     setColumnFilters([]);
@@ -818,9 +876,119 @@ export function CatalogNavigator({
     setPage(nextPage);
   }, []);
 
+  const handleRevealPinnedProduct = useCallback(
+    (productId: string) => {
+      if (!activeFolderId || !productId) {
+        return;
+      }
+
+      const cacheKey = `${activeFolderId}:${serializedColumnFilters}:${productId}`;
+      const cachedPage = pinnedLocatePagesRef.current.get(cacheKey);
+      if (cachedPage != null) {
+        setPage(cachedPage);
+        return;
+      }
+
+      let inflight = pinnedLocateInflightRef.current.get(cacheKey);
+      if (!inflight) {
+        inflight = locateProductPage(activeFolderId, productId, {
+          pageSize: PAGE_SIZE,
+          serializedFilters: serializedColumnFilters || undefined,
+        })
+          .then((locatedPage) => {
+            if (locatedPage != null) {
+              pinnedLocatePagesRef.current.set(cacheKey, locatedPage);
+            }
+            return locatedPage;
+          })
+          .finally(() => {
+            pinnedLocateInflightRef.current.delete(cacheKey);
+          });
+        pinnedLocateInflightRef.current.set(cacheKey, inflight);
+      }
+
+      void inflight.then((locatedPage) => {
+        if (locatedPage != null) {
+          setPage(locatedPage);
+        }
+      });
+    },
+    [activeFolderId, serializedColumnFilters],
+  );
+
+  const handlePrefetchPinnedProduct = useCallback(
+    (productId: string) => {
+      if (!activeFolderId || !productId) {
+        return;
+      }
+
+      const cacheKey = `${activeFolderId}:${serializedColumnFilters}:${productId}`;
+      const filtersForFetch =
+        enableColumnFilters && columnFilters.length > 0
+          ? columnFilters
+          : undefined;
+
+      void (async () => {
+        try {
+          let locatedPage = pinnedLocatePagesRef.current.get(cacheKey) ?? null;
+
+          if (locatedPage == null) {
+            let inflight = pinnedLocateInflightRef.current.get(cacheKey);
+            if (!inflight) {
+              inflight = locateProductPage(activeFolderId, productId, {
+                pageSize: PAGE_SIZE,
+                serializedFilters: serializedColumnFilters || undefined,
+              })
+                .then((page) => {
+                  if (page != null) {
+                    pinnedLocatePagesRef.current.set(cacheKey, page);
+                  }
+                  return page;
+                })
+                .finally(() => {
+                  pinnedLocateInflightRef.current.delete(cacheKey);
+                });
+              pinnedLocateInflightRef.current.set(cacheKey, inflight);
+            }
+
+            locatedPage = await inflight;
+            if (locatedPage == null) {
+              return;
+            }
+          }
+
+          await queryClient.prefetchQuery({
+            queryKey: adminQueryKeys.products(
+              activeFolderId,
+              locatedPage,
+              serializedColumnFilters,
+              "",
+            ),
+            queryFn: () =>
+              fetchFolderProductsPage(activeFolderId, locatedPage, {
+                pageSize: PAGE_SIZE,
+                filters: filtersForFetch,
+              }),
+          });
+        } catch {
+          return;
+        }
+      })();
+    },
+    [
+      activeFolderId,
+      columnFilters,
+      enableColumnFilters,
+      queryClient,
+      serializedColumnFilters,
+    ],
+  );
+
   const handleFolderSearchChange = useCallback((value: string) => {
     setFolderSearch(value);
-    setPage(1);
+    if (value.trim()) {
+      setPage(1);
+    }
   }, []);
 
   const handleColumnFilterChange = useCallback(
@@ -1342,6 +1510,7 @@ export function CatalogNavigator({
                 }
                 onAddFolder={isAdmin && catalogHasNoFolders ? handleAddFolder : undefined}
                 onPageChange={handlePageChange}
+                page={page}
                 enableColumnFilters={enableColumnFilters}
                 columnFilters={columnFilters}
                 onColumnFilterChange={handleColumnFilterChange}
@@ -1359,6 +1528,9 @@ export function CatalogNavigator({
                 }
                 folderSearchResetKey={folderSearchResetKey}
                 folderSearchSeedValue={folderSearchSeedValue}
+                highlightProductId={highlightedProductId}
+                onRevealPinnedProduct={handleRevealPinnedProduct}
+                onPrefetchPinnedProduct={handlePrefetchPinnedProduct}
               />
             </>
           ) : null}

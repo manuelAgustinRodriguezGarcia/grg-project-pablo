@@ -84,24 +84,25 @@ export async function buildReceiptPdf(
     identityLines: issuerIdentityLines(input.issuer),
   });
 
-  y -= 10;
+  y -= 16;
+  const clientBoxHeight = 72;
   page.drawRectangle({
     x: PAGE_MARGIN,
-    y: y - 78,
+    y: y - clientBoxHeight,
     width: CONTENT_WIDTH,
-    height: 90,
+    height: clientBoxHeight,
     color: PDF_MUTED,
   });
   drawPdfText(page, "Recibimos de", {
     x: PAGE_MARGIN + 10,
-    y: y - 8,
+    y: y - 14,
     size: 8,
     font: bold,
     color: PDF_BLUE,
   });
   drawPdfText(page, input.clientName, {
     x: PAGE_MARGIN + 10,
-    y: y - 24,
+    y: y - 30,
     size: 11,
     font: bold,
   });
@@ -113,7 +114,7 @@ export async function buildReceiptPdf(
   if (identification) {
     drawPdfText(page, identification, {
       x: PAGE_MARGIN + 10,
-      y: y - 38,
+      y: y - 44,
       size: 8,
       font,
     });
@@ -122,35 +123,82 @@ export async function buildReceiptPdf(
   const methodLabel = RECEIPT_PAYMENT_METHOD_LABELS[input.paymentMethod];
   drawPdfText(page, `Metodo: ${methodLabel}`, {
     x: PAGE_MARGIN + 10,
-    y: y - 52,
+    y: y - 58,
     size: 8,
     font,
   });
 
+  y -= clientBoxHeight + 18;
+
   if (input.allocations.length === 0) {
     drawPdfText(page, "Pago a cuenta", {
-      x: PAGE_MARGIN + 10,
-      y: y - 66,
-      size: 8,
-      font,
+      x: PAGE_MARGIN,
+      y,
+      size: 9,
+      font: bold,
     });
+    y -= 16;
   } else {
-    const invoiceSummary = input.allocations
-      .map(
-        (allocation) =>
-          `${allocation.invoiceType} ${allocation.invoiceNumber} ($${formatPdfAmount(allocation.amount)})`,
-      )
-      .join(" / ");
-    const wrapped = wrapPdfText(invoiceSummary, font, 8, CONTENT_WIDTH - 24);
-    drawPdfText(page, wrapped[0] ?? "", {
-      x: PAGE_MARGIN + 10,
-      y: y - 66,
+    const colInvoice = PAGE_MARGIN;
+    const colMethod = PAGE_MARGIN + CONTENT_WIDTH * 0.42;
+    const colAmount = PAGE_MARGIN + CONTENT_WIDTH * 0.72;
+    const rowHeight = 14;
+
+    drawPdfText(page, "N° factura", {
+      x: colInvoice,
+      y,
       size: 8,
-      font,
+      font: bold,
     });
+    drawPdfText(page, "Metodo de pago", {
+      x: colMethod,
+      y,
+      size: 8,
+      font: bold,
+    });
+    drawPdfText(page, "Monto", {
+      x: colAmount,
+      y,
+      size: 8,
+      font: bold,
+    });
+    y -= 4;
+    page.drawRectangle({
+      x: PAGE_MARGIN,
+      y: y - 1,
+      width: CONTENT_WIDTH,
+      height: 1,
+      color: PDF_GRAY,
+    });
+    y -= rowHeight;
+
+    for (const allocation of input.allocations) {
+      const invoiceLabel = `${allocation.invoiceType} ${allocation.invoiceNumber}`;
+      drawPdfText(page, invoiceLabel, {
+        x: colInvoice,
+        y,
+        size: 8,
+        font,
+        maxWidth: colMethod - colInvoice - 8,
+      });
+      drawPdfText(page, methodLabel, {
+        x: colMethod,
+        y,
+        size: 8,
+        font,
+        maxWidth: colAmount - colMethod - 8,
+      });
+      drawPdfText(page, `$ ${formatPdfAmount(allocation.amount)}`, {
+        x: colAmount,
+        y,
+        size: 8,
+        font,
+      });
+      y -= rowHeight;
+    }
   }
 
-  y -= 112;
+  y -= 10;
   page.drawRectangle({
     x: PAGE_MARGIN,
     y: y - 18,
