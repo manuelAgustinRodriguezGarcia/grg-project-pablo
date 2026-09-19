@@ -97,6 +97,7 @@ export type ProcessExternalImagesResult = {
     rejected: number;
     ambiguous: number;
     duplicateName: number;
+    unmatchedSkipped: number;
   };
 };
 
@@ -331,6 +332,7 @@ export class ProductImageService {
       rejected: 0,
       ambiguous: 0,
       duplicateName: 0,
+      unmatchedSkipped: 0,
     };
 
     const productImageCounts = new Map<string, number>();
@@ -406,17 +408,7 @@ export class ProductImageService {
       }
 
       if (outcome.status === "PENDING_REVIEW") {
-        stats.pendingReview += 1;
-        await persistMatchedImage({
-          importJobId: input.importJobId,
-          folderId: input.folderId,
-          productId: null,
-          buffer: image.buffer,
-          originalName: image.originalName,
-          mimeType: validation.mimeType,
-          source: image.source,
-          status: "PENDING_REVIEW",
-        });
+        stats.unmatchedSkipped += 1;
         continue;
       }
 
@@ -438,6 +430,14 @@ export class ProductImageService {
           isPrimary: count === 1,
         });
       }
+    }
+
+    if (stats.unmatchedSkipped > 0) {
+      warnings.push(
+        stats.unmatchedSkipped === 1
+          ? "1 imagen del ZIP no coincidió con productos de esta carpeta y se omitió."
+          : `${stats.unmatchedSkipped} imágenes del ZIP no coincidieron con productos de esta carpeta y se omitieron.`,
+      );
     }
 
     return { warnings, stats };

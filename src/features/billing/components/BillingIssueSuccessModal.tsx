@@ -300,18 +300,15 @@ export function BillingIssueSuccessModal({
         ) : null}
         <div className={styles.issueSuccessActions}>
           <div className={styles.issueSuccessDocActions}>
-            <button
-              type="button"
+            <Link
+              href={BILLING_MOVIMIENTOS_PATH}
               className={styles.issueSuccessSecondary}
-              onClick={() => {
-                void runPrint();
-              }}
-              disabled={busyAction !== null}
+              onClick={goToList}
             >
-              <Printer strokeWidth={ICON_STROKE} aria-hidden />
-              Imprimir
-              <kbd className={styles.shortcutKbd}>I</kbd>
-            </button>
+              <ArrowLeftRight strokeWidth={ICON_STROKE} aria-hidden />
+              Ver lista
+              <kbd className={styles.shortcutKbd}>L</kbd>
+            </Link>
             <button
               type="button"
               className={styles.issueSuccessSecondary}
@@ -378,15 +375,18 @@ export function BillingIssueSuccessModal({
               {copy.anotherLabel}
               <kbd className={styles.shortcutKbd}>N</kbd>
             </button>
-            <Link
-              href={BILLING_MOVIMIENTOS_PATH}
+            <button
+              type="button"
               className={styles.issueSuccessPrimary}
-              onClick={goToList}
+              onClick={() => {
+                void runPrint();
+              }}
+              disabled={busyAction !== null}
             >
-              <ArrowLeftRight strokeWidth={ICON_STROKE} aria-hidden />
-              Ver lista
-              <kbd className={styles.shortcutKbd}>L</kbd>
-            </Link>
+              <Printer strokeWidth={ICON_STROKE} aria-hidden />
+              Imprimir
+              <kbd className={styles.shortcutKbd}>I</kbd>
+            </button>
           </div>
         </div>
         <p className={styles.issueSuccessShortcuts}>

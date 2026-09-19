@@ -338,10 +338,15 @@ export function ReceiptFormModal({
     if (!row) {
       return;
     }
-    setRowCash(
-      invoiceId,
-      cashNeededForInvoice(row.outstandingCents, row.creditAppliedCents),
+    const fullCash = cashNeededForInvoice(
+      row.outstandingCents,
+      row.creditAppliedCents,
     );
+    if (fullCash > 0 && row.cashCents >= fullCash) {
+      setRowCash(invoiceId, 0);
+      return;
+    }
+    setRowCash(invoiceId, fullCash);
   }
 
   const invoiceById = useMemo(() => {
@@ -737,7 +742,11 @@ export function ReceiptFormModal({
                       <th scope="col">Saldo a favor aplicado</th>
                     )}
                     <th scope="col">{isAllocate ? "Aplica" : "Importe cobrado"}</th>
-                    {isAllocate ? null : <th scope="col"> </th>}
+                    {isAllocate ? null : (
+                      <th scope="col" className={styles.allocationFillCol}>
+                        {" "}
+                      </th>
+                    )}
                     {isAllocate ? (
                       <th scope="col">Saldo</th>
                     ) : (
@@ -756,6 +765,12 @@ export function ReceiptFormModal({
                       row.creditAppliedCents,
                       row.cashCents,
                     );
+                    const fullCashCents = cashNeededForInvoice(
+                      row.outstandingCents,
+                      row.creditAppliedCents,
+                    );
+                    const isFullCash =
+                      fullCashCents > 0 && row.cashCents >= fullCashCents;
                     return (
                       <tr
                         key={row.invoiceId}
@@ -892,16 +907,28 @@ export function ReceiptFormModal({
                           />
                         </td>
                         {isAllocate ? null : (
-                          <td>
+                          <td className={styles.allocationFillCol}>
                             <button
                               type="button"
-                              className={styles.receiptFillAllButton}
+                              className={[
+                                styles.receiptFillAllButton,
+                                isFullCash
+                                  ? styles.receiptFillAllButtonActive
+                                  : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 fillRowOneHundred(row.invoiceId);
                               }}
                               disabled={isBusy}
-                              aria-label={`Cargar el 100% de ${invoice.invoiceNumber}`}
+                              aria-pressed={isFullCash}
+                              aria-label={
+                                isFullCash
+                                  ? `Quitar el 100% de ${invoice.invoiceNumber}`
+                                  : `Cargar el 100% de ${invoice.invoiceNumber}`
+                              }
                             >
                               100%
                             </button>
@@ -933,7 +960,7 @@ export function ReceiptFormModal({
                     <td>
                       {formatArsExact(centsToPesos(amountCents))}
                     </td>
-                    {isAllocate ? null : <td />}
+                    {isAllocate ? null : <td className={styles.allocationFillCol} />}
                     <td />
                   </tr>
                 </tfoot>

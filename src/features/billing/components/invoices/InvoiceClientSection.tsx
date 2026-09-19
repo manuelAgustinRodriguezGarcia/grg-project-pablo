@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react";
 import type { BillingClientListItem } from "@/features/billing/types/billing-client.types";
 import { IVA_CONDITION_LABELS } from "@/features/billing/types/billing-client.types";
-import type { BillingFiscalContext } from "@/features/billing/types/billing-invoice.types";
+import {
+  INVOICE_TYPE_LABELS,
+  type BillingFiscalContext,
+} from "@/features/billing/types/billing-invoice.types";
 import { formatArs } from "@/features/billing/utils/format-ars";
 import {
   determineInvoiceType,
@@ -64,7 +67,12 @@ export function InvoiceClientSection({
     : false;
 
   return (
-    <section className={styles.sectionCard} aria-label="Cliente">
+    <section
+      className={`${styles.sectionCard}${
+        selectedClient ? ` ${styles.selectedClientSticky}` : ""
+      }`}
+      aria-label="Cliente"
+    >
       <h2 className={styles.sectionCardTitle}>
         <BookUser className={styles.sectionCardIcon} strokeWidth={ICON_STROKE} aria-hidden />
         Cliente
@@ -77,11 +85,24 @@ export function InvoiceClientSection({
               <p className={styles.selectedClientName}>
                 {selectedClient.name}
               </p>
-              <p className={styles.selectedClientMeta}>
-                {selectedClient.code} ·{" "}
-                {formatBillingClientPickerIdentification(selectedClient)}{" "}
-                · {IVA_CONDITION_LABELS[selectedClient.ivaCondition]}
-              </p>
+              <div className={styles.selectedClientMetaRow}>
+                <p className={styles.selectedClientMeta}>
+                  {selectedClient.code} ·{" "}
+                  {formatBillingClientPickerIdentification(selectedClient)}{" "}
+                  · {IVA_CONDITION_LABELS[selectedClient.ivaCondition]}
+                </p>
+                {invoiceType ? (
+                  <span
+                    className={`${styles.selectedClientTypePill} ${
+                      invoiceType === "A"
+                        ? styles.selectedClientTypePillA
+                        : styles.selectedClientTypePillB
+                    }`}
+                  >
+                    {INVOICE_TYPE_LABELS[invoiceType]}
+                  </span>
+                ) : null}
+              </div>
               {selectedClient.address || selectedClient.city ? (
                 <p className={styles.selectedClientMeta}>
                   {[
@@ -106,25 +127,17 @@ export function InvoiceClientSection({
             </button>
           </div>
 
-          <div
-            className={`${styles.invoiceTypeNotice} ${
-              invoiceType === "A"
-                ? styles.invoiceTypeNoticeA
-                : styles.invoiceTypeNoticeB
-            }`}
-            role="status"
-          >
-            {isGeneric ? (
-              <>
-                Se generará una Factura tipo B para consumidor final sin
-                identificación.
-                <br />
-                Límite vigente: {formatArs(fiscalContext.genericClientLimit)}.
-              </>
-            ) : (
-              <>Se generará una Factura tipo {invoiceType}.</>
-            )}
-          </div>
+          {isGeneric ? (
+            <div
+              className={`${styles.invoiceTypeNotice} ${styles.invoiceTypeNoticeB}`}
+              role="status"
+            >
+              Se generará una Factura tipo B para consumidor final sin
+              identificación.
+              <br />
+              Límite vigente: {formatArs(fiscalContext.genericClientLimit)}.
+            </div>
+          ) : null}
         </>
       ) : (
         <>

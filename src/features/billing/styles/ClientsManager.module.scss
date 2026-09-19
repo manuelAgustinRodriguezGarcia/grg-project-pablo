@@ -3524,7 +3524,8 @@ td.clientIdentityCell {
     display: flex;
   }
 
-  .issueSuccessSecondary {
+  .issueSuccessSecondary,
+  .issueSuccessPrimary {
     width: 100%;
     padding-inline: 0.55rem;
   }
@@ -3552,6 +3553,7 @@ td.clientIdentityCell {
   font-size: 0.88rem;
   font-weight: 650;
   color: $navy;
+  text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
   transition:
@@ -3601,13 +3603,24 @@ td.clientIdentityCell {
     height: 1rem;
   }
 
-  &:hover {
+  .shortcutKbd {
+    background: $white;
+    border-color: rgba($navy, 0.12);
+    color: $navy;
+  }
+
+  &:hover:not(:disabled) {
     background: color-mix(in srgb, $blue 92%, black);
   }
 
   &:focus-visible {
     outline: 2px solid $blue;
     outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
 }
 
@@ -3646,6 +3659,11 @@ td.clientIdentityCell {
   overflow: auto;
   padding: 1.15rem 1.35rem 0.35rem;
   background: $white;
+
+  .historyTableWrap {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
 }
 
 .receiptFormOverlay .receiptModalFooter {
@@ -3773,9 +3791,14 @@ td.clientIdentityCell {
 }
 
 .receiptFillAllButton {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   min-width: 3.5rem;
-  padding: 0 0.75rem;
+  min-height: 1.9375rem;
+  padding: 0.35rem 0.75rem;
   border: 1px solid rgba($blue, 0.35);
   border-radius: $radius-sm;
   background: rgba($blue, 0.08);
@@ -3783,10 +3806,12 @@ td.clientIdentityCell {
   font-family: $font-sans;
   font-size: 0.82rem;
   font-weight: 700;
+  line-height: 1.2;
   cursor: pointer;
   transition:
     background-color 0.15s ease,
-    border-color 0.15s ease;
+    border-color 0.15s ease,
+    color 0.15s ease;
 
   @media (hover: hover) and (pointer: fine) {
     &:hover:not(:disabled) {
@@ -3803,6 +3828,20 @@ td.clientIdentityCell {
   &:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+  }
+}
+
+.receiptFillAllButtonActive {
+  background: $blue;
+  border-color: $blue;
+  color: $white;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $blue 88%, $navy);
+      border-color: color-mix(in srgb, $blue 88%, $navy);
+      color: $white;
+    }
   }
 }
 
@@ -3902,6 +3941,11 @@ td.clientIdentityCell {
   font-weight: 700;
   color: rgba($navy, 0.55);
   text-transform: uppercase;
+}
+
+.allocationFillCol {
+  width: 4.75rem;
+  text-align: center;
 }
 
 .allocationTotalRow td {

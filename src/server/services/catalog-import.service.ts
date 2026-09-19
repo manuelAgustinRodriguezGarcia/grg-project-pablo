@@ -2085,8 +2085,15 @@ export class CatalogImportService {
           },
         });
 
+        const detail =
+          error instanceof Error && error.message.trim()
+            ? error.message.trim()
+            : null;
+
         throw new ImportError(
-          "El procesamiento de imágenes fue interrumpido. Pulse importar de nuevo para continuar.",
+          detail
+            ? `El procesamiento de imágenes fue interrumpido (${detail}). Pulse importar de nuevo para continuar.`
+            : "El procesamiento de imágenes fue interrumpido. Pulse importar de nuevo para continuar.",
           "IMAGE_PROCESSING_INTERRUPTED",
         );
       }

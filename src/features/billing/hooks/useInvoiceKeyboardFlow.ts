@@ -56,6 +56,20 @@ export function useInvoiceKeyboardFlow({
     focusInvoiceField(INVOICE_CLIENT_PICKER_ID);
   }, []);
 
+  const isFirstItemRow = useCallback(
+    (rowKey: string) => rows[0]?.key === rowKey,
+    [rows],
+  );
+
+  const focusItemField = useCallback(
+    (id: string, rowKey: string, forceScroll = false) => {
+      focusInvoiceField(id, {
+        scroll: forceScroll || !isFirstItemRow(rowKey),
+      });
+    },
+    [isFirstItemRow],
+  );
+
   useEffect(() => {
     if (!focusClientPickerWhen) {
       return;
@@ -78,11 +92,11 @@ export function useInvoiceKeyboardFlow({
       const result = resolveAddItemShortcut(rows.map(toKeyboardSnapshot));
       switch (result.type) {
         case "focus-empty-rubro":
-          focusInvoiceField(invoiceItemRubroId(result.rowKey));
+          focusItemField(invoiceItemRubroId(result.rowKey), result.rowKey, true);
           return;
         case "add-empty-row": {
           const nextKey = addEmptyRow();
-          focusInvoiceField(invoiceItemRubroId(nextKey));
+          focusItemField(invoiceItemRubroId(nextKey), nextKey, true);
           return;
         }
         default: {
@@ -96,14 +110,14 @@ export function useInvoiceKeyboardFlow({
     return () => {
       document.removeEventListener("keydown", handleAddItemShortcut);
     };
-  }, [addEmptyRow, enabled, rows]);
+  }, [addEmptyRow, enabled, focusItemField, rows]);
 
   const focusFirstRubro = useCallback(() => {
     const firstRow = rows[0];
     if (!firstRow) {
       return;
     }
-    focusInvoiceField(invoiceItemRubroId(firstRow.key));
+    focusInvoiceField(invoiceItemRubroId(firstRow.key), { scroll: false });
   }, [rows]);
 
   const leaveItemsSection = useCallback(() => {
@@ -114,9 +128,12 @@ export function useInvoiceKeyboardFlow({
     });
   }, [discardTrailingEmptyRows]);
 
-  const afterRubroSelected = useCallback((rowKey: string) => {
-    focusInvoiceField(invoiceItemDescriptionId(rowKey));
-  }, []);
+  const afterRubroSelected = useCallback(
+    (rowKey: string) => {
+      focusItemField(invoiceItemDescriptionId(rowKey), rowKey);
+    },
+    [focusItemField],
+  );
 
   const handleDescriptionKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>, rowKey: string) => {
@@ -125,9 +142,9 @@ export function useInvoiceKeyboardFlow({
       }
 
       event.preventDefault();
-      focusInvoiceField(invoiceItemQuantityId(rowKey));
+      focusItemField(invoiceItemQuantityId(rowKey), rowKey);
     },
-    [],
+    [focusItemField],
   );
 
   const handleQuantityKeyDown = useCallback(
@@ -153,9 +170,9 @@ export function useInvoiceKeyboardFlow({
         commitQuantity?.(rowKey, "1");
       }
 
-      focusInvoiceField(invoiceItemFieldId("price", rowKey));
+      focusItemField(invoiceItemFieldId("price", rowKey), rowKey);
     },
-    [commitQuantity, rows],
+    [commitQuantity, focusItemField, rows],
   );
 
   const handlePriceKeyDown = useCallback(
@@ -166,17 +183,29 @@ export function useInvoiceKeyboardFlow({
 
       event.preventDefault();
 
+      const finishedFirstItem = isFirstItemRow(rowKey);
       const result = resolvePriceEnter(rowKey, rows.map(toKeyboardSnapshot));
       switch (result.type) {
         case "focus":
-          focusInvoiceField(invoiceItemFieldId(result.field, result.rowKey));
+          focusItemField(
+            invoiceItemFieldId(result.field, result.rowKey),
+            result.rowKey,
+          );
           return;
         case "focus-empty-rubro":
-          focusInvoiceField(invoiceItemRubroId(result.rowKey));
+          focusItemField(
+            invoiceItemRubroId(result.rowKey),
+            result.rowKey,
+            finishedFirstItem,
+          );
           return;
         case "add-empty-row": {
           const nextKey = addEmptyRow();
-          focusInvoiceField(invoiceItemRubroId(nextKey));
+          focusItemField(
+            invoiceItemRubroId(nextKey),
+            nextKey,
+            finishedFirstItem,
+          );
           return;
         }
         default: {
@@ -185,7 +214,7 @@ export function useInvoiceKeyboardFlow({
         }
       }
     },
-    [addEmptyRow, rows],
+    [addEmptyRow, focusItemField, isFirstItemRow, rows],
   );
 
   return {

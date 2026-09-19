@@ -583,10 +583,15 @@ export function resolvePriceEnter(
   return { type: "add-empty-row" };
 }
 
-export function focusInvoiceField(id: string): void {
+export function focusInvoiceField(
+  id: string,
+  options?: { scroll?: boolean },
+): void {
   if (typeof document === "undefined") {
     return;
   }
+
+  const shouldScroll = options?.scroll !== false;
 
   function attempt(): boolean {
     const element = document.getElementById(id);
@@ -596,7 +601,9 @@ export function focusInvoiceField(id: string): void {
 
     element.focus({ preventScroll: true });
     if (document.activeElement === element) {
-      scrollInvoiceFocusIntoView(element);
+      if (shouldScroll) {
+        scrollInvoiceFocusIntoView(element);
+      }
       return true;
     }
 

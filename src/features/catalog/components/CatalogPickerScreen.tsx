@@ -78,16 +78,36 @@ function CatalogFoldersPreview({
       }
 
       const rect = anchor.getBoundingClientRect();
+      const pad = 12;
       const width = Math.min(
         Math.max(rect.width, PREVIEW_COLUMN_MIN_WIDTH * columnCount),
-        window.innerWidth - 24,
+        window.innerWidth - pad * 2,
       );
-      let left = rect.left + rect.width / 2 - width / 2;
-      left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
+      const grid = anchor.closest("[role='listbox']");
+      const gridRect = grid?.getBoundingClientRect();
+      const edgeSlack = 10;
+      const isLeftEdge = gridRect
+        ? rect.left - gridRect.left <= edgeSlack
+        : rect.left < window.innerWidth * 0.28;
+      const isRightEdge = gridRect
+        ? gridRect.right - rect.right <= edgeSlack
+        : rect.right > window.innerWidth * 0.72;
+      const cardCenter = rect.left + rect.width / 2;
+      const viewportCenter = window.innerWidth / 2;
+      const widePreview = columnCount > 1 || names.length > PREVIEW_COLUMN_SIZE;
+      let left: number;
+      if (isLeftEdge || (widePreview && cardCenter < viewportCenter)) {
+        left = rect.left;
+      } else if (isRightEdge || (widePreview && cardCenter > viewportCenter)) {
+        left = rect.right - width;
+      } else {
+        left = cardCenter - width / 2;
+      }
+      left = Math.max(pad, Math.min(left, window.innerWidth - width - pad));
 
       const gap = 8;
-      const spaceBelow = window.innerHeight - rect.bottom - gap - 12;
-      const spaceAbove = rect.top - gap - 12;
+      const spaceBelow = window.innerHeight - rect.bottom - gap - pad;
+      const spaceAbove = rect.top - gap - pad;
       const placeAbove = spaceBelow < 140 && spaceAbove > spaceBelow;
       const estimatedHeight = rowCount * PREVIEW_ROW_HEIGHT + PREVIEW_PAD_Y;
       const maxHeight = Math.max(
@@ -95,10 +115,10 @@ function CatalogFoldersPreview({
         Math.min(estimatedHeight, placeAbove ? spaceAbove : spaceBelow),
       );
       const top = placeAbove
-        ? Math.max(12, rect.top - gap - Math.min(estimatedHeight, maxHeight))
+        ? Math.max(pad, rect.top - gap - Math.min(estimatedHeight, maxHeight))
         : Math.min(
             rect.bottom + gap,
-            window.innerHeight - maxHeight - 12,
+            window.innerHeight - maxHeight - pad,
           );
 
       setStyle({
@@ -116,7 +136,7 @@ function CatalogFoldersPreview({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [anchor, columnCount, mounted, rowCount]);
+  }, [anchor, columnCount, mounted, names.length, rowCount]);
 
   if (!mounted || names.length === 0 || typeof document === "undefined") {
     return null;
