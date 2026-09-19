@@ -11,7 +11,14 @@ function notePdfUrl(noteId: string): string {
 }
 
 async function fetchPdfBlob(url: string): Promise<Blob> {
-  const response = await fetch(url, { credentials: "include" });
+  let response: Response;
+  try {
+    response = await fetch(url, { credentials: "include" });
+  } catch {
+    throw new Error(
+      "No se pudo conectar con el servidor para generar el PDF. Recargá la página e intentá de nuevo.",
+    );
+  }
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as {

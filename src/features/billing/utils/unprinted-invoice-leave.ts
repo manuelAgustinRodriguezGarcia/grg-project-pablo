@@ -26,7 +26,7 @@ export function resolveUnprintedLeaveAction(
   intent: UnprintedLeaveIntent,
 ): UnprintedLeaveAction {
   if (intent.type === "reset") {
-    return { label: "Crear nueva", shortcut: "N" };
+    return { label: "Crear nueva", shortcut: "F2" };
   }
 
   const path = normalizeBillingPath(intent.href);

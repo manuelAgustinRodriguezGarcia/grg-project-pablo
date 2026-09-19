@@ -73,14 +73,14 @@ describe("UnprintedInvoiceLeaveDialog", () => {
     expect(onLeave).toHaveBeenCalledTimes(2);
   });
 
-  it("Crear nueva y N continúan sin imprimir", () => {
+  it("Crear nueva y F2 continúan sin imprimir", () => {
     const onLeave = vi.fn();
 
     render(
       <UnprintedInvoiceLeaveDialog
         isPrinting={false}
         error={null}
-        leaveAction={{ label: "Crear nueva", shortcut: "N" }}
+        leaveAction={{ label: "Crear nueva", shortcut: "F2" }}
         onPrint={vi.fn()}
         onLeave={onLeave}
         onStay={vi.fn()}
@@ -90,7 +90,7 @@ describe("UnprintedInvoiceLeaveDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: /Crear nueva/ }));
     expect(onLeave).toHaveBeenCalledTimes(1);
 
-    fireEvent.keyDown(document, { key: "N" });
+    fireEvent.keyDown(document, { key: "F2" });
     expect(onLeave).toHaveBeenCalledTimes(2);
   });
 });

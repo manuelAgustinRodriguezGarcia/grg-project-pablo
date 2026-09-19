@@ -8,10 +8,10 @@ import {
 import { resolveUnprintedLeaveAction } from "@/features/billing/utils/unprinted-invoice-leave";
 
 describe("resolveUnprintedLeaveAction", () => {
-  it("para reset usa Crear nueva con N", () => {
+  it("para reset usa Crear nueva con F2", () => {
     expect(resolveUnprintedLeaveAction({ type: "reset" })).toEqual({
       label: "Crear nueva",
-      shortcut: "N",
+      shortcut: "F2",
     });
   });
 
