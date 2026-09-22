@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import type {
   BillingIdentificationType,
@@ -70,6 +71,18 @@ type ClientFormModalProps = {
 const CREATE_DEFAULT_IDENTIFICATION: BillingIdentificationType = "CUIT";
 const CREATE_DEFAULT_IVA: BillingIvaCondition = "RESPONSABLE_INSCRIPTO";
 
+type MatchFieldKey = "name" | "email" | "whatsapp" | "identification";
+
+const AUTOFILL_OFF = {
+  autoComplete: "off" as const,
+  autoCorrect: "off" as const,
+  autoCapitalize: "off" as const,
+  spellCheck: false as const,
+  "data-1p-ignore": true,
+  "data-lpignore": "true",
+  "data-form-type": "other",
+};
+
 export function ClientFormModal({
   mode,
   initialClient,
@@ -108,6 +121,16 @@ export function ClientFormModal({
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [pendingSubmitValues, setPendingSubmitValues] =
     useState<ClientFormValues | null>(null);
+  const [activeMatchField, setActiveMatchField] =
+    useState<MatchFieldKey | null>(null);
+
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const identificationTypeRefs = useRef<
+    Partial<Record<BillingIdentificationType, HTMLButtonElement | null>>
+  >({});
+  const ivaConditionRefs = useRef<
+    Partial<Record<BillingIvaCondition, HTMLButtonElement | null>>
+  >({});
 
   const isDirty =
     name !== (initialClient?.name ?? "") ||
@@ -359,11 +382,136 @@ export function ClientFormModal({
     onSubmit(values);
   }
 
+  function focusElementById(id: string) {
+    document.getElementById(id)?.focus();
+  }
+
+  function focusIdentificationType(type: BillingIdentificationType = identificationType) {
+    identificationTypeRefs.current[type]?.focus();
+  }
+
+  function focusIvaCondition(condition: BillingIvaCondition = ivaCondition) {
+    const enabled =
+      identificationType === "CUIT" || condition === "CONSUMIDOR_FINAL"
+        ? condition
+        : "CONSUMIDOR_FINAL";
+    ivaConditionRefs.current[enabled]?.focus();
+  }
+
+  function focusSubmitButton() {
+    submitButtonRef.current?.focus();
+  }
+
+  function advanceFromIdentificationType(type: BillingIdentificationType) {
+    if (type === "NINGUNO") {
+      focusIvaCondition(
+        identificationType === "CUIT" ? ivaCondition : "CONSUMIDOR_FINAL",
+      );
+      return;
+    }
+    focusElementById("client-identification");
+  }
+
+  function hideMatches() {
+    setActiveMatchField(null);
+  }
+
+  function handleAdvanceKey(
+    event: ReactKeyboardEvent<HTMLElement>,
+    advance: () => void,
+    matchField?: MatchFieldKey,
+  ) {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    if (matchField) {
+      hideMatches();
+    }
+    advance();
+  }
+
+  function handleIdentificationTypeKeyDown(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    optionValue: BillingIdentificationType,
+  ) {
+    if (identificationLocked || isBusy) {
+      return;
+    }
+
+    const values = IDENTIFICATION_OPTIONS.map((option) => option.value);
+    const currentIndex = values.indexOf(optionValue);
+
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const next = values[(currentIndex + 1) % values.length];
+      handleIdentificationTypeChange(next);
+      requestAnimationFrame(() => focusIdentificationType(next));
+      return;
+    }
+
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const previous =
+        values[(currentIndex - 1 + values.length) % values.length];
+      handleIdentificationTypeChange(previous);
+      requestAnimationFrame(() => focusIdentificationType(previous));
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      advanceFromIdentificationType(optionValue);
+    }
+  }
+
+  function handleIvaConditionKeyDown(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    condition: BillingIvaCondition,
+  ) {
+    if (isBusy) {
+      return;
+    }
+
+    const enabledConditions = IVA_CONDITION_ORDER.filter(
+      (item) => identificationType === "CUIT" || item === "CONSUMIDOR_FINAL",
+    );
+    const currentIndex = enabledConditions.indexOf(condition);
+
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const next =
+        enabledConditions[(currentIndex + 1) % enabledConditions.length];
+      setIvaCondition(next);
+      requestAnimationFrame(() => focusIvaCondition(next));
+      return;
+    }
+
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const previous =
+        enabledConditions[
+          (currentIndex - 1 + enabledConditions.length) %
+            enabledConditions.length
+        ];
+      setIvaCondition(previous);
+      requestAnimationFrame(() => focusIvaCondition(previous));
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      focusSubmitButton();
+    }
+  }
+
   function renderMatchDropdown(
+    field: MatchFieldKey,
     matches: BillingClientListItem[],
     tone: "warn" | "block",
   ) {
-    if (matches.length === 0) {
+    if (activeMatchField !== field || matches.length === 0) {
       return null;
     }
 
@@ -436,7 +584,7 @@ export function ClientFormModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} autoComplete="off">
           <div className={styles.formColumns}>
             <section
               className={styles.formColumn}
@@ -463,10 +611,16 @@ export function ClientFormModal({
                           .replace(/[^A-Z0-9-]/g, ""),
                       )
                     }
-                    placeholder="GLR-00002"
+                    onKeyDown={(event) =>
+                      handleAdvanceKey(event, () =>
+                        focusElementById("client-name"),
+                      )
+                    }
+                    placeholder=""
                     maxLength={24}
                     required
                     disabled={isBusy}
+                    {...AUTOFILL_OFF}
                   />
                   <p className={styles.formHint}>
                     Formato: iniciales y número de 5 dígitos, por ejemplo
@@ -482,20 +636,32 @@ export function ClientFormModal({
                 >
                   Nombre o razón social
                 </label>
-                <input
-                  id="client-name"
-                  className={`${modalStyles.formInput} ${styles.uppercaseInput}${
-                    nameMatches.length > 0 ? ` ${styles.formInputWarn}` : ""
-                  }`}
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="TRANSPORTES DEL SUR S.A."
-                  maxLength={160}
-                  required
-                  autoFocus={mode === "create"}
-                  disabled={isBusy}
-                />
-                {renderMatchDropdown(nameMatches, "warn")}
+                <div className={styles.matchInputWrap}>
+                  <input
+                    id="client-name"
+                    className={`${modalStyles.formInput} ${styles.uppercaseInput}${
+                      nameMatches.length > 0 ? ` ${styles.formInputWarn}` : ""
+                    }`}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    onFocus={() => setActiveMatchField("name")}
+                    onBlur={hideMatches}
+                    onKeyDown={(event) =>
+                      handleAdvanceKey(
+                        event,
+                        () => focusElementById("client-address"),
+                        "name",
+                      )
+                    }
+                    placeholder=""
+                    maxLength={160}
+                    required
+                    autoFocus={mode === "create"}
+                    disabled={isBusy}
+                    {...AUTOFILL_OFF}
+                  />
+                  {renderMatchDropdown("name", nameMatches, "warn")}
+                </div>
               </div>
 
               <div className={modalStyles.formField}>
@@ -510,9 +676,15 @@ export function ClientFormModal({
                   className={modalStyles.formInput}
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
-                  placeholder="Av. San Martín 1234"
+                  onKeyDown={(event) =>
+                    handleAdvanceKey(event, () =>
+                      focusElementById("client-city"),
+                    )
+                  }
+                  placeholder=""
                   maxLength={160}
                   disabled={isBusy}
+                  {...AUTOFILL_OFF}
                 />
               </div>
 
@@ -529,9 +701,15 @@ export function ClientFormModal({
                     className={modalStyles.formInput}
                     value={city}
                     onChange={(event) => setCity(event.target.value)}
-                    placeholder="Rafaela"
+                    onKeyDown={(event) =>
+                      handleAdvanceKey(event, () =>
+                        focusElementById("client-province"),
+                      )
+                    }
+                    placeholder=""
                     maxLength={160}
                     disabled={isBusy}
+                    {...AUTOFILL_OFF}
                   />
                 </div>
 
@@ -561,6 +739,7 @@ export function ClientFormModal({
                       setLocalError(null);
                       onClearError();
                     }}
+                    onConfirmed={() => focusElementById("client-email")}
                   />
                   {provinceError ? (
                     <p className={modalStyles.formError} role="alert">
@@ -578,19 +757,32 @@ export function ClientFormModal({
                   >
                     Email (opcional)
                   </label>
-                  <input
-                    id="client-email"
-                    type="email"
-                    className={`${modalStyles.formInput}${
-                      emailMatches.length > 0 ? ` ${styles.formInputWarn}` : ""
-                    }`}
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="cliente@correo.com"
-                    maxLength={160}
-                    disabled={isBusy}
-                  />
-                  {renderMatchDropdown(emailMatches, "warn")}
+                  <div className={styles.matchInputWrap}>
+                    <input
+                      id="client-email"
+                      type="text"
+                      inputMode="email"
+                      className={`${modalStyles.formInput}${
+                        emailMatches.length > 0 ? ` ${styles.formInputWarn}` : ""
+                      }`}
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      onFocus={() => setActiveMatchField("email")}
+                      onBlur={hideMatches}
+                      onKeyDown={(event) =>
+                        handleAdvanceKey(
+                          event,
+                          () => focusElementById("client-whatsapp"),
+                          "email",
+                        )
+                      }
+                      placeholder=""
+                      maxLength={160}
+                      disabled={isBusy}
+                      {...AUTOFILL_OFF}
+                    />
+                    {renderMatchDropdown("email", emailMatches, "warn")}
+                  </div>
                 </div>
 
                 <div className={`${modalStyles.formField} ${styles.formFieldWithMatches}`}>
@@ -600,21 +792,33 @@ export function ClientFormModal({
                   >
                     WhatsApp (opcional)
                   </label>
-                  <input
-                    id="client-whatsapp"
-                    type="tel"
-                    className={`${modalStyles.formInput}${
-                      whatsappMatches.length > 0
-                        ? ` ${styles.formInputWarn}`
-                        : ""
-                    }`}
-                    value={whatsapp}
-                    onChange={(event) => setWhatsapp(event.target.value)}
-                    placeholder="3492 123456"
-                    maxLength={30}
-                    disabled={isBusy}
-                  />
-                  {renderMatchDropdown(whatsappMatches, "warn")}
+                  <div className={styles.matchInputWrap}>
+                    <input
+                      id="client-whatsapp"
+                      type="tel"
+                      className={`${modalStyles.formInput}${
+                        whatsappMatches.length > 0
+                          ? ` ${styles.formInputWarn}`
+                          : ""
+                      }`}
+                      value={whatsapp}
+                      onChange={(event) => setWhatsapp(event.target.value)}
+                      onFocus={() => setActiveMatchField("whatsapp")}
+                      onBlur={hideMatches}
+                      onKeyDown={(event) =>
+                        handleAdvanceKey(
+                          event,
+                          () => focusElementById("client-notes"),
+                          "whatsapp",
+                        )
+                      }
+                      placeholder=""
+                      maxLength={30}
+                      disabled={isBusy}
+                      {...AUTOFILL_OFF}
+                    />
+                    {renderMatchDropdown("whatsapp", whatsappMatches, "warn")}
+                  </div>
                 </div>
               </div>
 
@@ -630,10 +834,19 @@ export function ClientFormModal({
                   className={`${modalStyles.formInput} ${styles.notesTextarea}`}
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Notas internas sobre el cliente…"
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" || event.shiftKey) {
+                      return;
+                    }
+                    handleAdvanceKey(event, () =>
+                      focusIdentificationType(identificationType),
+                    );
+                  }}
+                  placeholder=""
                   maxLength={1000}
                   rows={3}
                   disabled={isBusy}
+                  {...AUTOFILL_OFF}
                 />
               </div>
             </section>
@@ -666,11 +879,21 @@ export function ClientFormModal({
                             type="button"
                             role="radio"
                             aria-checked={isActive}
+                            ref={(node) => {
+                              identificationTypeRefs.current[option.value] =
+                                node;
+                            }}
                             className={`${styles.segmentButton} ${
                               isActive ? styles.segmentButtonActive : ""
                             }`}
                             onClick={() =>
                               handleIdentificationTypeChange(option.value)
+                            }
+                            onKeyDown={(event) =>
+                              handleIdentificationTypeKeyDown(
+                                event,
+                                option.value,
+                              )
                             }
                             disabled={isBusy || identificationLocked}
                           >
@@ -697,29 +920,42 @@ export function ClientFormModal({
                       >
                         {IDENTIFICATION_TYPE_LABELS[identificationType]}
                       </label>
-                      <input
-                        id="client-identification"
-                        className={`${modalStyles.formInput}${
-                          hasIdentificationDuplicate
-                            ? ` ${styles.formInputBlock}`
-                            : identificationMatches.length > 0
-                              ? ` ${styles.formInputWarn}`
-                              : ""
-                        }`}
-                        value={identificationNumber}
-                        onChange={(event) =>
-                          handleIdentificationNumberChange(event.target.value)
-                        }
-                        inputMode="numeric"
-                        placeholder={isCuit ? "20-12345678-3" : "12345678"}
-                        maxLength={20}
-                        required
-                        disabled={isBusy || identificationLocked}
-                      />
-                      {renderMatchDropdown(
-                        identificationMatches,
-                        hasIdentificationDuplicate ? "block" : "warn",
-                      )}
+                      <div className={styles.matchInputWrap}>
+                        <input
+                          id="client-identification"
+                          className={`${modalStyles.formInput}${
+                            hasIdentificationDuplicate
+                              ? ` ${styles.formInputBlock}`
+                              : identificationMatches.length > 0
+                                ? ` ${styles.formInputWarn}`
+                                : ""
+                          }`}
+                          value={identificationNumber}
+                          onChange={(event) =>
+                            handleIdentificationNumberChange(event.target.value)
+                          }
+                          onFocus={() => setActiveMatchField("identification")}
+                          onBlur={hideMatches}
+                          onKeyDown={(event) =>
+                            handleAdvanceKey(
+                              event,
+                              () => focusIvaCondition(ivaCondition),
+                              "identification",
+                            )
+                          }
+                          inputMode="numeric"
+                          placeholder=""
+                          maxLength={20}
+                          required
+                          disabled={isBusy || identificationLocked}
+                          {...AUTOFILL_OFF}
+                        />
+                        {renderMatchDropdown(
+                          "identification",
+                          identificationMatches,
+                          hasIdentificationDuplicate ? "block" : "warn",
+                        )}
+                      </div>
                       <p className={styles.formHint}>
                         {isCuit
                           ? "Se guarda sin guiones y se valida con el dígito verificador."
@@ -755,10 +991,16 @@ export function ClientFormModal({
                             type="button"
                             role="radio"
                             aria-checked={isActive}
+                            ref={(node) => {
+                              ivaConditionRefs.current[condition] = node;
+                            }}
                             className={`${styles.ivaOptionButton} ${
                               isActive ? styles.ivaOptionButtonActive : ""
                             }`}
                             onClick={() => setIvaCondition(condition)}
+                            onKeyDown={(event) =>
+                              handleIvaConditionKeyDown(event, condition)
+                            }
                             disabled={isBusy || !isEnabled}
                             title={IVA_CONDITION_LABELS[condition]}
                           >
@@ -789,8 +1031,9 @@ export function ClientFormModal({
 
           <div className={modalStyles.modalActions}>
             <button
+              ref={submitButtonRef}
               type="submit"
-              className={modalStyles.modalSaveButton}
+              className={`${modalStyles.modalSaveButton} ${styles.clientFormSaveButton}`}
               disabled={
                 isBusy ||
                 name.trim().length === 0 ||

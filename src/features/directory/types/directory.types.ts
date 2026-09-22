@@ -5,6 +5,11 @@ export type DirectoryOfflineSync = {
   lastServerVersion?: number;
 };
 
+export type DirectoryCatalogSection = {
+  id: string;
+  name: string;
+};
+
 export type DirectoryCatalogItem = {
   id: string;
   name: string;
@@ -12,6 +17,7 @@ export type DirectoryCatalogItem = {
   coverImageUrl: string | null;
   sectionCount: number;
   sectionNames: string[];
+  sections: DirectoryCatalogSection[];
   updatedAt: string;
   order: number;
   offlineSync: DirectoryOfflineSync;

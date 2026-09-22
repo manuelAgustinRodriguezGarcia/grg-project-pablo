@@ -71,6 +71,7 @@ export function InvoiceClientSection({
       className={`${styles.sectionCard}${
         selectedClient ? ` ${styles.selectedClientSticky}` : ""
       }`}
+      {...(selectedClient ? { "data-invoice-client-sticky": true } : {})}
       aria-label="Cliente"
     >
       <h2 className={styles.sectionCardTitle}>

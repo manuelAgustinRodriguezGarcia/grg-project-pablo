@@ -178,6 +178,7 @@ function toDirectoryCatalogItem(catalog: CatalogListItem): DirectoryCatalogItem 
     coverImageUrl: null,
     sectionCount: catalog.folderCount,
     sectionNames: [],
+    sections: [],
     updatedAt: catalog.updatedAt,
     order: catalog.order,
     offlineSync: { status: "unavailable" },
@@ -695,6 +696,7 @@ export function ImportWizard({
         coverImageUrl: null,
         sectionCount: 0,
         sectionNames: [],
+        sections: [],
         updatedAt: result.data.updatedAt,
         order: result.data.order,
         offlineSync: { status: "unavailable" },
@@ -737,17 +739,21 @@ export function ImportWizard({
       };
       setFolders((current) => [...current, created]);
       setCatalogList((current) =>
-        current.map((catalog) =>
-          catalog.id === selectedCatalogId
-            ? {
-                ...catalog,
-                sectionCount: catalog.sectionCount + 1,
-                sectionNames: [...catalog.sectionNames, created.name].sort((left, right) =>
-                  left.localeCompare(right, "es"),
-                ),
-              }
-            : catalog,
-        ),
+        current.map((catalog) => {
+          if (catalog.id !== selectedCatalogId) {
+            return catalog;
+          }
+          const nextSections = [
+            ...catalog.sections.filter((section) => section.id !== created.id),
+            { id: created.id, name: created.name },
+          ].sort((left, right) => left.name.localeCompare(right.name, "es"));
+          return {
+            ...catalog,
+            sectionCount: nextSections.length,
+            sectionNames: nextSections.map((section) => section.name),
+            sections: nextSections,
+          };
+        }),
       );
       setSelectedFolderId(created.id);
       onDirectoryChanged?.({

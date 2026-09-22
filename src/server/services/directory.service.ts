@@ -1,6 +1,7 @@
 import type { Catalog } from "@/generated/prisma/client";
 import type {
   DirectoryCatalogItem,
+  DirectoryCatalogSection,
   DirectoryResponse,
 } from "@/features/directory/types/directory.types";
 import { requireAuth } from "@/server/auth";
@@ -32,7 +33,7 @@ async function resolveCoverImageUrl(
 function toDirectoryCatalogItem(
   catalog: Catalog,
   coverImageUrl: string | null,
-  sectionNames: string[],
+  sections: DirectoryCatalogSection[],
   lastServerVersion: number,
 ): DirectoryCatalogItem {
   return {
@@ -40,8 +41,9 @@ function toDirectoryCatalogItem(
     name: catalog.name,
     description: catalog.description,
     coverImageUrl,
-    sectionCount: sectionNames.length,
-    sectionNames,
+    sectionCount: sections.length,
+    sectionNames: sections.map((section) => section.name),
+    sections,
     updatedAt: catalog.updatedAt.toISOString(),
     order: catalog.order,
     offlineSync: {
@@ -63,12 +65,12 @@ export class DirectoryService {
     const items = await Promise.all(
       visibleCatalogs.map(async (catalog) => {
         const coverImageUrl = await resolveCoverImageUrl(catalog.coverImagePath);
-        const sectionNames = await folderRepository.findNamesByCatalogIdOrdered(
+        const sections = await folderRepository.findIdNamesByCatalogIdOrdered(
           catalog.id,
           visibilityService.folderWhereForRole(role),
         );
 
-        return toDirectoryCatalogItem(catalog, coverImageUrl, sectionNames, lastServerVersion);
+        return toDirectoryCatalogItem(catalog, coverImageUrl, sections, lastServerVersion);
       }),
     );
 

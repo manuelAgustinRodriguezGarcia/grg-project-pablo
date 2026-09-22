@@ -43,6 +43,7 @@ type CustomDropdownProps = {
   emptyMessage?: string;
   placeholder?: string;
   preferPlaceholderWithoutOptions?: boolean;
+  autoOpenToken?: number;
 };
 
 function DropdownRevealText({
@@ -363,6 +364,7 @@ export function CustomDropdown({
   emptyMessage = "Sin opciones disponibles",
   placeholder,
   preferPlaceholderWithoutOptions = false,
+  autoOpenToken = 0,
 }: CustomDropdownProps) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -391,6 +393,18 @@ export function CustomDropdown({
     return placeholder ?? emptyMessage;
   })();
   const isMutedTrigger = selectedOption === null;
+
+  useEffect(() => {
+    if (!autoOpenToken || disabled || options.length === 0) {
+      return;
+    }
+
+    setIsOpen(true);
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(`${listboxId}-trigger`)?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [autoOpenToken, disabled, listboxId, options.length]);
 
   useEffect(() => {
     if (!isOpen) {

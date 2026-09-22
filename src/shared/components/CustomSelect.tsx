@@ -15,6 +15,7 @@ type CustomSelectProps = {
   value: string;
   options: CustomSelectOption[];
   onChange: (value: string) => void;
+  onConfirmed?: (value: string) => void;
   disabled?: boolean;
   ariaLabel?: string;
   id?: string;
@@ -36,6 +37,7 @@ export function CustomSelect({
   value,
   options,
   onChange,
+  onConfirmed,
   disabled = false,
   ariaLabel,
   id,
@@ -119,16 +121,19 @@ export function CustomSelect({
     }
   }
 
-  function handleSelect(optionValue: string) {
+  function handleSelect(optionValue: string, confirmed = false) {
     onChange(optionValue);
     setQuery("");
     setIsOpen(false);
+    if (confirmed) {
+      onConfirmed?.(optionValue);
+    }
   }
 
   function confirmHighlighted() {
     const option = filteredOptions[highlightedIndex] ?? filteredOptions[0];
     if (option) {
-      handleSelect(option.value);
+      handleSelect(option.value, true);
     }
   }
 
@@ -169,9 +174,17 @@ export function CustomSelect({
       return;
     }
 
-    if (event.key === "Enter" && isOpen) {
+    if (event.key === "Enter") {
       event.preventDefault();
-      confirmHighlighted();
+      if (isOpen) {
+        confirmHighlighted();
+        return;
+      }
+      if (value) {
+        onConfirmed?.(value);
+        return;
+      }
+      openList();
     }
   }
 

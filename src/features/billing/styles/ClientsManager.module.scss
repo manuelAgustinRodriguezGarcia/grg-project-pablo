@@ -2196,6 +2196,15 @@ td.clientIdentityCell {
   position: relative;
 }
 
+.matchInputWrap {
+  position: relative;
+  z-index: 0;
+
+  &:focus-within {
+    z-index: 30;
+  }
+}
+
 .formInputWarn {
   border-color: rgba(#b45309, 0.45) !important;
   box-shadow: 0 0 0 3px rgba(#b45309, 0.12);
@@ -2207,23 +2216,54 @@ td.clientIdentityCell {
 }
 
 .matchDropdown {
-  margin: 0.4rem 0 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% - 0.15rem);
+  z-index: 20;
+  margin: 0;
   padding: 0.55rem 0.7rem;
-  border: 1px solid rgba($navy, 0.12);
+  border: 1px solid rgba($navy, 0.16);
   border-radius: $radius-md;
-  background: rgba($navy, 0.03);
+  background: $white;
+  box-shadow: 0 10px 28px rgba($navy, 0.18);
   user-select: none;
   pointer-events: none;
+  isolation: isolate;
+}
+
+.clientFormSaveButton.clientFormSaveButton {
+  border: 1px solid $blue;
+  background: $white;
+  color: $blue;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: $blue;
+      color: $white;
+    }
+  }
+
+  &:focus:not(:disabled) {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+    background: $blue;
+    color: $white;
+  }
 }
 
 .matchDropdownWarn {
-  border-color: rgba(#b45309, 0.28);
-  background: rgba(#b45309, 0.08);
+  border-color: #d97706;
+  background: #fffbeb;
 }
 
 .matchDropdownBlock {
-  border-color: rgba(#c0392b, 0.28);
-  background: rgba(#c0392b, 0.08);
+  border-color: #c0392b;
+  background: #fef2f2;
 }
 
 .matchDropdownTitle {

@@ -5,6 +5,7 @@ import {
   buildPickerHighlightItems,
   initialPickerHighlightIndex,
   resolvePickerHighlightMove,
+  scrollInvoiceFocusIntoView,
   scrollOverflowItemIntoView,
   shouldLeaveEmptyPicker,
   type PickerArrowKey,
@@ -154,6 +155,22 @@ export function InvoiceSearchPicker({
 
     scrollOverflowItemIntoView(list, highlighted);
   }, [isOpen, activeHighlightIndex]);
+
+  useEffect(() => {
+    if (!isOpen || disabled) {
+      return;
+    }
+
+    const input = document.getElementById(inputId);
+    if (!(input instanceof HTMLElement)) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      scrollInvoiceFocusIntoView(input);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [disabled, inputId, isOpen]);
 
   function moveHighlight(key: PickerArrowKey) {
     if (highlightItems.length === 0) {

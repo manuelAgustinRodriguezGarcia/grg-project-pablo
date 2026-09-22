@@ -9,6 +9,7 @@ import {
   isInvoiceSubmitShortcut,
   isInvoiceAddItemShortcut,
   nextOverflowScrollTop,
+  nextInvoiceFocusScrollTop,
   resolveAddItemShortcut,
   resolveDiscountEnter,
   resolvePickerHighlightMove,
@@ -191,6 +192,78 @@ describe("nextOverflowScrollTop", () => {
         { top: 70, bottom: 100 },
       ),
     ).toBe(16);
+  });
+});
+
+describe("nextInvoiceFocusScrollTop", () => {
+  it("no scrollea si la fila ya está libre bajo el sticky", () => {
+    expect(
+      nextInvoiceFocusScrollTop({
+        scrollTop: 120,
+        viewportTop: 0,
+        viewportBottom: 600,
+        targetTop: 140,
+        targetBottom: 190,
+        stickyBottom: 100,
+        gap: 10,
+      }),
+    ).toBeNull();
+  });
+
+  it("alinea la fila justo debajo del sticky si está tapada", () => {
+    expect(
+      nextInvoiceFocusScrollTop({
+        scrollTop: 200,
+        viewportTop: 0,
+        viewportBottom: 600,
+        targetTop: 60,
+        targetBottom: 110,
+        stickyBottom: 100,
+        gap: 10,
+      }),
+    ).toBe(150);
+  });
+
+  it("scrollea lo mínimo si la fila queda cortada abajo", () => {
+    expect(
+      nextInvoiceFocusScrollTop({
+        scrollTop: 0,
+        viewportTop: 0,
+        viewportBottom: 400,
+        targetTop: 350,
+        targetBottom: 430,
+        stickyBottom: 80,
+        gap: 10,
+      }),
+    ).toBe(30);
+  });
+
+  it("sin sticky usa solo el gap superior", () => {
+    expect(
+      nextInvoiceFocusScrollTop({
+        scrollTop: 40,
+        viewportTop: 0,
+        viewportBottom: 500,
+        targetTop: 2,
+        targetBottom: 50,
+        stickyBottom: null,
+        gap: 10,
+      }),
+    ).toBe(32);
+  });
+
+  it("scrollea para dejar espacio al dropdown del picker", () => {
+    expect(
+      nextInvoiceFocusScrollTop({
+        scrollTop: 100,
+        viewportTop: 0,
+        viewportBottom: 600,
+        targetTop: 400,
+        targetBottom: 680,
+        stickyBottom: 90,
+        gap: 10,
+      }),
+    ).toBe(180);
   });
 });
 

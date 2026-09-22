@@ -347,6 +347,10 @@ export function scrollOverflowItemIntoView(
   );
 }
 
+export const INVOICE_CLIENT_STICKY_ATTR = "data-invoice-client-sticky";
+export const INVOICE_FOCUS_SCROLL_GAP_PX = 10;
+export const INVOICE_PICKER_LIST_RESERVE_PX = 278;
+
 export function findScrollableAncestor(
   element: HTMLElement,
 ): HTMLElement | null {
@@ -387,21 +391,119 @@ function prefersReducedMotion(): boolean {
   );
 }
 
+function findInvoiceClientSticky(
+  root: ParentNode | null | undefined,
+): HTMLElement | null {
+  if (!root || typeof root.querySelector !== "function") {
+    return null;
+  }
+
+  const sticky = root.querySelector(`[${INVOICE_CLIENT_STICKY_ATTR}]`);
+  return sticky instanceof HTMLElement ? sticky : null;
+}
+
+function invoiceFocusCombobox(element: HTMLElement): HTMLElement | null {
+  if (element.getAttribute("role") === "combobox") {
+    return element;
+  }
+
+  const nested = element.querySelector('[role="combobox"]');
+  if (nested instanceof HTMLElement) {
+    return nested;
+  }
+
+  const parent = element.closest('[role="combobox"]');
+  return parent instanceof HTMLElement ? parent : null;
+}
+
+export function invoiceFocusVisibleBottom(
+  element: HTMLElement,
+  target: HTMLElement,
+): number {
+  const targetBottom = target.getBoundingClientRect().bottom;
+  const combobox = invoiceFocusCombobox(element);
+  if (!combobox) {
+    return targetBottom;
+  }
+
+  const listId = combobox.getAttribute("aria-controls");
+  if (listId) {
+    const list = document.getElementById(listId);
+    if (list) {
+      return Math.max(targetBottom, list.getBoundingClientRect().bottom);
+    }
+  }
+
+  return Math.max(
+    targetBottom,
+    combobox.getBoundingClientRect().bottom + INVOICE_PICKER_LIST_RESERVE_PX,
+  );
+}
+
+export type InvoiceFocusScrollViewport = {
+  scrollTop: number;
+  viewportTop: number;
+  viewportBottom: number;
+  targetTop: number;
+  targetBottom: number;
+  stickyBottom: number | null;
+  gap?: number;
+};
+
+export function nextInvoiceFocusScrollTop(
+  input: InvoiceFocusScrollViewport,
+): number | null {
+  const gap = input.gap ?? INVOICE_FOCUS_SCROLL_GAP_PX;
+  const coveredBySticky =
+    input.stickyBottom !== null
+      ? Math.max(0, input.stickyBottom - input.viewportTop)
+      : 0;
+  const clearTop = input.viewportTop + coveredBySticky + gap;
+
+  let delta = 0;
+
+  if (input.targetTop < clearTop - 2) {
+    delta = input.targetTop - clearTop;
+  } else if (input.targetBottom > input.viewportBottom + 2) {
+    delta = input.targetBottom - input.viewportBottom;
+    if (input.targetTop - delta < clearTop) {
+      delta = input.targetTop - clearTop;
+    }
+  } else {
+    return null;
+  }
+
+  if (Math.abs(delta) < 2) {
+    return null;
+  }
+
+  return Math.max(0, input.scrollTop + delta);
+}
+
 export function scrollInvoiceFocusIntoView(element: HTMLElement): void {
   const target = invoiceFocusScrollTarget(element);
   const container = findScrollableAncestor(target);
-  const topOffset = 72;
   const behavior = prefersReducedMotion() ? "auto" : "smooth";
+  const targetTop = target.getBoundingClientRect().top;
+  const targetBottom = invoiceFocusVisibleBottom(element, target);
 
   if (!container) {
     if (typeof window === "undefined") {
       return;
     }
 
-    const targetRect = target.getBoundingClientRect();
-    const nextTop = Math.max(0, window.scrollY + targetRect.top - topOffset);
+    const sticky = findInvoiceClientSticky(document);
+    const stickyRect = sticky?.getBoundingClientRect() ?? null;
+    const nextTop = nextInvoiceFocusScrollTop({
+      scrollTop: window.scrollY,
+      viewportTop: 0,
+      viewportBottom: window.innerHeight,
+      targetTop,
+      targetBottom,
+      stickyBottom: stickyRect?.bottom ?? null,
+    });
 
-    if (Math.abs(nextTop - window.scrollY) < 2) {
+    if (nextTop === null) {
       return;
     }
 
@@ -409,16 +511,21 @@ export function scrollInvoiceFocusIntoView(element: HTMLElement): void {
     return;
   }
 
+  const sticky = findInvoiceClientSticky(container);
+  const stickyRect = sticky?.getBoundingClientRect() ?? null;
   const containerRect = container.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
-  const desiredTop = containerRect.top + topOffset;
-  const delta = targetRect.top - desiredTop;
+  const nextTop = nextInvoiceFocusScrollTop({
+    scrollTop: container.scrollTop,
+    viewportTop: containerRect.top,
+    viewportBottom: containerRect.bottom,
+    targetTop,
+    targetBottom,
+    stickyBottom: stickyRect?.bottom ?? null,
+  });
 
-  if (Math.abs(delta) < 2) {
+  if (nextTop === null) {
     return;
   }
-
-  const nextTop = Math.max(0, container.scrollTop + delta);
 
   if (prefersReducedMotion() || typeof container.scrollTo !== "function") {
     container.scrollTop = nextTop;

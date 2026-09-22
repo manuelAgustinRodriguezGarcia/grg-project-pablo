@@ -214,16 +214,48 @@ function toDirectoryCatalogItem(
   catalog: CatalogListItem,
   previous?: DirectoryCatalogItem | null,
 ): DirectoryCatalogItem {
+  const sections = previous?.sections ?? [];
   return {
     id: catalog.id,
     name: catalog.name,
     description: catalog.description,
     coverImageUrl: previous?.coverImageUrl ?? null,
     sectionCount: catalog.folderCount,
-    sectionNames: previous?.sectionNames ?? [],
+    sectionNames: sections.map((section) => section.name),
+    sections,
     updatedAt: catalog.updatedAt,
     order: catalog.order,
     offlineSync: previous?.offlineSync ?? { status: "unavailable" },
+  };
+}
+
+function toLiteNavigationFolders(
+  sections: DirectoryCatalogItem["sections"],
+): CatalogNavigationFolderItem[] {
+  return sortByName(
+    sections.map((section) => ({
+      id: section.id,
+      name: section.name,
+      description: null,
+      coverImageUrl: null,
+      order: 0,
+      visibleToNormalUser: true,
+      productCount: 0,
+      updatedAt: "",
+    })),
+  );
+}
+
+function withCatalogSections(
+  catalog: DirectoryCatalogItem,
+  sections: DirectoryCatalogItem["sections"],
+): DirectoryCatalogItem {
+  const sorted = sortByName(sections);
+  return {
+    ...catalog,
+    sections: sorted,
+    sectionCount: sorted.length,
+    sectionNames: sorted.map((section) => section.name),
   };
 }
 
@@ -449,14 +481,12 @@ export function CatalogNavigator({
           setCatalogList((current) =>
             current.map((catalog) =>
               catalog.id === change.catalogId
-                ? {
-                    ...catalog,
-                    sectionCount: catalog.sectionCount + 1,
-                    sectionNames: sortByName([
-                      ...catalog.sectionNames.map((name) => ({ name })),
-                      { name: change.folder.name },
-                    ]).map((item) => item.name),
-                  }
+                ? withCatalogSections(catalog, [
+                    ...catalog.sections.filter(
+                      (section) => section.id !== change.folder.id,
+                    ),
+                    { id: change.folder.id, name: change.folder.name },
+                  ])
                 : catalog,
             ),
           );
@@ -486,23 +516,21 @@ export function CatalogNavigator({
                 return catalog;
               }
 
-              const previousName = currentFolders?.find(
-                (folder) => folder.id === change.folder.id,
-              )?.name;
-              const nextNames = previousName
-                ? catalog.sectionNames.map((name) =>
-                    name === previousName ? change.folder.name : name,
+              const hasSection = catalog.sections.some(
+                (section) => section.id === change.folder.id,
+              );
+              const nextSections = hasSection
+                ? catalog.sections.map((section) =>
+                    section.id === change.folder.id
+                      ? { id: section.id, name: change.folder.name }
+                      : section,
                   )
-                : catalog.sectionNames.includes(change.folder.name)
-                  ? catalog.sectionNames
-                  : [...catalog.sectionNames, change.folder.name];
+                : [
+                    ...catalog.sections,
+                    { id: change.folder.id, name: change.folder.name },
+                  ];
 
-              return {
-                ...catalog,
-                sectionNames: sortByName(
-                  nextNames.map((name) => ({ name })),
-                ).map((item) => item.name),
-              };
+              return withCatalogSections(catalog, nextSections);
             }),
           );
           break;
@@ -522,23 +550,16 @@ export function CatalogNavigator({
             });
           }
           setCatalogList((current) =>
-            current.map((catalog) => {
-              if (catalog.id !== change.catalogId) {
-                return catalog;
-              }
-
-              const deletedName = currentFolders?.find(
-                (folder) => folder.id === change.folderId,
-              )?.name;
-
-              return {
-                ...catalog,
-                sectionCount: Math.max(0, catalog.sectionCount - 1),
-                sectionNames: deletedName
-                  ? catalog.sectionNames.filter((name) => name !== deletedName)
-                  : catalog.sectionNames,
-              };
-            }),
+            current.map((catalog) =>
+              catalog.id === change.catalogId
+                ? withCatalogSections(
+                    catalog,
+                    catalog.sections.filter(
+                      (section) => section.id !== change.folderId,
+                    ),
+                  )
+                : catalog,
+            ),
           );
           if (selectedFolderId === change.folderId) {
             setSelectedFolderId("");
@@ -578,19 +599,29 @@ export function CatalogNavigator({
     placeholderData: keepPreviousData,
   });
 
+  const directoryFolders = useMemo(() => {
+    const catalog = catalogList.find((item) => item.id === activeCatalogId);
+    return toLiteNavigationFolders(catalog?.sections ?? []);
+  }, [activeCatalogId, catalogList]);
+
   const folders = useMemo(() => {
-    if (navigationQuery.isPlaceholderData) {
-      return [];
+    if (
+      activeCatalogId &&
+      !navigationQuery.isPlaceholderData &&
+      navigationQuery.data
+    ) {
+      return navigationQuery.data;
     }
-    return navigationQuery.data ?? [];
-  }, [navigationQuery.data, navigationQuery.isPlaceholderData]);
-  const isNavigationReady =
-    Boolean(activeCatalogId) &&
-    navigationQuery.isFetched &&
-    !navigationQuery.isPlaceholderData;
-  const isLoadingFolders =
-    Boolean(activeCatalogId) &&
-    (!isNavigationReady || (navigationQuery.isFetching && folders.length === 0));
+    return directoryFolders;
+  }, [
+    activeCatalogId,
+    directoryFolders,
+    navigationQuery.data,
+    navigationQuery.isPlaceholderData,
+  ]);
+
+  const isNavigationReady = Boolean(activeCatalogId);
+  const isLoadingFolders = false;
   const foldersError =
     navigationQuery.error instanceof Error ? navigationQuery.error.message : null;
 
@@ -622,22 +653,11 @@ export function CatalogNavigator({
 
   const canLoadFolderProducts =
     Boolean(activeFolderId) &&
-    isNavigationReady &&
     folders.some((folder) => folder.id === activeFolderId);
 
   useEffect(() => {
     if (!activeCatalogId) {
       replaceParams({ catalog: null, folder: null });
-      return;
-    }
-
-    // Preserve deep-linked folder while this catalog's folders load;
-    // avoid writing a stale folder from keepPreviousData of another catalog.
-    if (!navigationQuery.isFetched || navigationQuery.isPlaceholderData) {
-      replaceParams({
-        catalog: activeCatalogId,
-        folder: selectedFolderId || null,
-      });
       return;
     }
 
@@ -648,10 +668,7 @@ export function CatalogNavigator({
   }, [
     activeCatalogId,
     activeFolderId,
-    navigationQuery.isFetched,
-    navigationQuery.isPlaceholderData,
     replaceParams,
-    selectedFolderId,
   ]);
 
   const serializedColumnFilters = useMemo(
@@ -723,38 +740,44 @@ export function CatalogNavigator({
   const productsError =
     productsQuery.error instanceof Error ? productsQuery.error.message : null;
 
+  const holdPreviousProducts =
+    preferProductsShell &&
+    Boolean(activeCatalogId) &&
+    !activeFolderId &&
+    folders.length > 0;
+
   if (canLoadFolderProducts && productTable) {
     stableTableDataRef.current = productTable;
-  } else if (isNavigationReady && !canLoadFolderProducts) {
-    // Catalog ready with no selectable folder (e.g. all folders deleted):
-    // drop the previous folder snapshot so we don't keep showing its table.
+  } else if (
+    !holdPreviousProducts &&
+    isNavigationReady &&
+    !canLoadFolderProducts
+  ) {
     stableTableDataRef.current = null;
   }
 
-  // Keep the last table snapshot while catalog/folder navigation loads so we
-  // show a refresh overlay instead of the initial shimmer skeleton again.
   const tableData =
     canLoadFolderProducts && productTable
       ? productTable
-      : isNavigationReady && !canLoadFolderProducts
-        ? null
-        : (stableTableDataRef.current ?? null);
+      : holdPreviousProducts
+        ? stableTableDataRef.current
+        : isNavigationReady && !canLoadFolderProducts
+          ? null
+          : (stableTableDataRef.current ?? null);
 
   const catalogHasNoFolders =
     Boolean(activeCatalogId) && isNavigationReady && folders.length === 0;
 
   const isFolderContextLoading =
-    isLoadingFolders ||
     (Boolean(activeFolderId) && !canLoadFolderProducts) ||
     (Boolean(activeFolderId) &&
       tableData !== null &&
       tableData.folder.id !== activeFolderId);
 
   const isInitialTableLoading =
+    Boolean(activeFolderId) &&
     tableData === null &&
-    (isLoadingFolders ||
-      productsQuery.isFetching ||
-      (Boolean(activeFolderId) && !canLoadFolderProducts));
+    (productsQuery.isFetching || !canLoadFolderProducts);
 
   const isTableRefreshing = tableData !== null && isFolderContextLoading;
 
@@ -773,10 +796,12 @@ export function CatalogNavigator({
     Boolean(foldersError || productsError) ||
     !activeCatalogId ||
     (isNavigationReady &&
-      (!activeFolderId ||
-        (tableData !== null &&
-          tableData.folder.id === activeFolderId &&
-          !isFolderContextLoading)));
+      (holdPreviousProducts
+        ? tableData !== null
+        : !activeFolderId ||
+          (tableData !== null &&
+            tableData.folder.id === activeFolderId &&
+            !isFolderContextLoading)));
 
   useReportAdminSectionReady(isSectionContentReady);
 
@@ -1131,14 +1156,12 @@ export function CatalogNavigator({
       setCatalogList((current) =>
         current.map((catalog) =>
           catalog.id === activeCatalogId
-            ? {
-                ...catalog,
-                sectionCount: catalog.sectionCount + 1,
-                sectionNames: sortByName([
-                  ...catalog.sectionNames.map((name) => ({ name })),
-                  { name: payload.name },
-                ]).map((item) => item.name),
-              }
+            ? withCatalogSections(catalog, [
+                ...catalog.sections.filter(
+                  (section) => section.id !== payload.folderId,
+                ),
+                { id: payload.folderId, name: payload.name },
+              ])
             : catalog,
         ),
       );
@@ -1228,13 +1251,12 @@ export function CatalogNavigator({
       setCatalogList((current) =>
         current.map((catalog) =>
           catalog.id === activeCatalogId
-            ? {
-                ...catalog,
-                sectionCount: Math.max(0, catalog.sectionCount - 1),
-                sectionNames: catalog.sectionNames.filter(
-                  (name) => name !== deleteFolderTarget.name,
+            ? withCatalogSections(
+                catalog,
+                catalog.sections.filter(
+                  (section) => section.id !== deleteFolderTarget.id,
                 ),
-              }
+              )
             : catalog,
         ),
       );
@@ -1279,16 +1301,14 @@ export function CatalogNavigator({
               return catalog;
             }
 
-            return {
-              ...catalog,
-              sectionNames: sortByName(
-                catalog.sectionNames
-                  .map((name) =>
-                    name === payload.previousName ? payload.name : name,
-                  )
-                  .map((name) => ({ name })),
-              ).map((item) => item.name),
-            };
+            return withCatalogSections(
+              catalog,
+              catalog.sections.map((section) =>
+                section.name === payload.previousName
+                  ? { ...section, name: payload.name }
+                  : section,
+              ),
+            );
           }),
         );
       }
@@ -1520,8 +1540,14 @@ export function CatalogNavigator({
                 onColumnsChanged={isAdmin ? handleColumnsChanged : undefined}
                 onEditProduct={isAdmin ? handleEditProduct : undefined}
                 onDeleteProduct={isAdmin ? handleDeleteProduct : undefined}
-                folderId={activeFolderId || undefined}
-                folderName={activeFolderName}
+                folderId={
+                  activeFolderId ||
+                  (holdPreviousProducts ? tableData?.folder.id : undefined)
+                }
+                folderName={
+                  activeFolderName ||
+                  (holdPreviousProducts ? tableData?.folder.name ?? "" : "")
+                }
                 folderSearchQuery={folderSearch}
                 onFolderSearchChange={
                   activeFolderId ? handleFolderSearchChange : undefined

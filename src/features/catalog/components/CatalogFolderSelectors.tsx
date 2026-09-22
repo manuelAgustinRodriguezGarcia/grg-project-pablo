@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CustomDropdown } from "@/features/catalog/components/CustomDropdown";
 import type {
   CatalogNavigationFolderItem,
@@ -32,7 +32,7 @@ export function CatalogFolderSelectors({
   folders,
   selectedCatalogId,
   selectedFolderId,
-  isLoadingFolders,
+  isLoadingFolders: _isLoadingFolders,
   onSelectCatalog,
   onSelectFolder,
   onBackToCatalogs,
@@ -43,6 +43,7 @@ export function CatalogFolderSelectors({
   onAddCatalog,
   onAddFolder,
 }: CatalogFolderSelectorsProps) {
+  const [folderAutoOpenToken, setFolderAutoOpenToken] = useState(0);
   const sortedCatalogs = useMemo(() => sortByName(catalogs), [catalogs]);
   const sortedFolders = useMemo(() => sortByName(folders), [folders]);
 
@@ -67,11 +68,12 @@ export function CatalogFolderSelectors({
       sortedFolders.map((folder) => ({
         id: folder.id,
         label: folder.name,
-        meta:
-          folder.productCount === 1
+        meta: folder.updatedAt
+          ? folder.productCount === 1
             ? "1 producto"
-            : `${folder.productCount} productos`,
-        showImage: true,
+            : `${folder.productCount} productos`
+          : undefined,
+        showImage: Boolean(folder.coverImageUrl),
         imageUrl: folder.coverImageUrl,
       })),
     [sortedFolders],
@@ -100,7 +102,10 @@ export function CatalogFolderSelectors({
           label="Catálogo"
           options={catalogOptions}
           selectedId={selectedCatalogId}
-          onSelect={onSelectCatalog}
+          onSelect={(catalogId) => {
+            onSelectCatalog(catalogId);
+            setFolderAutoOpenToken((token) => token + 1);
+          }}
           onOptionEdit={onEditCatalog}
           onOptionDelete={onDeleteCatalog}
           onAdd={onAddCatalog}
@@ -117,15 +122,10 @@ export function CatalogFolderSelectors({
           onOptionEdit={onEditFolder}
           onOptionDelete={onDeleteFolder}
           onAdd={onAddFolder}
-          disabled={
-            !selectedCatalogId ||
-            isLoadingFolders ||
-            sortedFolders.length === 0
-          }
-          addDisabled={!selectedCatalogId || isLoadingFolders}
-          emptyMessage={
-            isLoadingFolders ? "Cargando carpetas…" : "Sin carpetas disponibles"
-          }
+          disabled={!selectedCatalogId || sortedFolders.length === 0}
+          addDisabled={!selectedCatalogId}
+          emptyMessage="Seleccione una carpeta aquí"
+          autoOpenToken={folderAutoOpenToken}
         />
       </div>
     </section>
