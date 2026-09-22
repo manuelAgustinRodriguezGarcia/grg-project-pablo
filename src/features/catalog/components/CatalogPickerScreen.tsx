@@ -328,7 +328,7 @@ export function CatalogPickerScreen({
                   onClick={() => onSelectCatalog(catalog.id)}
                   onMouseEnter={() => {
                     setHoveredIndex(index);
-                    focusCardAt(index);
+                    focusCardAt(index, { fromPointer: true });
                   }}
                   onMouseLeave={() => setHoveredIndex(null)}
                   onFocus={() => {

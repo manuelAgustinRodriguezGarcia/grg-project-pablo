@@ -58,6 +58,10 @@ type ClientsManagerProps = {
   initialInvoices?: BillingInvoiceListItem[];
   openClientId?: string;
   openClientHistory?: boolean;
+  canCreateClient?: boolean;
+  canUpdateClient?: boolean;
+  canDeleteClient?: boolean;
+  canManageMovements?: boolean;
 };
 
 function toActionPayload(values: ClientFormValues, includeCode: boolean) {
@@ -81,6 +85,10 @@ export function ClientsManager({
   initialInvoices = [],
   openClientId,
   openClientHistory = false,
+  canCreateClient = false,
+  canUpdateClient = false,
+  canDeleteClient = false,
+  canManageMovements = false,
 }: ClientsManagerProps) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
@@ -350,7 +358,7 @@ export function ClientsManager({
             onIvaFilterChange={setIvaFilter}
             onPaymentFilterChange={setPaymentFilter}
             onSortOrderChange={setSortOrder}
-            onCreateClick={handleOpenCreate}
+            onCreateClick={canCreateClient ? handleOpenCreate : undefined}
           />
 
           {actionError ? (
@@ -367,9 +375,9 @@ export function ClientsManager({
                 error={listError}
                 busyClientId={busyClientId}
                 onDetails={handleOpenDetails}
-                onEdit={handleOpenEdit}
-                onDelete={setDeleteTarget}
-                onCreateClick={handleOpenCreate}
+                onEdit={canUpdateClient ? handleOpenEdit : undefined}
+                onDelete={canDeleteClient ? setDeleteTarget : undefined}
+                onCreateClick={canCreateClient ? handleOpenCreate : undefined}
               />
             </div>
             <ClientsInsightsPanel
@@ -396,19 +404,27 @@ export function ClientsManager({
             setDetailsClient(null);
             setFocusClientHistory(false);
           }}
-          onIssueReceipt={(invoice) => {
-            if (!invoice.clientId || !invoiceCanIssueReceipt(invoice)) {
-              return;
-            }
-            setReceiptForm({
-              kind: "create-from-invoice",
-              invoiceId: invoice.id,
-              clientId: invoice.clientId,
-            });
-          }}
-          onIssueNote={(invoice, kind) => {
-            setNoteForm({ kind, invoiceId: invoice.id });
-          }}
+          onIssueReceipt={
+            canManageMovements
+              ? (invoice) => {
+                  if (!invoice.clientId || !invoiceCanIssueReceipt(invoice)) {
+                    return;
+                  }
+                  setReceiptForm({
+                    kind: "create-from-invoice",
+                    invoiceId: invoice.id,
+                    clientId: invoice.clientId,
+                  });
+                }
+              : undefined
+          }
+          onIssueNote={
+            canManageMovements
+              ? (invoice, kind) => {
+                  setNoteForm({ kind, invoiceId: invoice.id });
+                }
+              : undefined
+          }
         />
       ) : null}
 

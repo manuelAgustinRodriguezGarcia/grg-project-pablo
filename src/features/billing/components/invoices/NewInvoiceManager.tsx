@@ -69,6 +69,7 @@ type NewInvoiceManagerProps = {
   initialClients: BillingClientListItem[];
   initialRubros: BillingRubroListItem[];
   fiscalContext: BillingFiscalContext;
+  canCreateInvoice?: boolean;
 };
 
 function createRowKey(): string {
@@ -96,6 +97,7 @@ export function NewInvoiceManager({
   initialClients,
   initialRubros,
   fiscalContext,
+  canCreateInvoice = false,
 }: NewInvoiceManagerProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -568,12 +570,19 @@ export function NewInvoiceManager({
   ]);
 
   const requestCreateConfirm = useCallback(() => {
-    if (!canSubmit || isSubmitting || !selectedClient || !invoiceType || !totals) {
+    if (
+      !canCreateInvoice ||
+      !canSubmit ||
+      isSubmitting ||
+      !selectedClient ||
+      !invoiceType ||
+      !totals
+    ) {
       return;
     }
     setSubmitError(null);
     setIsConfirmOpen(true);
-  }, [canSubmit, invoiceType, isSubmitting, selectedClient, totals]);
+  }, [canCreateInvoice, canSubmit, invoiceType, isSubmitting, selectedClient, totals]);
 
   const handleCreateClient = useCallback(
     async (values: ClientFormValues) => {
@@ -865,12 +874,13 @@ export function NewInvoiceManager({
             onClearDiscount={handleClearDiscount}
             onPaymentMethodChange={setPaymentMethod}
             onNotesChange={setNotes}
-            onSubmit={requestCreateConfirm}
+            onSubmit={canCreateInvoice ? requestCreateConfirm : undefined}
           />
         </div>
       </div>
 
-      {isConfirmOpen &&
+      {canCreateInvoice &&
+      isConfirmOpen &&
       selectedClient &&
       invoiceType &&
       totals ? (

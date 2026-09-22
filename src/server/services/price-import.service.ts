@@ -1,5 +1,6 @@
 import type { ImportActionType, PriceColumn } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
+import { requirePermission } from "@/server/auth";
 import {
   buildExistingCodeIndex,
   detectSemanticFlags,
@@ -357,6 +358,7 @@ async function persistPriceColumnsFromSheet(
 
 export class PriceImportService {
   async setDestination(jobId: string, input: SetPriceImportDestinationInput) {
+    await requirePermission("prices.import");
     const list = await priceListRepository.findById(input.priceListId);
     if (!list) {
       throw new ImportError("Lista de precios destino inválida.", "VALIDATION_ERROR");
@@ -390,6 +392,7 @@ export class PriceImportService {
     priceListId: string,
     config: ImportJobConfig,
   ) {
+    await requirePermission("prices.import");
     const existingColumns = await priceColumnRepository.findByPriceListIdOrdered(priceListId);
     const columns = await resolvePriceColumnsFromSheet(
       priceListId,
@@ -454,6 +457,7 @@ export class PriceImportService {
     config: ImportJobConfig,
     previewItems: MappedPriceItemRow[],
   ) {
+    await requirePermission("prices.import");
     const list = await priceListRepository.findByIdWithItemCount(priceListId);
     if (!list) {
       throw new ImportError("Lista de precios destino no encontrada.", "VALIDATION_ERROR");

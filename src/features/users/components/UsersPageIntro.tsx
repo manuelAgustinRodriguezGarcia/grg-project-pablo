@@ -2,8 +2,10 @@
 
 import { CustomSelect } from "@/shared/components/CustomSelect";
 import { ICON_STROKE, Plus, Search, Users } from "@/shared/icons";
-import type { UserRole } from "@/generated/prisma/client";
-import { USER_ROLE_LABELS } from "@/features/users/types/user.types";
+import {
+  USER_ROLE_LABELS,
+  USER_ROLES,
+} from "@/features/users/types/user.types";
 import styles from "@/features/users/styles/UsersManager.module.scss";
 
 type UsersPageIntroProps = {
@@ -16,9 +18,9 @@ type UsersPageIntroProps = {
 
 const ROLE_FILTER_OPTIONS = [
   { value: "all", label: "Todos los roles" },
-  ...(["ADMIN", "USUARIO"] as const).map((role) => ({
+  ...USER_ROLES.map((role) => ({
     value: role,
-    label: USER_ROLE_LABELS[role as UserRole],
+    label: USER_ROLE_LABELS[role],
   })),
 ];
 

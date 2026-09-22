@@ -1,6 +1,9 @@
 import { z } from "zod";
+import { USER_ROLES } from "@/shared/auth/permissions";
 
-export const userRoleSchema = z.enum(["ADMIN", "USUARIO"]);
+export const userRoleSchema = z.enum(
+  USER_ROLES as [(typeof USER_ROLES)[number], ...(typeof USER_ROLES)[number][]],
+);
 
 export const createUserSchema = z.object({
   email: z

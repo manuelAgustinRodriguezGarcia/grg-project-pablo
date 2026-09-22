@@ -22,6 +22,8 @@ vi.mock("@/server/auth", () => ({
   requireRole: vi.fn(),
   requireAdmin: vi.fn(),
   requireEditor: vi.fn(),
+  requirePermission: vi.fn(),
+  requireAnyPermission: vi.fn(),
 }));
 vi.mock("@/server/auth/invalidate-user-sessions", () => ({
   invalidateUserSessions: vi.fn().mockResolvedValue(undefined),
@@ -66,7 +68,7 @@ describe("UserService", () => {
           email: "nuevo@example.com",
           password: "password123",
           name: "Nuevo",
-          role: "USUARIO",
+          role: "VISITANTE",
         }),
       ).rejects.toMatchObject({ code: "EMAIL_ALREADY_EXISTS" });
     });
@@ -78,7 +80,7 @@ describe("UserService", () => {
         email: "nuevo@example.com",
         password: "password123",
         name: "Nuevo Usuario",
-        role: "USUARIO",
+        role: "VISITANTE",
       });
 
       expect(getSupabaseAdminClient).toHaveBeenCalled();
@@ -111,7 +113,7 @@ describe("UserService", () => {
       vi.mocked(userRepository.findById).mockResolvedValue(adminUserFixture);
 
       await expect(
-        userService.updateUser({ id: ADMIN_USER_ID, role: "USUARIO" }),
+        userService.updateUser({ id: ADMIN_USER_ID, role: "VISITANTE" }),
       ).rejects.toMatchObject({ code: "CANNOT_CHANGE_OWN_ROLE" });
     });
 
@@ -149,40 +151,40 @@ describe("UserService", () => {
     it("actualiza el rol e invalida sesiones", async () => {
       const target = createUserFixture({
         id: TARGET_USER_ID,
-        role: "USUARIO",
+        role: "VISITANTE",
       });
       vi.mocked(userRepository.findById).mockResolvedValue(target);
       setupSupabaseAdminMock();
       vi.mocked(userRepository.updateProfile).mockResolvedValue(
-        createUserFixture({ id: TARGET_USER_ID, role: "ADMIN" }),
+        createUserFixture({ id: TARGET_USER_ID, role: "ADMINISTRADOR" }),
       );
 
       const user = await userService.updateUser({
         id: TARGET_USER_ID,
-        role: "ADMIN",
+        role: "ADMINISTRADOR",
       });
 
-      expect(user.role).toBe("ADMIN");
+      expect(user.role).toBe("ADMINISTRADOR");
       expect(invalidateUserSessions).toHaveBeenCalledWith(TARGET_USER_ID);
     });
 
     it("no falla si la invalidación de sesiones falla tras actualizar el rol", async () => {
       const target = createUserFixture({
         id: TARGET_USER_ID,
-        role: "USUARIO",
+        role: "VISITANTE",
       });
       vi.mocked(userRepository.findById).mockResolvedValue(target);
       setupSupabaseAdminMock();
       vi.mocked(userRepository.updateProfile).mockResolvedValue(
-        createUserFixture({ id: TARGET_USER_ID, role: "ADMIN" }),
+        createUserFixture({ id: TARGET_USER_ID, role: "ADMINISTRADOR" }),
       );
       vi.mocked(invalidateUserSessions).mockRejectedValueOnce(
         new Error("permission denied"),
       );
 
       await expect(
-        userService.updateUser({ id: TARGET_USER_ID, role: "ADMIN" }),
-      ).resolves.toMatchObject({ role: "ADMIN" });
+        userService.updateUser({ id: TARGET_USER_ID, role: "ADMINISTRADOR" }),
+      ).resolves.toMatchObject({ role: "ADMINISTRADOR" });
     });
 
     it("rechaza email duplicado de otro usuario", async () => {

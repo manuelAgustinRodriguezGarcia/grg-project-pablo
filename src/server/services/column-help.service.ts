@@ -1,5 +1,6 @@
 import type { FolderColumn, UserRole } from "@/generated/prisma/client";
-import { requireAuth, requireAdmin } from "@/server/auth";
+import { requireAuth, requirePermission } from "@/server/auth";
+import { shouldFilterVisibilityForRole } from "@/shared/auth/permissions";
 import {
   buildColumnHelpImageStoragePaths,
   generateThumbnail,
@@ -141,7 +142,7 @@ export class ColumnHelpService {
       }),
     );
 
-    if (role !== "ADMIN") {
+    if (shouldFilterVisibilityForRole(role)) {
       return resolved.map((item) => ({
         ...item,
         helpText: item.visibleToNormalUser ? item.helpText : null,
@@ -187,7 +188,7 @@ export class ColumnHelpService {
     originalFilename: string;
     altText?: string | null;
   }): Promise<ColumnListItem> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
     const column = await requireColumn(input.columnId);
 
     const maxSize = BUCKET_CONFIGS[STORAGE_BUCKETS.COLUMN_HELP_IMAGES].maxSizeBytes;
@@ -263,7 +264,7 @@ export class ColumnHelpService {
       entityId: column.id,
     });
 
-    const [item] = await this.resolveHelpForColumns([updated], "ADMIN");
+    const [item] = await this.resolveHelpForColumns([updated], "ADMINISTRADOR");
     return item;
   }
 
@@ -274,7 +275,7 @@ export class ColumnHelpService {
     sizeBytes: number;
     altText?: string | null;
   }): Promise<{ upload: PendingImageUploadTarget; altText?: string | null }> {
-    await requireAdmin();
+    await requirePermission("catalogs.update");
     await requireColumn(input.columnId);
 
     try {
@@ -324,7 +325,7 @@ export class ColumnHelpService {
   }
 
   async deleteHelpImage(columnId: string): Promise<ColumnListItem> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
     const column = await requireColumn(columnId);
 
     if (!column.helpImagePath) {
@@ -352,7 +353,7 @@ export class ColumnHelpService {
       entityId: column.id,
     });
 
-    const [item] = await this.resolveHelpForColumns([updated], "ADMIN");
+    const [item] = await this.resolveHelpForColumns([updated], "ADMINISTRADOR");
     return item;
   }
 

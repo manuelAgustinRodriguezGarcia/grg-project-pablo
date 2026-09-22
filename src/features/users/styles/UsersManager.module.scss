@@ -317,6 +317,7 @@ $users-shadow:
 .roleBadge {
   display: inline-flex;
   align-items: center;
+  gap: 0.35rem;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -324,14 +325,58 @@ $users-shadow:
   line-height: 1.3;
 }
 
-.roleBadgeAdmin {
-  color: $green;
-  background: rgba($green, 0.12);
+.roleBadgeIcon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
 }
 
-.roleBadgeUser {
-  color: $blue;
-  background: rgba($blue, 0.12);
+.roleBadgeIconAdmin {
+  animation: adminGoldShine 2.8s ease-in-out infinite;
+}
+
+@keyframes adminGoldShine {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgba(184, 150, 15, 0));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 4px rgba(184, 150, 15, 0.65));
+  }
+}
+
+.roleBadgeVisitor {
+  color: #0066d9;
+  background: rgba(0, 102, 217, 0.12);
+}
+
+.roleBadgeSeller {
+  color: #1f9d55;
+  background: rgba(31, 157, 85, 0.12);
+}
+
+.roleBadgeAdvancedVisitor {
+  color: #6d28d9;
+  background: rgba(109, 40, 217, 0.12);
+}
+
+.roleBadgeAdmin {
+  color: #b8960f;
+  background: rgba(184, 150, 15, 0.12);
+}
+
+.roleSelectOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+
+.roleSelectIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
 }
 
 .mobileList {

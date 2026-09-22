@@ -39,6 +39,7 @@ type MovimientosManagerProps = {
   initialReceipts: BillingReceiptListItem[];
   initialNotes: BillingNoteListItem[];
   clients: BillingClientListItem[];
+  canManageMovements?: boolean;
 };
 
 export function MovimientosManager({
@@ -46,6 +47,7 @@ export function MovimientosManager({
   initialReceipts,
   initialNotes,
   clients,
+  canManageMovements = false,
 }: MovimientosManagerProps) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<MovementKindFilter>("all");
@@ -181,9 +183,21 @@ export function MovimientosManager({
           onKindChange={setKind}
           onFromDateChange={setFromDate}
           onToDateChange={setToDate}
-          onCreateReceipt={() => setReceiptForm({ kind: "create" })}
-          onCreateCreditNote={() => setNoteForm({ kind: "CREDIT" })}
-          onCreateDebitNote={() => setNoteForm({ kind: "DEBIT" })}
+          onCreateReceipt={
+            canManageMovements
+              ? () => setReceiptForm({ kind: "create" })
+              : undefined
+          }
+          onCreateCreditNote={
+            canManageMovements
+              ? () => setNoteForm({ kind: "CREDIT" })
+              : undefined
+          }
+          onCreateDebitNote={
+            canManageMovements
+              ? () => setNoteForm({ kind: "DEBIT" })
+              : undefined
+          }
         />
 
         <div className={styles.comprobantesLayout}>
@@ -253,19 +267,27 @@ export function MovimientosManager({
         <InvoiceDetailModal
           invoice={selectedInvoice}
           onClose={() => setSelectedInvoiceId(null)}
-          onIssueReceipt={(invoice) => {
-            if (!invoice.clientId || !invoiceCanIssueReceipt(invoice)) {
-              return;
-            }
-            setReceiptForm({
-              kind: "create-from-invoice",
-              invoiceId: invoice.id,
-              clientId: invoice.clientId,
-            });
-          }}
-          onIssueNote={(invoice, noteKind) => {
-            setNoteForm({ kind: noteKind, invoiceId: invoice.id });
-          }}
+          onIssueReceipt={
+            canManageMovements
+              ? (invoice) => {
+                  if (!invoice.clientId || !invoiceCanIssueReceipt(invoice)) {
+                    return;
+                  }
+                  setReceiptForm({
+                    kind: "create-from-invoice",
+                    invoiceId: invoice.id,
+                    clientId: invoice.clientId,
+                  });
+                }
+              : undefined
+          }
+          onIssueNote={
+            canManageMovements
+              ? (invoice, noteKind) => {
+                  setNoteForm({ kind: noteKind, invoiceId: invoice.id });
+                }
+              : undefined
+          }
         />
       ) : null}
 

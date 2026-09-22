@@ -21,6 +21,16 @@ vi.mock("@/server/auth", () => ({
   requireRole: vi.fn(),
   requireAdmin: vi.fn(),
   requireEditor: vi.fn(),
+  requirePermission: vi.fn(),
+  requireAnyPermission: vi.fn(),
+}));
+vi.mock("@/server/services/uploaded-file-retention", () => ({
+  uploadedFileRetentionService: {
+    purgeFilesForCatalog: vi.fn(),
+    purgeFilesForFolder: vi.fn(),
+    purgeFilesForPriceList: vi.fn(),
+    purgeIfWithoutRetainedImport: vi.fn(),
+  },
 }));
 vi.mock("@/server/repositories/price-list.repository", () => ({
   priceListRepository: {

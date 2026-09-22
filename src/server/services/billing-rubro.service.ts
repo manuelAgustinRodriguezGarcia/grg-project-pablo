@@ -2,7 +2,7 @@ import type {
   BillingRubro,
   BillingRubroStatus,
 } from "@/generated/prisma/client";
-import { requireAdmin } from "@/server/auth";
+import { requireAnyPermission, requirePermission } from "@/server/auth";
 import {
   billingRubroRepository,
   type CreateBillingRubroData,
@@ -117,17 +117,17 @@ async function ensureUniqueCode(
 
 export class BillingRubroService {
   async listRubros(): Promise<BillingRubro[]> {
-    await requireAdmin();
+    await requireAnyPermission(["categories.read", "invoices.create"]);
     return billingRubroRepository.findAllOrdered();
   }
 
   async getRubro(id: string): Promise<BillingRubro> {
-    await requireAdmin();
+    await requireAnyPermission(["categories.read", "invoices.create"]);
     return requireBillingRubro(id);
   }
 
   async createRubro(input: BillingRubroInput): Promise<BillingRubro> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("categories.create");
     const sanitized = sanitizeBillingRubroInput(input);
     const customCode = sanitizeCode(input.code);
     await ensureUniqueName(sanitized.name);
@@ -147,7 +147,7 @@ export class BillingRubroService {
   }
 
   async updateRubro(input: UpdateBillingRubroInput): Promise<BillingRubro> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("categories.update");
     const existing = await requireBillingRubro(input.id);
     const sanitized = sanitizeBillingRubroInput(input);
     const nextCode = sanitizeCode(input.code);
@@ -175,7 +175,7 @@ export class BillingRubroService {
   }
 
   async deleteRubro(id: string): Promise<void> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("categories.delete");
     await requireBillingRubro(id);
     await billingRubroRepository.delete(id);
 

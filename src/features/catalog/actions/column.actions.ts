@@ -90,7 +90,7 @@ export async function createColumnAction(
 
   try {
     const column = await columnConfigService.createColumn(parsed.data);
-    return { success: true, data: await resolveColumnItem(column, "ADMIN") };
+    return { success: true, data: await resolveColumnItem(column, "ADMINISTRADOR") };
   } catch (error) {
     return toActionError(error);
   }
@@ -111,7 +111,7 @@ export async function updateColumnAction(
 
   try {
     const column = await columnConfigService.updateColumn(parsed.data);
-    return { success: true, data: await resolveColumnItem(column, "ADMIN") };
+    return { success: true, data: await resolveColumnItem(column, "ADMINISTRADOR") };
   } catch (error) {
     return toActionError(error);
   }
@@ -132,7 +132,7 @@ export async function reorderColumnsAction(
 
   try {
     const columns = await columnConfigService.reorderColumns(parsed.data);
-    return { success: true, data: await resolveColumnItems(columns, "ADMIN") };
+    return { success: true, data: await resolveColumnItems(columns, "ADMINISTRADOR") };
   } catch (error) {
     return toActionError(error);
   }
@@ -156,7 +156,7 @@ export async function setColumnVisibilityAction(
       parsed.data.id,
       parsed.data.visible,
     );
-    return { success: true, data: await resolveColumnItem(column, "ADMIN") };
+    return { success: true, data: await resolveColumnItem(column, "ADMINISTRADOR") };
   } catch (error) {
     return toActionError(error);
   }

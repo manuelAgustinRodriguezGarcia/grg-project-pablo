@@ -26,6 +26,8 @@ vi.mock("@/server/auth", () => ({
   requireRole: vi.fn(),
   requireAdmin: vi.fn(),
   requireEditor: vi.fn(),
+  requirePermission: vi.fn(),
+  requireAnyPermission: vi.fn(),
 }));
 vi.mock("@/server/repositories/column.repository", () => ({
   columnRepository: {

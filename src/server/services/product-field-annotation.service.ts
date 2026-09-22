@@ -1,5 +1,5 @@
 import type { ProductFieldAnnotation } from "@/generated/prisma/client";
-import { requireEditor } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import {
   buildProductFieldHelpImageStoragePaths,
   generateThumbnail,
@@ -242,7 +242,7 @@ export class ProductFieldAnnotationService {
     originalFilename: string;
     altText?: string | null;
   }): Promise<ProductFieldAnnotationResolved> {
-    const { profile: admin } = await requireEditor();
+    const { profile: admin } = await requirePermission("catalogs.update");
     const product = await requireProduct(input.productId);
     await assertColumnKeyInFolder(product.folderId, input.columnInternalKey);
 
@@ -330,7 +330,7 @@ export class ProductFieldAnnotationService {
     sizeBytes: number;
     altText?: string | null;
   }): Promise<{ upload: PendingImageUploadTarget; altText?: string | null }> {
-    await requireEditor();
+    await requirePermission("catalogs.update");
     const product = await requireProduct(input.productId);
     await assertColumnKeyInFolder(product.folderId, input.columnInternalKey);
 
@@ -387,7 +387,7 @@ export class ProductFieldAnnotationService {
     productId: string,
     columnInternalKey: string,
   ): Promise<ProductFieldAnnotationResolved | null> {
-    const { profile: admin } = await requireEditor();
+    const { profile: admin } = await requirePermission("catalogs.update");
     const product = await requireProduct(productId);
     await assertColumnKeyInFolder(product.folderId, columnInternalKey);
 

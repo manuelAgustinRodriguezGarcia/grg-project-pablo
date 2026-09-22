@@ -101,7 +101,7 @@ type InvoiceSummarySectionProps = {
   onClearDiscount: () => void;
   onPaymentMethodChange: (method: BillingPaymentMethod) => void;
   onNotesChange: (value: string) => void;
-  onSubmit: () => void;
+  onSubmit?: () => void;
 };
 
 export function InvoiceSummarySection({
@@ -442,15 +442,17 @@ export function InvoiceSummarySection({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        id={INVOICE_SUBMIT_ID}
-        className={styles.submitButton}
-        onClick={onSubmit}
-        disabled={!canSubmit || isSubmitting}
-      >
-        {isSubmitting ? "Creando factura…" : "Crear factura en modo prueba"}
-      </button>
+      {onSubmit ? (
+        <button
+          type="button"
+          id={INVOICE_SUBMIT_ID}
+          className={styles.submitButton}
+          onClick={onSubmit}
+          disabled={!canSubmit || isSubmitting}
+        >
+          {isSubmitting ? "Creando factura…" : "Crear factura en modo prueba"}
+        </button>
+      ) : null}
     </div>
   );
 }

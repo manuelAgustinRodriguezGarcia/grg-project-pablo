@@ -52,7 +52,10 @@
   width: 100%;
   padding: 0.7rem 1rem;
   border: 1px solid admin.$border;
-  border-radius: 999px;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
   background: rgba(admin.$white, 0.06);
   color: admin.$text-light;
   font-family: $font-sans;
@@ -62,7 +65,11 @@
   transition:
     color 0.2s ease,
     border-color 0.2s ease,
-    background-color 0.2s ease;
+    background-color 0.2s ease,
+    gap 0.25s ease,
+    width 0.25s ease,
+    height 0.25s ease,
+    padding 0.25s ease;
 
   &:focus-visible {
     outline: 2px solid admin.$white;
@@ -85,22 +92,27 @@
 }
 
 .label {
+  max-width: 12rem;
   overflow: hidden;
   white-space: nowrap;
+  opacity: 1;
   transition:
     opacity 0.2s ease,
-    max-width 0.3s ease;
+    max-width 0.25s ease;
 }
 
 .buttonSidebarCollapsed {
   justify-content: center;
+  flex-shrink: 0;
   gap: 0;
-  width: 2.75rem;
+  width: 100%;
   height: 2.75rem;
   padding: 0;
 
   .label {
-    display: none;
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
   }
 }
 

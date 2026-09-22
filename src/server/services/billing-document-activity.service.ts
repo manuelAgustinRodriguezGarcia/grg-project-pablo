@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { billingInvoiceRepository } from "@/server/repositories/billing-invoice.repository";
 import { billingNoteRepository } from "@/server/repositories/billing-note.repository";
 import { billingReceiptRepository } from "@/server/repositories/billing-receipt.repository";
@@ -48,7 +48,7 @@ export class BillingDocumentActivityService {
     id: string,
     activity: BillingDocumentActivityKind,
   ): Promise<BillingDocumentActivity> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("invoices.read");
     const at = new Date();
     const field = activityFieldForKind(activity);
     const data = { [field]: at };

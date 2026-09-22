@@ -1,6 +1,6 @@
 import type { FolderColumn, UserRole } from "@/generated/prisma/client";
 import type { ColumnListItem } from "@/features/catalog/types/column.types";
-import { requireAuth, requireEditor } from "@/server/auth";
+import { requireAuth, requirePermission } from "@/server/auth";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
 import { columnRepository } from "@/server/repositories/column.repository";
 import { folderRepository } from "@/server/repositories/folder.repository";
@@ -477,7 +477,7 @@ export class ProductService {
   }
 
   async getProduct(productId: string): Promise<ProductDetail> {
-    const { profile } = await requireEditor();
+    const { profile } = await requirePermission("catalogs.update");
 
     const product = await productRepository.findById(productId);
     if (!product) {
@@ -520,7 +520,7 @@ export class ProductService {
   }
 
   async createProduct(input: CreateProductInput): Promise<ProductDetail> {
-    const { profile: admin } = await requireEditor();
+    const { profile: admin } = await requirePermission("catalogs.update");
     await assertFolderForAdmin(input.folderId);
 
     const columns = await getEditableColumns(input.folderId);
@@ -568,7 +568,7 @@ export class ProductService {
   }
 
   async updateProduct(input: UpdateProductInput): Promise<ProductDetail> {
-    const { profile: admin } = await requireEditor();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await productRepository.findById(input.productId);
     if (!existing) {
@@ -624,7 +624,7 @@ export class ProductService {
   }
 
   async deleteProduct(productId: string): Promise<void> {
-    const { profile: admin } = await requireEditor();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const product = await productRepository.findById(productId);
     if (!product) {
@@ -645,7 +645,7 @@ export class ProductService {
   }
 
   async duplicateProduct(productId: string): Promise<ProductDetail> {
-    const { profile: admin } = await requireEditor();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const source = await productRepository.findById(productId);
     if (!source) {

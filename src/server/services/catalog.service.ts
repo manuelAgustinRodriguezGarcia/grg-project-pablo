@@ -1,5 +1,5 @@
 import type { CatalogStatus } from "@/generated/prisma/client";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import {
   catalogRepository,
   type CatalogWithFolderCount,
@@ -77,17 +77,17 @@ async function deleteCoverImageBestEffort(
 
 export class CatalogService {
   async listCatalogs(): Promise<CatalogWithFolderCount[]> {
-    await requireAdmin();
+    await requirePermission("catalogs.read");
     return catalogRepository.findAllOrderedWithFolderCount();
   }
 
   async getCatalog(id: string): Promise<CatalogWithFolderCount> {
-    await requireAdmin();
+    await requirePermission("catalogs.read");
     return requireCatalog(id);
   }
 
   async createCatalog(input: CreateCatalogInput): Promise<CatalogWithFolderCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.create");
 
     const trimmedName = input.name.trim();
     if (!trimmedName) {
@@ -125,7 +125,7 @@ export class CatalogService {
   }
 
   async updateCatalog(input: UpdateCatalogInput): Promise<CatalogWithFolderCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await requireCatalog(input.id);
 
@@ -170,7 +170,7 @@ export class CatalogService {
   async reorderCatalogs(
     input: ReorderCatalogsInput,
   ): Promise<CatalogWithFolderCount[]> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     if (input.items.length === 0) {
       throw new CatalogError(
@@ -204,7 +204,7 @@ export class CatalogService {
     id: string,
     visible: boolean,
   ): Promise<CatalogWithFolderCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await requireCatalog(id);
 
@@ -230,7 +230,7 @@ export class CatalogService {
   }
 
   async deleteCatalog(id: string): Promise<void> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.delete");
 
     const existing = await requireCatalog(id);
 
@@ -247,7 +247,7 @@ export class CatalogService {
   }
 
   async clearCatalog(id: string): Promise<{ deletedProductCount: number }> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     await requireCatalog(id);
 
@@ -266,7 +266,7 @@ export class CatalogService {
   async setCoverImage(
     input: SetCoverImageInput,
   ): Promise<CatalogWithFolderCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await requireCatalog(input.catalogId);
     const previousPath = existing.coverImagePath;
@@ -315,7 +315,7 @@ export class CatalogService {
   }
 
   async removeCoverImage(id: string): Promise<CatalogWithFolderCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await requireCatalog(id);
 

@@ -11,9 +11,9 @@ describe("VisibilityService", () => {
     const hiddenFolder = createFolderFixture({ visibleToNormalUser: false });
     const hiddenColumn = createColumnFixture({ visibleToNormalUser: false });
 
-    expect(visibilityService.filterCatalogs([hiddenCatalog], "ADMIN")).toHaveLength(1);
-    expect(visibilityService.filterFolders([hiddenFolder], "ADMIN")).toHaveLength(1);
-    expect(visibilityService.filterColumns([hiddenColumn], "ADMIN")).toHaveLength(1);
+    expect(visibilityService.filterCatalogs([hiddenCatalog], "ADMINISTRADOR")).toHaveLength(1);
+    expect(visibilityService.filterFolders([hiddenFolder], "ADMINISTRADOR")).toHaveLength(1);
+    expect(visibilityService.filterColumns([hiddenColumn], "ADMINISTRADOR")).toHaveLength(1);
   });
 
   it("USUARIO excluye entidades ocultas", () => {
@@ -26,16 +26,16 @@ describe("VisibilityService", () => {
     const hiddenColumn = createColumnFixture({ visibleToNormalUser: false });
 
     expect(
-      visibilityService.filterCatalogs([visibleCatalog, hiddenCatalog], "USUARIO"),
+      visibilityService.filterCatalogs([visibleCatalog, hiddenCatalog], "VISITANTE"),
     ).toEqual([visibleCatalog]);
     expect(
       visibilityService.filterFolders(
         [visibleFolder, hiddenFolder, inactiveFolder],
-        "USUARIO",
+        "VISITANTE",
       ),
     ).toEqual([visibleFolder]);
     expect(
-      visibilityService.filterColumns([visibleColumn, hiddenColumn], "USUARIO"),
+      visibilityService.filterColumns([visibleColumn, hiddenColumn], "VISITANTE"),
     ).toEqual([visibleColumn]);
   });
 
@@ -43,11 +43,11 @@ describe("VisibilityService", () => {
     const hiddenCatalog = createCatalogFixture({ visibleToNormalUser: false });
 
     expect(() =>
-      visibilityService.assertCatalogVisibleForRole(hiddenCatalog, "USUARIO"),
+      visibilityService.assertCatalogVisibleForRole(hiddenCatalog, "VISITANTE"),
     ).toThrow(VisibilityError);
 
     expect(() =>
-      visibilityService.assertCatalogVisibleForRole(hiddenCatalog, "ADMIN"),
+      visibilityService.assertCatalogVisibleForRole(hiddenCatalog, "ADMINISTRADOR"),
     ).not.toThrow();
   });
 
@@ -56,10 +56,10 @@ describe("VisibilityService", () => {
     const inactiveFolder = createFolderFixture({ status: "INACTIVE" });
 
     expect(() =>
-      visibilityService.assertFolderVisibleForRole(hiddenFolder, "USUARIO"),
+      visibilityService.assertFolderVisibleForRole(hiddenFolder, "VISITANTE"),
     ).toThrow(VisibilityError);
     expect(() =>
-      visibilityService.assertFolderVisibleForRole(inactiveFolder, "USUARIO"),
+      visibilityService.assertFolderVisibleForRole(inactiveFolder, "VISITANTE"),
     ).toThrow(VisibilityError);
   });
 
@@ -73,7 +73,7 @@ describe("VisibilityService", () => {
     const result = visibilityService.stripHiddenDynamicData(
       dynamicData,
       ["codigo", "marca"],
-      "USUARIO",
+      "VISITANTE",
     );
 
     expect(result).toEqual({ codigo: "ABC", marca: "SKF" });
@@ -83,7 +83,7 @@ describe("VisibilityService", () => {
     const dynamicData = { codigo: "ABC", nota_interna: "solo admin" };
 
     expect(
-      visibilityService.stripHiddenDynamicData(dynamicData, ["codigo"], "ADMIN"),
+      visibilityService.stripHiddenDynamicData(dynamicData, ["codigo"], "ADMINISTRADOR"),
     ).toEqual(dynamicData);
   });
 });

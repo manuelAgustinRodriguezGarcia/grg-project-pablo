@@ -6,25 +6,27 @@ import {
 } from "../../../helpers/fixtures/user.fixture";
 
 describe("toAdminUiAuth", () => {
-  it("marca ADMIN con canEdit e isAdmin", () => {
+  it("marca ADMINISTRADOR con canEdit e isAdmin", () => {
     const auth = toAdminUiAuth(adminUserFixture);
 
-    expect(auth).toEqual({
-      role: "ADMIN",
+    expect(auth).toMatchObject({
+      role: "ADMINISTRADOR",
       canEdit: true,
       isAdmin: true,
       currentUserId: adminUserFixture.id,
+      canManageUsers: true,
     });
   });
 
-  it("marca USUARIO sin canEdit ni isAdmin (solo lectura)", () => {
+  it("marca VISITANTE sin canEdit ni isAdmin (solo lectura)", () => {
     const auth = toAdminUiAuth(usuarioUserFixture);
 
-    expect(auth).toEqual({
-      role: "USUARIO",
+    expect(auth).toMatchObject({
+      role: "VISITANTE",
       canEdit: false,
       isAdmin: false,
       currentUserId: usuarioUserFixture.id,
+      canManageUsers: false,
     });
   });
 });

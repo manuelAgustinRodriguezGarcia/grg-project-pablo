@@ -105,10 +105,16 @@ export function AdminSignOutButton({
           type="button"
           className={`${isDock ? styles.buttonDock : isSheet ? styles.buttonSheet : isSidebar ? styles.buttonSidebar : styles.button} ${isSidebar && isCollapsed ? styles.buttonSidebarCollapsed : ""}`}
           title={isSidebar && isCollapsed ? "Cerrar sesión" : undefined}
+          aria-label={isSidebar && isCollapsed ? "Cerrar sesión" : undefined}
           onClick={openConfirm}
         >
           <LogOut className={styles.icon} strokeWidth={ICON_STROKE} aria-hidden />
-          <span className={styles.label}>Cerrar sesión</span>
+          <span
+            className={styles.label}
+            aria-hidden={(isSidebar && isCollapsed) || undefined}
+          >
+            Cerrar sesión
+          </span>
         </button>
       </form>
       {confirmDialog}

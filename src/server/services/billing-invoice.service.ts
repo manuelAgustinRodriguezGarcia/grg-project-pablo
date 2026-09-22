@@ -5,7 +5,7 @@ import type {
   BillingRubro,
 } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { buildInvoicePdf } from "@/server/pdf/build-invoice-pdf";
 import { resolveInvoicePdfIssuer } from "@/server/pdf/invoice-pdf-issuer";
 import { loadRothamelLogoPng } from "@/server/pdf/load-rothamel-logo";
@@ -214,17 +214,17 @@ function requireTestEnvironment(settings: BillingFiscalSettings): void {
 
 export class BillingInvoiceService {
   async listInvoices(): Promise<BillingInvoiceWithItems[]> {
-    await requireAdmin();
+    await requirePermission("invoices.read");
     return billingInvoiceRepository.findAllOrdered();
   }
 
   async releaseClientOverpayments(clientId: string): Promise<void> {
-    await requireAdmin();
+    await requirePermission("invoices.update");
     await releaseOverpaymentsForClient(clientId);
   }
 
   async getInvoice(id: string): Promise<BillingInvoiceWithItems> {
-    await requireAdmin();
+    await requirePermission("invoices.read");
     const invoice = await billingInvoiceRepository.findById(id);
 
     if (!invoice) {
@@ -240,7 +240,7 @@ export class BillingInvoiceService {
   async createInvoice(
     input: CreateBillingInvoiceInput,
   ): Promise<BillingInvoiceWithItems> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("invoices.create");
 
     const items = sanitizeItems(input.items);
     const discountPercent = sanitizeDiscountPercent(input.discountPercent);

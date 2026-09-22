@@ -23,7 +23,7 @@ type ClientsPageIntroProps = {
   onIvaFilterChange: (value: string) => void;
   onPaymentFilterChange: (value: string) => void;
   onSortOrderChange: (value: ClientSortOrder) => void;
-  onCreateClick: () => void;
+  onCreateClick?: () => void;
 };
 
 const IDENTIFICATION_FILTER_OPTIONS = [
@@ -85,14 +85,16 @@ export function ClientsPageIntro({
         </h2>
       </div>
       <div className={styles.filtersRow}>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={onCreateClick}
-          >
-            <Plus strokeWidth={ICON_STROKE} aria-hidden />
-            Nuevo cliente
-          </button>
+          {onCreateClick ? (
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={onCreateClick}
+            >
+              <Plus strokeWidth={ICON_STROKE} aria-hidden />
+              Nuevo cliente
+            </button>
+          ) : null}
           <div className={styles.filterSelect}>
             <CustomSelect
               value={sortOrder}

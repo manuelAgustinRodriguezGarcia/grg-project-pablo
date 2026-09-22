@@ -210,7 +210,7 @@ export function FolderPickerScreen({
                   }`}
                   tabIndex={focusedIndex === index ? 0 : -1}
                   onClick={() => onSelectFolder(folder.id)}
-                  onMouseEnter={() => focusCardAt(index)}
+                  onMouseEnter={() => focusCardAt(index, { fromPointer: true })}
                   onFocus={() => {
                     if (focusedIndex !== index) {
                       focusCardAt(index);

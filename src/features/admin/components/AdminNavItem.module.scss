@@ -24,7 +24,11 @@
   transition:
     background-color 0.2s ease,
     color 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    gap 0.25s ease,
+    padding 0.25s ease,
+    margin 0.25s ease,
+    width 0.25s ease;
 
   &:focus-visible {
     outline: 2px solid $white;
@@ -87,36 +91,24 @@
 .label {
   position: relative;
   z-index: 1;
+  max-width: 14rem;
   font-weight: 700;
   line-height: 1.2;
   overflow: hidden;
   white-space: nowrap;
+  opacity: 1;
   transition:
     opacity 0.2s ease,
-    max-width 0.3s ease;
+    max-width 0.25s ease;
 }
 
-.linkCollapsed {
-  justify-content: center;
+.link:not(.linkDock):not(.linkSheet).linkCollapsed {
   gap: 0;
-  width: 2.75rem;
-  height: 2.75rem;
-  margin-inline: 0;
-  padding: 0;
 
   .label {
-    display: none;
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .linkCollapsed:hover {
-    width: calc(100% + 1rem);
-    height: auto;
-    min-height: 2.75rem;
-    margin-inline: -0.5rem;
-    padding: 0.8rem 0;
-    border-radius: 0;
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
   }
 }
 
@@ -230,6 +222,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .link,
+  .label,
   .collapsedTooltip {
     transition: none;
   }

@@ -58,7 +58,12 @@ export function AdminNavItem({
         }}
       >
         <Icon className={styles.icon} strokeWidth={ICON_STROKE} aria-hidden />
-        <span className={styles.label}>{label}</span>
+        <span
+          className={styles.label}
+          aria-hidden={showCollapsedTooltip || undefined}
+        >
+          {label}
+        </span>
       </Link>
       {showCollapsedTooltip ? (
         <span className={styles.collapsedTooltip} role="tooltip">

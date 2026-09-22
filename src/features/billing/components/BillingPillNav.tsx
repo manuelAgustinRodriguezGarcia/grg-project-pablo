@@ -15,15 +15,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAdminSectionTransition } from "@/features/admin/components/AdminSectionTransition";
 import { useUnsavedInvoiceDraft } from "@/features/billing/components/invoices/UnsavedInvoiceDraftContext";
 import {
-  BILLING_NAV_TABS,
   BILLING_NEW_INVOICE_PATH,
   BILLING_NEW_INVOICE_SHORTCUT,
   billingPathMatchesHref,
   billingTabCurrentMenuItem,
   billingTabMatchesPath,
+  filterBillingNavTabsForRole,
   type BillingNavIconTone,
   type BillingNavTab,
 } from "@/features/billing/data/billingNav";
+import { hasPermission } from "@/shared/auth/permissions";
+import type { UserRole } from "@/generated/prisma/client";
 import { ChevronDown, ICON_STROKE, ReceiptText } from "@/shared/icons";
 import styles from "@/features/billing/styles/BillingPillNav.module.scss";
 
@@ -32,6 +34,7 @@ const NEW_INVOICE_TAB: BillingNavTab = {
   label: "Nueva factura",
   icon: ReceiptText,
   exact: true,
+  permission: "invoices.read",
 };
 
 type MobileNavItem = {
@@ -213,22 +216,28 @@ function BillingNavTabWithMenu({
   );
 }
 
-export function BillingPillNav() {
+export function BillingPillNav({ userRole }: { userRole: UserRole }) {
   const pathname = usePathname();
   const router = useRouter();
   const sectionTransition = useAdminSectionTransition();
   const unsavedDraft = useUnsavedInvoiceDraft();
+  const canCreateInvoice = hasPermission(userRole, "invoices.create");
+  const canOpenNewInvoice = hasPermission(userRole, "invoices.read");
+  const navTabs = useMemo(
+    () => filterBillingNavTabsForRole(userRole),
+    [userRole],
+  );
   const pendingHref = sectionTransition?.pendingHref ?? null;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileNavRef = useRef<HTMLDivElement>(null);
   const mobileNavItems = useMemo(
-    () => flattenMobileNavItems(BILLING_NAV_TABS),
-    [],
+    () => flattenMobileNavItems(navTabs),
+    [navTabs],
   );
 
   const currentTab = useMemo(() => {
     const matchPath = pendingHref ?? pathname;
-    const matched = BILLING_NAV_TABS.find((tab) =>
+    const matched = navTabs.find((tab) =>
       billingTabMatchesPath(matchPath, tab),
     );
 
@@ -236,12 +245,12 @@ export function BillingPillNav() {
       return matched;
     }
 
-    if (matchPath === BILLING_NEW_INVOICE_PATH) {
+    if (matchPath === BILLING_NEW_INVOICE_PATH && canOpenNewInvoice) {
       return NEW_INVOICE_TAB;
     }
 
-    return BILLING_NAV_TABS[0];
-  }, [pathname, pendingHref]);
+    return navTabs[0] ?? NEW_INVOICE_TAB;
+  }, [canOpenNewInvoice, navTabs, pathname, pendingHref]);
 
   const currentMenuItem = billingTabCurrentMenuItem(
     pendingHref ?? pathname,
@@ -301,6 +310,10 @@ export function BillingPillNav() {
   }, [isMobileMenuOpen]);
 
   useEffect(() => {
+    if (!canCreateInvoice) {
+      return;
+    }
+
     function handleNewInvoiceShortcut(event: KeyboardEvent) {
       if (event.key !== BILLING_NEW_INVOICE_SHORTCUT) {
         return;
@@ -324,7 +337,7 @@ export function BillingPillNav() {
     return () => {
       document.removeEventListener("keydown", handleNewInvoiceShortcut);
     };
-  }, [goToNewInvoice]);
+  }, [canCreateInvoice, goToNewInvoice]);
 
   function handleNavClick(
     event: MouseEvent<HTMLAnchorElement>,
@@ -349,7 +362,7 @@ export function BillingPillNav() {
     <nav className={styles.bar} aria-label="Secciones de facturación">
       <div className={styles.inner}>
         <div className={styles.tabs} role="list">
-          {BILLING_NAV_TABS.map((tab) => {
+          {navTabs.map((tab) => {
             const isSectionPending = Boolean(
               pendingHref && billingTabMatchesPath(pendingHref, tab),
             );
@@ -466,13 +479,16 @@ export function BillingPillNav() {
           </ul>
         </div>
 
+        {canOpenNewInvoice ? (
         <Link
           href={BILLING_NEW_INVOICE_PATH}
           className={`${styles.newInvoiceButton} ${
             isInvoicing ? styles.newInvoiceButtonCurrent : ""
           }`}
           aria-current={isOnNewInvoice ? "page" : undefined}
-          aria-keyshortcuts={BILLING_NEW_INVOICE_SHORTCUT}
+          aria-keyshortcuts={
+            canCreateInvoice ? BILLING_NEW_INVOICE_SHORTCUT : undefined
+          }
           onClick={(event) => {
             if (isOnNewInvoice) {
               return;
@@ -516,7 +532,7 @@ export function BillingPillNav() {
                 Facturando...
               </span>
             </span>
-            {isOnNewInvoice ? null : (
+            {isOnNewInvoice || !canCreateInvoice ? null : (
               <kbd className={styles.newInvoiceShortcut} aria-hidden>
                 {BILLING_NEW_INVOICE_SHORTCUT}
               </kbd>
@@ -524,13 +540,14 @@ export function BillingPillNav() {
           </span>
           <span className={styles.newInvoiceLabelShort}>
             {isInvoicing ? "Facturando..." : "Facturar"}
-            {isOnNewInvoice ? null : (
+            {isOnNewInvoice || !canCreateInvoice ? null : (
               <kbd className={styles.newInvoiceShortcut} aria-hidden>
                 {BILLING_NEW_INVOICE_SHORTCUT}
               </kbd>
             )}
           </span>
         </Link>
+        ) : null}
       </div>
     </nav>
   );

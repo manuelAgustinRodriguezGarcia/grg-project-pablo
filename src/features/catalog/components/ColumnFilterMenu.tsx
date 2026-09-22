@@ -406,7 +406,7 @@ export function ColumnFilterMenu({
   }, [hasColumnDescription, isEditModalOpen, isOpen, updatePopoverPosition]);
 
   useEffect(() => {
-    // Solo USUARIO (no admin): ahorrar el click extra en el input.
+    // Solo VISITANTE (no admin): ahorrar el click extra en el input.
     if (!isOpen || isEditModalOpen || isVisibilityOnly || isAdmin) {
       return;
     }

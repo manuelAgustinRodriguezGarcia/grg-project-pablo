@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { Permission } from "@/shared/auth/permissions";
 import {
   Archive,
   CircleDollarSign,
@@ -12,11 +13,9 @@ export type AdminNavItemConfig = {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Visible only when session role is ADMIN. */
-  adminOnly?: boolean;
+  permission: Permission;
 };
 
-/** Hrefs visibles en el dock móvil (el resto vive en el sheet “Más”). */
 export const ADMIN_MOBILE_DOCK_HREFS = [
   "/admin/inicio",
   "/admin/catalogos",
@@ -29,35 +28,37 @@ export const ADMIN_NAV_ITEMS: AdminNavItemConfig[] = [
     href: "/admin/inicio",
     label: "Inicio",
     icon: House,
-    adminOnly: true,
+    permission: "dashboard.read",
   },
   {
     href: "/admin/catalogos",
     label: "Catálogos",
     icon: TableProperties,
+    permission: "catalogs.read",
   },
   {
     href: "/admin/precios",
     label: "Precios",
     icon: CircleDollarSign,
+    permission: "prices.read",
   },
   {
     href: "/admin/facturacion",
     label: "Facturación",
     icon: ReceiptText,
-    adminOnly: true,
+    permission: "invoices.read",
   },
   {
     href: "/admin/archivos",
     label: "Archivos",
     icon: Archive,
-    adminOnly: true,
+    permission: "files.read",
   },
   {
     href: "/admin/usuarios",
     label: "Usuarios",
     icon: Users,
-    adminOnly: true,
+    permission: "users.manage",
   },
 ];
 

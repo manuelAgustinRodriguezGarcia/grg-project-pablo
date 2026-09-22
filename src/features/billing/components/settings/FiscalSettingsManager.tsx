@@ -31,6 +31,7 @@ import styles from "@/features/billing/styles/FiscalSettings.module.scss";
 
 type FiscalSettingsManagerProps = {
   initialSettings: BillingFiscalContext;
+  canUpdateSettings?: boolean;
 };
 
 type PendingChange =
@@ -52,6 +53,7 @@ function environmentLabel(environment: BillingFiscalContext["environment"]): str
 
 export function FiscalSettingsManager({
   initialSettings,
+  canUpdateSettings = false,
 }: FiscalSettingsManagerProps) {
   const queryClient = useQueryClient();
   const settingsQuery = useQuery({
@@ -233,35 +235,39 @@ export function FiscalSettingsManager({
             <p className={styles.currentValue}>
               {formatIvaPercent(settings.ivaPercent)}%
             </p>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="iva-percent-input">
-                Nuevo porcentaje
-              </label>
-              <div className={styles.inputWrap}>
-                <input
-                  id="iva-percent-input"
-                  className={styles.input}
-                  type="text"
-                  inputMode="decimal"
-                  value={ivaInput}
-                  onChange={(event) => {
-                    setIvaInput(event.target.value);
-                    setIvaError(null);
-                  }}
-                  aria-invalid={Boolean(ivaError)}
-                />
-                <span className={styles.suffix}>%</span>
-              </div>
-            </div>
-            {ivaError ? <p className={styles.error}>{ivaError}</p> : null}
-            <button
-              type="button"
-              className={styles.submit}
-              onClick={requestIvaUpdate}
-              disabled={!ivaChanged || isBusy}
-            >
-              Actualizar IVA
-            </button>
+            {canUpdateSettings ? (
+              <>
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="iva-percent-input">
+                    Nuevo porcentaje
+                  </label>
+                  <div className={styles.inputWrap}>
+                    <input
+                      id="iva-percent-input"
+                      className={styles.input}
+                      type="text"
+                      inputMode="decimal"
+                      value={ivaInput}
+                      onChange={(event) => {
+                        setIvaInput(event.target.value);
+                        setIvaError(null);
+                      }}
+                      aria-invalid={Boolean(ivaError)}
+                    />
+                    <span className={styles.suffix}>%</span>
+                  </div>
+                </div>
+                {ivaError ? <p className={styles.error}>{ivaError}</p> : null}
+                <button
+                  type="button"
+                  className={styles.submit}
+                  onClick={requestIvaUpdate}
+                  disabled={!ivaChanged || isBusy}
+                >
+                  Actualizar IVA
+                </button>
+              </>
+            ) : null}
           </section>
 
           <section
@@ -284,34 +290,38 @@ export function FiscalSettingsManager({
             <p className={styles.currentValue}>
               {formatArsExact(settings.genericClientLimit)}
             </p>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="generic-limit-input">
-                Nuevo límite
-              </label>
-              <div className={styles.inputWrap}>
-                <input
-                  id="generic-limit-input"
-                  className={styles.input}
-                  type="text"
-                  inputMode="decimal"
-                  value={limitInput}
-                  onChange={(event) => {
-                    setLimitInput(maskPesosInput(event.target.value));
-                    setLimitError(null);
-                  }}
-                  aria-invalid={Boolean(limitError)}
-                />
-              </div>
-            </div>
-            {limitError ? <p className={styles.error}>{limitError}</p> : null}
-            <button
-              type="button"
-              className={styles.submit}
-              onClick={requestLimitUpdate}
-              disabled={!limitChanged || isBusy}
-            >
-              Actualizar límite
-            </button>
+            {canUpdateSettings ? (
+              <>
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="generic-limit-input">
+                    Nuevo límite
+                  </label>
+                  <div className={styles.inputWrap}>
+                    <input
+                      id="generic-limit-input"
+                      className={styles.input}
+                      type="text"
+                      inputMode="decimal"
+                      value={limitInput}
+                      onChange={(event) => {
+                        setLimitInput(maskPesosInput(event.target.value));
+                        setLimitError(null);
+                      }}
+                      aria-invalid={Boolean(limitError)}
+                    />
+                  </div>
+                </div>
+                {limitError ? <p className={styles.error}>{limitError}</p> : null}
+                <button
+                  type="button"
+                  className={styles.submit}
+                  onClick={requestLimitUpdate}
+                  disabled={!limitChanged || isBusy}
+                >
+                  Actualizar límite
+                </button>
+              </>
+            ) : null}
           </section>
 
           <section
@@ -351,7 +361,7 @@ export function FiscalSettingsManager({
         </div>
       </div>
 
-      {pending && confirmCopy ? (
+      {canUpdateSettings && pending && confirmCopy ? (
         <ConfirmDialog
           title={confirmCopy.title}
           message={confirmCopy.message}

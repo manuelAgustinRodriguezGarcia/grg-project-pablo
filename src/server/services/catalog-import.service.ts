@@ -6,7 +6,7 @@ import type {
   ProductImageStatus,
 } from "@/generated/prisma/client";
 import ExcelJS from "exceljs";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import {
   buildExistingCodeIndex,
   buildExistingContentIndex,
@@ -296,7 +296,7 @@ function countFormulas(products: MappedProductRow[]): {
 
 export class CatalogImportService {
   async uploadAndCreateJob(input: UploadImportFileInput) {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.import");
 
     let uploaded;
     try {
@@ -335,7 +335,7 @@ export class CatalogImportService {
     excel: DirectUploadFileMeta;
     externals?: DirectUploadExternalMeta[];
   }): Promise<BeginDirectUploadResult> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.import");
     const excelConfig = BUCKET_CONFIGS[STORAGE_BUCKETS.EXCEL_ORIGINALS];
     const tempConfig = BUCKET_CONFIGS[STORAGE_BUCKETS.TEMP_IMPORTS];
 
@@ -456,7 +456,7 @@ export class CatalogImportService {
     jobId: string,
     input?: { externals?: FinalizeExternalUploadInput[] },
   ) {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -593,7 +593,7 @@ export class CatalogImportService {
     jobId: string,
     externals: DirectUploadExternalMeta[],
   ): Promise<{ jobId: string; externals: DirectUploadTarget[] }> {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -668,7 +668,7 @@ export class CatalogImportService {
     jobId: string,
     externals: FinalizeExternalUploadInput[],
   ) {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -715,7 +715,7 @@ export class CatalogImportService {
   }
 
   async createJobFromUploadedFile(uploadedFileId: string) {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
 
     const file = await uploadedFileRepository.findById(uploadedFileId);
     if (!file) {
@@ -739,7 +739,7 @@ export class CatalogImportService {
   }
 
   async getJob(jobId: string) {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -750,7 +750,7 @@ export class CatalogImportService {
   }
 
   async analyzeJob(jobId: string) {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -818,7 +818,7 @@ export class CatalogImportService {
   }
 
   async setDestination(jobId: string, input: SetImportDestinationInput) {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -876,7 +876,7 @@ export class CatalogImportService {
   }
 
   async setConfig(jobId: string, input: SetImportConfigInput) {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -1107,7 +1107,7 @@ export class CatalogImportService {
   }
 
   async uploadImportImages(jobId: string, files: UploadImportImageInput[]) {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -1168,7 +1168,7 @@ export class CatalogImportService {
   }
 
   async completeImageReview(jobId: string) {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -1653,7 +1653,7 @@ export class CatalogImportService {
   }
 
   async buildPreview(jobId: string, configOverride?: ImportJobConfig) {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -1798,7 +1798,7 @@ export class CatalogImportService {
   }
 
   async apply(jobId: string, input: ApplyImportInput) {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.import");
     const job = await importJobRepository.findByIdWithRelations(jobId);
 
     if (!job) {
@@ -2113,7 +2113,7 @@ export class CatalogImportService {
   }
 
   async cancel(jobId: string) {
-    await requireAdmin();
+    await requirePermission("catalogs.import");
     const job = await importJobRepository.findById(jobId);
 
     if (!job) {

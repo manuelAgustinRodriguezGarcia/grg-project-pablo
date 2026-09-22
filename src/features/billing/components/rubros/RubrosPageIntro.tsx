@@ -13,7 +13,7 @@ type RubrosPageIntroProps = {
   onQueryChange: (value: string) => void;
   onStatusFilterChange: (value: string) => void;
   onSortOrderChange: (value: RubroSortOrder) => void;
-  onCreateClick: () => void;
+  onCreateClick?: () => void;
 };
 
 const STATUS_FILTER_OPTIONS = [
@@ -51,14 +51,16 @@ export function RubrosPageIntro({
         </h2>
       </div>
       <div className={styles.filtersRow}>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={onCreateClick}
-          >
-            <Plus strokeWidth={ICON_STROKE} aria-hidden />
-            Nuevo rubro
-          </button>
+          {onCreateClick ? (
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={onCreateClick}
+            >
+              <Plus strokeWidth={ICON_STROKE} aria-hidden />
+              Nuevo rubro
+            </button>
+          ) : null}
           <div className={styles.filterSelect}>
             <CustomSelect
               value={statusFilter}

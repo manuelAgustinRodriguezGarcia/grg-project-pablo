@@ -21,9 +21,9 @@ type ClientsTableProps = {
   error: string | null;
   busyClientId: string | null;
   onDetails: (client: BillingClientListItem) => void;
-  onEdit: (client: BillingClientListItem) => void;
-  onDelete: (client: BillingClientListItem) => void;
-  onCreateClick: () => void;
+  onEdit?: (client: BillingClientListItem) => void;
+  onDelete?: (client: BillingClientListItem) => void;
+  onCreateClick?: () => void;
 };
 
 function PaymentStatusBadge({ hasDebt }: { hasDebt: boolean }) {
@@ -86,13 +86,15 @@ export function ClientsTable({
             <p className={styles.tableEmptyText}>
               No hay clientes que coincidan con los filtros.
             </p>
-            <button
-              type="button"
-              className={styles.primaryButton}
-              onClick={onCreateClick}
-            >
-              Crear primer cliente
-            </button>
+            {onCreateClick ? (
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={onCreateClick}
+              >
+                Crear primer cliente
+              </button>
+            ) : null}
           </div>
         </div>
       </section>
@@ -149,21 +151,23 @@ export function ClientsTable({
                             Detalles
                           </span>
                         </span>
-                        <span className={styles.rowActionWrap}>
-                          <button
-                            type="button"
-                            className={`${styles.editActionButton} ${styles.iconActionButton}`}
-                            onClick={() => onEdit(client)}
-                            aria-label={`Editar ${client.name}`}
-                            disabled={isBusy}
-                          >
-                            <Pencil strokeWidth={ICON_STROKE} aria-hidden />
-                          </button>
-                          <span className={styles.rowActionTooltip} role="tooltip">
-                            Editar
+                        {onEdit ? (
+                          <span className={styles.rowActionWrap}>
+                            <button
+                              type="button"
+                              className={`${styles.editActionButton} ${styles.iconActionButton}`}
+                              onClick={() => onEdit(client)}
+                              aria-label={`Editar ${client.name}`}
+                              disabled={isBusy}
+                            >
+                              <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+                            </button>
+                            <span className={styles.rowActionTooltip} role="tooltip">
+                              Editar
+                            </span>
                           </span>
-                        </span>
-                        {canDelete ? (
+                        ) : null}
+                        {onDelete && canDelete ? (
                           <span className={styles.rowActionWrap}>
                             <button
                               type="button"
@@ -224,16 +228,18 @@ export function ClientsTable({
                     <Eye strokeWidth={ICON_STROKE} aria-hidden />
                     <span>Detalles</span>
                   </button>
-                  <button
-                    type="button"
-                    className={styles.cardActionButton}
-                    onClick={() => onEdit(client)}
-                    disabled={isBusy}
-                  >
-                    <Pencil strokeWidth={ICON_STROKE} aria-hidden />
-                    <span>Editar</span>
-                  </button>
-                  {canDelete ? (
+                  {onEdit ? (
+                    <button
+                      type="button"
+                      className={styles.cardActionButton}
+                      onClick={() => onEdit(client)}
+                      disabled={isBusy}
+                    >
+                      <Pencil strokeWidth={ICON_STROKE} aria-hidden />
+                      <span>Editar</span>
+                    </button>
+                  ) : null}
+                  {onDelete && canDelete ? (
                     <button
                       type="button"
                       className={styles.cardActionButtonDanger}

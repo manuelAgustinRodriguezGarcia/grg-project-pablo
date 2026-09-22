@@ -7,6 +7,7 @@ import type {
   UserRole,
 } from "@/generated/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
+import { shouldFilterVisibilityForRole } from "@/shared/auth/permissions";
 import { VisibilityError } from "./visibility.errors";
 
 type VisibleEntity = {
@@ -23,7 +24,7 @@ type VisiblePriceListEntity = VisibleEntity & {
 
 export class VisibilityService {
   shouldFilterForRole(role: UserRole): boolean {
-    return role !== "ADMIN";
+    return shouldFilterVisibilityForRole(role);
   }
 
   catalogWhereForRole(role: UserRole): Prisma.CatalogWhereInput {

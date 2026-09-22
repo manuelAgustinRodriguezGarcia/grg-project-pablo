@@ -35,6 +35,20 @@ describe("billing nav tabs", () => {
       "red",
     ]);
     expect(clientsTab.menuItems?.[1]?.icon).toBe(FileText);
+    expect(clientsTab.permission).toBe("clients.read");
+    expect(clientsTab.menuItems?.map((item) => item.permission)).toEqual([
+      "clients.read",
+      "debts.read",
+    ]);
+  });
+
+  it("requires permission on every nav tab", () => {
+    for (const tab of BILLING_NAV_TABS) {
+      expect(tab.permission).toEqual(expect.any(String));
+      for (const item of tab.menuItems ?? []) {
+        expect(item.permission).toEqual(expect.any(String));
+      }
+    }
   });
 
   it("marks Clientes active on both client and debtor lists", () => {

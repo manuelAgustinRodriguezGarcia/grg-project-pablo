@@ -4,6 +4,8 @@ import { createColumnFixture } from "../../../helpers/fixtures/column.fixture";
 
 vi.mock("@/server/auth", () => ({
   requireAuth: vi.fn(),
+  requirePermission: vi.fn(),
+  requireAnyPermission: vi.fn(),
 }));
 
 vi.mock("@/server/repositories/product.repository", () => ({
@@ -195,7 +197,7 @@ describe("searchService.searchInCatalog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(requireAuth).mockResolvedValue({
-      profile: { id: "user-1", role: "ADMIN", email: "admin@test.com" },
+      profile: { id: "user-1", role: "ADMINISTRADOR", email: "admin@test.com" },
       session: {} as never,
     });
   });
@@ -265,7 +267,7 @@ describe("searchService.searchGlobal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(requireAuth).mockResolvedValue({
-      profile: { id: "user-1", role: "ADMIN", email: "admin@test.com" },
+      profile: { id: "user-1", role: "ADMINISTRADOR", email: "admin@test.com" },
       session: {} as never,
     });
     vi.mocked(productRepository.findSearchPaginated).mockResolvedValue({

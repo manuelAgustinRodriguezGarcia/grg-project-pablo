@@ -22,8 +22,8 @@ import { auditService } from "@/server/services/audit.service";
 import { billingInvoiceService } from "@/server/services/billing-invoice.service";
 import {
   adminUserFixture,
+  mockRequirePermissionForbidden,
   mockRequireRole,
-  mockRequireRoleForbidden,
 } from "../../../helpers/mocks/auth";
 
 vi.mock("@/server/auth", () => ({
@@ -31,6 +31,8 @@ vi.mock("@/server/auth", () => ({
   requireRole: vi.fn(),
   requireAdmin: vi.fn(),
   requireEditor: vi.fn(),
+  requirePermission: vi.fn(),
+  requireAnyPermission: vi.fn(),
 }));
 vi.mock("@/server/repositories/billing-client.repository", () => ({
   billingClientRepository: {
@@ -500,8 +502,8 @@ describe("BillingInvoiceService", () => {
       expect(secondCall.invoiceNumber).toBe("0007-PRUEBA-000000008");
     });
 
-    it("solo ADMIN puede crear facturas", async () => {
-      mockRequireRoleForbidden();
+    it("rechaza VISITANTE al crear facturas", async () => {
+      mockRequirePermissionForbidden();
 
       await expect(
         billingInvoiceService.createInvoice(baseInput()),

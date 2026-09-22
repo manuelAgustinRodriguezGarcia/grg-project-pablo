@@ -6,7 +6,7 @@ import {
   BILLING_INVOICE_ID_QUERY,
   BILLING_PAYMENT_STATUS_QUERY,
 } from "@/features/billing/data/billingNav";
-import { requireAdminOrRedirect } from "@/server/auth";
+import { requirePermissionOrRedirect } from "@/server/auth";
 
 export const metadata: Metadata = {
   title: "Facturas",
@@ -30,7 +30,7 @@ function firstParam(value: string | string[] | undefined): string {
 export default async function FacturacionFacturasPage({
   searchParams,
 }: FacturacionFacturasPageProps) {
-  await requireAdminOrRedirect("/admin");
+  await requirePermissionOrRedirect("invoices.read", "/admin");
   const params = await searchParams;
   const [invoicesResult, clientsResult] = await Promise.all([
     listBillingInvoicesAction(),

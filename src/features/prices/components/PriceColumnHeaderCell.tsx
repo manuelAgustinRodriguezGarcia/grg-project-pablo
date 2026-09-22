@@ -60,7 +60,7 @@ export function PriceColumnHeaderCell({
       scope="col"
       className={thClassName || undefined}
       onMouseDown={(event) => {
-        // USUARIO: evitar que el <th> robe el foco al abrir el filtro,
+        // VISITANTE: evitar que el <th> robe el foco al abrir el filtro,
         // así el input puede quedar enfocado de inmediato.
         if (!showFilterMenu || isAdmin) {
           return;

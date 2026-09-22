@@ -4,17 +4,42 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { CustomSelect } from "@/shared/components/CustomSelect";
 import type { UserListItem } from "@/features/users/types/user.types";
-import { USER_ROLE_LABELS } from "@/features/users/types/user.types";
+import {
+  USER_ROLE_LABELS,
+  USER_ROLES,
+} from "@/features/users/types/user.types";
+import {
+  ICON_STROKE,
+  ROLE_ICONS,
+  ROLE_TONE_CSS_VARS,
+  getRoleTone,
+} from "@/features/users/utils/role-presentation";
 import type { UserRole } from "@/generated/prisma/client";
-import { Eye, EyeOff, ICON_STROKE } from "@/shared/icons";
+import { Eye, EyeOff } from "@/shared/icons";
 import modalStyles from "@/features/prices/styles/PriceColumnEditModal.module.scss";
+import usersStyles from "@/features/users/styles/UsersManager.module.scss";
 
-const ROLE_OPTIONS: { value: UserRole; label: string }[] = (
-  ["ADMIN", "USUARIO"] as const
-).map((role) => ({
-  value: role,
-  label: USER_ROLE_LABELS[role],
-}));
+const ROLE_OPTIONS = USER_ROLES.map((role) => {
+  const Icon = ROLE_ICONS[role];
+  const label = USER_ROLE_LABELS[role];
+  const color = ROLE_TONE_CSS_VARS[getRoleTone(role)];
+
+  return {
+    value: role,
+    searchText: label,
+    triggerLabel: label,
+    label: (
+      <span className={usersStyles.roleSelectOption} style={{ color }}>
+        <Icon
+          className={usersStyles.roleSelectIcon}
+          strokeWidth={ICON_STROKE}
+          aria-hidden
+        />
+        {label}
+      </span>
+    ),
+  };
+});
 
 export type UserFormValues = {
   name: string;
@@ -44,7 +69,7 @@ export function UserFormModal({
 }: UserFormModalProps) {
   const [name, setName] = useState(initialUser?.name ?? "");
   const [email, setEmail] = useState(initialUser?.email ?? "");
-  const [role, setRole] = useState<UserRole>(initialUser?.role ?? "USUARIO");
+  const [role, setRole] = useState<UserRole>(initialUser?.role ?? "VISITANTE");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -142,10 +167,7 @@ export function UserFormModal({
               onChange={(next) => setRole(next as UserRole)}
               disabled={isBusy || (isSelf && mode === "edit")}
               ariaLabel="Rol del usuario"
-              options={ROLE_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
+              options={ROLE_OPTIONS}
             />
             {isSelf && mode === "edit" ? (
               <p className={modalStyles.modalSubtitle}>

@@ -4,7 +4,7 @@ import type {
   BillingReceiptPaymentMethod,
   BillingPaymentStatus,
 } from "@/generated/prisma/client";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { prisma } from "@/server/database/prisma";
 import { buildReceiptPdf } from "@/server/pdf/build-receipt-pdf";
 import { loadRothamelLogoPng } from "@/server/pdf/load-rothamel-logo";
@@ -189,12 +189,12 @@ async function syncInvoicePaymentStatus(
 
 export class BillingReceiptService {
   async listReceipts() {
-    await requireAdmin();
+    await requirePermission("movements.read");
     return billingReceiptRepository.findAllOrdered();
   }
 
   async createReceipt(input: CreateBillingReceiptInput) {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("movements.create");
     const client = await billingClientRepository.findById(input.clientId);
     if (!client) {
       throw new BillingInvoiceError(
@@ -371,7 +371,7 @@ export class BillingReceiptService {
   }
 
   async allocateReceipt(input: AllocateBillingReceiptInput) {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("movements.update");
     const receipt = await billingReceiptRepository.findById(input.receiptId);
     if (!receipt) {
       throw new BillingInvoiceError(
@@ -511,7 +511,7 @@ export class BillingReceiptService {
     bytes: Uint8Array;
     filename: string;
   }> {
-    await requireAdmin();
+    await requirePermission("movements.read");
     const receipt = await billingReceiptRepository.findById(receiptId);
 
     if (!receipt) {

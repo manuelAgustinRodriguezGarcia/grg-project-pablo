@@ -7,6 +7,19 @@ import { priceListRepository } from "@/server/repositories/price-list.repository
 import { priceImportService } from "@/server/services/price-import.service";
 import { createPriceListFixture, PRICE_LIST_ID } from "../../../helpers/fixtures/price-list.fixture";
 
+vi.mock("@/server/auth", () => ({
+  requireAuth: vi.fn(),
+  requireRole: vi.fn(),
+  requireAdmin: vi.fn(),
+  requireEditor: vi.fn(),
+  requirePermission: vi.fn(async () => ({
+    profile: { id: "admin-1", role: "ADMINISTRADOR", email: "admin@test.com", name: "Admin" },
+  })),
+  requireAnyPermission: vi.fn(async () => ({
+    profile: { id: "admin-1", role: "ADMINISTRADOR", email: "admin@test.com", name: "Admin" },
+  })),
+}));
+
 vi.mock("@/server/repositories/import-job.repository", () => ({
   importJobRepository: {
     deletePreview: vi.fn(),

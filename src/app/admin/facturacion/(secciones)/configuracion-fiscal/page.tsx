@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { toAdminUiAuth } from "@/features/auth/types/admin-ui-auth";
 import { getBillingFiscalSettingsAction } from "@/features/billing/actions/billing-fiscal-settings.actions";
 import { FiscalSettingsManager } from "@/features/billing/components/settings/FiscalSettingsManager";
 import type { BillingFiscalContext } from "@/features/billing/types/billing-invoice.types";
-import { requireAdminOrRedirect } from "@/server/auth";
+import { requirePermissionOrRedirect } from "@/server/auth";
 
 export const metadata: Metadata = {
   title: "Configuración fiscal",
@@ -16,7 +17,8 @@ const FALLBACK_FISCAL_CONTEXT: BillingFiscalContext = {
 };
 
 export default async function FacturacionConfiguracionFiscalPage() {
-  await requireAdminOrRedirect("/admin");
+  const auth = await requirePermissionOrRedirect("settings.read", "/admin");
+  const adminAuth = toAdminUiAuth(auth.profile);
   const settingsResult = await getBillingFiscalSettingsAction();
 
   return (
@@ -24,6 +26,7 @@ export default async function FacturacionConfiguracionFiscalPage() {
       initialSettings={
         settingsResult.success ? settingsResult.data : FALLBACK_FISCAL_CONTEXT
       }
+      canUpdateSettings={adminAuth.canUpdateSettings}
     />
   );
 }

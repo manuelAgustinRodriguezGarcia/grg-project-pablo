@@ -3,7 +3,7 @@ import type {
   BillingIdentificationType,
   BillingIvaCondition,
 } from "@/generated/prisma/client";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import {
   billingClientRepository,
   type CreateBillingClientData,
@@ -297,17 +297,17 @@ function sanitizeClientCode(raw: string | null | undefined): string | null {
 
 export class BillingClientService {
   async listClients(): Promise<BillingClient[]> {
-    await requireAdmin();
+    await requirePermission("clients.read");
     return billingClientRepository.findAllOrdered();
   }
 
   async getClient(id: string): Promise<BillingClient> {
-    await requireAdmin();
+    await requirePermission("clients.read");
     return requireBillingClient(id);
   }
 
   async createClient(input: BillingClientInput): Promise<BillingClient> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("clients.create");
     const sanitized = sanitizeBillingClientInput(input);
     await ensureUniqueIdentification(
       sanitized.identificationType,
@@ -327,7 +327,7 @@ export class BillingClientService {
   }
 
   async ensureGenericClient(): Promise<BillingClient> {
-    await requireAdmin();
+    await requirePermission("clients.create");
     const existing = await billingClientRepository.findCanonicalGeneric();
 
     if (existing && isGenericBillingClient(existing)) {
@@ -342,7 +342,7 @@ export class BillingClientService {
   }
 
   async updateClient(input: UpdateBillingClientInput): Promise<BillingClient> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("clients.update");
     const existing = await requireBillingClient(input.id);
     const sanitized = sanitizeBillingClientInput(input);
     const hasHistory = await billingClientRepository.hasHistory(input.id);
@@ -397,7 +397,7 @@ export class BillingClientService {
   }
 
   async deleteClient(id: string): Promise<void> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("clients.delete");
     await requireBillingClient(id);
 
     if (await billingClientRepository.hasHistory(id)) {

@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import {
   buildLibroIvaDailyXlsx,
   buildLibroIvaXlsx,
@@ -97,7 +97,7 @@ export class BillingLibroIvaService {
     bytes: Uint8Array;
     filename: string;
   }> {
-    await requireAdmin();
+    await requirePermission("invoices.read");
 
     let range: LibroIvaRange;
     try {
@@ -133,7 +133,7 @@ export class BillingLibroIvaService {
     bytes: Uint8Array;
     filename: string;
   }> {
-    await requireAdmin();
+    await requirePermission("invoices.read");
     const variant = parseDailyVariant(variantInput);
 
     let range: LibroIvaRange;
@@ -164,7 +164,7 @@ export class BillingLibroIvaService {
     bytes: Uint8Array;
     filename: string;
   }> {
-    await requireAdmin();
+    await requirePermission("invoices.read");
 
     let range: LibroIvaRange;
     try {
@@ -198,7 +198,7 @@ export class BillingLibroIvaService {
     bytes: Uint8Array;
     filename: string;
   }> {
-    await requireAdmin();
+    await requirePermission("invoices.read");
     const variant = parseDailyVariant(variantInput);
 
     let range: LibroIvaRange;
@@ -231,7 +231,7 @@ export class BillingLibroIvaService {
     bytes: Uint8Array;
     filename: string;
   }> {
-    await requireAdmin();
+    await requirePermission("invoices.read");
 
     let range: LibroIvaRange;
     let periodText: string;
@@ -281,7 +281,7 @@ export class BillingLibroIvaService {
     bytes: Uint8Array;
     filename: string;
   }> {
-    await requireAdmin();
+    await requirePermission("invoices.read");
 
     let range: LibroIvaRange;
     let periodText: string;

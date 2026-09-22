@@ -75,11 +75,16 @@ export {
   Users,
   UserRound,
   UserRoundArrowLeft,
+  UserSearch,
+  UserPlus,
+  UserStar,
   CircleUserRound,
   UserX,
   ShieldUser,
   Wallet,
   X,
 } from "lucide-react";
+
+export { ShieldUser as UserShield } from "lucide-react";
 
 export const ICON_STROKE = 1.5;

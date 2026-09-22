@@ -1,5 +1,5 @@
 import type { FolderStatus } from "@/generated/prisma/client";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { catalogRepository } from "@/server/repositories/catalog.repository";
 import {
   folderRepository,
@@ -168,18 +168,18 @@ async function handleFolderWrite<T>(
 
 export class FolderService {
   async listFolders(catalogId: string): Promise<FolderWithProductCount[]> {
-    await requireAdmin();
+    await requirePermission("catalogs.read");
     await requireCatalogExists(catalogId);
     return folderRepository.findByCatalogIdOrdered(catalogId);
   }
 
   async getFolder(id: string): Promise<FolderWithProductCount> {
-    await requireAdmin();
+    await requirePermission("catalogs.read");
     return requireFolder(id);
   }
 
   async createFolder(input: CreateFolderInput): Promise<FolderWithProductCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.create");
 
     await requireCatalogExists(input.catalogId);
 
@@ -234,7 +234,7 @@ export class FolderService {
   }
 
   async updateFolder(input: UpdateFolderInput): Promise<FolderWithProductCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await requireFolder(input.id);
 
@@ -288,7 +288,7 @@ export class FolderService {
   async reorderFolders(
     input: ReorderFoldersInput,
   ): Promise<FolderWithProductCount[]> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     await requireCatalogExists(input.catalogId);
 
@@ -335,7 +335,7 @@ export class FolderService {
     id: string,
     visible: boolean,
   ): Promise<FolderWithProductCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await requireFolder(id);
 
@@ -361,7 +361,7 @@ export class FolderService {
   }
 
   async deleteFolder(id: string): Promise<void> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.delete");
 
     const existing = await requireFolder(id);
 
@@ -380,7 +380,7 @@ export class FolderService {
   async setCoverImage(
     input: SetFolderCoverImageInput,
   ): Promise<FolderWithProductCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await requireFolder(input.folderId);
     const previousPath = existing.coverImagePath;
@@ -429,7 +429,7 @@ export class FolderService {
   }
 
   async removeCoverImage(id: string): Promise<FolderWithProductCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await requireFolder(id);
 
@@ -457,7 +457,7 @@ export class FolderService {
   }
 
   async clearFolder(id: string): Promise<{ deletedProductCount: number }> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     await requireFolder(id);
 
@@ -477,7 +477,7 @@ export class FolderService {
     id: string,
     config: FolderColumnKeysConfig | null,
   ): Promise<FolderWithProductCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await requireFolder(id);
     const validatedConfig = validateColumnKeysConfig(config);
@@ -503,7 +503,7 @@ export class FolderService {
     id: string,
     config: FolderColumnKeysConfig | null,
   ): Promise<FolderWithProductCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const existing = await requireFolder(id);
     const validatedConfig = validateColumnKeysConfig(config);

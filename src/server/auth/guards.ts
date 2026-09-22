@@ -1,7 +1,13 @@
 import { redirect } from "next/navigation";
 import type { UserRole } from "@/generated/prisma/client";
+import {
+  canAccessRoute,
+  hasPermission,
+  resolveForbiddenRedirect,
+  type Permission,
+} from "@/shared/auth/permissions";
 import { userRepository } from "@/server/repositories/user.repository";
-import { AUTH_LOGIN_PATH, USER_HOME_PATH } from "./config";
+import { AUTH_LOGIN_PATH } from "./config";
 import { AuthError, AuthForbiddenError } from "./errors";
 import { createSupabaseServerClient } from "./supabase-server";
 import { resolveSupabaseAuthUser } from "./supabase-user";
@@ -34,7 +40,7 @@ async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
       id: user.id,
       email: user.email ?? "",
       name: resolveDisplayName(user.user_metadata, user.email ?? "Usuario"),
-      role: "USUARIO",
+      role: "VISITANTE",
     });
   }
 
@@ -55,12 +61,10 @@ async function loadAuthenticatedUser(): Promise<AuthenticatedUser> {
   return { supabaseUser: user, profile };
 }
 
-/** Exige sesión válida y perfil local activo. Lanza `AuthError` si falla. */
 export async function requireAuth(): Promise<AuthenticatedUser> {
   return loadAuthenticatedUser();
 }
 
-/** Exige un rol concreto además de sesión válida. */
 export async function requireRole(role: UserRole): Promise<AuthenticatedUser> {
   const auth = await requireAuth();
 
@@ -71,30 +75,38 @@ export async function requireRole(role: UserRole): Promise<AuthenticatedUser> {
   return auth;
 }
 
-function hasOneOfRoles(role: UserRole, allowed: readonly UserRole[]): boolean {
-  return allowed.includes(role);
-}
-
-/** Exige rol ADMIN (gestión de usuarios, estructura, imports y mutaciones). */
-export async function requireAdmin(): Promise<AuthenticatedUser> {
+export async function requirePermission(
+  permission: Permission,
+): Promise<AuthenticatedUser> {
   const auth = await requireAuth();
 
-  if (!hasOneOfRoles(auth.profile.role, ["ADMIN"])) {
+  if (!hasPermission(auth.profile.role, permission)) {
     throw new AuthForbiddenError();
   }
 
   return auth;
 }
 
-/**
- * Exige rol ADMIN para mutaciones de contenido (productos, precios, imágenes).
- * USUARIO es solo lectura: ver, buscar, filtrar y navegar.
- */
-export async function requireEditor(): Promise<AuthenticatedUser> {
-  return requireAdmin();
+export async function requireAnyPermission(
+  permissions: readonly Permission[],
+): Promise<AuthenticatedUser> {
+  const auth = await requireAuth();
+
+  if (!permissions.some((permission) => hasPermission(auth.profile.role, permission))) {
+    throw new AuthForbiddenError();
+  }
+
+  return auth;
 }
 
-/** Redirige al login si no hay sesión válida (para layouts/páginas). */
+export async function requireAdmin(): Promise<AuthenticatedUser> {
+  return requirePermission("users.manage");
+}
+
+export async function requireEditor(): Promise<AuthenticatedUser> {
+  return requirePermission("catalogs.update");
+}
+
 export async function requireAuthOrRedirect(
   redirectTo?: string,
 ): Promise<AuthenticatedUser> {
@@ -127,14 +139,46 @@ export async function requireRoleOrRedirect(
   return auth;
 }
 
-/** Redirige a catálogos si el usuario no es ADMIN (páginas solo-admin). */
-export async function requireAdminOrRedirect(
+export async function requirePermissionOrRedirect(
+  permission: Permission,
   redirectTo?: string,
 ): Promise<AuthenticatedUser> {
   const auth = await requireAuthOrRedirect(redirectTo);
 
-  if (auth.profile.role !== "ADMIN") {
-    redirect(USER_HOME_PATH);
+  if (!hasPermission(auth.profile.role, permission)) {
+    redirect(resolveForbiddenRedirect(auth.profile.role));
+  }
+
+  return auth;
+}
+
+export async function requireAnyPermissionOrRedirect(
+  permissions: readonly Permission[],
+  redirectTo?: string,
+): Promise<AuthenticatedUser> {
+  const auth = await requireAuthOrRedirect(redirectTo);
+
+  if (!permissions.some((permission) => hasPermission(auth.profile.role, permission))) {
+    redirect(resolveForbiddenRedirect(auth.profile.role));
+  }
+
+  return auth;
+}
+
+export async function requireAdminOrRedirect(
+  redirectTo?: string,
+): Promise<AuthenticatedUser> {
+  return requirePermissionOrRedirect("users.manage", redirectTo);
+}
+
+export async function requireRouteAccessOrRedirect(
+  pathname: string,
+  redirectTo?: string,
+): Promise<AuthenticatedUser> {
+  const auth = await requireAuthOrRedirect(redirectTo);
+
+  if (!canAccessRoute(auth.profile.role, pathname)) {
+    redirect(resolveForbiddenRedirect(auth.profile.role));
   }
 
   return auth;

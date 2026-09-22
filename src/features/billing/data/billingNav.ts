@@ -1,4 +1,10 @@
 import type { LucideIcon } from "lucide-react";
+import type { UserRole } from "@/generated/prisma/client";
+import {
+  canAccessRoute,
+  hasPermission,
+  type Permission,
+} from "@/shared/auth/permissions";
 import {
   ArrowLeftRight,
   BookUser,
@@ -25,6 +31,7 @@ export type BillingSectionConfig = {
   description: string;
   icon: LucideIcon;
   tone: BillingSectionTone;
+  permission: Permission;
 };
 
 export const BILLING_HUB_PATH = "/admin/facturacion";
@@ -61,6 +68,7 @@ export const BILLING_SECTIONS: BillingSectionConfig[] = [
     description: "Alta, edición y consulta de clientes de facturación.",
     icon: BookUser,
     tone: "sky",
+    permission: "clients.read",
   },
   {
     href: BILLING_DEBTORS_PATH,
@@ -68,6 +76,7 @@ export const BILLING_SECTIONS: BillingSectionConfig[] = [
     description: "Listado de clientes con saldo pendiente de cuenta corriente.",
     icon: Wallet,
     tone: "rose",
+    permission: "debts.read",
   },
   {
     href: `${BILLING_HUB_PATH}/rubros`,
@@ -75,6 +84,7 @@ export const BILLING_SECTIONS: BillingSectionConfig[] = [
     description: "Conceptos y categorías usados en las facturas.",
     icon: Tags,
     tone: "teal",
+    permission: "categories.read",
   },
   {
     href: BILLING_NEW_INVOICE_PATH,
@@ -82,6 +92,7 @@ export const BILLING_SECTIONS: BillingSectionConfig[] = [
     description: "Crear comprobantes en modo prueba o fiscal.",
     icon: Plus,
     tone: "indigo",
+    permission: "invoices.read",
   },
   {
     href: BILLING_INVOICES_PATH,
@@ -89,6 +100,7 @@ export const BILLING_SECTIONS: BillingSectionConfig[] = [
     description: "Historial, filtros, descarga de facturas y Libro IVA.",
     icon: ReceiptText,
     tone: "amber",
+    permission: "invoices.read",
   },
   {
     href: BILLING_MOVIMIENTOS_PATH,
@@ -96,6 +108,7 @@ export const BILLING_SECTIONS: BillingSectionConfig[] = [
     description: "Recibos, notas de crédito, notas de débito e imputaciones.",
     icon: ArrowLeftRight,
     tone: "rose",
+    permission: "movements.read",
   },
   {
     href: `${BILLING_HUB_PATH}/configuracion-fiscal`,
@@ -103,6 +116,7 @@ export const BILLING_SECTIONS: BillingSectionConfig[] = [
     description: "IVA, límite de cliente genérico y ambiente de emisión.",
     icon: Cog,
     tone: "slate",
+    permission: "settings.read",
   },
 ];
 
@@ -113,6 +127,7 @@ export type BillingNavMenuItem = {
   label: string;
   icon: LucideIcon;
   iconTone: BillingNavIconTone;
+  permission: Permission;
 };
 
 export type BillingNavTab = {
@@ -120,6 +135,7 @@ export type BillingNavTab = {
   label: string;
   icon: LucideIcon;
   exact?: boolean;
+  permission: Permission;
   menuItems?: BillingNavMenuItem[];
 };
 
@@ -156,6 +172,7 @@ function toBillingNavTab(section: BillingSectionConfig): BillingNavTab {
     href: section.href,
     label: section.label,
     icon: section.icon,
+    permission: section.permission,
   };
 
   if (section.href !== BILLING_CLIENTS_PATH) {
@@ -170,12 +187,14 @@ function toBillingNavTab(section: BillingSectionConfig): BillingNavTab {
         label: "Lista de clientes",
         icon: BookUser,
         iconTone: "blue",
+        permission: "clients.read",
       },
       {
         href: BILLING_DEBTORS_PATH,
         label: "Clientes con deuda",
         icon: FileText,
         iconTone: "red",
+        permission: "debts.read",
       },
     ],
   };
@@ -187,6 +206,7 @@ export const BILLING_NAV_TABS: BillingNavTab[] = [
     label: "Resumen",
     icon: LayoutDashboard,
     exact: true,
+    permission: "billing.hub.read",
   },
   ...BILLING_SECTIONS.filter(
     (section) =>
@@ -194,3 +214,34 @@ export const BILLING_NAV_TABS: BillingNavTab[] = [
       section.href !== BILLING_DEBTORS_PATH,
   ).map(toBillingNavTab),
 ];
+
+export function filterBillingNavTabsForRole(
+  role: UserRole,
+  tabs: readonly BillingNavTab[] = BILLING_NAV_TABS,
+): BillingNavTab[] {
+  return tabs
+    .map((tab) => {
+      if (!hasPermission(role, tab.permission)) {
+        return null;
+      }
+
+      if (!tab.menuItems?.length) {
+        return tab;
+      }
+
+      const menuItems = tab.menuItems.filter((item) =>
+        hasPermission(role, item.permission),
+      );
+
+      if (menuItems.length === 0) {
+        return null;
+      }
+
+      return { ...tab, menuItems };
+    })
+    .filter((tab): tab is BillingNavTab => tab !== null);
+}
+
+export function canAccessBillingPath(role: UserRole, path: string): boolean {
+  return canAccessRoute(role, path);
+}

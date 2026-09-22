@@ -1,6 +1,6 @@
 import type { PriceColumn, UserRole } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
-import { requireAuth, requireEditor } from "@/server/auth";
+import { requireAuth, requirePermission } from "@/server/auth";
 import {
   priceItemRepository,
   type PaginatedPriceItems,
@@ -333,7 +333,7 @@ export class PriceItemService {
     priceListId: string,
     values: Record<string, unknown>,
   ): Promise<PriceItemTableRow> {
-    const { profile: admin } = await requireEditor();
+    const { profile: admin } = await requirePermission("prices.create");
     await priceListService.requirePriceListForAdmin(priceListId);
 
     const columns = await priceColumnRepository.findByPriceListIdOrdered(priceListId);
@@ -352,14 +352,14 @@ export class PriceItemService {
     });
 
     const visibleKeys = new Set(columns.map((column) => column.internalKey));
-    return toTableRow(item, visibleKeys, "ADMIN");
+    return toTableRow(item, visibleKeys, "ADMINISTRADOR");
   }
 
   async updateItem(
     itemId: string,
     values: Record<string, unknown>,
   ): Promise<PriceItemTableRow> {
-    const { profile: admin } = await requireEditor();
+    const { profile: admin } = await requirePermission("prices.update");
     const existing = await priceItemRepository.findById(itemId);
     if (!existing) {
       throw new PriceItemError("Ítem no encontrado.", "PRICE_ITEM_NOT_FOUND");
@@ -382,11 +382,11 @@ export class PriceItemService {
     });
 
     const visibleKeys = new Set(columns.map((column) => column.internalKey));
-    return toTableRow(item, visibleKeys, "ADMIN");
+    return toTableRow(item, visibleKeys, "ADMINISTRADOR");
   }
 
   async deleteItem(id: string): Promise<void> {
-    const { profile: admin } = await requireEditor();
+    const { profile: admin } = await requirePermission("prices.delete");
     const item = await priceItemRepository.findById(id);
     if (!item) {
       throw new PriceItemError("Ítem no encontrado.", "PRICE_ITEM_NOT_FOUND");

@@ -20,10 +20,27 @@ export {
   requireAuthOrRedirect,
   requireRole,
   requireRoleOrRedirect,
+  requirePermission,
+  requireAnyPermission,
+  requirePermissionOrRedirect,
+  requireAnyPermissionOrRedirect,
   requireAdmin,
   requireAdminOrRedirect,
   requireEditor,
+  requireRouteAccessOrRedirect,
 } from "./guards";
+export {
+  canAccessRoute,
+  getPermissionsForRole,
+  hasAnyPermission,
+  hasPermission,
+  ROLE_PERMISSIONS,
+  USER_ROLE_LABELS,
+  USER_ROLE_TONES,
+  USER_ROLES,
+  type Permission,
+  type RoleTone,
+} from "@/shared/auth/permissions";
 export { authService, AuthService } from "./auth.service";
 export type {
   RequestPasswordResetInput,

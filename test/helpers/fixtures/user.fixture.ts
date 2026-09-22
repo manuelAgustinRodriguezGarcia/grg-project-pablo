@@ -11,7 +11,7 @@ export function createUserFixture(overrides: Partial<User> = {}): User {
     id: TARGET_USER_ID,
     email: "usuario@example.com",
     name: "Usuario Test",
-    role: "USUARIO",
+    role: "VISITANTE",
     status: "ACTIVE",
     lastAccessAt: baseDate,
     createdAt: baseDate,
@@ -24,12 +24,12 @@ export const adminUserFixture = createUserFixture({
   id: ADMIN_USER_ID,
   email: "admin@example.com",
   name: "Admin Test",
-  role: "ADMIN",
+  role: "ADMINISTRADOR",
 });
 
 export const usuarioUserFixture = createUserFixture({
   id: USUARIO_USER_ID,
   email: "usuario@example.com",
   name: "Usuario Test",
-  role: "USUARIO",
+  role: "VISITANTE",
 });

@@ -111,7 +111,7 @@ export class UserService {
     if (
       admin.id === input.id &&
       input.role !== undefined &&
-      input.role !== "ADMIN"
+      input.role !== "ADMINISTRADOR"
     ) {
       throw new UserError(
         "No puedes cambiar tu propio rol de administrador.",

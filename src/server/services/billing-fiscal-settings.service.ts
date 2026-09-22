@@ -1,6 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import type { BillingFiscalSettings } from "@/generated/prisma/client";
-import { requireAdmin } from "@/server/auth";
+import { requireAnyPermission, requirePermission } from "@/server/auth";
 import { billingFiscalSettingsRepository } from "@/server/repositories/billing-fiscal-settings.repository";
 import {
   isValidGenericClientLimit,
@@ -17,14 +17,14 @@ export type UpdateBillingFiscalSettingsInput =
 
 export class BillingFiscalSettingsService {
   async getSettings(): Promise<BillingFiscalSettings> {
-    await requireAdmin();
+    await requireAnyPermission(["settings.read", "invoices.create"]);
     return billingFiscalSettingsRepository.getOrCreate();
   }
 
   async updateSettings(
     input: UpdateBillingFiscalSettingsInput,
   ): Promise<BillingFiscalSettings> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("settings.update");
     const current = await billingFiscalSettingsRepository.getOrCreate();
 
     if ("ivaPercent" in input) {

@@ -6,7 +6,7 @@ import type {
 import { Prisma } from "@/generated/prisma/client";
 import { LINKED_EXTRA_IMAGE_LABEL } from "@/features/catalog/utils/linked-extra-image";
 import type { ExternalImageRef } from "@/server/importers/types";
-import { requireAuth, requireAdmin, requireEditor } from "@/server/auth";
+import { requireAuth, requirePermission } from "@/server/auth";
 import {
   buildImportExternalImagePath,
   buildProductImageStoragePaths,
@@ -222,7 +222,7 @@ export class ProductImageService {
     contentType: string;
     source: ExternalImageRef["source"];
   }): Promise<ExternalImageRef> {
-    await requireAdmin();
+    await requirePermission("catalogs.update");
 
     if (!isAllowedImageExtension(input.originalFilename)) {
       throw new ProductImageError(
@@ -273,7 +273,7 @@ export class ProductImageService {
     originalFilename: string;
     source: ExternalImageRef["source"];
   }): Promise<ExternalImageRef> {
-    await requireAdmin();
+    await requirePermission("catalogs.update");
 
     if (!isAllowedImageExtension(input.originalFilename)) {
       throw new ProductImageError(
@@ -454,7 +454,7 @@ export class ProductImageService {
     items: ProductImageReviewItem[];
     pagination: { page: number; pageSize: number; total: number; totalPages: number };
   }> {
-    await requireAdmin();
+    await requirePermission("catalogs.update");
 
     const page = options.page ?? 1;
     const pageSize = options.pageSize ?? 50;
@@ -507,7 +507,7 @@ export class ProductImageService {
     productId: string;
     folderId: string;
   }): Promise<ProductImageReviewItem> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const image = await productImageRepository.findByIdAndJob(
       input.imageId,
@@ -629,7 +629,7 @@ export class ProductImageService {
     sortOrder?: number;
     label?: string | null;
   }): Promise<ProductImageReviewItem> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const image = await productImageRepository.findByIdAndJob(
       input.imageId,
@@ -682,7 +682,7 @@ export class ProductImageService {
   }
 
   async softDeleteImage(importJobId: string, imageId: string): Promise<void> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("catalogs.update");
 
     const image = await productImageRepository.findByIdAndJob(imageId, importJobId);
     if (!image) {
@@ -900,7 +900,7 @@ export class ProductImageService {
       throw new ProductImageError("Producto no encontrado.", "PRODUCT_NOT_FOUND");
     }
 
-    await requireEditor();
+    await requirePermission("catalogs.update");
     return product;
   }
 
@@ -990,7 +990,7 @@ export class ProductImageService {
     sortOrder?: number;
     label?: string | null;
   }): Promise<ProductImageReviewItem> {
-    const { profile: editor } = await requireEditor();
+    const { profile: editor } = await requirePermission("catalogs.update");
     const product = await this.assertProductForEditor(input.productId);
 
     const maxSize = BUCKET_CONFIGS[STORAGE_BUCKETS.PRODUCT_IMAGES].maxSizeBytes;
@@ -1168,7 +1168,7 @@ export class ProductImageService {
     buffer: Buffer;
     originalFilename: string;
   }): Promise<ProductImageReviewItem> {
-    const { profile: editor } = await requireEditor();
+    const { profile: editor } = await requirePermission("catalogs.update");
     const product = await this.assertProductForEditor(input.productId);
 
     const image = await productImageRepository.findById(input.imageId);
@@ -1257,7 +1257,7 @@ export class ProductImageService {
     sortOrder?: number;
     label?: string | null;
   }): Promise<ProductImageReviewItem> {
-    const { profile: editor } = await requireEditor();
+    const { profile: editor } = await requirePermission("catalogs.update");
     await this.assertProductForEditor(input.productId);
 
     const image = await productImageRepository.findById(input.imageId);
@@ -1286,7 +1286,7 @@ export class ProductImageService {
   }
 
   async deleteProductImage(productId: string, imageId: string): Promise<void> {
-    const { profile: editor } = await requireEditor();
+    const { profile: editor } = await requirePermission("catalogs.update");
     await this.assertProductForEditor(productId);
 
     const image = await productImageRepository.findById(imageId);

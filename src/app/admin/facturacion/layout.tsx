@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminOrRedirect } from "@/server/auth";
+import { requireAnyPermissionOrRedirect } from "@/server/auth";
 import { BillingPillNav } from "@/features/billing/components/BillingPillNav";
 import { ICON_STROKE, ReceiptText } from "@/shared/icons";
 import styles from "@/features/billing/styles/BillingSectionsLayout.module.scss";
@@ -13,7 +13,10 @@ export default async function FacturacionLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  await requireAdminOrRedirect("/admin/facturacion");
+  const auth = await requireAnyPermissionOrRedirect(
+    ["billing.hub.read", "invoices.read", "clients.read"],
+    "/admin/facturacion",
+  );
 
   return (
     <div className={styles.shell}>
@@ -28,7 +31,7 @@ export default async function FacturacionLayout({
             Facturación
           </h1>
         </header>
-        <BillingPillNav />
+        <BillingPillNav userRole={auth.profile.role} />
       </div>
       <div
         className={styles.content}

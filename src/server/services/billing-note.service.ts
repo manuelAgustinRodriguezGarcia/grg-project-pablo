@@ -1,6 +1,6 @@
 import type { BillingNoteKind } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { prisma } from "@/server/database/prisma";
 import { buildNotePdf } from "@/server/pdf/build-note-pdf";
 import { resolveInvoicePdfIssuer } from "@/server/pdf/invoice-pdf-issuer";
@@ -35,12 +35,12 @@ function validationError(message: string): BillingInvoiceError {
 
 export class BillingNoteService {
   async listNotes() {
-    await requireAdmin();
+    await requirePermission("movements.read");
     return billingNoteRepository.findAllOrdered();
   }
 
   async createNote(input: CreateBillingNoteInput) {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("movements.create");
     const invoice = await billingInvoiceRepository.findById(input.invoiceId);
     if (!invoice) {
       throw new BillingInvoiceError(
@@ -188,7 +188,7 @@ export class BillingNoteService {
     bytes: Uint8Array;
     filename: string;
   }> {
-    await requireAdmin();
+    await requirePermission("movements.read");
     const note = await billingNoteRepository.findById(noteId);
     if (!note) {
       throw new BillingInvoiceError(

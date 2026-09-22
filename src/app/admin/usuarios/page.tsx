@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { UsersManager } from "@/features/users/components/UsersManager";
 import { listUsersAction } from "@/features/users/actions/user.actions";
-import { requireAdminOrRedirect } from "@/server/auth";
+import { requirePermissionOrRedirect } from "@/server/auth";
 
 export const metadata: Metadata = {
   title: "Usuarios",
 };
 
 export default async function AdminUsuariosPage() {
-  const auth = await requireAdminOrRedirect("/admin");
+  const auth = await requirePermissionOrRedirect("users.manage", "/admin");
   const usersResult = await listUsersAction();
 
   return (

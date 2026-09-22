@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { toAdminUiAuth } from "@/features/auth/types/admin-ui-auth";
 import { listBillingClientsAction } from "@/features/billing/actions/billing-client.actions";
 import { getBillingFiscalContextAction } from "@/features/billing/actions/billing-invoice.actions";
 import { listBillingRubrosAction } from "@/features/billing/actions/billing-rubro.actions";
 import { NewInvoiceManager } from "@/features/billing/components/invoices/NewInvoiceManager";
 import type { BillingFiscalContext } from "@/features/billing/types/billing-invoice.types";
-import { requireAdminOrRedirect } from "@/server/auth";
+import { requirePermissionOrRedirect } from "@/server/auth";
 
 export const metadata: Metadata = {
   title: "Nueva factura",
@@ -18,7 +19,8 @@ const FALLBACK_FISCAL_CONTEXT: BillingFiscalContext = {
 };
 
 export default async function FacturacionNuevaFacturaPage() {
-  await requireAdminOrRedirect("/admin");
+  const auth = await requirePermissionOrRedirect("invoices.read", "/admin");
+  const adminAuth = toAdminUiAuth(auth.profile);
 
   const [clientsResult, rubrosResult, fiscalResult] = await Promise.all([
     listBillingClientsAction(),
@@ -33,6 +35,7 @@ export default async function FacturacionNuevaFacturaPage() {
       fiscalContext={
         fiscalResult.success ? fiscalResult.data : FALLBACK_FISCAL_CONTEXT
       }
+      canCreateInvoice={adminAuth.canCreateInvoice}
     />
   );
 }

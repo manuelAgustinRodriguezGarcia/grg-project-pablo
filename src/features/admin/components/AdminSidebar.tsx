@@ -19,15 +19,18 @@ import {
 } from "@/features/admin/data/adminNav";
 import { USER_ROLE_LABELS } from "@/features/users/types/user.types";
 import {
+  getRoleIcon,
+  getRoleTone,
+} from "@/features/users/utils/role-presentation";
+import {
   getRoleHomePath,
   isAdminEntryPath,
 } from "@/server/auth/config";
+import { hasPermission } from "@/shared/auth/permissions";
 import {
   ChevronLeft,
   ChevronRight,
   Ellipsis,
-  ShieldUser,
-  UserRound,
   X,
   ICON_STROKE,
 } from "@/shared/icons";
@@ -112,9 +115,8 @@ function getSidebarCollapseServerSnapshot(): boolean {
 export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
   const pathname = usePathname();
   const activePathname = resolveActivePathname(pathname, userRole);
-  const isAdmin = userRole === "ADMIN";
-  const navItems = ADMIN_NAV_ITEMS.filter(
-    (item) => !item.adminOnly || isAdmin,
+  const navItems = ADMIN_NAV_ITEMS.filter((item) =>
+    hasPermission(userRole, item.permission),
   );
   const dockItems = navItems.filter((item) => DOCK_HREF_SET.has(item.href));
   const isOverflowRouteActive = navItems.some(
@@ -122,7 +124,8 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
       !DOCK_HREF_SET.has(item.href) &&
       isNavItemActive(activePathname, item.href),
   );
-  const RoleIcon = isAdmin ? ShieldUser : UserRound;
+  const RoleIcon = getRoleIcon(userRole);
+  const roleTone = getRoleTone(userRole);
   const roleLabel = USER_ROLE_LABELS[userRole];
   const isCollapsed = useSyncExternalStore(
     subscribeSidebarCollapse,
@@ -418,18 +421,19 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
           </div>
 
           <div className={styles.userArea}>
-            <div className={styles.userRow}>
+            <div
+              className={`${styles.userRow} ${styles[`userRow_${roleTone}`]}`}
+            >
               <RoleIcon
-                className={`${styles.roleIcon} ${isAdmin ? styles.roleIconAdmin : styles.roleIconUser}`}
+                className={`${styles.roleIcon} ${styles[`roleIcon_${roleTone}`]}`}
                 strokeWidth={ICON_STROKE}
                 aria-hidden
               />
-              <div className={styles.userMeta}>
-                <span
-                  className={`${styles.userRole} ${isAdmin ? styles.userRoleAdmin : styles.userRoleUser}`}
-                >
-                  {roleLabel}
-                </span>
+              <div
+                className={styles.userMeta}
+                aria-hidden={isCollapsed || undefined}
+              >
+                <span className={styles.userRole}>{roleLabel}</span>
                 <span className={styles.userEmail} title={userEmail}>
                   {userEmail}
                 </span>

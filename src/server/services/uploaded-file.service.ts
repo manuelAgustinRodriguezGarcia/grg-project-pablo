@@ -1,5 +1,5 @@
 import type { ImportJobStatus } from "@/generated/prisma/client";
-import { requireAuth, requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { importJobRepository } from "@/server/repositories/import-job.repository";
 import { uploadedFileRepository } from "@/server/repositories/uploaded-file.repository";
 import { catalogImportService } from "@/server/services/catalog-import.service";
@@ -40,7 +40,7 @@ export class UploadedFileService {
     pageSize: number;
     query?: string;
   }): Promise<UploadedFileListResponse> {
-    await requireAuth();
+    await requirePermission("files.read");
 
     const paginated = await uploadedFileRepository.findManyPaginated({
       page: input.page,
@@ -60,13 +60,13 @@ export class UploadedFileService {
   }
 
   async getFileDetail(fileId: string) {
-    await requireAdmin();
+    await requirePermission("files.read");
     const file = await this.requireRetainedFile(fileId);
     return toUploadedFileDetail(file);
   }
 
   async getDownloadUrl(fileId: string): Promise<UploadedFileDownloadResponse> {
-    await requireAuth();
+    await requirePermission("files.read");
     const file = await this.requireRetainedFile(fileId);
 
     const signed = await createSignedDownloadUrl(
@@ -89,7 +89,7 @@ export class UploadedFileService {
     fileId: string,
     jobId?: string,
   ): Promise<UploadedFileReportResponse> {
-    await requireAdmin();
+    await requirePermission("files.read");
     const file = await this.requireRetainedFile(fileId);
 
     const targetJob = jobId
@@ -130,7 +130,7 @@ export class UploadedFileService {
   }
 
   async reprocess(fileId: string) {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("files.manage");
     const file = await this.requireRetainedFile(fileId);
 
     const active = await importJobRepository.findActiveByUploadedFileId(fileId);
@@ -154,7 +154,7 @@ export class UploadedFileService {
   }
 
   async deleteFile(fileId: string, input: { confirmed: boolean }) {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("files.manage");
     const file = await this.requireRetainedFile(fileId);
 
     await importJobRepository.cancelAllActiveByUploadedFileId(fileId);
@@ -183,7 +183,7 @@ export class UploadedFileService {
   }
 
   async cleanupOrphanFiles(input?: { dryRun?: boolean }) {
-    await requireAdmin();
+    await requirePermission("files.manage");
     const dryRun = input?.dryRun ?? false;
 
     const files = await uploadedFileRepository.findAllWithHistory();

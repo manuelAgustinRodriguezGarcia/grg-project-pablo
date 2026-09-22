@@ -28,6 +28,7 @@ import styles from "@/features/billing/styles/ClientsManager.module.scss";
 type RubrosManagerProps = {
   initialRubros: BillingRubroListItem[];
   initialInvoices?: BillingInvoiceListItem[];
+  canManage?: boolean;
 };
 
 function toActionPayload(values: RubroFormValues) {
@@ -41,6 +42,7 @@ function toActionPayload(values: RubroFormValues) {
 export function RubrosManager({
   initialRubros,
   initialInvoices = [],
+  canManage = false,
 }: RubrosManagerProps) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
@@ -238,7 +240,7 @@ export function RubrosManager({
             onQueryChange={setQuery}
             onStatusFilterChange={setStatusFilter}
             onSortOrderChange={setSortOrder}
-            onCreateClick={handleOpenCreate}
+            onCreateClick={canManage ? handleOpenCreate : undefined}
           />
 
           {actionError ? (
@@ -252,10 +254,14 @@ export function RubrosManager({
                 isLoading={hideInternalLoaders ? false : isLoading}
                 error={listError}
                 busyRubroId={busyRubroId}
-                onEdit={handleOpenEdit}
-                onToggleStatus={(rubro) => void handleToggleStatus(rubro)}
-                onDelete={setDeleteTarget}
-                onCreateClick={handleOpenCreate}
+                onEdit={canManage ? handleOpenEdit : undefined}
+                onToggleStatus={
+                  canManage
+                    ? (rubro) => void handleToggleStatus(rubro)
+                    : undefined
+                }
+                onDelete={canManage ? setDeleteTarget : undefined}
+                onCreateClick={canManage ? handleOpenCreate : undefined}
               />
             </div>
             <RubrosInsightsPanel invoices={invoicesQuery.data ?? []} />

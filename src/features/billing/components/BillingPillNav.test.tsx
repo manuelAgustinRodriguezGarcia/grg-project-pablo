@@ -71,7 +71,7 @@ function clientesMenuWrap() {
 
 describe("BillingPillNav clientes menu", () => {
   it("exposes lista de clientes and lista de deudores under Clientes", () => {
-    render(<BillingPillNav />);
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
 
     const clientsOption = screen.getByRole("menuitem", {
       name: "Lista de clientes",
@@ -85,7 +85,7 @@ describe("BillingPillNav clientes menu", () => {
   });
 
   it("keeps the clientes menu closed until hover", () => {
-    render(<BillingPillNav />);
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
 
     const wrap = clientesMenuWrap();
     expect(wrap).not.toHaveClass("tabWrapOpen");
@@ -96,13 +96,13 @@ describe("BillingPillNav clientes menu", () => {
 
   it("does not open the clientes menu when deudores loads", () => {
     navigation.pathname = BILLING_DEBTORS_PATH;
-    render(<BillingPillNav />);
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
 
     expect(clientesMenuWrap()).not.toHaveClass("tabWrapOpen");
   });
 
   it("closes the menu after choosing lista de deudores", () => {
-    render(<BillingPillNav />);
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
 
     const wrap = clientesMenuWrap();
     fireEvent.pointerEnter(wrap!);
@@ -112,13 +112,13 @@ describe("BillingPillNav clientes menu", () => {
   });
 
   it("closes the menu when the route changes to deudores", () => {
-    const { rerender } = render(<BillingPillNav />);
+    const { rerender } = render(<BillingPillNav userRole="ADMINISTRADOR" />);
     const wrap = clientesMenuWrap();
     fireEvent.pointerEnter(wrap!);
     expect(wrap).toHaveClass("tabWrapOpen");
 
     navigation.pathname = BILLING_DEBTORS_PATH;
-    rerender(<BillingPillNav />);
+    rerender(<BillingPillNav userRole="ADMINISTRADOR" />);
 
     expect(clientesMenuWrap()).not.toHaveClass("tabWrapOpen");
   });
@@ -126,7 +126,7 @@ describe("BillingPillNav clientes menu", () => {
 
 describe("BillingPillNav nueva factura shortcut", () => {
   it("muestra F2 junto a Nueva factura", () => {
-    render(<BillingPillNav />);
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
 
     expect(screen.getByRole("link", { name: /Nueva factura/ })).toHaveAttribute(
       "aria-keyshortcuts",
@@ -138,7 +138,7 @@ describe("BillingPillNav nueva factura shortcut", () => {
   });
 
   it("F2 navega a nueva factura", () => {
-    render(<BillingPillNav />);
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
 
     fireEvent.keyDown(document, { key: BILLING_NEW_INVOICE_SHORTCUT });
 
@@ -147,7 +147,7 @@ describe("BillingPillNav nueva factura shortcut", () => {
 
   it("F2 no navega si ya está en nueva factura", () => {
     navigation.pathname = BILLING_NEW_INVOICE_PATH;
-    render(<BillingPillNav />);
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
 
     fireEvent.keyDown(document, { key: BILLING_NEW_INVOICE_SHORTCUT });
 
@@ -157,7 +157,7 @@ describe("BillingPillNav nueva factura shortcut", () => {
   it("dice Nueva factura cuando la factura ya fue creada", () => {
     navigation.pathname = BILLING_NEW_INVOICE_PATH;
     unsavedDraftState.isInvoiceIssued = true;
-    render(<BillingPillNav />);
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
 
     expect(
       screen.getByRole("link", { name: /Nueva factura/ }),

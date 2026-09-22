@@ -37,8 +37,6 @@
 
 .sidebarShell[data-collapsed="true"] .sidebar {
   width: $sidebar-collapsed-width;
-  padding-inline: 0.5rem;
-  align-items: center;
   overflow: visible;
 }
 
@@ -55,12 +53,10 @@
 }
 
 .sidebarShell[data-collapsed="true"] .navList {
-  align-items: center;
+  align-items: stretch;
 }
 
 .sidebarShell[data-collapsed="true"] .navList li {
-  display: flex;
-  justify-content: center;
   width: 100%;
 }
 
@@ -120,28 +116,42 @@
 .userArea {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  padding: 1rem 0.5rem 0;
+  gap: 0;
+  width: calc(100% + 2rem);
+  margin-inline: -1rem;
+  margin-bottom: -1.25rem;
+  padding: 0;
   border-top: 1px solid $border;
-  transition: padding 0.3s ease;
+  transition:
+    padding 0.3s ease,
+    width 0.25s ease,
+    margin 0.25s ease;
+}
+
+.userArea .userRow {
+  flex: 1 1 auto;
+  min-height: 3.5rem;
+  padding-inline: 1.5rem;
+  padding-block: 0.85rem;
 }
 
 .sidebarShell[data-collapsed="true"] .userArea {
-  align-items: center;
-  width: 100%;
-  padding-inline: 0;
+  align-items: stretch;
+  gap: 0;
 }
 
 .sidebarShell[data-collapsed="true"] .userArea form {
   display: flex;
-  justify-content: center;
   width: 100%;
+  margin-top: 0;
+  flex-shrink: 0;
 }
 
-.sidebarShell[data-collapsed="true"] .userRow {
+.sidebarShell[data-collapsed="true"] .userArea .userRow {
   justify-content: center;
   gap: 0;
   width: 100%;
+  padding-inline: 0.5rem;
 }
 
 .top {
@@ -160,7 +170,30 @@
   align-items: center;
   gap: 0.85rem;
   min-width: 0;
-  transition: justify-content 0.3s ease;
+  transition:
+    justify-content 0.3s ease,
+    gap 0.25s ease,
+    background-color 0.2s ease;
+}
+
+.userRow_visitor {
+  background: $blue;
+  color: $white;
+}
+
+.userRow_seller {
+  background: $green;
+  color: $white;
+}
+
+.userRow_advancedVisitor {
+  background: #6d28d9;
+  color: $white;
+}
+
+.userRow_admin {
+  background: #b8960f;
+  color: $white;
 }
 
 .userRowLink {
@@ -193,14 +226,29 @@
   width: 2.35rem;
   height: 2.35rem;
   flex-shrink: 0;
+  color: $white;
 }
 
-.roleIconAdmin {
-  color: $green;
+.roleIcon_visitor,
+.roleIcon_seller,
+.roleIcon_advancedVisitor {
+  color: $white;
 }
 
-.roleIconUser {
-  color: #5eb8ff;
+.roleIcon_admin {
+  color: $white;
+  animation: adminGoldShine 2.8s ease-in-out infinite;
+}
+
+@keyframes adminGoldShine {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.55));
+  }
 }
 
 .userMeta {
@@ -209,6 +257,13 @@
   gap: 0.2rem;
   min-width: 0;
   flex: 1;
+  max-width: 14rem;
+  overflow: hidden;
+  opacity: 1;
+  transition:
+    opacity 0.2s ease,
+    max-width 0.25s ease,
+    flex-basis 0.25s ease;
 }
 
 .userRole {
@@ -218,14 +273,7 @@
   letter-spacing: 0.18em;
   line-height: 1.25;
   text-transform: uppercase;
-}
-
-.userRoleAdmin {
-  color: $green;
-}
-
-.userRoleUser {
-  color: #5eb8ff;
+  color: $white;
 }
 
 .userEmail {
@@ -234,7 +282,7 @@
   font-size: 0.82rem;
   font-weight: 500;
   line-height: 1.35;
-  color: $text-light;
+  color: rgba($white, 0.9);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -245,7 +293,10 @@
 }
 
 .sidebarShell[data-collapsed="true"] .userMeta {
-  display: none;
+  flex: 0 1 0;
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .mobileDock {

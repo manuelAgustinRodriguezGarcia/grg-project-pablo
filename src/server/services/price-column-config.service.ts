@@ -1,5 +1,5 @@
 import type { ColumnDataType, PriceColumn, UserRole } from "@/generated/prisma/client";
-import { requireAuth, requireAdmin } from "@/server/auth";
+import { requireAuth, requirePermission } from "@/server/auth";
 import {
   priceColumnRepository,
   type CreatePriceColumnData,
@@ -98,7 +98,7 @@ async function handleColumnWrite<T>(operation: () => Promise<T>): Promise<T> {
 export class PriceColumnConfigService {
   async listColumns(priceListId: string, role?: UserRole): Promise<PriceColumn[]> {
     if (role === undefined) {
-      await requireAdmin();
+      await requirePermission("prices.read");
       return priceColumnRepository.findByPriceListIdOrdered(priceListId);
     }
 
@@ -112,7 +112,7 @@ export class PriceColumnConfigService {
   }
 
   async createColumn(input: CreatePriceColumnInput): Promise<PriceColumn> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("prices.create");
     await requirePriceListExists(input.priceListId);
 
     const internalKey = input.internalKey.trim();
@@ -153,7 +153,7 @@ export class PriceColumnConfigService {
   }
 
   async updateColumn(input: UpdatePriceColumnInput): Promise<PriceColumn> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("prices.update");
     const existing = await requireColumn(input.id);
 
     if (input.originalName !== undefined) {
@@ -206,7 +206,7 @@ export class PriceColumnConfigService {
   }
 
   async deleteColumn(id: string): Promise<void> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("prices.delete");
     await requireColumn(id);
     await priceColumnRepository.delete(id);
 
@@ -219,7 +219,7 @@ export class PriceColumnConfigService {
   }
 
   async reorderColumns(input: ReorderPriceColumnsInput): Promise<void> {
-    await requireAdmin();
+    await requirePermission("prices.update");
     await requirePriceListExists(input.priceListId);
     if (input.items.length === 0) {
       return;

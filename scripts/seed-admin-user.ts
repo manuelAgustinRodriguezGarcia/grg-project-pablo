@@ -6,7 +6,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 const SEED_EMAIL = process.env.SEED_ADMIN_EMAIL ?? "agencygrg@gmail.com";
 const SEED_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "grgsolutions";
 const SEED_NAME = process.env.SEED_ADMIN_NAME ?? "adminGRG";
-const SEED_ROLE = "ADMIN" as const;
+const SEED_ROLE = "ADMINISTRADOR" as const;
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

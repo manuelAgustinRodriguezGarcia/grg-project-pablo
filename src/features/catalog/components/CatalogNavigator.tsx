@@ -604,24 +604,27 @@ export function CatalogNavigator({
     return toLiteNavigationFolders(catalog?.sections ?? []);
   }, [activeCatalogId, catalogList]);
 
+  const hasSettledNavigation = Boolean(
+    activeCatalogId &&
+      navigationQuery.data &&
+      !navigationQuery.isPlaceholderData,
+  );
+
   const folders = useMemo(() => {
-    if (
-      activeCatalogId &&
-      !navigationQuery.isPlaceholderData &&
-      navigationQuery.data
-    ) {
+    if (hasSettledNavigation && navigationQuery.data) {
       return navigationQuery.data;
     }
     return directoryFolders;
   }, [
-    activeCatalogId,
     directoryFolders,
+    hasSettledNavigation,
     navigationQuery.data,
-    navigationQuery.isPlaceholderData,
   ]);
 
   const isNavigationReady = Boolean(activeCatalogId);
-  const isLoadingFolders = false;
+  const isLoadingFolders = Boolean(
+    activeCatalogId && !hasSettledNavigation && !navigationQuery.isError,
+  );
   const foldersError =
     navigationQuery.error instanceof Error ? navigationQuery.error.message : null;
 
@@ -861,8 +864,12 @@ export function CatalogNavigator({
   }, []);
 
   const handleSelectCatalog = useCallback(
-    (catalogId: string) => {
-      setPreferProductsShell((current) => current || Boolean(selectedCatalogId));
+    (catalogId: string, options?: { openFolderPicker?: boolean }) => {
+      if (options?.openFolderPicker) {
+        setPreferProductsShell(false);
+      } else {
+        setPreferProductsShell((current) => current || Boolean(selectedCatalogId));
+      }
       setHighlightedProductId(null);
       setSelectedCatalogId(catalogId);
       setSelectedFolderId("");
@@ -871,6 +878,13 @@ export function CatalogNavigator({
       resetFolderSearch();
     },
     [resetFolderSearch, selectedCatalogId],
+  );
+
+  const handleSelectCatalogFromPicker = useCallback(
+    (catalogId: string) => {
+      handleSelectCatalog(catalogId, { openFolderPicker: true });
+    },
+    [handleSelectCatalog],
   );
 
   const handleSelectFolder = useCallback(
@@ -1438,7 +1452,7 @@ export function CatalogNavigator({
             <CatalogPickerScreen
               catalogs={sortedCatalogs}
               isAdmin={isAdmin}
-              onSelectCatalog={handleSelectCatalog}
+              onSelectCatalog={handleSelectCatalogFromPicker}
               onAddCatalog={isAdmin ? handleAddCatalog : undefined}
             />
           ) : null}

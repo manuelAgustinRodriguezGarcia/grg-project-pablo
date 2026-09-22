@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -25,6 +26,10 @@ function isArrowKey(key: string): boolean {
   );
 }
 
+function isActivationKey(key: string): boolean {
+  return key === "Enter" || key === " ";
+}
+
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -36,6 +41,60 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
   const tag = target.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
+function getScrollParent(element: HTMLElement): HTMLElement | null {
+  let parent = element.parentElement;
+  while (parent) {
+    const { overflowY } = getComputedStyle(parent);
+    if (
+      overflowY === "auto" ||
+      overflowY === "scroll" ||
+      overflowY === "overlay"
+    ) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return null;
+}
+
+function getStickyTopInset(scroller: HTMLElement): number {
+  let inset = 0;
+  for (const child of scroller.children) {
+    if (!(child instanceof HTMLElement)) {
+      continue;
+    }
+    if (getComputedStyle(child).position !== "sticky") {
+      continue;
+    }
+    const top = Number.parseFloat(getComputedStyle(child).top) || 0;
+    inset = Math.max(inset, child.getBoundingClientRect().height + top);
+  }
+  return inset;
+}
+
+function scrollCardIntoScroller(card: HTMLElement): void {
+  const scroller = getScrollParent(card);
+  if (!scroller) {
+    card.scrollIntoView({ block: "nearest", inline: "nearest" });
+    return;
+  }
+
+  const scrollerRect = scroller.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+  const visibleTop = scrollerRect.top + getStickyTopInset(scroller);
+  const visibleBottom = scrollerRect.bottom;
+  const pad = 8;
+
+  if (cardRect.bottom > visibleBottom - pad) {
+    scroller.scrollTop += cardRect.bottom - (visibleBottom - pad);
+    return;
+  }
+
+  if (cardRect.top < visibleTop + pad) {
+    scroller.scrollTop -= visibleTop + pad - cardRect.top;
+  }
 }
 
 export function useCardGridKeyboard({
@@ -53,6 +112,11 @@ export function useCardGridKeyboard({
   const itemCountRef = useRef(itemCount);
   const enabledRef = useRef(enabled);
   const onActivateRef = useRef(onActivate);
+  const ignoreActivationUntilRef = useRef(0);
+  const ignorePointerUntilRef = useRef(0);
+  const activeArrowRef = useRef<string | null>(null);
+  const pressedArrowsRef = useRef(new Set<string>());
+  const focusFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     focusedIndexRef.current = focusedIndex;
@@ -83,7 +147,11 @@ export function useCardGridKeyboard({
     });
   }, [itemCount]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!enabled || itemCount <= 0) {
+      return;
+    }
+
     const grid = gridRef.current;
     if (!grid) {
       return;
@@ -96,6 +164,7 @@ export function useCardGridKeyboard({
 
       const cards = grid.querySelectorAll<HTMLElement>("[data-card-index]");
       if (cards.length < 2) {
+        columnCountRef.current = 1;
         setColumnCount(1);
         return;
       }
@@ -108,38 +177,59 @@ export function useCardGridKeyboard({
         }
         columns += 1;
       }
-      setColumnCount(Math.max(1, columns));
+      const nextColumns = Math.max(1, columns);
+      columnCountRef.current = nextColumns;
+      setColumnCount(nextColumns);
     }
 
     measureColumns();
     const observer = new ResizeObserver(measureColumns);
     observer.observe(grid);
     return () => observer.disconnect();
-  }, [itemCount]);
+  }, [enabled, itemCount]);
 
-  const focusCardAt = useCallback((index: number) => {
-    if (!enabledRef.current || itemCountRef.current <= 0) {
-      return;
-    }
-
-    const nextIndex = Math.max(
-      0,
-      Math.min(index, itemCountRef.current - 1),
-    );
-    focusedIndexRef.current = nextIndex;
-    setFocusedIndex(nextIndex);
-
-    requestAnimationFrame(() => {
-      const card = gridRef.current?.querySelector<HTMLElement>(
-        `[data-card-index="${nextIndex}"]`,
-      );
-      if (!card) {
+  const focusCardAt = useCallback(
+    (index: number, options?: { fromPointer?: boolean }) => {
+      if (!enabledRef.current || itemCountRef.current <= 0) {
         return;
       }
-      card.focus({ preventScroll: true });
-      card.scrollIntoView({ block: "nearest", inline: "nearest" });
-    });
-  }, []);
+
+      if (
+        options?.fromPointer &&
+        performance.now() < ignorePointerUntilRef.current
+      ) {
+        return;
+      }
+
+      const nextIndex = Math.max(
+        0,
+        Math.min(index, itemCountRef.current - 1),
+      );
+      focusedIndexRef.current = nextIndex;
+      setFocusedIndex(nextIndex);
+
+      if (!options?.fromPointer) {
+        ignorePointerUntilRef.current = performance.now() + 200;
+      }
+
+      if (focusFrameRef.current !== null) {
+        cancelAnimationFrame(focusFrameRef.current);
+      }
+
+      focusFrameRef.current = requestAnimationFrame(() => {
+        focusFrameRef.current = null;
+        const card = gridRef.current?.querySelector<HTMLElement>(
+          `[data-card-index="${nextIndex}"]`,
+        );
+        if (!card) {
+          return;
+        }
+        card.focus({ preventScroll: true });
+        scrollCardIntoScroller(card);
+      });
+    },
+    [],
+  );
 
   const moveFromIndex = useCallback((index: number, key: string) => {
     const count = itemCountRef.current;
@@ -166,10 +256,19 @@ export function useCardGridKeyboard({
     return nextIndex;
   }, []);
 
-  useEffect(() => {
+  const shouldIgnoreActivation = useCallback(() => {
+    return performance.now() < ignoreActivationUntilRef.current;
+  }, []);
+
+  useLayoutEffect(() => {
     if (!enabled) {
+      ignoreActivationUntilRef.current = 0;
+      activeArrowRef.current = null;
+      pressedArrowsRef.current.clear();
       return;
     }
+
+    ignoreActivationUntilRef.current = performance.now() + 250;
 
     function onWindowKeyDown(event: KeyboardEvent) {
       if (!enabledRef.current || itemCountRef.current <= 0) {
@@ -193,10 +292,17 @@ export function useCardGridKeyboard({
       }
 
       if (event.key === "Enter") {
+        if (event.defaultPrevented) {
+          return;
+        }
         if (inEditable && !inSearch) {
           return;
         }
         if (inSearch) {
+          return;
+        }
+        if (shouldIgnoreActivation()) {
+          event.preventDefault();
           return;
         }
         event.preventDefault();
@@ -214,13 +320,49 @@ export function useCardGridKeyboard({
       }
 
       event.preventDefault();
-      const nextIndex = moveFromIndex(focusedIndexRef.current, event.key);
+      pressedArrowsRef.current.add(event.key);
+
+      if (activeArrowRef.current === null) {
+        activeArrowRef.current = event.key;
+      }
+
+      if (event.key !== activeArrowRef.current) {
+        return;
+      }
+
+      const nextIndex = moveFromIndex(
+        focusedIndexRef.current,
+        activeArrowRef.current,
+      );
       focusCardAt(nextIndex);
     }
 
+    function onWindowKeyUp(event: KeyboardEvent) {
+      if (!isArrowKey(event.key)) {
+        return;
+      }
+
+      pressedArrowsRef.current.delete(event.key);
+
+      if (activeArrowRef.current !== event.key) {
+        return;
+      }
+
+      const remaining = pressedArrowsRef.current.values().next();
+      activeArrowRef.current = remaining.done ? null : remaining.value;
+    }
+
     window.addEventListener("keydown", onWindowKeyDown);
-    return () => window.removeEventListener("keydown", onWindowKeyDown);
-  }, [enabled, focusCardAt, moveFromIndex, searchInputRef]);
+    window.addEventListener("keyup", onWindowKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onWindowKeyDown);
+      window.removeEventListener("keyup", onWindowKeyUp);
+      if (focusFrameRef.current !== null) {
+        cancelAnimationFrame(focusFrameRef.current);
+        focusFrameRef.current = null;
+      }
+    };
+  }, [enabled, focusCardAt, moveFromIndex, searchInputRef, shouldIgnoreActivation]);
 
   const handleSearchKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -242,8 +384,12 @@ export function useCardGridKeyboard({
         return;
       }
 
-      if (event.key === "Enter" || event.key === " ") {
+      if (isActivationKey(event.key)) {
         event.preventDefault();
+        event.stopPropagation();
+        if (shouldIgnoreActivation()) {
+          return;
+        }
         onActivate(index);
         return;
       }
@@ -253,7 +399,7 @@ export function useCardGridKeyboard({
         searchInputRef?.current?.focus();
       }
     },
-    [enabled, itemCount, onActivate, searchInputRef],
+    [enabled, itemCount, onActivate, searchInputRef, shouldIgnoreActivation],
   );
 
   const focusSearch = useCallback(() => {

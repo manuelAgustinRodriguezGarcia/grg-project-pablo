@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { Clock, ICON_STROKE } from "@/shared/icons";
 import styles from "./ContactSection.module.scss";
 
@@ -10,7 +10,6 @@ const SEASON_CYCLE_MS = 15_000;
 
 function getDefaultSeason(date = new Date()): Season {
   const month = date.getMonth();
-  // Hemisferio sur (Chaco): invierno aprox. mayo–agosto.
   return month >= 4 && month <= 7 ? "winter" : "summer";
 }
 
@@ -28,6 +27,9 @@ export function HoursContactCard({ className }: HoursContactCardProps) {
   const isSummer = season === "summer";
   const afternoonHours = isSummer ? "15:30 - 19:30" : "15:00 - 19:00";
   const seasonTitleSuffix = isSummer ? "(Verano)" : "(Invierno)";
+  const toggleLabel = isSummer
+    ? "Cambiar a horarios de invierno"
+    : "Cambiar a horarios de verano";
 
   useEffect(() => {
     const reducedMotion = window.matchMedia(
@@ -50,6 +52,13 @@ export function HoursContactCard({ className }: HoursContactCardProps) {
     setCycleId((current) => current + 1);
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleSeasonToggle();
+    }
+  }
+
   return (
     <article
       className={[
@@ -60,24 +69,20 @@ export function HoursContactCard({ className }: HoursContactCardProps) {
       ]
         .filter(Boolean)
         .join(" ")}
+      role="button"
+      tabIndex={0}
+      aria-label={toggleLabel}
+      onClick={handleSeasonToggle}
+      onKeyDown={handleKeyDown}
     >
       <div className={styles.cardContent}>
-        <button
-          type="button"
-          className={styles.seasonToggle}
-          onClick={handleSeasonToggle}
-          aria-label={
-            isSummer
-              ? "Cambiar a horarios de invierno"
-              : "Cambiar a horarios de verano"
-          }
-        >
+        <div className={styles.seasonIconWrap} aria-hidden="true">
           <Clock
-            className={styles.seasonToggleIcon}
+            className={styles.cardIcon}
             strokeWidth={ICON_STROKE}
             aria-hidden
           />
-        </button>
+        </div>
 
         <div className={styles.cardText}>
           <h3 className={styles.cardTitle}>

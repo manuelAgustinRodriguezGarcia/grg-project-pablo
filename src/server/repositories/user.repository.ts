@@ -39,7 +39,7 @@ export class UserRepository {
         id,
         email,
         name,
-        role: role ?? "USUARIO",
+        role: role ?? "VISITANTE",
         status: status ?? "ACTIVE",
       },
       update: {

@@ -1,5 +1,5 @@
 import type { PriceListStatus } from "@/generated/prisma/client";
-import { requireAuth, requireAdmin } from "@/server/auth";
+import { requireAuth, requirePermission } from "@/server/auth";
 import {
   priceListRepository,
   type PriceListWithItemCount,
@@ -92,7 +92,7 @@ export class PriceListService {
   }
 
   async createPriceList(input: CreatePriceListInput): Promise<PriceListWithItemCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("prices.create");
 
     const trimmedName = input.name.trim();
     if (!trimmedName) {
@@ -133,7 +133,7 @@ export class PriceListService {
   }
 
   async updatePriceList(input: UpdatePriceListInput): Promise<PriceListWithItemCount> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("prices.update");
     const existing = await requirePriceList(input.id);
 
     if (input.name !== undefined) {
@@ -184,7 +184,7 @@ export class PriceListService {
   }
 
   async deletePriceList(id: string): Promise<void> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("prices.delete");
     await requirePriceList(id);
     await uploadedFileRetentionService.purgeFilesForPriceList(id);
     await priceListRepository.delete(id);
@@ -198,7 +198,7 @@ export class PriceListService {
   }
 
   async clearPriceList(id: string): Promise<{ deletedCount: number }> {
-    const { profile: admin } = await requireAdmin();
+    const { profile: admin } = await requirePermission("prices.update");
     await requirePriceList(id);
     const deletedCount = await priceListRepository.clearItems(id);
 
@@ -213,7 +213,7 @@ export class PriceListService {
   }
 
   async reorderPriceLists(input: ReorderPriceListsInput): Promise<void> {
-    await requireAdmin();
+    await requirePermission("prices.update");
     if (input.items.length === 0) {
       return;
     }
@@ -221,7 +221,7 @@ export class PriceListService {
   }
 
   async requirePriceListForAdmin(id: string): Promise<PriceListWithItemCount> {
-    await requireAdmin();
+    await requirePermission("prices.read");
     return requirePriceList(id);
   }
 }

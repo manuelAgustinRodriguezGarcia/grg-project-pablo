@@ -17,9 +17,9 @@ type MovimientosPageIntroProps = {
   onKindChange: (value: MovementKindFilter) => void;
   onFromDateChange: (value: string) => void;
   onToDateChange: (value: string) => void;
-  onCreateReceipt: () => void;
-  onCreateCreditNote: () => void;
-  onCreateDebitNote: () => void;
+  onCreateReceipt?: () => void;
+  onCreateCreditNote?: () => void;
+  onCreateDebitNote?: () => void;
 };
 
 const KIND_FILTER_OPTIONS = [
@@ -61,34 +61,42 @@ export function MovimientosPageIntro({
         </div>
       </div>
       <div className={styles.filtersRow}>
-        <div className={styles.movementCreateGroup}>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={onCreateReceipt}
-          >
-            <Plus strokeWidth={ICON_STROKE} aria-hidden />
-            Recibo
-          </button>
-          <button
-            type="button"
-            className={`${styles.secondaryButton} ${styles.movementCreateCredit}`}
-            aria-label="Nueva nota de crédito"
-            onClick={onCreateCreditNote}
-          >
-            <Plus strokeWidth={ICON_STROKE} aria-hidden />
-            N. Crédito
-          </button>
-          <button
-            type="button"
-            className={`${styles.secondaryButton} ${styles.movementCreateDebit}`}
-            aria-label="Nueva nota de débito"
-            onClick={onCreateDebitNote}
-          >
-            <Plus strokeWidth={ICON_STROKE} aria-hidden />
-            N. Débito
-          </button>
-        </div>
+        {onCreateReceipt || onCreateCreditNote || onCreateDebitNote ? (
+          <div className={styles.movementCreateGroup}>
+            {onCreateReceipt ? (
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={onCreateReceipt}
+              >
+                <Plus strokeWidth={ICON_STROKE} aria-hidden />
+                Recibo
+              </button>
+            ) : null}
+            {onCreateCreditNote ? (
+              <button
+                type="button"
+                className={`${styles.secondaryButton} ${styles.movementCreateCredit}`}
+                aria-label="Nueva nota de crédito"
+                onClick={onCreateCreditNote}
+              >
+                <Plus strokeWidth={ICON_STROKE} aria-hidden />
+                N. Crédito
+              </button>
+            ) : null}
+            {onCreateDebitNote ? (
+              <button
+                type="button"
+                className={`${styles.secondaryButton} ${styles.movementCreateDebit}`}
+                aria-label="Nueva nota de débito"
+                onClick={onCreateDebitNote}
+              >
+                <Plus strokeWidth={ICON_STROKE} aria-hidden />
+                N. Débito
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         <div className={`${styles.filterSelect} ${styles.filterSelectWide}`}>
           <CustomSelect
             value={kind}

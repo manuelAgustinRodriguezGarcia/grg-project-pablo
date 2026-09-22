@@ -3,13 +3,19 @@ import { ImportError } from "@/server/services/import.errors";
 
 vi.mock("@/server/auth", () => ({
   requireRole: vi.fn(async () => ({
-    profile: { id: "admin-1", role: "ADMIN", email: "admin@test.com", name: "Admin" },
+    profile: { id: "admin-1", role: "ADMINISTRADOR", email: "admin@test.com", name: "Admin" },
   })),
   requireAdmin: vi.fn(async () => ({
-    profile: { id: "admin-1", role: "ADMIN", email: "admin@test.com", name: "Admin" },
+    profile: { id: "admin-1", role: "ADMINISTRADOR", email: "admin@test.com", name: "Admin" },
   })),
   requireEditor: vi.fn(async () => ({
-    profile: { id: "admin-1", role: "ADMIN", email: "admin@test.com", name: "Admin" },
+    profile: { id: "admin-1", role: "ADMINISTRADOR", email: "admin@test.com", name: "Admin" },
+  })),
+  requirePermission: vi.fn(async () => ({
+    profile: { id: "admin-1", role: "ADMINISTRADOR", email: "admin@test.com", name: "Admin" },
+  })),
+  requireAnyPermission: vi.fn(async () => ({
+    profile: { id: "admin-1", role: "ADMINISTRADOR", email: "admin@test.com", name: "Admin" },
   })),
 }));
 

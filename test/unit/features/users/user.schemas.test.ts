@@ -12,7 +12,7 @@ describe("createUserSchema", () => {
       email: "nuevo@example.com",
       password: "password123",
       name: "Nuevo Usuario",
-      role: "USUARIO",
+      role: "VISITANTE",
     });
 
     expect(result.success).toBe(true);
@@ -34,7 +34,7 @@ describe("createUserSchema", () => {
       email: "correo-invalido",
       password: "password123",
       name: "Nuevo Usuario",
-      role: "USUARIO",
+      role: "VISITANTE",
     });
 
     expect(result.success).toBe(false);
@@ -45,7 +45,7 @@ describe("createUserSchema", () => {
       email: "nuevo@example.com",
       password: "1234567",
       name: "Nuevo Usuario",
-      role: "USUARIO",
+      role: "VISITANTE",
     });
 
     expect(result.success).toBe(false);
@@ -56,7 +56,7 @@ describe("createUserSchema", () => {
       email: "nuevo@example.com",
       password: "password123",
       name: "",
-      role: "USUARIO",
+      role: "VISITANTE",
     });
 
     expect(result.success).toBe(false);

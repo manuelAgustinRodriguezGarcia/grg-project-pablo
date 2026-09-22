@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { buildDebtorsXlsx } from "@/server/excel/build-debtors-xlsx";
 import { billingInvoiceRepository } from "@/server/repositories/billing-invoice.repository";
 import {
@@ -16,7 +16,7 @@ export class BillingDebtorsService {
     toDate: string;
     sort: DebtorSortOrder;
   }): Promise<{ bytes: Uint8Array; filename: string }> {
-    await requireAdmin();
+    await requirePermission("debts.read");
     const invoices = (await billingInvoiceRepository.findAllOrdered())
       .map(toBillingInvoiceListItem)
       .filter((invoice) =>

@@ -42,7 +42,7 @@ describe("guards auto-provision", () => {
     const supabaseUser = {
       id: "new-user-id",
       email: "attacker@example.com",
-      user_metadata: { role: "ADMIN", name: "Attacker" },
+      user_metadata: { role: "ADMINISTRADOR", name: "Attacker" },
     };
 
     vi.mocked(createSupabaseServerClient).mockResolvedValue({
@@ -57,7 +57,7 @@ describe("guards auto-provision", () => {
       id: input.id,
       email: input.email,
       name: input.name,
-      role: input.role ?? "USUARIO",
+      role: input.role ?? "VISITANTE",
       status: "ACTIVE",
       lastAccessAt: null,
       createdAt: new Date(),
@@ -68,9 +68,9 @@ describe("guards auto-provision", () => {
     const auth = await requireAuth();
 
     expect(userRepository.upsertFromAuth).toHaveBeenCalledWith(
-      expect.objectContaining({ role: "USUARIO" }),
+      expect.objectContaining({ role: "VISITANTE" }),
     );
-    expect(auth.profile.role).toBe("USUARIO");
+    expect(auth.profile.role).toBe("VISITANTE");
   });
 });
 
@@ -93,7 +93,7 @@ describe("requireAdmin", () => {
     vi.mocked(userRepository.touchLastAccessIfStale).mockResolvedValue(undefined);
 
     const auth = await requireAdmin();
-    expect(auth.profile.role).toBe("ADMIN");
+    expect(auth.profile.role).toBe("ADMINISTRADOR");
   });
 
   it("rechaza USUARIO", async () => {
@@ -134,7 +134,7 @@ describe("requireEditor", () => {
     vi.mocked(userRepository.touchLastAccessIfStale).mockResolvedValue(undefined);
 
     const auth = await requireEditor();
-    expect(auth.profile.role).toBe("ADMIN");
+    expect(auth.profile.role).toBe("ADMINISTRADOR");
   });
 
   it("rechaza USUARIO (solo lectura)", async () => {
@@ -175,7 +175,7 @@ describe("requireAdminOrRedirect", () => {
     vi.mocked(userRepository.touchLastAccessIfStale).mockResolvedValue(undefined);
 
     const auth = await requireAdminOrRedirect("/admin");
-    expect(auth.profile.role).toBe("ADMIN");
+    expect(auth.profile.role).toBe("ADMINISTRADOR");
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
