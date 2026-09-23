@@ -80,6 +80,12 @@ const READ_ALL_EXCEPT_USERS: readonly Permission[] = ALL_PERMISSIONS.filter(
     permission.endsWith(".read") || permission === "billing.hub.read",
 );
 
+const ADVANCED_VISITOR_CREATES: readonly Permission[] = [
+  "invoices.create",
+  "clients.create",
+  "movements.create",
+];
+
 export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   VISITANTE: ["catalogs.read", "prices.read"],
   VENDEDOR: [
@@ -90,7 +96,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "clients.read",
     "clients.create",
   ],
-  VISITANTE_AVANZADO: READ_ALL_EXCEPT_USERS,
+  VISITANTE_AVANZADO: [
+    ...READ_ALL_EXCEPT_USERS,
+    ...ADVANCED_VISITOR_CREATES,
+  ],
   ADMINISTRADOR: ALL_PERMISSIONS,
 };
 

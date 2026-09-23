@@ -1,14 +1,12 @@
 @use "../../admin/styles/variables" as *;
 
 .bar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
   display: flex;
-  flex-shrink: 0;
-  height: 3.5rem;
+  flex: 1;
+  flex-shrink: 1;
+  min-width: 0;
+  height: auto;
   overflow: hidden;
-  border-bottom: 1px solid rgba($navy, 0.08);
   background: $white;
 
   &:has(.tabWrapOpen) {
@@ -57,29 +55,53 @@
   transition-delay: 0s;
 }
 
+.tabWrapOpen .tab:not(.tabPending) {
+  color: $white;
+
+  &::before {
+    transform: scaleY(1);
+  }
+}
+
 .tab {
   position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   height: 100%;
   gap: 0.45rem;
   flex-shrink: 0;
+  overflow: hidden;
   padding: 0 0.95rem;
-  border-bottom: 2px solid transparent;
+  border-bottom: none;
   color: rgba($navy, 0.68);
   font-size: 0.88rem;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease,
-    border-color 0.15s ease;
+  transition: color 0.2s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: $blue;
+    transform: scaleY(0);
+    transform-origin: top center;
+    pointer-events: none;
+    transition:
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.18s ease;
+  }
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      color: $navy;
-      background: rgba($blue, 0.04);
+      color: $white;
+
+      &::before {
+        transform: scaleY(1);
+      }
     }
   }
 
@@ -90,26 +112,40 @@
 }
 
 .tabActive {
-  color: $blue;
-  background: #eef4fd;
-  border-bottom-color: $blue;
+  color: $white;
+
+  &::before {
+    transform: scaleY(1);
+    background: $blue;
+  }
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      color: $blue;
-      background: #eef4fd;
+      color: $white;
+
+      &::before {
+        background: color-mix(in srgb, $blue 88%, black);
+      }
     }
   }
 }
 
-.tabPending {
-  color: $navy;
-  background: rgba($blue, 0.04);
+.tab.tabPending {
+  color: $blue;
+  background: rgba($blue, 0.16);
+
+  &::before {
+    transform: scaleY(0);
+  }
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      color: $navy;
-      background: rgba($blue, 0.04);
+      color: $blue;
+      background: rgba($blue, 0.22);
+
+      &::before {
+        transform: scaleY(0);
+      }
     }
   }
 }
@@ -182,6 +218,11 @@
   background: #eef4fd;
 }
 
+.tabMenuItem.tabPending {
+  color: $blue;
+  background: rgba($blue, 0.16);
+}
+
 .tabMenuIconBlue {
   color: $blue;
 }
@@ -191,26 +232,50 @@
 }
 
 .newInvoiceButton {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   align-self: stretch;
   gap: 0.5rem;
   flex-shrink: 0;
+  overflow: hidden;
   min-width: 14.5rem;
   padding: 0 2.25rem;
-  border: none;
-  background: $blue;
-  color: $white;
+  border: 1px solid rgba($navy, 0.16);
+  background: $white;
+  color: rgba($navy, 0.68);
   font-size: 0.95rem;
   font-weight: 650;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color 0.18s ease;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: $blue;
+    transform: scaleY(0);
+    transform-origin: top center;
+    pointer-events: none;
+    transition:
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.18s ease;
+  }
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: color-mix(in srgb, $blue 92%, black);
+      color: $white;
+      border-color: $blue;
+
+      &::before {
+        transform: scaleY(1);
+      }
     }
   }
 
@@ -226,12 +291,22 @@
   flex-shrink: 0;
 }
 
-.newInvoiceButtonCurrent {
-  background: $blue;
+.newInvoiceButtonCurrent,
+.newInvoiceButton[aria-current="page"] {
+  color: $white;
+  border-color: $blue;
+
+  &::before {
+    transform: scaleY(1);
+  }
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: color-mix(in srgb, $blue 92%, black);
+      color: $white;
+
+      &::before {
+        background: color-mix(in srgb, $blue 88%, black);
+      }
     }
   }
 }
@@ -261,14 +336,22 @@
   justify-content: center;
   min-width: 1.55rem;
   padding: 0.12rem 0.38rem;
-  border: 1px solid rgba($white, 0.38);
+  border: 1px solid rgba($navy, 0.22);
   border-radius: 0.3rem;
-  background: rgba($white, 0.16);
+  background: rgba($navy, 0.05);
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1;
+  color: rgba($navy, 0.68);
+}
+
+.newInvoiceButton:hover .newInvoiceShortcut,
+.newInvoiceButtonCurrent .newInvoiceShortcut,
+.newInvoiceButton[aria-current="page"] .newInvoiceShortcut {
+  border-color: rgba($white, 0.38);
+  background: rgba($white, 0.16);
   color: $white;
 }
 
@@ -432,8 +515,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tab,
+  .tab::before,
   .tabMenu,
   .newInvoiceButton,
+  .newInvoiceButton::before,
   .mobileTrigger,
   .mobileTriggerChevron,
   .mobileMenu {

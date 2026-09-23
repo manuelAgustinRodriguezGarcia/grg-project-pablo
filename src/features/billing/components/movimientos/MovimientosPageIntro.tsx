@@ -2,7 +2,7 @@
 
 import { CustomDatePicker } from "@/shared/components/CustomDatePicker";
 import { CustomSelect } from "@/shared/components/CustomSelect";
-import { ArrowLeftRight, ICON_STROKE, Plus, Search } from "@/shared/icons";
+import { ICON_STROKE, Plus, Search } from "@/shared/icons";
 import type { BillingMovementKind } from "@/features/billing/utils/movement-list";
 import styles from "@/features/billing/styles/ClientsManager.module.scss";
 
@@ -44,22 +44,6 @@ export function MovimientosPageIntro({
 }: MovimientosPageIntroProps) {
   return (
     <section className={styles.sectionIntro} aria-label="Movimientos">
-      <div className={styles.sectionHeader}>
-        <div className={styles.sectionHeaderText}>
-          <h2 className={styles.sectionTitle}>
-            <ArrowLeftRight
-              className={styles.sectionTitleIcon}
-              strokeWidth={ICON_STROKE}
-              aria-hidden
-            />
-            Movimientos
-          </h2>
-          <p className={styles.sectionHint}>
-            Recibos, notas de crédito, notas de débito e imputaciones. Las
-            facturas se consultan en Facturas.
-          </p>
-        </div>
-      </div>
       <div className={styles.filtersRow}>
         {onCreateReceipt || onCreateCreditNote || onCreateDebitNote ? (
           <div className={styles.movementCreateGroup}>

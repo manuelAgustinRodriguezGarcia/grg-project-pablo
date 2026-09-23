@@ -1,7 +1,7 @@
 "use client";
 
 import { CustomSelect } from "@/shared/components/CustomSelect";
-import { ICON_STROKE, Plus, Search, Tags } from "@/shared/icons";
+import { ICON_STROKE, Plus, Search } from "@/shared/icons";
 import styles from "@/features/billing/styles/ClientsManager.module.scss";
 
 export type RubroSortOrder = "name-az" | "name-za" | "code-az" | "code-za";
@@ -40,16 +40,6 @@ export function RubrosPageIntro({
 }: RubrosPageIntroProps) {
   return (
     <section className={styles.sectionIntro} aria-label="Gestión de rubros">
-      <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>
-          <Tags
-            className={styles.sectionTitleIcon}
-            strokeWidth={ICON_STROKE}
-            aria-hidden
-          />
-          Rubros
-        </h2>
-      </div>
       <div className={styles.filtersRow}>
           {onCreateClick ? (
             <button

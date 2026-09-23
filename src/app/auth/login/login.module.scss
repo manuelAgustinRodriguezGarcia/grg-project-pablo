@@ -1,21 +1,5 @@
 @use "../../../features/auth/styles/variables" as *;
 
-:global(html.login-scrollbar-hidden) {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  overflow: hidden;
-  height: 100%;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-:global(html.login-scrollbar-hidden body) {
-  overflow: hidden;
-  height: 100%;
-}
-
 .page {
   display: flex;
   flex-direction: column;

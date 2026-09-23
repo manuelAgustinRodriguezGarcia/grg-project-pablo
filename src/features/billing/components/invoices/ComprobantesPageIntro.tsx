@@ -3,7 +3,7 @@
 import type { BillingPaymentStatus } from "@/generated/prisma/client";
 import { CustomDatePicker } from "@/shared/components/CustomDatePicker";
 import { CustomSelect } from "@/shared/components/CustomSelect";
-import { FileSpreadsheet, ICON_STROKE, ReceiptText, Search } from "@/shared/icons";
+import { FileSpreadsheet, ICON_STROKE, Search } from "@/shared/icons";
 import styles from "@/features/billing/styles/ClientsManager.module.scss";
 
 type InvoiceTypeFilter = "all" | "A" | "B";
@@ -56,16 +56,6 @@ export function ComprobantesPageIntro({
 }: ComprobantesPageIntroProps) {
   return (
     <section className={styles.sectionIntro} aria-label="Gestión de facturas">
-      <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>
-          <ReceiptText
-            className={styles.sectionTitleIcon}
-            strokeWidth={ICON_STROKE}
-            aria-hidden
-          />
-          Facturas
-        </h2>
-      </div>
       <div className={styles.filtersRow}>
         <button
           type="button"

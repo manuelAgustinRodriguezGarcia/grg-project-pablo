@@ -35,7 +35,7 @@ type MovimientosTableProps = {
   error: string | null;
   onOpenInvoice: (invoiceId: string) => void;
   onOpenReceipt: (receiptId: string) => void;
-  onAllocate: (receiptId: string) => void;
+  onAllocate?: (receiptId: string) => void;
 };
 
 const MOVEMENT_DATE_FORMATTER = new Intl.DateTimeFormat("es-AR", {
@@ -123,7 +123,7 @@ function MovementActions({
   movement: BillingMovementListItem;
   variant: "icon" | "card";
   onOpenReceipt: (receiptId: string) => void;
-  onAllocate: (receiptId: string) => void;
+  onAllocate?: (receiptId: string) => void;
   onDownloadError: (message: string) => void;
 }) {
   const markActivity = useBillingDocumentActivity();
@@ -239,7 +239,7 @@ function MovementActions({
       return (
         <>
           {documentButtons}
-          {movement.remainingAmount > 0 ? (
+          {onAllocate && movement.remainingAmount > 0 ? (
             <button
               type="button"
               className={styles.cardActionButton}
@@ -263,7 +263,7 @@ function MovementActions({
       return (
         <>
           {documentButtons}
-          {movement.remainingAmount > 0 ? (
+          {onAllocate && movement.remainingAmount > 0 ? (
             <span className={styles.rowActionWrap}>
               <button
                 type="button"

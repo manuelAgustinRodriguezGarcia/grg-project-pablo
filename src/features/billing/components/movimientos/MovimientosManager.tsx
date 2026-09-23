@@ -40,6 +40,7 @@ type MovimientosManagerProps = {
   initialNotes: BillingNoteListItem[];
   clients: BillingClientListItem[];
   canManageMovements?: boolean;
+  canUpdateMovements?: boolean;
 };
 
 export function MovimientosManager({
@@ -48,6 +49,7 @@ export function MovimientosManager({
   initialNotes,
   clients,
   canManageMovements = false,
+  canUpdateMovements = false,
 }: MovimientosManagerProps) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<MovementKindFilter>("all");
@@ -253,12 +255,16 @@ export function MovimientosManager({
             error={listError}
             onOpenInvoice={setSelectedInvoiceId}
             onOpenReceipt={setSelectedReceiptId}
-            onAllocate={(receiptId) => {
-              const receipt = receiptsById.get(receiptId);
-              if (receipt && receipt.remainingAmount > 0) {
-                setReceiptForm({ kind: "allocate", receipt });
-              }
-            }}
+            onAllocate={
+              canUpdateMovements
+                ? (receiptId) => {
+                    const receipt = receiptsById.get(receiptId);
+                    if (receipt && receipt.remainingAmount > 0) {
+                      setReceiptForm({ kind: "allocate", receipt });
+                    }
+                  }
+                : undefined
+            }
           />
         </div>
       </div>

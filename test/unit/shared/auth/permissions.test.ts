@@ -28,10 +28,22 @@ describe("ROLE_PERMISSIONS", () => {
     ).toBe(false);
   });
 
-  it("VISITANTE_AVANZADO lee todo salvo usuarios y no escribe", () => {
+  it("VISITANTE_AVANZADO factura y crea clientes o movimientos sin editar ni borrar", () => {
     expect(hasPermission("VISITANTE_AVANZADO", "settings.read")).toBe(true);
     expect(hasPermission("VISITANTE_AVANZADO", "movements.read")).toBe(true);
-    expect(hasPermission("VISITANTE_AVANZADO", "invoices.create")).toBe(false);
+    expect(hasPermission("VISITANTE_AVANZADO", "invoices.create")).toBe(true);
+    expect(hasPermission("VISITANTE_AVANZADO", "clients.create")).toBe(true);
+    expect(hasPermission("VISITANTE_AVANZADO", "movements.create")).toBe(true);
+    expect(hasPermission("VISITANTE_AVANZADO", "invoices.update")).toBe(false);
+    expect(hasPermission("VISITANTE_AVANZADO", "clients.update")).toBe(false);
+    expect(hasPermission("VISITANTE_AVANZADO", "clients.delete")).toBe(false);
+    expect(hasPermission("VISITANTE_AVANZADO", "movements.update")).toBe(false);
+    expect(hasPermission("VISITANTE_AVANZADO", "categories.update")).toBe(
+      false,
+    );
+    expect(hasPermission("VISITANTE_AVANZADO", "categories.delete")).toBe(
+      false,
+    );
     expect(hasPermission("VISITANTE_AVANZADO", "users.manage")).toBe(false);
     expect(canAccessRoute("VISITANTE_AVANZADO", "/admin/usuarios")).toBe(false);
     expect(canAccessRoute("VISITANTE_AVANZADO", "/admin/archivos")).toBe(true);

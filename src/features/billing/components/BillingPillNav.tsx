@@ -187,7 +187,7 @@ function BillingNavTabWithMenu({
             pendingHref && billingPathMatchesHref(pendingHref, item.href),
           );
           const isActive =
-            !isPending && billingPathMatchesHref(pathname, item.href);
+            !pendingHref && billingPathMatchesHref(pathname, item.href);
 
           return (
             <Link
@@ -371,9 +371,9 @@ export function BillingPillNav({ userRole }: { userRole: UserRole }) {
                 billingPathMatchesHref(pendingHref, tab.href, tab.exact),
             );
             const isSectionActive =
-              !isSectionPending && billingTabMatchesPath(pathname, tab);
+              !pendingHref && billingTabMatchesPath(pathname, tab);
             const isHrefActive =
-              !isHrefPending &&
+              !pendingHref &&
               billingPathMatchesHref(pathname, tab.href, tab.exact);
             const tabClassName = `${styles.tab} ${isSectionActive ? styles.tabActive : ""} ${isSectionPending ? styles.tabPending : ""}`;
 

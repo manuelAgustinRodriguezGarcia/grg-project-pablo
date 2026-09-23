@@ -48,3 +48,28 @@ a {
     scroll-behavior: auto !important;
   }
 }
+
+html.landing-scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html.landing-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+html.login-scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overflow: hidden;
+  height: 100%;
+}
+
+html.login-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+html.login-scrollbar-hidden body {
+  overflow: hidden;
+  height: 100%;
+}

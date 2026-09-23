@@ -11,8 +11,12 @@
   position: sticky;
   top: 0;
   z-index: 40;
+  display: flex;
+  align-items: stretch;
   overflow: visible;
   flex-shrink: 0;
+  min-height: 3.5rem;
+  border-bottom: 1px solid rgba($navy, 0.08);
   background: $white;
 }
 
@@ -29,36 +33,4 @@
   .content {
     padding-bottom: 5.25rem;
   }
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  flex-shrink: 0;
-  padding: clamp(1.25rem, 3vw, 2rem) 1.25rem 0.85rem;
-  border-bottom: 1px solid rgba($navy, 0.08);
-  background: $white;
-
-  @media (max-width: 1023px) {
-    border-bottom: none;
-  }
-}
-
-.headerTitle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin: 0;
-  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
-  font-weight: 700;
-  color: $navy;
-  line-height: 1.2;
-}
-
-.headerTitleIcon {
-  width: 1.55rem;
-  height: 1.55rem;
-  flex-shrink: 0;
-  color: $blue;
 }

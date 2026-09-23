@@ -29,6 +29,7 @@ export default async function FacturacionMovimientosPage() {
       initialNotes={notesResult.success ? notesResult.data : []}
       clients={clientsResult.success ? clientsResult.data : []}
       canManageMovements={adminAuth.canManageMovements}
+      canUpdateMovements={adminAuth.canUpdateMovements}
     />
   );
 }

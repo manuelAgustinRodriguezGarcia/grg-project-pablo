@@ -20,6 +20,7 @@ export type AdminUiAuth = {
   canDeleteInvoice: boolean;
   canManageCategories: boolean;
   canManageMovements: boolean;
+  canUpdateMovements: boolean;
   canUpdateSettings: boolean;
   canManageFiles: boolean;
   canManageUsers: boolean;
@@ -44,6 +45,7 @@ export function toAdminUiAuth(
     canDeleteInvoice: hasPermission(role, "invoices.delete"),
     canManageCategories: hasPermission(role, "categories.update"),
     canManageMovements: hasPermission(role, "movements.create"),
+    canUpdateMovements: hasPermission(role, "movements.update"),
     canUpdateSettings: hasPermission(role, "settings.update"),
     canManageFiles: hasPermission(role, "files.manage"),
     canManageUsers: hasPermission(role, "users.manage"),
