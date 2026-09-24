@@ -221,14 +221,14 @@ describe("buildCollectionSlices", () => {
         label: "Cobrado",
         amount: 800,
         percent: 80,
-        color: "#031b3d",
+        color: "#0066d9",
       },
       {
         key: "pending",
         label: "Pendiente",
         amount: 200,
         percent: 20,
-        color: "#4a96dc",
+        color: "#dc2626",
       },
     ]);
   });

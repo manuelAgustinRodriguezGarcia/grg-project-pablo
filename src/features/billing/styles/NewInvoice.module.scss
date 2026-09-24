@@ -711,6 +711,60 @@ $item-columns-a: minmax(10rem, 1.35fr) minmax(8rem, 1.35fr) 4.5rem 7.2rem 7.2rem
   font-weight: 500;
 }
 
+@media (max-width: 1023px) {
+  .itemsHeader,
+  .itemsHeaderA {
+    display: none;
+  }
+
+  .itemRow,
+  .itemRowA {
+    grid-template-columns: 1fr;
+    min-width: 0;
+    align-items: stretch;
+    gap: 0.65rem;
+    padding: 0.85rem 0.75rem;
+    border: 1px solid rgba($navy, 0.08);
+    border-radius: $radius-md;
+    background: $white;
+  }
+
+  .itemRow .srOnly {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0 0 0.28rem;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
+    display: block;
+    font-family: $font-sans;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: rgba($navy, 0.6);
+  }
+
+  .itemLineTotal[data-mobile-label]::before {
+    content: attr(data-mobile-label);
+    display: block;
+    margin-bottom: 0.28rem;
+    font-family: $font-sans;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: rgba($navy, 0.6);
+  }
+
+  .itemRemoveCell {
+    justify-content: flex-start;
+  }
+
+  .itemRemoveButton {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
 .addItemButton {
   display: inline-flex;
   align-items: center;

@@ -3699,6 +3699,11 @@ td.clientIdentityCell {
   overflow: auto;
   padding: 1.15rem 1.35rem 0.35rem;
   background: $white;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   .historyTableWrap {
     overflow-x: hidden;

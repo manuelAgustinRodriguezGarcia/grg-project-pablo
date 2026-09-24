@@ -58,6 +58,17 @@ export function useAdminSectionTransition(): AdminSectionTransitionContextValue 
   return useContext(AdminSectionTransitionContext);
 }
 
+export function useBeginAdminSectionNavigation() {
+  const transition = useAdminSectionTransition();
+
+  return useCallback(
+    (href: string, options?: BeginNavigationOptions) => {
+      transition?.beginNavigation(href, options);
+    },
+    [transition],
+  );
+}
+
 /** Call from section pages when primary content can be shown without internal loaders. */
 export function useReportAdminSectionReady(isReady: boolean): void {
   const transition = useAdminSectionTransition();

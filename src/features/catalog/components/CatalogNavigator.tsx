@@ -279,6 +279,7 @@ type CatalogNavigatorProps = {
   catalogs: DirectoryCatalogItem[];
   initialCatalogId?: string;
   initialFolderId?: string;
+  initialCreateCatalog?: boolean;
   canEdit?: boolean;
   isAdmin?: boolean;
   enableColumnFilters?: boolean;
@@ -300,6 +301,7 @@ export function CatalogNavigator({
   catalogs,
   initialCatalogId = "",
   initialFolderId = "",
+  initialCreateCatalog = false,
   canEdit = false,
   isAdmin = false,
   enableColumnFilters = false,
@@ -378,7 +380,9 @@ export function CatalogNavigator({
   const [isCatalogActionBusy, setIsCatalogActionBusy] = useState(false);
   const [catalogActionError, setCatalogActionError] = useState<string | null>(null);
 
-  const [isCreateCatalogOpen, setIsCreateCatalogOpen] = useState(false);
+  const [isCreateCatalogOpen, setIsCreateCatalogOpen] = useState(
+    () => Boolean(initialCreateCatalog && isAdmin),
+  );
   const [createCatalogNameDraft, setCreateCatalogNameDraft] = useState("");
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [isFolderActionBusy, setIsFolderActionBusy] = useState(false);
@@ -1067,6 +1071,10 @@ export function CatalogNavigator({
       return;
     }
 
+    if (productTable.pagination.total === 0) {
+      return;
+    }
+
     setEditingProduct(null);
     setIsProductFormOpen(true);
   }, [activeCatalogId, activeFolderId, isLoadingProducts, productTable]);
@@ -1115,6 +1123,14 @@ export function CatalogNavigator({
     setCreateCatalogNameDraft("");
     setIsCreateCatalogOpen(true);
   }, []);
+
+  useEffect(() => {
+    if (!initialCreateCatalog) {
+      return;
+    }
+
+    replaceParams({ nuevo: null });
+  }, [initialCreateCatalog, replaceParams]);
 
   const handleAddFolder = useCallback(() => {
     setFolderActionError(null);
@@ -1182,6 +1198,7 @@ export function CatalogNavigator({
       setSelectedFolderId(payload.folderId);
       setPage(1);
       setIsCreateFolderOpen(false);
+      setIsImportOpen(true);
       router.refresh();
     },
     [activeCatalogId, queryClient, router],
@@ -1424,6 +1441,12 @@ export function CatalogNavigator({
   ) : null;
 
   const visibleFolders = activeCatalogId ? folders : [];
+  const isActiveFolderBlank =
+    !activeFolderId ||
+    (productTable && productTable.folder.id === activeFolderId
+      ? productTable.pagination.total === 0
+      : (folders.find((folder) => folder.id === activeFolderId)?.productCount ??
+          0) === 0);
   const activeFolderName =
     folders.find((folder) => folder.id === activeFolderId)?.name ?? "";
   const activeCatalogName =
@@ -1487,6 +1510,7 @@ export function CatalogNavigator({
                 onSelectSearchFolder={handleSelectFolderSearchResult}
                 onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
                 onAddProductClick={isAdmin ? handleAddProductClick : undefined}
+                isAddProductDisabled={isActiveFolderBlank}
               >
                 <CatalogFolderSelectors
                   catalogs={sortedCatalogs}

@@ -70,6 +70,22 @@ function clientesMenuWrap() {
 }
 
 describe("BillingPillNav clientes menu", () => {
+  it("renders Clientes as a plain link for vendedores", () => {
+    render(<BillingPillNav userRole="VENDEDOR" />);
+
+    const clientsLink = document.querySelector(
+      `a[href="${BILLING_CLIENTS_PATH}"]`,
+    );
+    expect(clientsLink).toHaveTextContent("Clientes");
+    expect(clientsLink).not.toHaveAttribute("aria-haspopup");
+    expect(
+      screen.queryByRole("menu", { name: "Clientes" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "Lista de clientes" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("exposes lista de clientes and lista de deudores under Clientes", () => {
     render(<BillingPillNav userRole="ADMINISTRADOR" />);
 

@@ -40,6 +40,23 @@ describe("CatalogPageIntro", () => {
     expect(onAddProductClick).toHaveBeenCalledTimes(1);
   });
 
+  it("disables the add product card when the folder is blank", () => {
+    const onAddProductClick = vi.fn();
+
+    render(
+      <CatalogPageIntro
+        isAdmin
+        onDebouncedSearchChange={vi.fn()}
+        onAddProductClick={onAddProductClick}
+        isAddProductDisabled
+      />,
+    );
+
+    expect(screen.getByTestId("catalog-action-add-product")).toBeDisabled();
+    fireEvent.click(screen.getByTestId("catalog-action-add-product"));
+    expect(onAddProductClick).not.toHaveBeenCalled();
+  });
+
   it("debounces search input before notifying the parent", () => {
     vi.useFakeTimers();
     const onDebouncedSearchChange = vi.fn();

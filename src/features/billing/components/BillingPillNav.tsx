@@ -377,7 +377,7 @@ export function BillingPillNav({ userRole }: { userRole: UserRole }) {
               billingPathMatchesHref(pathname, tab.href, tab.exact);
             const tabClassName = `${styles.tab} ${isSectionActive ? styles.tabActive : ""} ${isSectionPending ? styles.tabPending : ""}`;
 
-            if (!tab.menuItems?.length) {
+            if ((tab.menuItems?.length ?? 0) < 2) {
               return (
                 <Link
                   key={tab.href}

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
+import { useBeginAdminSectionNavigation } from "@/features/admin/components/AdminSectionTransition";
 import type { DashboardKpi } from "@/features/billing/data/dashboardTypes";
 import { ICON_STROKE } from "@/shared/icons";
 import styles from "@/features/billing/styles/Dashboard.module.scss";
@@ -55,13 +58,18 @@ export function DashboardKpiCard({
   );
 
   const className = `${styles.kpiCard} ${TONE_CLASS[kpi.tone]} ${href ? styles.kpiCardLink : ""}`;
+  const beginNavigation = useBeginAdminSectionNavigation();
 
   if (!href) {
     return <article className={className}>{content}</article>;
   }
 
   return (
-    <Link href={href} className={className}>
+    <Link
+      href={href}
+      className={className}
+      onClick={() => beginNavigation(href, { exact: true })}
+    >
       {content}
     </Link>
   );

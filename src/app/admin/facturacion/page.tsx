@@ -31,6 +31,7 @@ export default async function FacturacionHubPage() {
   return (
     <BillingHub
       initialInvoices={invoicesResult.success ? invoicesResult.data : []}
+      userRole={auth.profile.role}
     />
   );
 }

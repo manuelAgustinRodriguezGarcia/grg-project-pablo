@@ -444,7 +444,10 @@ export function InvoiceItemsSection({
                 </div>
 
                 {isTypeA ? (
-                  <div className={styles.itemLineTotal}>
+                  <div
+                    className={styles.itemLineTotal}
+                    data-mobile-label="P. unitario S/IVA"
+                  >
                     <span
                       className={`${styles.itemLineTotalValue} ${
                         unitNet ? "" : styles.itemLineTotalEmpty
@@ -455,7 +458,10 @@ export function InvoiceItemsSection({
                   </div>
                 ) : null}
 
-                <div className={styles.itemLineTotal}>
+                <div
+                  className={styles.itemLineTotal}
+                  data-mobile-label="TOTAL S/IVA"
+                >
                   <span
                     className={`${styles.itemLineTotalValue} ${
                       lineTotal ? "" : styles.itemLineTotalEmpty

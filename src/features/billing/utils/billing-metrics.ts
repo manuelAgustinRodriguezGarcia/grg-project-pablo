@@ -224,7 +224,7 @@ export function buildInvoiceTypeSlices(
       label: "Factura A",
       amount: amountA,
       percent: percents[0] ?? 0,
-      color: "#062b5f",
+      color: "#ea6a1f",
       invoiceCount: typeA.length,
     },
     {
@@ -232,7 +232,7 @@ export function buildInvoiceTypeSlices(
       label: "Factura B",
       amount: amountB,
       percent: percents[1] ?? 0,
-      color: "#4a96dc",
+      color: "#0066d9",
       invoiceCount: typeB.length,
     },
   ];
@@ -254,14 +254,14 @@ export function buildCollectionSlices(
         label: "Cobrado",
         amount: collected,
         percent: percents[0] ?? 0,
-        color: "#031b3d",
+        color: "#0066d9",
       },
       {
         key: "pending",
         label: "Pendiente",
         amount: pending,
         percent: percents[1] ?? 0,
-        color: "#4a96dc",
+        color: "#dc2626",
       },
     ],
   };

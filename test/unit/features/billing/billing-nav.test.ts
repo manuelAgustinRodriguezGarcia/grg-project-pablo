@@ -6,6 +6,7 @@ import {
   BILLING_NAV_TABS,
   billingTabCurrentMenuItem,
   billingTabMatchesPath,
+  filterBillingNavTabsForRole,
 } from "@/features/billing/data/billingNav";
 import { FileText } from "@/shared/icons";
 
@@ -69,5 +70,19 @@ describe("billing nav tabs", () => {
     expect(
       billingTabCurrentMenuItem(BILLING_DEBTORS_PATH, clientsTab)?.label,
     ).toBe("Clientes con deuda");
+  });
+
+  it("drops the Clientes hover menu when the role only has one option", () => {
+    const sellerTabs = filterBillingNavTabsForRole("VENDEDOR");
+    const sellerClientsTab = sellerTabs.find(
+      (tab) => tab.href === BILLING_CLIENTS_PATH,
+    );
+
+    expect(sellerClientsTab?.menuItems).toBeUndefined();
+    expect(
+      filterBillingNavTabsForRole("ADMINISTRADOR").find(
+        (tab) => tab.href === BILLING_CLIENTS_PATH,
+      )?.menuItems,
+    ).toHaveLength(2);
   });
 });

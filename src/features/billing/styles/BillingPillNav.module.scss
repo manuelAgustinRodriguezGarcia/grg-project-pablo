@@ -9,7 +9,8 @@
   overflow: hidden;
   background: $white;
 
-  &:has(.tabWrapOpen) {
+  &:has(.tabWrapOpen),
+  &:has(.mobileMenuOpen) {
     overflow: visible;
   }
 }
@@ -243,16 +244,14 @@
   overflow: hidden;
   min-width: 14.5rem;
   padding: 0 2.25rem;
-  border: 1px solid rgba($navy, 0.16);
-  background: $white;
-  color: rgba($navy, 0.68);
+  border: none;
+  background: rgba($blue, 0.12);
+  color: $blue;
   font-size: 0.95rem;
   font-weight: 650;
   text-decoration: none;
   white-space: nowrap;
-  transition:
-    color 0.2s ease,
-    border-color 0.2s ease;
+  transition: color 0.2s ease;
 
   &::before {
     content: "";
@@ -271,7 +270,6 @@
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       color: $white;
-      border-color: $blue;
 
       &::before {
         transform: scaleY(1);
@@ -294,7 +292,6 @@
 .newInvoiceButtonCurrent,
 .newInvoiceButton[aria-current="page"] {
   color: $white;
-  border-color: $blue;
 
   &::before {
     transform: scaleY(1);
@@ -336,18 +333,25 @@
   justify-content: center;
   min-width: 1.55rem;
   padding: 0.12rem 0.38rem;
-  border: 1px solid rgba($navy, 0.22);
+  border: 1px solid rgba($blue, 0.28);
   border-radius: 0.3rem;
-  background: rgba($navy, 0.05);
+  background: rgba($blue, 0.1);
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1;
-  color: rgba($navy, 0.68);
+  color: $blue;
 }
 
-.newInvoiceButton:hover .newInvoiceShortcut,
+@media (hover: hover) and (pointer: fine) {
+  .newInvoiceButton:hover .newInvoiceShortcut {
+    border-color: rgba($white, 0.38);
+    background: rgba($white, 0.16);
+    color: $white;
+  }
+}
+
 .newInvoiceButtonCurrent .newInvoiceShortcut,
 .newInvoiceButton[aria-current="page"] .newInvoiceShortcut {
   border-color: rgba($white, 0.38);
@@ -374,13 +378,19 @@
     display: none;
   }
 
+  .bar {
+    overflow: visible;
+  }
+
   .mobileNav {
     position: relative;
     display: flex;
     align-items: center;
     flex: 1;
     min-width: 0;
-    height: 100%;
+    height: auto;
+    align-self: center;
+    overflow: visible;
   }
 
   .mobileTrigger {
@@ -437,9 +447,12 @@
   .mobileMenu {
     position: absolute;
     top: calc(100% + 0.45rem);
+    bottom: auto;
     right: 0;
     left: 0;
-    z-index: 40;
+    z-index: 80;
+    max-height: min(22rem, calc(100dvh - 5.5rem));
+    overflow: auto;
     margin: 0;
     padding: 0.35rem;
     list-style: none;
@@ -451,7 +464,7 @@
       0 2px 8px rgba($navy, 0.06);
     opacity: 0;
     visibility: hidden;
-    transform: translateY(0.35rem);
+    transform: translateY(-0.35rem);
     pointer-events: none;
     transition:
       opacity 0.18s ease,
@@ -492,6 +505,10 @@
     display: inline-flex;
   }
 
+  .newInvoiceShortcut {
+    display: none;
+  }
+
   .newInvoiceButton {
     position: fixed;
     right: 1rem;
@@ -503,9 +520,21 @@
     height: 3rem;
     padding: 0 1.2rem 0 1.05rem;
     border-radius: 999px;
+    background: $blue;
+    color: $white;
     box-shadow:
       0 4px 14px rgba($navy, 0.16),
       0 10px 24px rgba($blue, 0.22);
+
+    &::before {
+      content: none;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        color: $white;
+      }
+    }
   }
 
   .newInvoiceButtonCurrent {

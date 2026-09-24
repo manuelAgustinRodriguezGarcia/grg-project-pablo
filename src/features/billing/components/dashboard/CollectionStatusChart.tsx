@@ -3,7 +3,6 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { DashboardDonutSlice } from "@/features/billing/data/dashboardTypes";
 import { DonutTooltip } from "@/features/billing/components/dashboard/ChartTooltip";
-import { getBlueScaleColorsByAmount } from "@/features/billing/utils/dashboard-chart-colors";
 import { formatArs } from "@/features/billing/utils/format-ars";
 import styles from "@/features/billing/styles/Dashboard.module.scss";
 
@@ -16,7 +15,6 @@ export function CollectionStatusChart({
   slices,
   total,
 }: CollectionStatusChartProps) {
-  const sliceColors = getBlueScaleColorsByAmount(slices);
   const hasData = total > 0;
 
   return (
@@ -37,13 +35,13 @@ export function CollectionStatusChart({
                   data={[...slices]}
                   dataKey="amount"
                   nameKey="label"
-                  innerRadius="62%"
-                  outerRadius="84%"
+                  innerRadius="66%"
+                  outerRadius="88%"
                   paddingAngle={2}
                   stroke="none"
                 >
-                  {slices.map((slice, index) => (
-                    <Cell key={slice.key} fill={sliceColors[index]} />
+                  {slices.map((slice) => (
+                    <Cell key={slice.key} fill={slice.color} />
                   ))}
                 </Pie>
                 <Tooltip
@@ -54,11 +52,11 @@ export function CollectionStatusChart({
             </ResponsiveContainer>
           </div>
           <ul className={styles.legend}>
-            {slices.map((slice, index) => (
+            {slices.map((slice) => (
               <li key={slice.key} className={styles.legendItem}>
                 <span
                   className={styles.legendSwatch}
-                  style={{ background: sliceColors[index] }}
+                  style={{ background: slice.color }}
                   aria-hidden
                 />
                 <span className={styles.legendText}>

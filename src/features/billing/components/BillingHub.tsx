@@ -4,7 +4,7 @@ import { useMemo, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { useAdminSectionTransition, useReportAdminSectionReady } from "@/features/admin/components/AdminSectionTransition";
-import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
+import { BillingGuideModal } from "@/features/billing/components/BillingGuideModal";
 import { InvoiceTypeChart } from "@/features/billing/components/dashboard/InvoiceTypeChart";
 import { TopRankCard } from "@/features/billing/components/dashboard/TopRankCard";
 import { useUnsavedInvoiceDraft } from "@/features/billing/components/invoices/UnsavedInvoiceDraftContext";
@@ -25,10 +25,12 @@ import {
   TrendingUp,
   Wallet,
 } from "@/shared/icons";
+import type { UserRole } from "@/generated/prisma/client";
 import styles from "@/features/billing/styles/BillingHub.module.scss";
 
 type BillingHubProps = {
   initialInvoices?: BillingInvoiceListItem[];
+  userRole: UserRole;
 };
 
 type HubKpiCardProps = {
@@ -98,7 +100,10 @@ function HubKpiCard({
   );
 }
 
-export function BillingHub({ initialInvoices = [] }: BillingHubProps) {
+export function BillingHub({
+  initialInvoices = [],
+  userRole,
+}: BillingHubProps) {
   const invoicesQuery = useBillingInvoicesQuery(initialInvoices);
   const sectionTransition = useAdminSectionTransition();
   const unsavedDraft = useUnsavedInvoiceDraft();
@@ -252,13 +257,9 @@ export function BillingHub({ initialInvoices = [] }: BillingHubProps) {
       </section>
 
       {isGuideOpen ? (
-        <ConfirmDialog
-          title="Guía de facturación"
-          message="Acá va a estar el tutorial de cómo usar el sitio: crear clientes, emitir facturas, cobrar con Recibos X y consultar el Libro IVA. Por ahora esta sección es un placeholder."
-          confirmLabel="Entendido"
-          cancelPlacement="corner"
-          onConfirm={() => setIsGuideOpen(false)}
-          onCancel={() => setIsGuideOpen(false)}
+        <BillingGuideModal
+          userRole={userRole}
+          onClose={() => setIsGuideOpen(false)}
         />
       ) : null}
     </div>

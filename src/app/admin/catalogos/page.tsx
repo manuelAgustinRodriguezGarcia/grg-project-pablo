@@ -12,6 +12,7 @@ type AdminCatalogosPageProps = {
   searchParams: Promise<{
     catalog?: string | string[];
     folder?: string | string[];
+    nuevo?: string | string[];
   }>;
 };
 
@@ -36,6 +37,7 @@ export default async function AdminCatalogosPage({
       catalogs={directory.catalogs}
       initialCatalogId={firstParam(params.catalog)}
       initialFolderId={firstParam(params.folder)}
+      initialCreateCatalog={firstParam(params.nuevo) === "1"}
       canEdit={adminAuth.canEdit}
       isAdmin={adminAuth.isAdmin}
       enableColumnFilters

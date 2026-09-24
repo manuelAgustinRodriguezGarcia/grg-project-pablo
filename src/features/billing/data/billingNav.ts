@@ -237,6 +237,16 @@ export function filterBillingNavTabsForRole(
         return null;
       }
 
+      if (menuItems.length === 1) {
+        return {
+          href: tab.href,
+          label: tab.label,
+          icon: tab.icon,
+          exact: tab.exact,
+          permission: tab.permission,
+        };
+      }
+
       return { ...tab, menuItems };
     })
     .filter((tab): tab is BillingNavTab => tab !== null);

@@ -60,6 +60,7 @@ type CatalogPageIntroProps = {
   onSelectSearchFolder?: (catalogId: string, folderId: string) => void;
   onImportExcelClick?: () => void;
   onAddProductClick?: () => void;
+  isAddProductDisabled?: boolean;
   children?: ReactNode;
 };
 
@@ -88,6 +89,7 @@ export function CatalogPageIntro({
   onSelectSearchFolder,
   onImportExcelClick,
   onAddProductClick,
+  isAddProductDisabled = false,
   children,
 }: CatalogPageIntroProps) {
   const listboxId = useId();
@@ -341,6 +343,8 @@ export function CatalogPageIntro({
                 card.variant === "green"
                   ? styles.actionCardIconGreen
                   : styles.actionCardIconBlue;
+              const isDisabled =
+                card.id === "add-product" && isAddProductDisabled;
 
               return (
                 <button
@@ -349,6 +353,7 @@ export function CatalogPageIntro({
                   className={`${styles.actionCard} ${cardClassName}`}
                   aria-label={card.title}
                   data-testid={`catalog-action-${card.id}`}
+                  disabled={isDisabled}
                   onClick={() =>
                     handleActionCardClick(card.id, {
                       onImportExcelClick,
