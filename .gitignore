@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 .superpowers/
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
 
 # debug
 npm-debug.log*
