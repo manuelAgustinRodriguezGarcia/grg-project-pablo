@@ -18,7 +18,8 @@ import {
   type BillingGuideArticle,
   type BillingGuideCategory,
 } from "@/features/billing/data/billingGuide";
-import { ArrowLeft, ChevronRight, ICON_STROKE, X } from "@/shared/icons";
+import { useEscapeToClose } from "@/features/billing/hooks/useBillingModalKeyboard";
+import { ArrowLeft, ChevronRight, ICON_STROKE, Info, X } from "@/shared/icons";
 import modalStyles from "@/features/prices/styles/PriceColumnEditModal.module.scss";
 import styles from "@/features/billing/styles/BillingGuideModal.module.scss";
 
@@ -39,13 +40,18 @@ function prefersReducedMotion(): boolean {
   );
 }
 
+const EMPTY_CATEGORY_COPY =
+  "Todavía no hay guías disponibles en esta sección.";
+const EMPTY_CATEGORY_PERMISSION_COPY =
+  "No hay artículos disponibles para tu usuario en esta sección.";
+
 function emptyCategoryMessage(category: BillingGuideCategory): string {
   const source = findBillingGuideCategory(BILLING_GUIDE_CATEGORIES, category.id);
   if (!source || source.articles.length === 0) {
-    return "Pronto vamos a agregar más preguntas acá.";
+    return EMPTY_CATEGORY_COPY;
   }
 
-  return "No hay artículos disponibles para tu usuario en esta sección.";
+  return EMPTY_CATEGORY_PERMISSION_COPY;
 }
 
 function GuideArticleBody({
@@ -210,24 +216,7 @@ export function BillingGuideModal({ userRole, onClose }: BillingGuideModalProps)
     headingRef.current?.focus();
   }, [screen, categoryId, articleId]);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") {
-        return;
-      }
-
-      event.preventDefault();
-      if (screen === "home") {
-        requestClose();
-        return;
-      }
-
-      goBack();
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [goBack, requestClose, screen]);
+  useEscapeToClose(requestClose, !isClosing);
 
   useEffect(() => {
     if (screen === "category" && !selectedCategory) {
@@ -412,7 +401,10 @@ export function BillingGuideModal({ userRole, onClose }: BillingGuideModalProps)
                   })}
                 </ul>
               ) : (
-                <div className={styles.emptyState}>
+                <div className={styles.emptyState} role="status">
+                  <span className={styles.iconWrap} aria-hidden>
+                    <Info className={styles.icon} strokeWidth={ICON_STROKE} />
+                  </span>
                   <p className={styles.emptyText}>
                     {emptyCategoryMessage(selectedCategory)}
                   </p>

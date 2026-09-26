@@ -2,6 +2,8 @@
 
 .overlay.overlay {
   z-index: 1100;
+  align-items: center;
+  padding: 1.25rem;
 }
 
 .overlayClosing {
@@ -38,13 +40,14 @@
 .card.card {
   width: min(100%, 58rem);
   height: min(86dvh, 46rem);
-  max-height: calc(100dvh - 2rem);
+  max-height: calc(100dvh - 2.5rem);
   display: flex;
   flex-direction: column;
   gap: 0;
   overflow: hidden;
   padding: 0;
   background: $white;
+  border-radius: $radius-lg;
 }
 
 .header {
@@ -166,6 +169,7 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 1.15rem 1.25rem 1.4rem;
   background: $bg-content;
 }
@@ -191,14 +195,12 @@
   cursor: pointer;
   transition:
     border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
+    box-shadow 0.15s ease;
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       border-color: rgba($blue, 0.4);
       box-shadow: 0 8px 22px rgba($navy, 0.08);
-      transform: translateY(-1px);
     }
   }
 
@@ -351,7 +353,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.35rem;
+  gap: 0.75rem;
   padding: 1.15rem 1.05rem;
   border: 1px dashed rgba($navy, 0.16);
   border-radius: $radius-md;
@@ -505,8 +507,8 @@
 }
 
 .infoBlockWarning {
-  background: rgba(#b45309, 0.08);
-  border-color: rgba(#b45309, 0.16);
+  background: rgba($navy, 0.04);
+  border-color: rgba($navy, 0.14);
 }
 
 .infoTitle {
@@ -523,19 +525,37 @@
   color: rgba($navy, 0.68);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .card.card {
+    width: min(100%, 48rem);
+    height: min(88dvh, 46rem);
+    max-height: calc(100dvh - 2rem);
+  }
+
+  .overlay.overlay {
+    padding: 1rem;
+  }
+
+  .homeGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .overlay.overlay {
+    padding: 0.75rem;
+  }
+
+  .card.card {
+    width: 100%;
     height: calc(100dvh - 1.5rem);
+    max-height: calc(100dvh - 1.5rem);
   }
 
   .header,
   .body {
     padding-left: 1rem;
     padding-right: 1rem;
-  }
-
-  .homeGrid {
-    grid-template-columns: 1fr;
   }
 
   .backButton span {
@@ -554,7 +574,4 @@
     animation: none;
   }
 
-  .topicCard:hover {
-    transform: none;
-  }
 }
