@@ -54,18 +54,18 @@ type TableColumn = {
 };
 
 const COLUMNS_B: TableColumn[] = [
-  { key: "code", label: "Codigo", width: 62, align: "left" },
+  { key: "code", label: "Código", width: 62, align: "left" },
   { key: "detail", label: "Detalle", width: 248, align: "left" },
   { key: "qty", label: "Cant.", width: 48, align: "right" },
-  { key: "unit", label: "P. unitario", width: 90, align: "right" },
+  { key: "unit", label: "P. Unitario", width: 90, align: "right" },
   { key: "total", label: "Total", width: 75, align: "right" },
 ];
 
 const COLUMNS_A: TableColumn[] = [
-  { key: "code", label: "Codigo", width: 58, align: "left" },
+  { key: "code", label: "Código", width: 58, align: "left" },
   { key: "detail", label: "Detalle", width: 210, align: "left" },
   { key: "qty", label: "Cant.", width: 42, align: "right" },
-  { key: "unit", label: "P. unitario S/IVA", width: 108, align: "right" },
+  { key: "unit", label: "P. Unitario S/IVA", width: 108, align: "right" },
   { key: "total", label: "Total S/IVA", width: 105, align: "right" },
 ];
 
@@ -179,7 +179,7 @@ function drawClientBox(
     joinLocation(input.clientCity, input.clientProvince),
     identification,
     `Condicion IVA: ${IVA_CONDITION_LABELS[input.clientIvaCondition]}`,
-    `Codigo cliente: ${input.clientCode}`,
+    `Código cliente: ${input.clientCode}`,
   ].filter((line): line is string => Boolean(line));
 
   const tipoLabel = `Tipo de factura: ${invoicePdfTipoFacturaLabel(input.paymentMethod)}`;

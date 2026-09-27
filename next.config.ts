@@ -71,16 +71,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  async rewrites() {
-    return {
-      afterFiles: [
-        {
-          source: "/admin/facturacion/facturas",
-          destination: "/admin/facturacion/comprobantes",
-        },
-      ],
-    };
-  },
 };
 
 export default nextConfig;

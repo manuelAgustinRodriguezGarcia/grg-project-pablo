@@ -66,7 +66,7 @@ function InvoiceItemsTable({ invoice }: { invoice: BillingInvoiceListItem }) {
             <th scope="col">Código</th>
             <th scope="col">Detalle</th>
             <th scope="col">Cant.</th>
-            <th scope="col">P. unitario</th>
+            <th scope="col">P. Unitario</th>
             <th scope="col">Total</th>
           </tr>
         </thead>

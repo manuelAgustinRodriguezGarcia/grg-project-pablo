@@ -302,8 +302,8 @@ export function InvoiceItemsSection({
           <span>Rubro</span>
           <span>Detalle</span>
           <span>Cant.</span>
-          <span>P. unit. c/IVA</span>
-          {isTypeA ? <span>P. unitario S/IVA</span> : null}
+          <span>P. Unitario c/IVA</span>
+          {isTypeA ? <span>P. Unitario S/IVA</span> : null}
           <span>TOTAL S/IVA</span>
           <span />
         </div>
@@ -446,7 +446,7 @@ export function InvoiceItemsSection({
                 {isTypeA ? (
                   <div
                     className={styles.itemLineTotal}
-                    data-mobile-label="P. unitario S/IVA"
+                    data-mobile-label="P. Unitario S/IVA"
                   >
                     <span
                       className={`${styles.itemLineTotalValue} ${
