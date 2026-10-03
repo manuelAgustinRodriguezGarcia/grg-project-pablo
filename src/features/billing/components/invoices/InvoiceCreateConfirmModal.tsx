@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type {
+  BillingFiscalEnvironment,
   BillingInvoiceType,
   BillingPaymentMethod,
 } from "@/generated/prisma/client";
@@ -14,8 +15,32 @@ import {
 import { isTypingTarget } from "@/features/billing/hooks/useBillingModalKeyboard";
 import type { InvoiceItemRow } from "./InvoiceItemsSection";
 import { isCompleteRow } from "./InvoiceItemsSection";
+import { PRODUCTION_EMISSION_DISABLED_MESSAGE } from "@/shared/fiscal/production-emission";
 import confirmStyles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 import styles from "@/features/billing/styles/NewInvoice.module.scss";
+
+function confirmButtonLabel(
+  environment: BillingFiscalEnvironment,
+  isSubmitting: boolean,
+  productionEmissionEnabled: boolean,
+): string {
+  switch (environment) {
+    case "MODO_PRUEBA":
+      return isSubmitting ? "Creando…" : "Confirmar factura";
+    case "HOMOLOGACION":
+      return isSubmitting ? "Emitiendo factura..." : "Emitir factura";
+    case "PRODUCCION":
+      if (!productionEmissionEnabled) {
+        return PRODUCTION_EMISSION_DISABLED_MESSAGE;
+      }
+
+      return isSubmitting ? "Emitiendo factura..." : "Emitir factura";
+    default: {
+      const unexpected: never = environment;
+      return unexpected;
+    }
+  }
+}
 
 function formatCents(cents: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -35,7 +60,10 @@ type InvoiceCreateConfirmModalProps = {
   ivaPercent: number;
   appliedDiscount: number;
   paymentMethod: BillingPaymentMethod;
+  environment?: BillingFiscalEnvironment;
+  productionEmissionEnabled?: boolean;
   isSubmitting: boolean;
+  submitError?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -49,7 +77,10 @@ export function InvoiceCreateConfirmModal({
   ivaPercent,
   appliedDiscount,
   paymentMethod,
+  environment = "MODO_PRUEBA",
+  productionEmissionEnabled = false,
   isSubmitting,
+  submitError = null,
   onConfirm,
   onCancel,
 }: InvoiceCreateConfirmModalProps) {
@@ -191,6 +222,29 @@ export function InvoiceCreateConfirmModal({
           </div>
         </dl>
 
+        {environment === "HOMOLOGACION" ? (
+          <p className={styles.createConfirmNotice}>
+            El comprobante será enviado a ARCA para su autorización.
+          </p>
+        ) : null}
+
+        {environment === "PRODUCCION" && productionEmissionEnabled ? (
+          <>
+            <p className={styles.createConfirmNotice}>
+              El comprobante será emitido en ARCA y tendrá validez fiscal.
+            </p>
+            <p className={styles.createConfirmNotice}>
+              Estás por emitir un comprobante fiscal real.
+            </p>
+          </>
+        ) : null}
+
+        {submitError ? (
+          <p className={styles.blockingError} role="alert">
+            {submitError}
+          </p>
+        ) : null}
+
         <div className={confirmStyles.confirmActions}>
           <button
             type="button"
@@ -209,7 +263,11 @@ export function InvoiceCreateConfirmModal({
             disabled={isSubmitting}
             aria-keyshortcuts="C"
           >
-            {isSubmitting ? "Creando…" : "Confirmar factura"}
+            {confirmButtonLabel(
+              environment,
+              isSubmitting,
+              productionEmissionEnabled,
+            )}
             {isSubmitting ? null : (
               <kbd className={styles.shortcutKbd}>C</kbd>
             )}

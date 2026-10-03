@@ -150,11 +150,11 @@ describe("InvoiceSummarySection discount and submit keyboard", () => {
           submitError={null}
           validationHints={[]}
           onDiscountInputChange={vi.fn()}
-          onApplyDiscount={onApplyDiscount}
+          onApplyDiscount={onApplyDiscount as () => void}
           onClearDiscount={vi.fn()}
           onPaymentMethodChange={vi.fn()}
           onNotesChange={vi.fn()}
-          onSubmit={onSubmit}
+          onSubmit={onSubmit as () => void}
         />,
       ),
     };
@@ -183,6 +183,103 @@ describe("InvoiceSummarySection discount and submit keyboard", () => {
     expect(
       screen.getByRole("button", { name: /Crear factura en modo prueba/ }),
     ).toHaveFocus();
+  });
+
+  it("en homologación el botón dice Emitir factura", () => {
+    render(
+      <InvoiceSummarySection
+        totals={null}
+        invoiceType={null}
+        ivaPercent={21}
+        discountInput=""
+        appliedDiscount={0}
+        paymentMethod="CONTADO"
+        allowOnAccount
+        notes=""
+        canSubmit
+        isSubmitting={false}
+        environment="HOMOLOGACION"
+        blockingError={null}
+        submitError={null}
+        validationHints={[]}
+        onDiscountInputChange={vi.fn()}
+        onApplyDiscount={vi.fn()}
+        onClearDiscount={vi.fn()}
+        onPaymentMethodChange={vi.fn()}
+        onNotesChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Emitir factura" }),
+    ).toBeEnabled();
+  });
+
+  it("en producción sin kill switch el botón queda deshabilitado", () => {
+    render(
+      <InvoiceSummarySection
+        totals={null}
+        invoiceType={null}
+        ivaPercent={21}
+        discountInput=""
+        appliedDiscount={0}
+        paymentMethod="CONTADO"
+        allowOnAccount
+        notes=""
+        canSubmit={false}
+        isSubmitting={false}
+        environment="PRODUCCION"
+        productionEmissionEnabled={false}
+        blockingError="La emisión en producción no está habilitada."
+        submitError={null}
+        validationHints={[]}
+        onDiscountInputChange={vi.fn()}
+        onApplyDiscount={vi.fn()}
+        onClearDiscount={vi.fn()}
+        onPaymentMethodChange={vi.fn()}
+        onNotesChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "La emisión en producción no está habilitada.",
+      }),
+    ).toBeDisabled();
+  });
+
+  it("en producción habilitada el botón dice Emitir factura", () => {
+    render(
+      <InvoiceSummarySection
+        totals={null}
+        invoiceType={null}
+        ivaPercent={21}
+        discountInput=""
+        appliedDiscount={0}
+        paymentMethod="CONTADO"
+        allowOnAccount
+        notes=""
+        canSubmit
+        isSubmitting={false}
+        environment="PRODUCCION"
+        productionEmissionEnabled
+        blockingError={null}
+        submitError={null}
+        validationHints={[]}
+        onDiscountInputChange={vi.fn()}
+        onApplyDiscount={vi.fn()}
+        onClearDiscount={vi.fn()}
+        onPaymentMethodChange={vi.fn()}
+        onNotesChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Emitir factura" }),
+    ).toBeEnabled();
   });
 
   it("Enter con descuento inválido no aplica ni avanza", () => {

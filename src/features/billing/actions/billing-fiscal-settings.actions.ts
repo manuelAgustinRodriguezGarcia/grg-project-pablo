@@ -2,10 +2,12 @@
 
 import { AuthError } from "@/server/auth";
 import { getSafeClientMessage } from "@/server/errors/sanitize-error";
+import { isArcaProductionEmissionEnabled } from "@/server/arca/config/production-emission";
 import { billingFiscalSettingsService } from "@/server/services/billing-fiscal-settings.service";
 import { BillingFiscalSettingsError } from "@/server/services/billing-fiscal-settings.errors";
 import {
   updateGenericClientLimitSchema,
+  updateIssuerFiscalSettingsSchema,
   updateIvaPercentSchema,
 } from "@/features/billing/schemas/billing-fiscal-settings.schemas";
 import type {
@@ -21,6 +23,15 @@ function toFiscalContext(
     genericClientLimit: settings.genericClientLimit.toNumber(),
     pointOfSale: settings.pointOfSale,
     environment: settings.environment,
+    issuerName: settings.issuerName,
+    issuerCuit: settings.issuerCuit,
+    issuerAddress: settings.issuerAddress,
+    issuerCity: settings.issuerCity,
+    issuerProvince: settings.issuerProvince,
+    issuerIvaCondition: settings.issuerIvaCondition,
+    issuerGrossIncome: settings.issuerGrossIncome,
+    issuerActivitiesStartedAt: settings.issuerActivitiesStartedAt,
+    productionEmissionEnabled: isArcaProductionEmissionEnabled(),
   };
 }
 
@@ -92,6 +103,29 @@ export async function updateBillingGenericClientLimitAction(
   try {
     const settings = await billingFiscalSettingsService.updateSettings({
       genericClientLimit: parsed.data.genericClientLimit,
+    });
+    return { success: true, data: toFiscalContext(settings) };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function updateBillingIssuerFiscalSettingsAction(
+  input: unknown,
+): Promise<BillingInvoiceActionResult<BillingFiscalContext>> {
+  const parsed = updateIssuerFiscalSettingsSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
+      code: "VALIDATION_ERROR",
+    };
+  }
+
+  try {
+    const settings = await billingFiscalSettingsService.updateSettings({
+      issuer: parsed.data,
     });
     return { success: true, data: toFiscalContext(settings) };
   } catch (error) {

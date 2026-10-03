@@ -21,6 +21,14 @@ export class BillingFiscalSettingsRepository {
   async update(data: {
     ivaPercent?: Prisma.Decimal;
     genericClientLimit?: Prisma.Decimal;
+    issuerName?: string;
+    issuerCuit?: string;
+    issuerAddress?: string;
+    issuerCity?: string;
+    issuerProvince?: string;
+    issuerIvaCondition?: string;
+    issuerGrossIncome?: string;
+    issuerActivitiesStartedAt?: string;
   }): Promise<BillingFiscalSettings> {
     return prisma.billingFiscalSettings.update({
       where: { id: BILLING_FISCAL_SETTINGS_ID },

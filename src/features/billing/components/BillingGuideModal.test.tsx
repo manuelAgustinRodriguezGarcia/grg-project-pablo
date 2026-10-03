@@ -97,6 +97,46 @@ describe("BillingGuideModal", () => {
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 
+  it("keeps keyboard focus inside the dialog", () => {
+    render(
+      <BillingGuideModal userRole="ADMINISTRADOR" onClose={vi.fn()} />,
+    );
+
+    const closeButton = screen.getByRole("button", { name: "Cerrar" });
+    const topicButtons = screen
+      .getAllByRole("button")
+      .filter((button) => button !== closeButton);
+    const lastTopic = topicButtons[topicButtons.length - 1];
+    if (!lastTopic) {
+      throw new Error("Expected at least one guide topic.");
+    }
+
+    lastTopic.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+
+    expect(closeButton).toHaveFocus();
+  });
+
+  it("locks background scroll while open and restores the previous focus", () => {
+    const opener = document.createElement("button");
+    opener.type = "button";
+    document.body.appendChild(opener);
+    opener.focus();
+    document.body.style.overflow = "auto";
+
+    const { unmount } = render(
+      <BillingGuideModal userRole="ADMINISTRADOR" onClose={vi.fn()} />,
+    );
+
+    expect(document.body.style.overflow).toBe("hidden");
+
+    unmount();
+
+    expect(document.body.style.overflow).toBe("auto");
+    expect(opener).toHaveFocus();
+    opener.remove();
+  });
+
   it("returns to home after closing and opening again", () => {
     const { unmount } = render(
       <BillingGuideModal userRole="ADMINISTRADOR" onClose={vi.fn()} />,

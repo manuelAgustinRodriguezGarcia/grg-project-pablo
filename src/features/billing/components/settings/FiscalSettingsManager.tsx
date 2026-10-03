@@ -8,13 +8,16 @@ import { ConfirmDialog } from "@/features/catalog/components/ConfirmDialog";
 import {
   getBillingFiscalSettingsAction,
   updateBillingGenericClientLimitAction,
+  updateBillingIssuerFiscalSettingsAction,
   updateBillingIvaPercentAction,
 } from "@/features/billing/actions/billing-fiscal-settings.actions";
+import { updateIssuerFiscalSettingsSchema } from "@/features/billing/schemas/billing-fiscal-settings.schemas";
 import type {
   BillingFiscalContext,
   BillingInvoiceActionResult,
 } from "@/features/billing/types/billing-invoice.types";
 import { FISCAL_ENVIRONMENT_LABELS } from "@/features/billing/types/billing-invoice.types";
+import { PRODUCTION_EMISSION_DISABLED_MESSAGE } from "@/shared/fiscal/production-emission";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import {
   formatIvaPercent,
@@ -25,8 +28,14 @@ import {
   maskPesosInput,
   parsePesosInput,
 } from "@/features/billing/utils/receipt-allocation";
+import {
+  formatActivitiesStartedAt,
+  getIssuerFiscalConfigurationStatus,
+  ISSUER_FISCAL_FIELD_LABELS,
+} from "@/features/billing/utils/issuer-fiscal-configuration";
 import { centsToPesos, pesosToCents } from "@/shared/utils/billing-invoice-totals";
-import { Cog, ICON_STROKE, Percent, Wallet } from "@/shared/icons";
+import { formatCuit } from "@/shared/utils/identification";
+import { Building2, Cog, ICON_STROKE, Percent, Wallet } from "@/shared/icons";
 import styles from "@/features/billing/styles/FiscalSettings.module.scss";
 
 type FiscalSettingsManagerProps = {
@@ -34,9 +43,53 @@ type FiscalSettingsManagerProps = {
   canUpdateSettings?: boolean;
 };
 
+type IssuerForm = {
+  issuerName: string;
+  issuerCuit: string;
+  issuerAddress: string;
+  issuerCity: string;
+  issuerProvince: string;
+  issuerIvaCondition: string;
+  issuerGrossIncome: string;
+  issuerActivitiesStartedAt: string;
+};
+
 type PendingChange =
   | { kind: "iva"; nextValue: number }
-  | { kind: "limit"; nextValue: number };
+  | { kind: "limit"; nextValue: number }
+  | { kind: "issuer"; nextValue: IssuerForm };
+
+function issuerFormFromSettings(settings: BillingFiscalContext): IssuerForm {
+  return {
+    issuerName: settings.issuerName ?? "",
+    issuerCuit: settings.issuerCuit ? formatCuit(settings.issuerCuit) : "",
+    issuerAddress: settings.issuerAddress ?? "",
+    issuerCity: settings.issuerCity ?? "",
+    issuerProvince: settings.issuerProvince ?? "",
+    issuerIvaCondition: settings.issuerIvaCondition ?? "",
+    issuerGrossIncome: settings.issuerGrossIncome ?? "",
+    issuerActivitiesStartedAt: formatActivitiesStartedAt(
+      settings.issuerActivitiesStartedAt,
+    ),
+  };
+}
+
+function environmentHint(settings: BillingFiscalContext): string {
+  switch (settings.environment) {
+    case "MODO_PRUEBA":
+      return "Numeración interna. Los comprobantes no se envían a ARCA.";
+    case "HOMOLOGACION":
+      return "Ambiente de prueba de ARCA. No tiene validez fiscal de producción.";
+    case "PRODUCCION":
+      return settings.productionEmissionEnabled
+        ? "Los comprobantes se emiten en ARCA y tienen validez fiscal."
+        : PRODUCTION_EMISSION_DISABLED_MESSAGE;
+    default: {
+      const unexpected: never = settings.environment;
+      return unexpected;
+    }
+  }
+}
 
 function environmentLabel(environment: BillingFiscalContext["environment"]): string {
   switch (environment) {
@@ -76,6 +129,10 @@ export function FiscalSettingsManager({
   );
   const [ivaError, setIvaError] = useState<string | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
+  const [issuerForm, setIssuerForm] = useState(() =>
+    issuerFormFromSettings(settings),
+  );
+  const [issuerError, setIssuerError] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingChange | null>(null);
   const [isBusy, setIsBusy] = useState(false);
 
@@ -128,6 +185,19 @@ export function FiscalSettingsManager({
             </>
           ),
         };
+      case "issuer":
+        return {
+          title: "Guardar datos del emisor",
+          message: (
+            <>
+              Está por guardar la razón social, el CUIT y el domicilio fiscal
+              del emisor. El CUIT se usa en las próximas emisiones.
+              <br />
+              <br />
+              ¿Desea continuar?
+            </>
+          ),
+        };
       default: {
         const _exhaustive: never = pending;
         return _exhaustive;
@@ -157,6 +227,20 @@ export function FiscalSettingsManager({
     setPending({ kind: "limit", nextValue: parsedLimit });
   }
 
+  function requestIssuerUpdate() {
+    setIssuerError(null);
+    const parsed = updateIssuerFiscalSettingsSchema.safeParse(issuerForm);
+
+    if (!parsed.success) {
+      setIssuerError(parsed.error.issues[0]?.message ?? "Datos inválidos.");
+      return;
+    }
+
+    setPending({ kind: "issuer", nextValue: parsed.data });
+  }
+
+  const issuerStatus = getIssuerFiscalConfigurationStatus(settings);
+
   async function persistPending() {
     if (!pending) {
       return;
@@ -177,6 +261,11 @@ export function FiscalSettingsManager({
             genericClientLimit: pending.nextValue,
           });
           break;
+        case "issuer":
+          result = await updateBillingIssuerFiscalSettingsAction(
+            pending.nextValue,
+          );
+          break;
         default: {
           const _exhaustive: never = pending;
           throw new Error(`Unhandled settings change: ${_exhaustive}`);
@@ -184,10 +273,20 @@ export function FiscalSettingsManager({
       }
 
       if (!result.success) {
-        if (pending.kind === "iva") {
-          setIvaError(result.error);
-        } else {
-          setLimitError(result.error);
+        switch (pending.kind) {
+          case "iva":
+            setIvaError(result.error);
+            break;
+          case "limit":
+            setLimitError(result.error);
+            break;
+          case "issuer":
+            setIssuerError(result.error);
+            break;
+          default: {
+            const unexpected: never = pending;
+            throw new Error(`Unhandled settings change: ${unexpected}`);
+          }
         }
         return;
       }
@@ -200,6 +299,8 @@ export function FiscalSettingsManager({
       setLimitInput(
         formatPesosInput(pesosToCents(result.data.genericClientLimit)),
       );
+      setIssuerForm(issuerFormFromSettings(result.data));
+      setIssuerError(null);
       setPending(null);
     } finally {
       setIsBusy(false);
@@ -212,10 +313,20 @@ export function FiscalSettingsManager({
         <header className={styles.header}>
           <h2 className={styles.title}>Configuración fiscal</h2>
           <p className={styles.subtitle}>
-            IVA vigente y límite para cliente genérico. La conexión con ARCA se
-            configura más adelante.
+            IVA, límite de cliente genérico y datos fiscales del emisor.
           </p>
         </header>
+
+        {issuerStatus.complete ? null : (
+          <p className={styles.warning} role="status">
+            Faltan datos fiscales del emisor para habilitar producción.
+            {issuerStatus.missingFields.length > 0
+              ? ` ${issuerStatus.missingFields
+                  .map((field) => ISSUER_FISCAL_FIELD_LABELS[field])
+                  .join(", ")}.`
+              : null}
+          </p>
+        )}
 
         <div className={styles.grid}>
           <section className={styles.card} aria-labelledby="iva-settings-title">
@@ -326,6 +437,135 @@ export function FiscalSettingsManager({
 
           <section
             className={`${styles.card} ${styles.wideCard}`}
+            aria-labelledby="issuer-settings-title"
+          >
+            <div className={styles.cardHeading}>
+              <span className={styles.cardIcon} aria-hidden>
+                <Building2 strokeWidth={ICON_STROKE} />
+              </span>
+              <div>
+                <h3 id="issuer-settings-title" className={styles.cardTitle}>
+                  Datos del emisor
+                </h3>
+                <p className={styles.cardHint}>
+                  Aparecen en el PDF fiscal. El CUIT se guarda sin guiones y se
+                  muestra como XX-XXXXXXXX-X.
+                </p>
+              </div>
+            </div>
+            <div className={styles.formGrid}>
+              <IssuerField
+                id="issuer-name"
+                label="Razón social"
+                value={issuerForm.issuerName}
+                readOnly={!canUpdateSettings}
+                onChange={(value) =>
+                  setIssuerForm((current) => ({ ...current, issuerName: value }))
+                }
+              />
+              <IssuerField
+                id="issuer-cuit"
+                label="CUIT"
+                value={issuerForm.issuerCuit}
+                readOnly={!canUpdateSettings}
+                onChange={(value) =>
+                  setIssuerForm((current) => ({ ...current, issuerCuit: value }))
+                }
+                onBlur={() =>
+                  setIssuerForm((current) => ({
+                    ...current,
+                    issuerCuit: current.issuerCuit
+                      ? formatCuit(current.issuerCuit)
+                      : "",
+                  }))
+                }
+              />
+              <IssuerField
+                id="issuer-address"
+                label="Domicilio comercial"
+                value={issuerForm.issuerAddress}
+                readOnly={!canUpdateSettings}
+                onChange={(value) =>
+                  setIssuerForm((current) => ({
+                    ...current,
+                    issuerAddress: value,
+                  }))
+                }
+              />
+              <IssuerField
+                id="issuer-city"
+                label="Localidad"
+                value={issuerForm.issuerCity}
+                readOnly={!canUpdateSettings}
+                onChange={(value) =>
+                  setIssuerForm((current) => ({ ...current, issuerCity: value }))
+                }
+              />
+              <IssuerField
+                id="issuer-province"
+                label="Provincia"
+                value={issuerForm.issuerProvince}
+                readOnly={!canUpdateSettings}
+                onChange={(value) =>
+                  setIssuerForm((current) => ({
+                    ...current,
+                    issuerProvince: value,
+                  }))
+                }
+              />
+              <IssuerField
+                id="issuer-iva"
+                label="Condición frente al IVA"
+                value={issuerForm.issuerIvaCondition}
+                readOnly={!canUpdateSettings}
+                onChange={(value) =>
+                  setIssuerForm((current) => ({
+                    ...current,
+                    issuerIvaCondition: value,
+                  }))
+                }
+              />
+              <IssuerField
+                id="issuer-gross-income"
+                label="Ingresos Brutos"
+                value={issuerForm.issuerGrossIncome}
+                readOnly={!canUpdateSettings}
+                onChange={(value) =>
+                  setIssuerForm((current) => ({
+                    ...current,
+                    issuerGrossIncome: value,
+                  }))
+                }
+              />
+              <IssuerField
+                id="issuer-activities-started"
+                label="Inicio de actividades"
+                placeholder="DD/MM/AAAA"
+                value={issuerForm.issuerActivitiesStartedAt}
+                readOnly={!canUpdateSettings}
+                onChange={(value) =>
+                  setIssuerForm((current) => ({
+                    ...current,
+                    issuerActivitiesStartedAt: value,
+                  }))
+                }
+              />
+            </div>
+            {issuerError ? <p className={styles.error}>{issuerError}</p> : null}
+            {canUpdateSettings ? (
+              <button
+                type="button"
+                className={styles.submit}
+                onClick={requestIssuerUpdate}
+                disabled={isBusy}
+              >
+                Guardar datos del emisor
+              </button>
+            ) : null}
+          </section>
+
+          <section
+            className={`${styles.card} ${styles.wideCard}`}
             aria-labelledby="fiscal-context-title"
           >
             <div className={styles.cardHeading}>
@@ -337,8 +577,7 @@ export function FiscalSettingsManager({
                   Ambiente actual
                 </h3>
                 <p className={styles.cardHint}>
-                  Datos de emisión usados en modo prueba. Certificados y CAE
-                  quedan para la etapa ARCA.
+                  Punto de venta y ambiente usados al emitir.
                 </p>
               </div>
             </div>
@@ -355,7 +594,7 @@ export function FiscalSettingsManager({
               </div>
             </div>
             <p className={styles.metaNote}>
-              Los comprobantes se numeran internamente y no se envían a ARCA.
+              {environmentHint(settings)}
             </p>
           </section>
         </div>
@@ -376,5 +615,42 @@ export function FiscalSettingsManager({
         />
       ) : null}
     </>
+  );
+}
+
+function IssuerField({
+  id,
+  label,
+  value,
+  onChange,
+  onBlur,
+  readOnly,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
+  readOnly: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div className={styles.field}>
+      <label className={styles.label} htmlFor={id}>
+        {label}
+      </label>
+      <input
+        id={id}
+        className={styles.input}
+        type="text"
+        inputMode="numeric"
+        placeholder={placeholder}
+        value={value}
+        readOnly={readOnly}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
+      />
+    </div>
   );
 }

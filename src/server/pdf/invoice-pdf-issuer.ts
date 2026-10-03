@@ -1,5 +1,7 @@
+import { formatActivitiesStartedAt } from "@/features/billing/utils/issuer-fiscal-configuration";
 import type { BillingFiscalSettings } from "@/generated/prisma/client";
 import type { InvoicePdfIssuer } from "@/server/pdf/invoice-pdf.types";
+import { formatCuit, isValidCuit } from "@/shared/utils/identification";
 
 /** Placeholders visibles hasta que Pablo cargue los datos reales. */
 export const DEFAULT_PDF_ISSUER: InvoicePdfIssuer = {
@@ -32,28 +34,71 @@ export function resolveInvoicePdfIssuer(
   };
 }
 
-export function issuerIdentityLines(issuer: InvoicePdfIssuer): string[] {
-  return [issuer.name, issuer.address, issuerLocationLine(issuer)].filter(
-    (line): line is string => Boolean(line),
-  );
+/** Datos reales del emisor. Los campos vacíos quedan vacíos. */
+export function resolveStoredInvoicePdfIssuer(
+  settings: BillingFiscalSettings,
+): InvoicePdfIssuer {
+  return {
+    name: settings.issuerName?.trim() || "",
+    cuit: settings.issuerCuit?.trim() || null,
+    address: settings.issuerAddress?.trim() || null,
+    city: settings.issuerCity?.trim() || null,
+    province: settings.issuerProvince?.trim() || null,
+    ivaCondition: settings.issuerIvaCondition?.trim() || null,
+    grossIncome: settings.issuerGrossIncome?.trim() || null,
+    activitiesStartedAt: settings.issuerActivitiesStartedAt?.trim() || null,
+  };
 }
 
-export function issuerLocationLine(issuer: InvoicePdfIssuer): string {
-  const city = (issuer.city ?? DEFAULT_PDF_ISSUER.city ?? "").toLocaleUpperCase(
-    "es-AR",
-  );
-  const province = (
-    issuer.province ??
-    DEFAULT_PDF_ISSUER.province ??
+export function issuerIdentityLines(
+  issuer: InvoicePdfIssuer,
+  usePlaceholders = true,
+): string[] {
+  return [
+    issuer.name.trim() || (usePlaceholders ? DEFAULT_PDF_ISSUER.name : ""),
+    issuer.address,
+    issuerLocationLine(issuer, usePlaceholders),
+  ].filter((line): line is string => Boolean(line?.trim()));
+}
+
+export function issuerLocationLine(
+  issuer: InvoicePdfIssuer,
+  usePlaceholders = true,
+): string {
+  const city = (
+    issuer.city?.trim() ||
+    (usePlaceholders ? DEFAULT_PDF_ISSUER.city : "") ||
     ""
   ).toLocaleUpperCase("es-AR");
-  return `${city}, ${province}`;
+  const province = (
+    issuer.province?.trim() ||
+    (usePlaceholders ? DEFAULT_PDF_ISSUER.province : "") ||
+    ""
+  ).toLocaleUpperCase("es-AR");
+
+  return [city, province].filter(Boolean).join(", ");
 }
 
-export function issuerFiscalLines(issuer: InvoicePdfIssuer): string[] {
+export function issuerFiscalLines(
+  issuer: InvoicePdfIssuer,
+  usePlaceholders = true,
+): string[] {
+  const rawCuit =
+    issuer.cuit?.trim() || (usePlaceholders ? DEFAULT_PDF_ISSUER.cuit : "");
+  const cuit = rawCuit && isValidCuit(rawCuit) ? formatCuit(rawCuit) : rawCuit;
+  const grossIncome =
+    issuer.grossIncome?.trim() ||
+    (usePlaceholders ? DEFAULT_PDF_ISSUER.grossIncome : "");
+  const rawStartedAt =
+    issuer.activitiesStartedAt?.trim() ||
+    (usePlaceholders ? DEFAULT_PDF_ISSUER.activitiesStartedAt : "");
+  const startedAt = rawStartedAt
+    ? formatActivitiesStartedAt(rawStartedAt)
+    : "";
+
   return [
-    `CUIT: ${issuer.cuit ?? DEFAULT_PDF_ISSUER.cuit}`,
-    `Ingresos Brutos: ${issuer.grossIncome ?? DEFAULT_PDF_ISSUER.grossIncome}`,
-    `Inicio de actividades: ${issuer.activitiesStartedAt ?? DEFAULT_PDF_ISSUER.activitiesStartedAt}`,
-  ];
+    cuit ? `CUIT: ${cuit}` : "",
+    grossIncome ? `Ingresos Brutos: ${grossIncome}` : "",
+    startedAt ? `Inicio de actividades: ${startedAt}` : "",
+  ].filter(Boolean);
 }

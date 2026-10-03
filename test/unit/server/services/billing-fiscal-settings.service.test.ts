@@ -117,6 +117,107 @@ describe("BillingFiscalSettingsService.updateSettings", () => {
     expect(billingFiscalSettingsRepository.update).not.toHaveBeenCalled();
   });
 
+  it("permite actualizar el IVA aunque falten datos del emisor", async () => {
+    vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+      createSettingsFixture({ environment: "MODO_PRUEBA" }),
+    );
+    vi.mocked(billingFiscalSettingsRepository.update).mockResolvedValue(
+      createSettingsFixture({ ivaPercent: new Prisma.Decimal("10.50") }),
+    );
+
+    await billingFiscalSettingsService.updateSettings({ ivaPercent: 10.5 });
+
+    const payload = vi.mocked(billingFiscalSettingsRepository.update).mock
+      .calls[0]?.[0];
+    expect(payload).toEqual({
+      ivaPercent: new Prisma.Decimal("10.50"),
+    });
+    expect(payload).not.toHaveProperty("issuerName");
+  });
+
+  it("guarda el CUIT del emisor normalizado, sin guiones", async () => {
+    const current = createSettingsFixture();
+    vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+      current,
+    );
+    vi.mocked(billingFiscalSettingsRepository.update).mockResolvedValue(
+      createSettingsFixture({ issuerCuit: "30712345671" }),
+    );
+
+    await billingFiscalSettingsService.updateSettings({
+      issuer: {
+        issuerName: "Rothamel Repuestos",
+        issuerCuit: "30-71234567-1",
+        issuerAddress: "Ruta 89 km 4",
+        issuerCity: "Pampa del Infierno",
+        issuerProvince: "Chaco",
+        issuerIvaCondition: "Responsable Inscripto",
+        issuerGrossIncome: "IIBB-123456",
+        issuerActivitiesStartedAt: "2004-03-15",
+      },
+    });
+
+    expect(billingFiscalSettingsRepository.update).toHaveBeenCalledWith({
+      issuerName: "Rothamel Repuestos",
+      issuerCuit: "30712345671",
+      issuerAddress: "Ruta 89 km 4",
+      issuerCity: "Pampa del Infierno",
+      issuerProvince: "Chaco",
+      issuerIvaCondition: "Responsable Inscripto",
+      issuerGrossIncome: "IIBB-123456",
+      issuerActivitiesStartedAt: "2004-03-15",
+    });
+  });
+
+  it("guarda 04/05/2007 como 4 de mayo", async () => {
+    vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+      createSettingsFixture(),
+    );
+    vi.mocked(billingFiscalSettingsRepository.update).mockResolvedValue(
+      createSettingsFixture({ issuerActivitiesStartedAt: "2007-05-04" }),
+    );
+
+    await billingFiscalSettingsService.updateSettings({
+      issuer: {
+        issuerName: "Rothamel Repuestos",
+        issuerCuit: "30712345671",
+        issuerAddress: "Ruta 89 km 4",
+        issuerCity: "Pampa del Infierno",
+        issuerProvince: "Chaco",
+        issuerIvaCondition: "Responsable Inscripto",
+        issuerGrossIncome: "IIBB-123456",
+        issuerActivitiesStartedAt: "04/05/2007",
+      },
+    });
+
+    expect(
+      vi.mocked(billingFiscalSettingsRepository.update).mock.calls[0]?.[0]
+        .issuerActivitiesStartedAt,
+    ).toBe("2007-05-04");
+  });
+
+  it("rechaza un CUIT de emisor inválido", async () => {
+    vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+      createSettingsFixture(),
+    );
+
+    await expect(
+      billingFiscalSettingsService.updateSettings({
+        issuer: {
+          issuerName: "Rothamel Repuestos",
+          issuerCuit: "30712345670",
+          issuerAddress: "Ruta 89 km 4",
+          issuerCity: "Pampa del Infierno",
+          issuerProvince: "Chaco",
+          issuerIvaCondition: "Responsable Inscripto",
+          issuerGrossIncome: "IIBB-123456",
+          issuerActivitiesStartedAt: "2004-03-15",
+        },
+      }),
+    ).rejects.toBeInstanceOf(BillingFiscalSettingsError);
+    expect(billingFiscalSettingsRepository.update).not.toHaveBeenCalled();
+  });
+
   it("solo ADMIN puede editar", async () => {
     mockRequireRoleForbidden();
 

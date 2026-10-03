@@ -6,6 +6,7 @@ export {
   Ban,
   Blocks,
   BookUser,
+  Building2,
   ArrowBigUp,
   ArrowLeft,
   ArrowLeftRight,

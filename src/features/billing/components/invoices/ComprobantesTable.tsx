@@ -9,6 +9,7 @@ import {
   FISCAL_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
   PAYMENT_STATUS_LABELS,
+  fiscalEnvironmentListLabel,
 } from "@/features/billing/types/billing-invoice.types";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import {
@@ -158,6 +159,9 @@ export function ComprobantesTable({
                     </td>
                     <td className={styles.invoiceNumberCell}>
                       {invoice.invoiceNumber}
+                      <p className={styles.invoiceMeta}>
+                        {fiscalEnvironmentListLabel(invoice.environment)}
+                      </p>
                       <DocumentActivityBadges activity={invoice} />
                     </td>
                     <td className={styles.amountCell}>
@@ -228,6 +232,9 @@ export function ComprobantesTable({
                   <div>
                     <p className={styles.clientCardCode}>
                       {invoice.invoiceNumber}
+                    </p>
+                    <p className={styles.invoiceMeta}>
+                      {fiscalEnvironmentListLabel(invoice.environment)}
                     </p>
                     <DocumentActivityBadges activity={invoice} />
                     <h2 className={styles.clientCardName}>

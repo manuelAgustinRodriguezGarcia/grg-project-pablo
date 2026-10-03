@@ -33,7 +33,7 @@ export function LastPriceListCard({ priceList }: LastPriceListCardProps) {
           </div>
         </>
       ) : (
-        <p className={styles.realMeta}>
+        <p className={styles.emptyHint}>
           Todavía no hay listas de precios cargadas.
         </p>
       )}

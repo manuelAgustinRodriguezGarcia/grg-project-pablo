@@ -1,6 +1,7 @@
 import type {
   BillingFiscalEnvironment,
   BillingIdentificationType,
+  BillingInvoiceFiscalStatus,
   BillingInvoiceType,
   BillingIvaCondition,
   BillingPaymentMethod,
@@ -32,6 +33,12 @@ export type InvoicePdfInput = {
   pointOfSale: string;
   issuedAt: Date;
   environment: BillingFiscalEnvironment;
+  fiscalStatus?: BillingInvoiceFiscalStatus;
+  sequenceNumber?: number | null;
+  cae?: string | null;
+  caeExpiresAt?: Date | null;
+  /** En modo prueba se mantienen los placeholders. En un PDF fiscal, no. */
+  issuerPlaceholders?: boolean;
   clientName: string;
   clientCode: string;
   clientAddress: string | null;

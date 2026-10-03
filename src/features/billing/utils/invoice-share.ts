@@ -100,9 +100,21 @@ export function buildInvoiceShareText(invoice: BillingInvoiceListItem): string {
   lines.push(`Pago: ${PAYMENT_METHOD_LABELS[invoice.paymentMethod]}`);
   lines.push(`Total: ${formatArsExact(invoice.totalVisualRounded)}`);
 
-  if (invoice.environment === "MODO_PRUEBA") {
-    lines.push("");
-    lines.push("MODO PRUEBA - NO VALIDO COMO FACTURA FISCAL");
+  switch (invoice.environment) {
+    case "MODO_PRUEBA":
+      lines.push("");
+      lines.push("MODO PRUEBA - NO VALIDO COMO FACTURA FISCAL");
+      break;
+    case "HOMOLOGACION":
+      lines.push("");
+      lines.push("HOMOLOGACION - SIN VALIDEZ FISCAL DE PRODUCCION");
+      break;
+    case "PRODUCCION":
+      break;
+    default: {
+      const unexpected: never = invoice.environment;
+      return unexpected;
+    }
   }
 
   return lines.join("\n");

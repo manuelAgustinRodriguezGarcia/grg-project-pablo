@@ -1,3 +1,5 @@
+import { printPdfBlob } from "@/features/billing/utils/print-document";
+
 function invoicePdfUrl(invoiceId: string): string {
   return `/api/admin/billing/invoices/${invoiceId}`;
 }
@@ -43,28 +45,9 @@ function triggerDownload(blob: Blob, filename: string): void {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }
 
-function printPdfFromUrl(url: string): void {
-  const frame = document.createElement("iframe");
-  frame.style.position = "fixed";
-  frame.style.right = "0";
-  frame.style.bottom = "0";
-  frame.style.width = "0";
-  frame.style.height = "0";
-  frame.style.border = "0";
-  frame.src = url;
-  frame.addEventListener("load", () => {
-    frame.contentWindow?.focus();
-    frame.contentWindow?.print();
-    window.setTimeout(() => {
-      frame.remove();
-    }, 60_000);
-  });
-  document.body.append(frame);
-}
-
 async function printPdfAtUrl(url: string): Promise<void> {
-  await fetchPdfBlob(url);
-  printPdfFromUrl(url);
+  const blob = await fetchPdfBlob(url);
+  await printPdfBlob(blob);
 }
 
 function blobToPdfFile(blob: Blob, filename: string): File {

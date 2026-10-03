@@ -5,6 +5,7 @@ import type {
   BillingPaymentMethod,
   BillingPaymentStatus,
 } from "@/generated/prisma/client";
+import { resolveArcaFiscalProfile } from "@/shared/fiscal/arca-fiscal-mapping";
 
 export const MAX_INVOICE_ITEM_QUANTITY = 99;
 export const MAX_INVOICE_ITEM_UNIT_PRICE = 99_999_999;
@@ -13,30 +14,21 @@ export const TEST_INVOICE_NUMBER_INFIX = "PRUEBA";
 export const TEST_INVOICE_SEQUENCE_DIGITS = 9;
 
 /**
- * Determina la letra de factura según la matriz del PRD Facturación §11.2.
- * Solo CUIT + Responsable Inscripto genera Factura A; todo el resto es B.
+ * Letra interna de la factura.
+ * Con CUIT, la letra sale del mapeo ARCA vigente.
+ * Sin CUIT sigue siendo B.
+ * Responsable No Inscripto no tiene mapeo ARCA: la letra interna sigue en B
+ * y la emisión ARCA debe rechazarse con resolveArcaFiscalProfile.
  */
 export function determineInvoiceType(
   identificationType: BillingIdentificationType,
   ivaCondition: BillingIvaCondition,
 ): BillingInvoiceType {
-  if (identificationType !== "CUIT") {
+  if (identificationType !== "CUIT" || ivaCondition === "RESPONSABLE_NO_INSCRIPTO") {
     return "B";
   }
 
-  switch (ivaCondition) {
-    case "RESPONSABLE_INSCRIPTO":
-      return "A";
-    case "RESPONSABLE_NO_INSCRIPTO":
-    case "MONOTRIBUTISTA":
-    case "CONSUMIDOR_FINAL":
-    case "EXENTO":
-      return "B";
-    default: {
-      const exhaustiveCheck: never = ivaCondition;
-      return exhaustiveCheck;
-    }
-  }
+  return resolveArcaFiscalProfile(identificationType, ivaCondition).voucherClass;
 }
 
 export type GenericClientCheckInput = {
@@ -87,6 +79,36 @@ export function buildTestInvoiceNumber(
     "0",
   );
   return `${pointOfSale}-${TEST_INVOICE_NUMBER_INFIX}-${sequence}`;
+}
+
+export const FISCAL_INVOICE_POINT_OF_SALE_DIGITS = 4;
+export const FISCAL_INVOICE_SEQUENCE_DIGITS = 8;
+
+/**
+ * Número visible de un comprobante autorizado.
+ * Ejemplo: punto 7 y comprobante 3 → `0007-00000003`.
+ * La letra queda en invoiceType.
+ */
+export function buildFiscalInvoiceNumber(
+  pointOfSale: number | string,
+  voucherNumber: number,
+): string {
+  const digits = String(pointOfSale).replace(/\D/g, "");
+
+  if (!digits || digits.length > FISCAL_INVOICE_POINT_OF_SALE_DIGITS) {
+    throw new Error("El punto de venta fiscal no es válido.");
+  }
+
+  if (!Number.isSafeInteger(voucherNumber) || voucherNumber < 1) {
+    throw new Error("El número de comprobante fiscal no es válido.");
+  }
+
+  const point = digits.padStart(FISCAL_INVOICE_POINT_OF_SALE_DIGITS, "0");
+  const sequence = String(voucherNumber).padStart(
+    FISCAL_INVOICE_SEQUENCE_DIGITS,
+    "0",
+  );
+  return `${point}-${sequence}`;
 }
 
 export function paymentStatusForMethod(

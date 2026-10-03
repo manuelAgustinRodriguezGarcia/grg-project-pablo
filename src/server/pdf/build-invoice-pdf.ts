@@ -18,6 +18,9 @@ import {
   embedBillingPdfLogo,
 } from "@/server/pdf/billing-pdf-header";
 import { comprobanteLetterColor } from "@/server/pdf/comprobante-letter-box";
+import { ArcaQrError } from "@/server/arca/qr/arca-qr.error";
+import { buildArcaQrUrl } from "@/server/arca/qr/build-arca-qr";
+import { renderArcaQrPng } from "@/server/arca/qr/render-arca-qr-png";
 import {
   issuerFiscalLines,
   issuerIdentityLines,
@@ -41,6 +44,9 @@ import {
 } from "@/server/pdf/pdf-layout";
 
 const TEST_BANNER = "MODO PRUEBA - NO VALIDO COMO FACTURA FISCAL";
+const HOMOLOGATION_BANNER =
+  "HOMOLOGACIÓN - SIN VALIDEZ FISCAL DE PRODUCCIÓN";
+const QR_DRAW_SIZE = 108;
 const CONTENT_WIDTH = A4_WIDTH - PAGE_MARGIN * 2;
 const ROW_HEIGHT = 16;
 const FOOTER_RESERVE = 170;
@@ -73,6 +79,23 @@ function columnsForInvoice(invoiceType: InvoicePdfInput["invoiceType"]): TableCo
   return invoiceType === "A" ? COLUMNS_A : COLUMNS_B;
 }
 
+type InvoicePdfPresentation = "test" | "homologation" | "production";
+
+function invoicePdfPresentation(input: InvoicePdfInput): InvoicePdfPresentation {
+  switch (input.environment) {
+    case "MODO_PRUEBA":
+      return "test";
+    case "HOMOLOGACION":
+      return "homologation";
+    case "PRODUCCION":
+      return "production";
+    default: {
+      const unexpected: never = input.environment;
+      return unexpected;
+    }
+  }
+}
+
 function drawWatermark(page: PDFPage, font: PDFFont, testMode: boolean): void {
   if (!testMode) {
     return;
@@ -89,15 +112,21 @@ function drawWatermark(page: PDFPage, font: PDFFont, testMode: boolean): void {
   });
 }
 
-function drawTestBanner(
+function drawEnvironmentBanner(
   page: PDFPage,
   font: PDFFont,
   bold: PDFFont,
-  testMode: boolean,
+  presentation: InvoicePdfPresentation,
 ): number {
-  if (!testMode) {
+  if (presentation === "production") {
     return A4_HEIGHT - PAGE_MARGIN;
   }
+
+  const testMode = presentation === "test";
+  const label = testMode ? TEST_BANNER : HOMOLOGATION_BANNER;
+  const caption = testMode
+    ? "Documento interno. No enviar a ARCA."
+    : "Comprobante de homologación.";
 
   const top = A4_HEIGHT - 22;
   page.drawRectangle({
@@ -105,27 +134,31 @@ function drawTestBanner(
     y: top - 22,
     width: CONTENT_WIDTH,
     height: 22,
-    color: PDF_AMBER_BG,
-    borderColor: rgb(0.85, 0.62, 0.22),
+    color: testMode ? PDF_AMBER_BG : PDF_MUTED,
+    borderColor: testMode ? rgb(0.85, 0.62, 0.22) : PDF_BLUE,
     borderWidth: 0.6,
   });
-  drawPdfText(page, TEST_BANNER, {
+  drawPdfText(page, label, {
     x: PAGE_MARGIN + 8,
     y: top - 16,
     size: 8,
     font: bold,
-    color: PDF_AMBER,
+    color: testMode ? PDF_AMBER : PDF_BLUE,
   });
 
-  const caption = "Documento interno. No enviar a ARCA.";
-  const captionWidth = font.widthOfTextAtSize(caption, 8);
-  drawPdfText(page, caption, {
-    x: A4_WIDTH - PAGE_MARGIN - 8 - captionWidth,
-    y: top - 16,
-    size: 8,
-    font,
-    color: PDF_AMBER,
-  });
+  const labelWidth = bold.widthOfTextAtSize(toWinAnsi(label), 8);
+  const captionWidth = font.widthOfTextAtSize(toWinAnsi(caption), 8);
+  const captionX = A4_WIDTH - PAGE_MARGIN - 8 - captionWidth;
+
+  if (captionX > PAGE_MARGIN + 16 + labelWidth) {
+    drawPdfText(page, caption, {
+      x: captionX,
+      y: top - 16,
+      size: 8,
+      font,
+      color: testMode ? PDF_AMBER : PDF_BLUE,
+    });
+  }
 
   return top - 36;
 }
@@ -147,19 +180,39 @@ function drawHeader(
     documentNumber: input.invoiceNumber,
     dateLine: `Fecha: ${formatPdfDate(input.issuedAt)}`,
     metaLines: [],
-    fiscalLines: issuerFiscalLines(input.issuer),
-    identityLines: issuerIdentityLines(input.issuer),
+    fiscalLines: issuerFiscalLines(
+      input.issuer,
+      input.issuerPlaceholders !== false,
+    ),
+    identityLines: issuerIdentityLines(
+      input.issuer,
+      input.issuerPlaceholders !== false,
+    ),
   });
 
-  const lineY = headerBottom - 8;
+  let cursor = headerBottom - 8;
+  const ivaCondition = input.issuer.ivaCondition?.trim() ?? "";
+
+  if (input.issuerPlaceholders === false && ivaCondition) {
+    drawPdfText(page, `Condición frente al IVA: ${ivaCondition}`, {
+      x: PAGE_MARGIN,
+      y: cursor,
+      size: 8,
+      font,
+      color: PDF_GRAY,
+      maxWidth: CONTENT_WIDTH,
+    });
+    cursor -= 12;
+  }
+
   page.drawLine({
-    start: { x: PAGE_MARGIN, y: lineY },
-    end: { x: A4_WIDTH - PAGE_MARGIN, y: lineY },
+    start: { x: PAGE_MARGIN, y: cursor },
+    end: { x: A4_WIDTH - PAGE_MARGIN, y: cursor },
     thickness: 1,
     color: PDF_NAVY,
   });
 
-  return lineY - 14;
+  return cursor - 14;
 }
 
 function drawClientBox(
@@ -178,11 +231,12 @@ function drawClientBox(
     input.clientAddress,
     joinLocation(input.clientCity, input.clientProvince),
     identification,
-    `Condicion IVA: ${IVA_CONDITION_LABELS[input.clientIvaCondition]}`,
+    `Condición IVA: ${IVA_CONDITION_LABELS[input.clientIvaCondition]}`,
+    input.clientIvaCondition === "CONSUMIDOR_FINAL" ? "A CONSUMIDOR FINAL" : null,
     `Código cliente: ${input.clientCode}`,
   ].filter((line): line is string => Boolean(line));
 
-  const tipoLabel = `Tipo de factura: ${invoicePdfTipoFacturaLabel(input.paymentMethod)}`;
+  const tipoLabel = `Forma de pago: ${invoicePdfTipoFacturaLabel(input.paymentMethod)}`;
   const tipoBandHeight = 16;
   const boxHeight = 18 + lines.length * 11 + tipoBandHeight + 4;
 
@@ -434,6 +488,23 @@ function drawTotals(
     cursor -= row.emphasize ? 16 : 13;
   }
 
+  if (input.total !== input.totalVisualRounded) {
+    cursor -= 4;
+    drawPdfText(
+      page,
+      `Valor fiscal exacto: $ ${formatPdfAmount(input.total)}. El total se muestra con redondeo visual.`,
+      {
+        x: boxX,
+        y: cursor,
+        size: 7,
+        font,
+        color: PDF_GRAY,
+        maxWidth: boxWidth,
+      },
+    );
+    cursor -= 12;
+  }
+
   if (input.notes?.trim()) {
     cursor -= 8;
     drawPdfText(page, "Observaciones", {
@@ -457,22 +528,87 @@ function drawTotals(
     }
   }
 
-  cursor -= 10;
-  drawPdfText(
-    page,
-    input.environment === "MODO_PRUEBA"
-      ? "Sin CAE ni QR fiscal. Este comprobante no tiene validez ante ARCA."
-      : "Documento generado por Rothamel Repuestos.",
-    {
-      x: PAGE_MARGIN,
-      y: cursor,
-      size: 7,
-      font,
-      color: PDF_GRAY,
-    },
-  );
+  if (input.environment === "MODO_PRUEBA") {
+    cursor -= 10;
+    drawPdfText(
+      page,
+      "Sin CAE ni QR fiscal. Este comprobante no tiene validez ante ARCA.",
+      {
+        x: PAGE_MARGIN,
+        y: cursor,
+        size: 7,
+        font,
+        color: PDF_GRAY,
+      },
+    );
+  }
 
   return cursor;
+}
+
+function formatCaeExpiration(value: Date): string {
+  const day = String(value.getUTCDate()).padStart(2, "0");
+  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const year = value.getUTCFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+async function drawFiscalFooter(
+  pdf: PDFDocument,
+  page: PDFPage,
+  font: PDFFont,
+  bold: PDFFont,
+  input: InvoicePdfInput,
+): Promise<void> {
+  if (!input.caeExpiresAt || Number.isNaN(input.caeExpiresAt.getTime())) {
+    throw new ArcaQrError("El vencimiento del CAE no está disponible.");
+  }
+
+  const url = buildArcaQrUrl({
+    environment: input.environment,
+    fiscalStatus: input.fiscalStatus ?? "BORRADOR",
+    cae: input.cae ?? null,
+    pointOfSale: input.pointOfSale,
+    sequenceNumber: input.sequenceNumber ?? null,
+    invoiceType: input.invoiceType,
+    total: input.total,
+    issuedAt: input.issuedAt,
+    issuerCuit: input.issuer.cuit,
+    clientIdentificationType: input.clientIdentificationType,
+    clientIdentificationNumber: input.clientIdentificationNumber,
+  });
+  const png = await renderArcaQrPng(url);
+  const image = await pdf.embedPng(png);
+  const qrY = PAGE_MARGIN;
+  const rightEdge = A4_WIDTH - PAGE_MARGIN;
+  const caeSize = 10;
+  const expirySize = 9;
+  const lineGap = 13;
+  const expiryBaseline = qrY;
+  const caeLine = `CAE: ${input.cae ?? ""}`;
+  const expiryLine = `Vto. CAE: ${formatCaeExpiration(input.caeExpiresAt)}`;
+
+  page.drawImage(image, {
+    x: PAGE_MARGIN,
+    y: qrY,
+    width: QR_DRAW_SIZE,
+    height: QR_DRAW_SIZE,
+  });
+
+  drawPdfText(page, caeLine, {
+    x: rightEdge - bold.widthOfTextAtSize(toWinAnsi(caeLine), caeSize),
+    y: expiryBaseline + lineGap,
+    size: caeSize,
+    font: bold,
+    color: PDF_NAVY,
+  });
+  drawPdfText(page, expiryLine, {
+    x: rightEdge - font.widthOfTextAtSize(toWinAnsi(expiryLine), expirySize),
+    y: expiryBaseline,
+    size: expirySize,
+    font,
+    color: PDF_NAVY,
+  });
 }
 
 export async function buildInvoicePdf(
@@ -482,8 +618,10 @@ export async function buildInvoicePdf(
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const logo = await embedBillingPdfLogo(pdf, input.logoPng);
-  const testMode = input.environment === "MODO_PRUEBA";
+  const presentation = invoicePdfPresentation(input);
+  const testMode = presentation === "test";
   const columns = columnsForInvoice(input.invoiceType);
+  const footerReserve = testMode ? FOOTER_RESERVE : FOOTER_RESERVE + QR_DRAW_SIZE;
   const detailWidth =
     columns.find((column) => column.key === "detail")?.width ?? 248;
 
@@ -494,7 +632,7 @@ export async function buildInvoicePdf(
   };
 
   const startContentPage = (target: PDFPage): number => {
-    let y = drawTestBanner(target, font, bold, testMode);
+    let y = drawEnvironmentBanner(target, font, bold, presentation);
     y = drawHeader(target, font, bold, input, logo, y);
     y = drawClientBox(target, font, bold, input, y);
     return drawTableHeader(target, bold, columns, y);
@@ -520,12 +658,16 @@ export async function buildInvoicePdf(
     y = drawItemRow(page, font, item, input, columns, y, index % 2 === 1);
   });
 
-  if (y < PAGE_MARGIN + FOOTER_RESERVE) {
+  if (y < PAGE_MARGIN + footerReserve) {
     page = addPage();
     y = startContentPage(page);
   }
 
   drawTotals(page, font, bold, input, y - 18);
+
+  if (!testMode) {
+    await drawFiscalFooter(pdf, page, font, bold, input);
+  }
 
   return pdf.save();
 }

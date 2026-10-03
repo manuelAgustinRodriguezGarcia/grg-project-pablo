@@ -11,7 +11,6 @@ import type { BillingClientListItem } from "@/features/billing/types/billing-cli
 import {
   IDENTIFICATION_TYPE_LABELS,
   IVA_CONDITION_LABELS,
-  IVA_CONDITION_ORDER,
   IVA_CONDITION_SHORT_LABELS,
 } from "@/features/billing/types/billing-client.types";
 import {
@@ -20,6 +19,10 @@ import {
   hasExactIdentificationDuplicate,
 } from "@/features/billing/utils/client-form-matches";
 import { CustomSelect } from "@/shared/components/CustomSelect";
+import {
+  clientFiscalPairError,
+  selectableIvaConditions,
+} from "@/shared/fiscal/billing-client-fiscal-rules";
 import { ARGENTINE_PROVINCES, isArgentineProvince } from "@/shared/utils/argentine-provinces";
 import {
   formatCuit,
@@ -262,6 +265,15 @@ export function ClientFormModal({
     onClearError();
   }
 
+  function availableIvaConditions(): BillingIvaCondition[] {
+    return selectableIvaConditions({
+      identificationType,
+      currentIvaCondition: ivaCondition,
+      initialIvaCondition:
+        mode === "edit" ? initialClient?.ivaCondition ?? null : null,
+    });
+  }
+
   function handleIdentificationTypeChange(next: BillingIdentificationType) {
     if (identificationLocked || next === identificationType) {
       return;
@@ -361,6 +373,18 @@ export function ClientFormModal({
       }
     }
 
+    const fiscalError = clientFiscalPairError({
+      identificationType,
+      ivaCondition: isCuit ? ivaCondition : "CONSUMIDOR_FINAL",
+      existingIvaCondition:
+        mode === "edit" ? initialClient?.ivaCondition ?? null : null,
+    });
+
+    if (fiscalError) {
+      setLocalError(fiscalError);
+      return;
+    }
+
     if (!isArgentineProvince(province)) {
       const message = "Falta seleccionar una provincia.";
       setProvinceError(message);
@@ -391,10 +415,10 @@ export function ClientFormModal({
   }
 
   function focusIvaCondition(condition: BillingIvaCondition = ivaCondition) {
-    const enabled =
-      identificationType === "CUIT" || condition === "CONSUMIDOR_FINAL"
-        ? condition
-        : "CONSUMIDOR_FINAL";
+    const available = availableIvaConditions();
+    const enabled = available.includes(condition)
+      ? condition
+      : "CONSUMIDOR_FINAL";
     ivaConditionRefs.current[enabled]?.focus();
   }
 
@@ -474,9 +498,7 @@ export function ClientFormModal({
       return;
     }
 
-    const enabledConditions = IVA_CONDITION_ORDER.filter(
-      (item) => identificationType === "CUIT" || item === "CONSUMIDOR_FINAL",
-    );
+    const enabledConditions = availableIvaConditions();
     const currentIndex = enabledConditions.indexOf(condition);
 
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
@@ -980,9 +1002,7 @@ export function ClientFormModal({
                       role="radiogroup"
                       aria-label="Condición de IVA"
                     >
-                      {IVA_CONDITION_ORDER.map((condition) => {
-                        const isEnabled =
-                          isCuit || condition === "CONSUMIDOR_FINAL";
+                      {availableIvaConditions().map((condition) => {
                         const isActive = ivaCondition === condition;
 
                         return (
@@ -1001,7 +1021,7 @@ export function ClientFormModal({
                             onKeyDown={(event) =>
                               handleIvaConditionKeyDown(event, condition)
                             }
-                            disabled={isBusy || !isEnabled}
+                            disabled={isBusy}
                             title={IVA_CONDITION_LABELS[condition]}
                           >
                             <span className={styles.ivaOptionShort}>
@@ -1015,7 +1035,14 @@ export function ClientFormModal({
                       })}
                     </div>
                     <p className={styles.formHint}>
-                      Sin CUIT solo se habilita Consumidor Final.
+                      {isCuit
+                        ? "Responsable Inscripto, Monotributista y Exento requieren CUIT."
+                        : "Sin CUIT solo se habilita Consumidor Final."}
+                      {availableIvaConditions().includes(
+                        "RESPONSABLE_NO_INSCRIPTO",
+                      )
+                        ? " Responsable No Inscripto se conserva solo mientras no cambies la condición."
+                        : ""}
                     </p>
                   </div>
                 </div>

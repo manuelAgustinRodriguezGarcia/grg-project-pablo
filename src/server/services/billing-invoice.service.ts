@@ -1,13 +1,30 @@
 import type {
   BillingClient,
   BillingFiscalSettings,
+  BillingInvoiceType,
   BillingPaymentMethod,
   BillingRubro,
 } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
+import { ArcaConfigurationError } from "@/server/arca/errors/arca-configuration.error";
+import { ArcaEmissionError } from "@/server/arca/errors/arca-emission.error";
+import { getArcaCredentials } from "@/server/arca/config/credentials";
+import { isArcaProductionEmissionEnabled } from "@/server/arca/config/production-emission";
+import { finalizeApprovedArcaEmission } from "@/server/arca/invoices/finalize-approved-arca-emission";
+import {
+  issueArcaInvoice,
+  type IssueArcaInvoiceResult,
+} from "@/server/arca/invoices/issue-arca-invoice";
+import { ArcaQrError } from "@/server/arca/qr/arca-qr.error";
+import type { ArcaEnvironment } from "@/server/arca/types/arca.types";
+import { normalizeIssuerCuit } from "@/server/arca/utils/cuit";
+import { parseArcaPointOfSale } from "@/server/arca/utils/point-of-sale";
 import { requirePermission } from "@/server/auth";
 import { buildInvoicePdf } from "@/server/pdf/build-invoice-pdf";
-import { resolveInvoicePdfIssuer } from "@/server/pdf/invoice-pdf-issuer";
+import {
+  resolveInvoicePdfIssuer,
+  resolveStoredInvoicePdfIssuer,
+} from "@/server/pdf/invoice-pdf-issuer";
 import { loadRothamelLogoPng } from "@/server/pdf/load-rothamel-logo";
 import {
   billingClientRepository,
@@ -20,6 +37,12 @@ import {
   type CreateBillingInvoiceItemData,
 } from "@/server/repositories/billing-invoice.repository";
 import { billingRubroRepository } from "@/server/repositories/billing-rubro.repository";
+import { getIssuerFiscalConfigurationStatus } from "@/features/billing/utils/issuer-fiscal-configuration";
+import {
+  PRODUCTION_CONFIGURATION_INCOMPLETE_MESSAGE,
+  PRODUCTION_CREDENTIALS_UNAVAILABLE_MESSAGE,
+  PRODUCTION_EMISSION_DISABLED_MESSAGE,
+} from "@/shared/fiscal/production-emission";
 import {
   buildTestInvoiceNumber,
   determineInvoiceType,
@@ -35,6 +58,7 @@ import {
 } from "@/shared/utils/billing-invoice-totals";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
+import { buildArcaBillingPersistenceSnapshot } from "./billing-invoice-arca-snapshot";
 import { BillingInvoiceError } from "./billing-invoice.errors";
 import { releaseOverpaymentsForClient } from "./billing-invoice-settlement";
 
@@ -51,12 +75,26 @@ export type BillingInvoiceItemInput = {
   unitPrice: number;
 };
 
+const IDEMPOTENCY_KEY_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const ARCA_REJECTED_MESSAGE = "ARCA rechazó el comprobante.";
+const ARCA_UNCERTAIN_MESSAGE =
+  "No se pudo confirmar el estado del comprobante en ARCA. Volvé a intentar sin modificar la factura.";
+const ARCA_PERSISTENCE_PENDING_MESSAGE =
+  "ARCA autorizó el comprobante, pero no pudo completarse el guardado local. Volvé a intentar sin modificar la factura.";
+
 export type CreateBillingInvoiceInput = {
+  idempotencyKey: string;
   clientId: string;
   items: BillingInvoiceItemInput[];
   discountPercent?: number;
   paymentMethod: BillingPaymentMethod;
   notes?: string | null;
+};
+
+export type CreateBillingInvoiceOptions = {
+  now?: Date;
 };
 
 function centsToDecimal(cents: number): Prisma.Decimal {
@@ -68,6 +106,37 @@ function formatArsForMessage(cents: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
+}
+
+function assertProductionEmissionReady(settings: BillingFiscalSettings): void {
+  if (!isArcaProductionEmissionEnabled()) {
+    throw new BillingInvoiceError(
+      PRODUCTION_EMISSION_DISABLED_MESSAGE,
+      "PRODUCTION_EMISSION_DISABLED",
+    );
+  }
+
+  const readiness = getIssuerFiscalConfigurationStatus(settings);
+
+  if (!readiness.complete) {
+    throw new BillingInvoiceError(
+      PRODUCTION_CONFIGURATION_INCOMPLETE_MESSAGE,
+      "ARCA_PRODUCTION_CONFIGURATION_INCOMPLETE",
+    );
+  }
+
+  try {
+    getArcaCredentials("PRODUCCION");
+  } catch (error) {
+    if (error instanceof ArcaConfigurationError) {
+      throw new BillingInvoiceError(
+        PRODUCTION_CREDENTIALS_UNAVAILABLE_MESSAGE,
+        "ARCA_CONFIGURATION_ERROR",
+      );
+    }
+
+    throw error;
+  }
 }
 
 function validationError(message: string): BillingInvoiceError {
@@ -203,14 +272,41 @@ async function requireActiveRubros(
   return rubrosById;
 }
 
-function requireTestEnvironment(settings: BillingFiscalSettings): void {
-  if (settings.environment !== "MODO_PRUEBA") {
-    throw new BillingInvoiceError(
-      "La emisión fiscal con ARCA todavía no está disponible. Configure el ambiente en modo prueba.",
-      "ENVIRONMENT_NOT_SUPPORTED",
-    );
+function assertIdempotencyKey(value: string): string {
+  const key = value.trim();
+
+  if (!IDEMPOTENCY_KEY_PATTERN.test(key)) {
+    throw validationError("La clave de idempotencia no es válida.");
   }
+
+  return key;
 }
+
+function safePreSendMessage(message: string): string {
+  const compact = message.replace(/\s+/g, " ").trim();
+
+  if (
+    !compact ||
+    /token|sign|soap|certificate|private key/i.test(compact)
+  ) {
+    return "No se pudo preparar el comprobante.";
+  }
+
+  return compact.slice(0, 240);
+}
+
+type PreparedInvoice = {
+  items: SanitizedItem[];
+  discountPercent: number;
+  notes: string | null;
+  client: BillingClient;
+  settings: BillingFiscalSettings;
+  rubrosById: Map<string, BillingRubro>;
+  invoiceType: BillingInvoiceType;
+  ivaPercent: number;
+  totals: ReturnType<typeof computeInvoiceTotals>;
+  paymentMethod: BillingPaymentMethod;
+};
 
 export class BillingInvoiceService {
   async listInvoices(): Promise<BillingInvoiceWithItems[]> {
@@ -239,9 +335,42 @@ export class BillingInvoiceService {
 
   async createInvoice(
     input: CreateBillingInvoiceInput,
+    options: CreateBillingInvoiceOptions = {},
   ): Promise<BillingInvoiceWithItems> {
     const { profile: admin } = await requirePermission("invoices.create");
+    const idempotencyKey = assertIdempotencyKey(input.idempotencyKey);
+    const prepared = await this.prepareInvoice(input);
 
+    switch (prepared.settings.environment) {
+      case "MODO_PRUEBA":
+        return this.createTestInvoice(admin.id, prepared);
+      case "HOMOLOGACION":
+        return this.createArcaInvoice(
+          admin.id,
+          prepared,
+          idempotencyKey,
+          options.now ?? new Date(),
+          "HOMOLOGACION",
+        );
+      case "PRODUCCION":
+        assertProductionEmissionReady(prepared.settings);
+        return this.createArcaInvoice(
+          admin.id,
+          prepared,
+          idempotencyKey,
+          options.now ?? new Date(),
+          "PRODUCCION",
+        );
+      default: {
+        const unexpected: never = prepared.settings.environment;
+        return unexpected;
+      }
+    }
+  }
+
+  private async prepareInvoice(
+    input: CreateBillingInvoiceInput,
+  ): Promise<PreparedInvoice> {
     const items = sanitizeItems(input.items);
     const discountPercent = sanitizeDiscountPercent(input.discountPercent);
     const notes = sanitizeNotes(input.notes);
@@ -252,13 +381,10 @@ export class BillingInvoiceService {
       requireActiveRubros(items.map((item) => item.rubroId)),
     ]);
 
-    requireTestEnvironment(settings);
-
     const invoiceType = determineInvoiceType(
       client.identificationType,
       client.ivaCondition,
     );
-
     const ivaPercent = settings.ivaPercent.toNumber();
     const totals = computeInvoiceTotals({
       invoiceType,
@@ -291,9 +417,27 @@ export class BillingInvoiceService {
       );
     }
 
-    const itemsData: CreateBillingInvoiceItemData[] = items.map(
+    return {
+      items,
+      discountPercent,
+      notes,
+      client,
+      settings,
+      rubrosById,
+      invoiceType,
+      ivaPercent,
+      totals,
+      paymentMethod: input.paymentMethod,
+    };
+  }
+
+  private async createTestInvoice(
+    userId: string,
+    prepared: PreparedInvoice,
+  ): Promise<BillingInvoiceWithItems> {
+    const itemsData: CreateBillingInvoiceItemData[] = prepared.items.map(
       (item, index) => {
-        const rubro = rubrosById.get(item.rubroId);
+        const rubro = prepared.rubrosById.get(item.rubroId);
 
         if (!rubro) {
           throw new BillingInvoiceError(
@@ -309,7 +453,7 @@ export class BillingInvoiceService {
           description: item.description ?? rubro.description ?? rubro.name,
           quantity: new Prisma.Decimal(item.quantity),
           unitPrice: centsToDecimal(item.unitPriceCents),
-          lineTotal: centsToDecimal(totals.lineTotalsCents[index]),
+          lineTotal: centsToDecimal(prepared.totals.lineTotalsCents[index]),
           sortOrder: index,
         };
       },
@@ -321,42 +465,176 @@ export class BillingInvoiceService {
     > = {
       environment: "MODO_PRUEBA",
       fiscalStatus: "MODO_PRUEBA",
-      invoiceType,
-      pointOfSale: settings.pointOfSale,
-      clientId: client.id,
-      clientCode: client.code,
-      clientName: client.name,
-      clientAddress: client.address,
-      clientCity: client.city,
-      clientProvince: client.province,
-      clientEmail: client.email,
-      clientWhatsapp: client.whatsapp,
-      clientIdentificationType: client.identificationType,
-      clientIdentificationNumber: client.identificationNumber,
-      clientIvaCondition: client.ivaCondition,
-      subtotal: centsToDecimal(totals.subtotalCents),
-      discountPercent: new Prisma.Decimal(discountPercent),
-      discountAmount: centsToDecimal(totals.discountCents),
-      ivaPercent: new Prisma.Decimal(ivaPercent),
-      ivaAmount: centsToDecimal(totals.ivaCents),
-      total: centsToDecimal(totals.totalCents),
-      totalVisualRounded: centsToDecimal(totals.totalVisualRoundedCents),
-      paymentMethod: input.paymentMethod,
-      paymentStatus: paymentStatusForMethod(input.paymentMethod),
-      notes,
+      invoiceType: prepared.invoiceType,
+      pointOfSale: prepared.settings.pointOfSale,
+      clientId: prepared.client.id,
+      clientCode: prepared.client.code,
+      clientName: prepared.client.name,
+      clientAddress: prepared.client.address,
+      clientCity: prepared.client.city,
+      clientProvince: prepared.client.province,
+      clientEmail: prepared.client.email,
+      clientWhatsapp: prepared.client.whatsapp,
+      clientIdentificationType: prepared.client.identificationType,
+      clientIdentificationNumber: prepared.client.identificationNumber,
+      clientIvaCondition: prepared.client.ivaCondition,
+      subtotal: centsToDecimal(prepared.totals.subtotalCents),
+      discountPercent: new Prisma.Decimal(prepared.discountPercent),
+      discountAmount: centsToDecimal(prepared.totals.discountCents),
+      ivaPercent: new Prisma.Decimal(prepared.ivaPercent),
+      ivaAmount: centsToDecimal(prepared.totals.ivaCents),
+      total: centsToDecimal(prepared.totals.totalCents),
+      totalVisualRounded: centsToDecimal(
+        prepared.totals.totalVisualRoundedCents,
+      ),
+      paymentMethod: prepared.paymentMethod,
+      paymentStatus: paymentStatusForMethod(prepared.paymentMethod),
+      notes: prepared.notes,
       items: itemsData,
     };
 
     const invoice = await this.createWithGeneratedNumber(invoiceData);
+    this.auditCreated(userId, invoice.id);
+    return invoice;
+  }
 
+  private async createArcaInvoice(
+    userId: string,
+    prepared: PreparedInvoice,
+    idempotencyKey: string,
+    issuedAt: Date,
+    environment: ArcaEnvironment,
+  ): Promise<BillingInvoiceWithItems> {
+    let result: IssueArcaInvoiceResult;
+
+    try {
+      const pointOfSale = parseArcaPointOfSale(prepared.settings.pointOfSale);
+      const issuerCuit = normalizeIssuerCuit(prepared.settings.issuerCuit);
+      const billing = buildArcaBillingPersistenceSnapshot({
+        issuedAt,
+        pointOfSale,
+        invoiceType: prepared.invoiceType,
+        client: prepared.client,
+        items: prepared.items,
+        rubrosById: prepared.rubrosById,
+        totals: prepared.totals,
+        ivaPercent: prepared.ivaPercent,
+        discountPercent: prepared.discountPercent,
+        paymentMethod: prepared.paymentMethod,
+        paymentStatus: paymentStatusForMethod(prepared.paymentMethod),
+        notes: prepared.notes,
+      });
+      result = await issueArcaInvoice({
+        idempotencyKey,
+        environment,
+        issuerCuit,
+        pointOfSale,
+        invoiceType: prepared.invoiceType,
+        voucherDate: issuedAt,
+        client: {
+          identificationType: prepared.client.identificationType,
+          identificationNumber: prepared.client.identificationNumber,
+          ivaCondition: prepared.client.ivaCondition,
+        },
+        totals: {
+          netCents: prepared.totals.netCents,
+          vatCents: prepared.totals.ivaCents,
+          totalCents: prepared.totals.totalCents,
+          nonTaxedCents: 0,
+          exemptCents: 0,
+          taxCents: 0,
+        },
+        ivaPercent: prepared.ivaPercent,
+        billing,
+      });
+    } catch (error) {
+      if (error instanceof ArcaConfigurationError) {
+        throw new BillingInvoiceError(
+          safePreSendMessage(error.message),
+          "ARCA_EMISSION_FAILED_PRE_SEND",
+        );
+      }
+
+      if (error instanceof ArcaEmissionError) {
+        throw new BillingInvoiceError(
+          safePreSendMessage(error.message),
+          "ARCA_EMISSION_FAILED_PRE_SEND",
+        );
+      }
+
+      throw new BillingInvoiceError(
+        "No se pudo preparar el comprobante.",
+        "ARCA_EMISSION_FAILED_PRE_SEND",
+      );
+    }
+
+    switch (result.status) {
+      case "approved":
+      case "completed":
+        return this.persistApprovedEmission(userId, result.emissionId);
+      case "rejected":
+        throw new BillingInvoiceError(
+          ARCA_REJECTED_MESSAGE,
+          "ARCA_INVOICE_REJECTED",
+        );
+      case "ambiguous":
+        throw new BillingInvoiceError(
+          ARCA_UNCERTAIN_MESSAGE,
+          "ARCA_EMISSION_STATUS_UNCERTAIN",
+        );
+      case "failed_pre_send":
+        throw new BillingInvoiceError(
+          safePreSendMessage(result.message),
+          "ARCA_EMISSION_FAILED_PRE_SEND",
+        );
+      default: {
+        const unexpected: never = result;
+        return unexpected;
+      }
+    }
+  }
+
+  private async persistApprovedEmission(
+    userId: string,
+    emissionId: string,
+  ): Promise<BillingInvoiceWithItems> {
+    try {
+      const finalized = await finalizeApprovedArcaEmission(emissionId);
+      const invoice = await billingInvoiceRepository.findById(
+        finalized.invoice.id,
+      );
+
+      if (!invoice) {
+        throw new BillingInvoiceError(
+          ARCA_PERSISTENCE_PENDING_MESSAGE,
+          "ARCA_APPROVED_LOCAL_PERSISTENCE_PENDING",
+        );
+      }
+
+      this.auditCreated(userId, invoice.id);
+      return invoice;
+    } catch (error) {
+      if (
+        error instanceof BillingInvoiceError &&
+        error.code === "ARCA_APPROVED_LOCAL_PERSISTENCE_PENDING"
+      ) {
+        throw error;
+      }
+
+      throw new BillingInvoiceError(
+        ARCA_PERSISTENCE_PENDING_MESSAGE,
+        "ARCA_APPROVED_LOCAL_PERSISTENCE_PENDING",
+      );
+    }
+  }
+
+  private auditCreated(userId: string, invoiceId: string): void {
     auditService.logOperationSafe({
-      userId: admin.id,
+      userId,
       action: AUDIT_ACTIONS.BILLING_INVOICE_CREATED,
       entityType: AUDIT_ENTITY_TYPES.BILLING_INVOICE,
-      entityId: invoice.id,
+      entityId: invoiceId,
     });
-
-    return invoice;
   }
 
   async generateInvoicePdf(id: string): Promise<{
@@ -369,39 +647,58 @@ export class BillingInvoiceService {
       loadRothamelLogoPng(),
     ]);
 
-    const bytes = await buildInvoicePdf({
-      invoiceType: invoice.invoiceType,
-      invoiceNumber: invoice.invoiceNumber,
-      pointOfSale: invoice.pointOfSale,
-      issuedAt: invoice.issuedAt,
-      environment: invoice.environment,
-      clientName: invoice.clientName,
-      clientCode: invoice.clientCode,
-      clientAddress: invoice.clientAddress,
-      clientCity: invoice.clientCity,
-      clientProvince: invoice.clientProvince,
-      clientIdentificationType: invoice.clientIdentificationType,
-      clientIdentificationNumber: invoice.clientIdentificationNumber,
-      clientIvaCondition: invoice.clientIvaCondition,
-      items: invoice.items.map((item) => ({
-        rubroCode: item.rubroCode,
-        description: item.description,
-        quantity: item.quantity.toNumber(),
-        unitPrice: item.unitPrice.toNumber(),
-        lineTotal: item.lineTotal.toNumber(),
-      })),
-      subtotal: invoice.subtotal.toNumber(),
-      discountPercent: invoice.discountPercent.toNumber(),
-      discountAmount: invoice.discountAmount.toNumber(),
-      ivaPercent: invoice.ivaPercent.toNumber(),
-      ivaAmount: invoice.ivaAmount.toNumber(),
-      total: invoice.total.toNumber(),
-      totalVisualRounded: invoice.totalVisualRounded.toNumber(),
-      paymentMethod: invoice.paymentMethod,
-      notes: invoice.notes,
-      issuer: resolveInvoicePdfIssuer(settings),
-      logoPng,
-    });
+    const fiscalPdf = invoice.environment !== "MODO_PRUEBA";
+
+    let bytes: Uint8Array;
+
+    try {
+      bytes = await buildInvoicePdf({
+        invoiceType: invoice.invoiceType,
+        invoiceNumber: invoice.invoiceNumber,
+        pointOfSale: invoice.pointOfSale,
+        issuedAt: invoice.issuedAt,
+        environment: invoice.environment,
+        fiscalStatus: invoice.fiscalStatus,
+        sequenceNumber: invoice.sequenceNumber,
+        cae: invoice.cae,
+        caeExpiresAt: invoice.caeExpiresAt,
+        issuerPlaceholders: !fiscalPdf,
+        clientName: invoice.clientName,
+        clientCode: invoice.clientCode,
+        clientAddress: invoice.clientAddress,
+        clientCity: invoice.clientCity,
+        clientProvince: invoice.clientProvince,
+        clientIdentificationType: invoice.clientIdentificationType,
+        clientIdentificationNumber: invoice.clientIdentificationNumber,
+        clientIvaCondition: invoice.clientIvaCondition,
+        items: invoice.items.map((item) => ({
+          rubroCode: item.rubroCode,
+          description: item.description,
+          quantity: item.quantity.toNumber(),
+          unitPrice: item.unitPrice.toNumber(),
+          lineTotal: item.lineTotal.toNumber(),
+        })),
+        subtotal: invoice.subtotal.toNumber(),
+        discountPercent: invoice.discountPercent.toNumber(),
+        discountAmount: invoice.discountAmount.toNumber(),
+        ivaPercent: invoice.ivaPercent.toNumber(),
+        ivaAmount: invoice.ivaAmount.toNumber(),
+        total: invoice.total.toNumber(),
+        totalVisualRounded: invoice.totalVisualRounded.toNumber(),
+        paymentMethod: invoice.paymentMethod,
+        notes: invoice.notes,
+        issuer: fiscalPdf
+          ? resolveStoredInvoicePdfIssuer(settings)
+          : resolveInvoicePdfIssuer(settings),
+        logoPng,
+      });
+    } catch (error) {
+      if (error instanceof ArcaQrError) {
+        throw new BillingInvoiceError(error.message, "ARCA_QR_DATA_INCOMPLETE");
+      }
+
+      throw error;
+    }
 
     return {
       bytes,

@@ -95,12 +95,38 @@ export const FISCAL_ENVIRONMENT_LABELS = {
   PRODUCCION: "Producción ARCA",
 } as const satisfies Record<BillingFiscalEnvironment, string>;
 
+export function fiscalEnvironmentListLabel(
+  environment: BillingFiscalEnvironment,
+): string {
+  switch (environment) {
+    case "MODO_PRUEBA":
+      return "Modo prueba";
+    case "HOMOLOGACION":
+      return "Homologación";
+    case "PRODUCCION":
+      return "Producción";
+    default: {
+      const unexpected: never = environment;
+      return unexpected;
+    }
+  }
+}
+
 /** Parámetros fiscales que necesita la UI de facturación (valores planos). */
 export type BillingFiscalContext = {
   ivaPercent: number;
   genericClientLimit: number;
   pointOfSale: string;
   environment: BillingFiscalEnvironment;
+  issuerName: string | null;
+  issuerCuit: string | null;
+  issuerAddress: string | null;
+  issuerCity: string | null;
+  issuerProvince: string | null;
+  issuerIvaCondition: string | null;
+  issuerGrossIncome: string | null;
+  issuerActivitiesStartedAt: string | null;
+  productionEmissionEnabled: boolean;
 };
 
 export type BillingInvoiceItemView = {
@@ -123,7 +149,10 @@ export type BillingInvoiceListItem = {
   invoiceType: BillingInvoiceType;
   pointOfSale: string;
   invoiceNumber: string;
+  sequenceNumber?: number;
   issuedAt: Date;
+  caePresent?: boolean;
+  caeExpiresAt?: string | null;
   clientId: string | null;
   clientCode: string;
   clientName: string;
@@ -208,7 +237,10 @@ export function toBillingInvoiceListItem(
     invoiceType: invoice.invoiceType,
     pointOfSale: invoice.pointOfSale,
     invoiceNumber: invoice.invoiceNumber,
+    sequenceNumber: invoice.sequenceNumber,
     issuedAt: invoice.issuedAt,
+    caePresent: Boolean(invoice.cae),
+    caeExpiresAt: invoice.caeExpiresAt?.toISOString() ?? null,
     clientId: invoice.clientId,
     clientCode: invoice.clientCode,
     clientName: invoice.clientName,

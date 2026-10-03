@@ -183,8 +183,70 @@ describe("BillingClientService", () => {
           identificationNumber: "12345678",
           ivaCondition: "MONOTRIBUTISTA",
         }),
-      ).rejects.toMatchObject({ code: "INVALID_IVA_CONDITION" });
+      ).rejects.toMatchObject({
+        code: "INVALID_IVA_CONDITION",
+        message: "Monotributista requiere CUIT.",
+      });
+
+      expect(billingClientRepository.create).not.toHaveBeenCalled();
     });
+
+    it.each([
+      ["RESPONSABLE_INSCRIPTO"],
+      ["MONOTRIBUTISTA"],
+      ["EXENTO"],
+      ["CONSUMIDOR_FINAL"],
+    ] as const)("acepta CUIT con %s", async (ivaCondition) => {
+      vi.mocked(billingClientRepository.create).mockResolvedValue(
+        createBillingClientFixture({
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition,
+        }),
+      );
+
+      await billingClientService.createClient({
+        name: "Cliente",
+        identificationType: "CUIT",
+        identificationNumber: "30500010912",
+        ivaCondition,
+      });
+
+      expect(billingClientRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition,
+        }),
+      );
+    });
+
+    it.each([
+      ["DNI", "12345678", "RESPONSABLE_INSCRIPTO", "Responsable Inscripto requiere CUIT."],
+      ["NINGUNO", null, "RESPONSABLE_INSCRIPTO", "Responsable Inscripto requiere CUIT."],
+      ["DNI", "12345678", "EXENTO", "Exento requiere CUIT."],
+      ["NINGUNO", null, "EXENTO", "Exento requiere CUIT."],
+      ["NINGUNO", null, "MONOTRIBUTISTA", "Monotributista requiere CUIT."],
+      ["CUIT", "30500010912", "RESPONSABLE_NO_INSCRIPTO", "Responsable No Inscripto no está disponible para clientes nuevos."],
+      ["DNI", "12345678", "RESPONSABLE_NO_INSCRIPTO", "Responsable No Inscripto no está disponible para clientes nuevos."],
+    ] as const)(
+      "rechaza el alta %s + %s",
+      async (identificationType, identificationNumber, ivaCondition, message) => {
+        await expect(
+          billingClientService.createClient({
+            name: "Cliente",
+            identificationType,
+            identificationNumber,
+            ivaCondition,
+          }),
+        ).rejects.toMatchObject({
+          code: "INVALID_IVA_CONDITION",
+          message,
+        });
+
+        expect(billingClientRepository.create).not.toHaveBeenCalled();
+      },
+    );
 
     it("limpia el documento cuando el tipo es NINGUNO", async () => {
       vi.mocked(billingClientRepository.create).mockResolvedValue(
@@ -377,6 +439,100 @@ describe("BillingClientService", () => {
       });
 
       expect(billingClientRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("conserva Responsable No Inscripto al editar un cliente que ya lo tiene", async () => {
+      vi.mocked(billingClientRepository.findById).mockResolvedValue(
+        createBillingClientFixture({
+          name: "DISTRIBUIDORA EL FARO",
+          code: "DEF-00003",
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition: "RESPONSABLE_NO_INSCRIPTO",
+        }),
+      );
+      vi.mocked(billingClientRepository.update).mockResolvedValue(
+        createBillingClientFixture({
+          name: "DISTRIBUIDORA EL FARO",
+          address: "Mitre 823",
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition: "RESPONSABLE_NO_INSCRIPTO",
+        }),
+      );
+
+      await billingClientService.updateClient({
+        id: BILLING_CLIENT_ID,
+        name: "DISTRIBUIDORA EL FARO",
+        address: "Mitre 823",
+        identificationType: "CUIT",
+        identificationNumber: "30500010912",
+        ivaCondition: "RESPONSABLE_NO_INSCRIPTO",
+      });
+
+      expect(billingClientRepository.update).toHaveBeenCalledWith(
+        BILLING_CLIENT_ID,
+        expect.objectContaining({
+          address: "Mitre 823",
+          ivaCondition: "RESPONSABLE_NO_INSCRIPTO",
+        }),
+      );
+    });
+
+    it("rechaza pasar a Responsable No Inscripto un cliente que no lo era", async () => {
+      vi.mocked(billingClientRepository.findById).mockResolvedValue(
+        createBillingClientFixture({
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition: "RESPONSABLE_INSCRIPTO",
+        }),
+      );
+
+      await expect(
+        billingClientService.updateClient({
+          id: BILLING_CLIENT_ID,
+          name: "GOMEZ SRL",
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition: "RESPONSABLE_NO_INSCRIPTO",
+        }),
+      ).rejects.toMatchObject({
+        code: "INVALID_IVA_CONDITION",
+        message:
+          "Responsable No Inscripto no está disponible para clientes nuevos.",
+      });
+
+      expect(billingClientRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("permite reemplazar Responsable No Inscripto por una condición soportada", async () => {
+      vi.mocked(billingClientRepository.findById).mockResolvedValue(
+        createBillingClientFixture({
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition: "RESPONSABLE_NO_INSCRIPTO",
+        }),
+      );
+      vi.mocked(billingClientRepository.update).mockResolvedValue(
+        createBillingClientFixture({
+          identificationType: "CUIT",
+          identificationNumber: "30500010912",
+          ivaCondition: "RESPONSABLE_INSCRIPTO",
+        }),
+      );
+
+      await billingClientService.updateClient({
+        id: BILLING_CLIENT_ID,
+        name: "DISTRIBUIDORA EL FARO",
+        identificationType: "CUIT",
+        identificationNumber: "30500010912",
+        ivaCondition: "RESPONSABLE_INSCRIPTO",
+      });
+
+      expect(billingClientRepository.update).toHaveBeenCalledWith(
+        BILLING_CLIENT_ID,
+        expect.objectContaining({ ivaCondition: "RESPONSABLE_INSCRIPTO" }),
+      );
     });
 
     it("permite editar IVA y otros datos con historial sin tocar CUIT/DNI", async () => {

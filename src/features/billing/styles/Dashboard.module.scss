@@ -213,6 +213,30 @@
   gap: 0.75rem;
   align-items: stretch;
 
+  // Keep each card as tall as its filled state (5 rows / chart), even when empty.
+  .rankList,
+  .rankEmpty {
+    min-height: 16.1497rem;
+  }
+
+  .invoiceTypeBody {
+    min-height: 15.9375rem;
+  }
+
+  .unpaidList,
+  .unpaidEmpty {
+    min-height: 20.3464rem;
+  }
+
+  .donutLayout,
+  .collectionEmpty {
+    min-height: 20.0625rem;
+  }
+
+  .emptyHint {
+    flex: 1;
+  }
+
   @media (max-width: 1100px) {
     grid-template-columns: 1fr 1fr;
   }
@@ -239,11 +263,16 @@
   .realCard,
   .realCardLink {
     flex: 1 1 0;
-    min-height: 0;
+    min-height: auto;
   }
 
   .realFooter {
     margin-top: auto;
+  }
+
+  .emptyHint {
+    flex: 1;
+    padding: 0.45rem 0.35rem;
   }
 }
 

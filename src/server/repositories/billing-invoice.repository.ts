@@ -82,7 +82,12 @@ export type CreateBillingInvoiceData = {
   paymentStatus: BillingPaymentStatus;
   notes: string | null;
   items: CreateBillingInvoiceItemData[];
+  issuedAt?: Date;
+  cae?: string;
+  caeExpiresAt?: Date;
 };
+
+type InvoiceDb = Prisma.TransactionClient | typeof prisma;
 
 export class BillingInvoiceRepository {
   async findAllOrdered(): Promise<BillingInvoiceWithItems[]> {
@@ -92,8 +97,11 @@ export class BillingInvoiceRepository {
     });
   }
 
-  async findById(id: string): Promise<BillingInvoiceWithItems | null> {
-    return prisma.billingInvoice.findUnique({
+  async findById(
+    id: string,
+    db: InvoiceDb = prisma,
+  ): Promise<BillingInvoiceWithItems | null> {
+    return db.billingInvoice.findUnique({
       where: { id },
       include: invoiceListInclude,
     });
@@ -110,18 +118,24 @@ export class BillingInvoiceRepository {
     });
   }
 
-  async create(data: CreateBillingInvoiceData): Promise<BillingInvoiceWithItems> {
-    const { items, ...invoice } = data;
+  async create(
+    data: CreateBillingInvoiceData,
+    db: InvoiceDb = prisma,
+  ): Promise<BillingInvoiceWithItems> {
+    const { items, issuedAt, cae, caeExpiresAt, ...invoice } = data;
 
-    const created = await prisma.billingInvoice.create({
+    const created = await db.billingInvoice.create({
       data: {
         ...invoice,
+        ...(issuedAt ? { issuedAt } : {}),
+        ...(cae ? { cae } : {}),
+        ...(caeExpiresAt ? { caeExpiresAt } : {}),
         items: { create: items },
       },
       select: { id: true },
     });
 
-    const full = await prisma.billingInvoice.findUnique({
+    const full = await db.billingInvoice.findUnique({
       where: { id: created.id },
       include: invoiceListInclude,
     });

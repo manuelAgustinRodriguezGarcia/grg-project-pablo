@@ -126,6 +126,8 @@ describe("computeInvoiceTotals", () => {
     expect(totals.subtotalCents).toBe(pesosToCents(10000));
     expect(totals.discountCents).toBe(pesosToCents(1000));
     expect(totals.totalCents).toBe(pesosToCents(9000));
+    expect(totals.netCents).not.toBe(totals.subtotalCents);
+    expect(totals.netCents + totals.ivaCents).toBe(totals.totalCents);
   });
 
   it("en Factura A el resumen cierra: subtotal - descuento + IVA = total", () => {

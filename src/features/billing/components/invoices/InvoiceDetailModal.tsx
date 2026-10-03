@@ -16,6 +16,7 @@ import {
   FISCAL_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
   PAYMENT_STATUS_LABELS,
+  fiscalEnvironmentListLabel,
 } from "@/features/billing/types/billing-invoice.types";
 import { billingClientHistoryHref } from "@/features/billing/data/billingNav";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
@@ -253,6 +254,7 @@ export function InvoiceDetailModal({
             </div>
             <p className={styles.invoiceDetailSubtitle}>
               {DATE_FORMATTER.format(new Date(invoice.issuedAt))} ·{" "}
+              {fiscalEnvironmentListLabel(invoice.environment)} ·{" "}
               {invoice.clientName} · {invoice.clientCode}
             </p>
           </div>

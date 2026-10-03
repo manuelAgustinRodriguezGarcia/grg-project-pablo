@@ -23,6 +23,7 @@ import {
   invoiceMatchesDateRange,
   type DebtorSortOrder,
 } from "@/features/billing/utils/invoice-list";
+import { printHtmlDocument } from "@/features/billing/utils/print-document";
 import { CustomSelect } from "@/shared/components/CustomSelect";
 import {
   Eye,
@@ -42,38 +43,6 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("es-AR", {
   month: "2-digit",
   year: "numeric",
 });
-
-function printDebtorsTable(title: string, html: string): void {
-  const frame = document.createElement("iframe");
-  frame.style.position = "fixed";
-  frame.style.right = "0";
-  frame.style.bottom = "0";
-  frame.style.width = "0";
-  frame.style.height = "0";
-  frame.style.border = "0";
-  document.body.append(frame);
-  const doc = frame.contentDocument;
-  if (!doc) {
-    frame.remove();
-    return;
-  }
-
-  doc.open();
-  doc.write(`<!doctype html><html><head><title>${title}</title>
-    <style>
-      body { font-family: Arial, sans-serif; color: #111; }
-      h1 { font-size: 16px; }
-      table { width: 100%; border-collapse: collapse; font-size: 12px; }
-      th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
-      th { background: #f3f3f3; }
-      td.num { text-align: right; }
-    </style>
-  </head><body>${html}</body></html>`);
-  doc.close();
-  frame.contentWindow?.focus();
-  frame.contentWindow?.print();
-  window.setTimeout(() => frame.remove(), 60_000);
-}
 
 export function DeudoresManager({
   initialInvoices = [],
@@ -193,20 +162,34 @@ export function DeudoresManager({
           </tr>`,
       )
       .join("");
-    printDebtorsTable(
-      "Clientes con deuda",
-      `<h1>Clientes con deuda — Rothamel Repuestos S.H</h1>
-       ${periodLine}
-       <p>${list.length} clientes · ${invoicesCount} facturas pendientes · Total ${formatArsExact(outstanding)}</p>
-       <table>
-         <thead>
-           <tr>
-             <th>CUIT</th><th>Cliente</th><th>Total adeudado</th>
-           </tr>
-         </thead>
-         <tbody>${rows}</tbody>
-       </table>`,
-    );
+    void printHtmlDocument(
+      `<!doctype html><html><head><meta charset="utf-8"><title>Clientes con deuda</title>
+        <style>
+          body { font-family: Arial, sans-serif; color: #111; }
+          h1 { font-size: 16px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+          th { background: #f3f3f3; }
+          td.num { text-align: right; }
+        </style>
+      </head><body>
+        <h1>Clientes con deuda — Rothamel Repuestos S.H</h1>
+        ${periodLine}
+        <p>${list.length} clientes · ${invoicesCount} facturas pendientes · Total ${formatArsExact(outstanding)}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>CUIT</th><th>Cliente</th><th>Total adeudado</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body></html>`,
+    ).catch((caught: unknown) => {
+      setError(
+        caught instanceof Error ? caught.message : "No se pudo imprimir.",
+      );
+    });
   }
 
   return (

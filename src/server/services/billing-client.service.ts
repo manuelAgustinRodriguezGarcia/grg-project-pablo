@@ -8,6 +8,7 @@ import {
   billingClientRepository,
   type CreateBillingClientData,
 } from "@/server/repositories/billing-client.repository";
+import { clientFiscalPairError } from "@/shared/fiscal/billing-client-fiscal-rules";
 import { isArgentineProvince } from "@/shared/utils/argentine-provinces";
 import {
   isValidCuit,
@@ -115,7 +116,26 @@ function sanitizeWhatsapp(value: string | null | undefined): string | null {
   return trimmed.startsWith("+") ? `+${digits}` : digits;
 }
 
-function sanitizeIdentification(input: BillingClientInput): {
+function assertFiscalPair(
+  identificationType: BillingIdentificationType,
+  ivaCondition: BillingIvaCondition,
+  existingIvaCondition?: BillingIvaCondition | null,
+): void {
+  const message = clientFiscalPairError({
+    identificationType,
+    ivaCondition,
+    existingIvaCondition,
+  });
+
+  if (message) {
+    throw new BillingClientError(message, "INVALID_IVA_CONDITION");
+  }
+}
+
+function sanitizeIdentification(
+  input: BillingClientInput,
+  existingIvaCondition?: BillingIvaCondition | null,
+): {
   identificationType: BillingIdentificationType;
   identificationNumber: string | null;
   ivaCondition: BillingIvaCondition;
@@ -138,6 +158,8 @@ function sanitizeIdentification(input: BillingClientInput): {
         "INVALID_CUIT",
       );
     }
+
+    assertFiscalPair("CUIT", input.ivaCondition, existingIvaCondition);
 
     return {
       identificationType: "CUIT",
@@ -165,36 +187,27 @@ function sanitizeIdentification(input: BillingClientInput): {
       );
     }
 
-    if (input.ivaCondition !== "CONSUMIDOR_FINAL") {
-      throw new BillingClientError(
-        "Con DNI solo se admite la condición Consumidor Final.",
-        "INVALID_IVA_CONDITION",
-      );
-    }
+    assertFiscalPair("DNI", input.ivaCondition, existingIvaCondition);
 
     return {
       identificationType: "DNI",
       identificationNumber: digits,
-      ivaCondition: "CONSUMIDOR_FINAL",
+      ivaCondition: input.ivaCondition,
     };
   }
 
-  if (input.ivaCondition !== "CONSUMIDOR_FINAL") {
-    throw new BillingClientError(
-      "Sin documento solo se admite la condición Consumidor Final.",
-      "INVALID_IVA_CONDITION",
-    );
-  }
+  assertFiscalPair("NINGUNO", input.ivaCondition, existingIvaCondition);
 
   return {
     identificationType: "NINGUNO",
     identificationNumber: null,
-    ivaCondition: "CONSUMIDOR_FINAL",
+    ivaCondition: input.ivaCondition,
   };
 }
 
 function sanitizeBillingClientInput(
   input: BillingClientInput,
+  existingIvaCondition?: BillingIvaCondition | null,
 ): SanitizedBillingClientInput {
   const name = input.name.trim().toLocaleUpperCase("es-AR");
 
@@ -205,7 +218,7 @@ function sanitizeBillingClientInput(
     );
   }
 
-  const identification = sanitizeIdentification(input);
+  const identification = sanitizeIdentification(input, existingIvaCondition);
 
   return {
     name,
@@ -344,7 +357,7 @@ export class BillingClientService {
   async updateClient(input: UpdateBillingClientInput): Promise<BillingClient> {
     const { profile: admin } = await requirePermission("clients.update");
     const existing = await requireBillingClient(input.id);
-    const sanitized = sanitizeBillingClientInput(input);
+    const sanitized = sanitizeBillingClientInput(input, existing.ivaCondition);
     const hasHistory = await billingClientRepository.hasHistory(input.id);
 
     if (hasHistory) {

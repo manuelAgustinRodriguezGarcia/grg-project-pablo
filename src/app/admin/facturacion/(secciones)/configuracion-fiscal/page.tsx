@@ -3,6 +3,7 @@ import { toAdminUiAuth } from "@/features/auth/types/admin-ui-auth";
 import { getBillingFiscalSettingsAction } from "@/features/billing/actions/billing-fiscal-settings.actions";
 import { FiscalSettingsManager } from "@/features/billing/components/settings/FiscalSettingsManager";
 import type { BillingFiscalContext } from "@/features/billing/types/billing-invoice.types";
+import { EMPTY_ISSUER_FISCAL_FIELDS } from "@/features/billing/utils/issuer-fiscal-configuration";
 import { requirePermissionOrRedirect } from "@/server/auth";
 
 export const metadata: Metadata = {
@@ -14,6 +15,8 @@ const FALLBACK_FISCAL_CONTEXT: BillingFiscalContext = {
   genericClientLimit: 400_000,
   pointOfSale: "0007",
   environment: "MODO_PRUEBA",
+  productionEmissionEnabled: false,
+  ...EMPTY_ISSUER_FISCAL_FIELDS,
 };
 
 export default async function FacturacionConfiguracionFiscalPage() {

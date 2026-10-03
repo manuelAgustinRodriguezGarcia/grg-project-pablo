@@ -27,6 +27,15 @@ import { InvoiceDocumentActions } from "@/features/billing/components/invoices/I
 import { InvoiceCreateConfirmModal } from "@/features/billing/components/invoices/InvoiceCreateConfirmModal";
 import { UnprintedInvoiceLeaveDialog } from "@/features/billing/components/invoices/UnprintedInvoiceLeaveDialog";
 import { BILLING_INVOICES_PATH } from "@/features/billing/data/billingNav";
+import {
+  createSubmitLock,
+  invoiceIntentionFingerprint,
+  isRejectedIntentionBlocked,
+  markInvoiceIdempotencyRejected,
+  syncInvoiceIdempotency,
+  type InvoiceIdempotencySession,
+} from "@/features/billing/utils/invoice-idempotency";
+import { invoiceFiscalPdfReady } from "@/features/billing/utils/invoice-fiscal-pdf";
 import { resolveUnprintedLeaveAction } from "@/features/billing/utils/unprinted-invoice-leave";
 import type { UnprintedLeaveIntent } from "@/features/billing/utils/unprinted-invoice-leave";
 import { useBillingClientsQuery } from "@/features/billing/hooks/useBillingClientsQuery";
@@ -49,6 +58,7 @@ import {
   pesosToCents,
   type InvoiceTotals,
 } from "@/shared/utils/billing-invoice-totals";
+import { PRODUCTION_EMISSION_DISABLED_MESSAGE } from "@/shared/fiscal/production-emission";
 import { AlertTriangle, CheckCircle2, ICON_STROKE, Info, Printer, ReceiptText } from "@/shared/icons";
 import { InvoiceClientSection } from "./InvoiceClientSection";
 import {
@@ -113,13 +123,17 @@ export function NewInvoiceManager({
     useState<BillingClientListItem | null>(null);
   const [rows, setRows] = useState<InvoiceItemRow[]>(() => [createEmptyRow()]);
   const rowsRef = useRef(rows);
-  rowsRef.current = rows;
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
   const [discountInput, setDiscountInput] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] =
     useState<BillingPaymentMethod>("CONTADO");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitLock = useRef(createSubmitLock()).current;
+  const idempotencyRef = useRef<InvoiceIdempotencySession | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdInvoice, setCreatedInvoice] =
@@ -177,6 +191,24 @@ export function NewInvoiceManager({
     : true;
 
   const completeRows = useMemo(() => rows.filter(isCompleteRow), [rows]);
+  const intentionFingerprint = useMemo(() => {
+    if (!selectedClient) {
+      return "";
+    }
+
+    return invoiceIntentionFingerprint({
+      clientId: selectedClient.id,
+      items: completeRows.map((row) => ({
+        rubroId: row.rubroId ?? "",
+        description: row.description.trim(),
+        quantity: String(parseRowQuantity(row) ?? ""),
+        unitPrice: String(parseRowUnitPrice(row) ?? ""),
+      })),
+      discountPercent: appliedDiscount,
+      paymentMethod,
+      notes,
+    });
+  }, [appliedDiscount, completeRows, notes, paymentMethod, selectedClient]);
 
   const totals: InvoiceTotals | null = useMemo(() => {
     if (!invoiceType || completeRows.length === 0) {
@@ -201,9 +233,14 @@ export function NewInvoiceManager({
       totals.totalCents > pesosToCents(fiscalContext.genericClientLimit),
   );
 
-  const blockingError = isGenericOverLimit
-    ? `El total supera el límite vigente de ${formatArs(fiscalContext.genericClientLimit)} para clientes sin identificación. Cargue los datos del cliente o reduzca el importe.`
-    : null;
+  const isProduction = fiscalContext.environment === "PRODUCCION";
+  const productionEmissionEnabled = fiscalContext.productionEmissionEnabled;
+  const productionBlocked = isProduction && !productionEmissionEnabled;
+  const blockingError = productionBlocked
+    ? PRODUCTION_EMISSION_DISABLED_MESSAGE
+    : isGenericOverLimit
+      ? `El total supera el límite vigente de ${formatArs(fiscalContext.genericClientLimit)} para clientes sin identificación. Cargue los datos del cliente o reduzca el importe.`
+      : null;
 
   const hasPartialRows = rows.some(isPartialDraftRow);
   const canSubmit = Boolean(
@@ -211,7 +248,8 @@ export function NewInvoiceManager({
       completeRows.length > 0 &&
       !hasPartialRows &&
       totals &&
-      !isGenericOverLimit,
+      !isGenericOverLimit &&
+      !productionBlocked,
   );
   const validationHints = [
     !selectedClient ? "Asegúrese de seleccionar el cliente" : null,
@@ -497,11 +535,14 @@ export function NewInvoiceManager({
 
   useBillingSuccessShortcuts(
     {
-      onPrint: createdInvoice
-        ? () => {
-            void printCreatedInvoice();
-          }
-        : undefined,
+      onPrint:
+        createdInvoice &&
+        (createdInvoice.environment === "MODO_PRUEBA" ||
+          invoiceFiscalPdfReady(createdInvoice))
+          ? () => {
+              void printCreatedInvoice();
+            }
+          : undefined,
       onCreateNew: () => requestLeaveIfUnprinted({ type: "reset" }),
       onList: () =>
         requestLeaveIfUnprinted({
@@ -515,7 +556,13 @@ export function NewInvoiceManager({
   );
 
   const handleSubmit = useCallback(async () => {
-    if (!selectedClient || !canSubmit) {
+    if (
+      !selectedClient ||
+      !canSubmit ||
+      (fiscalContext.environment === "PRODUCCION" &&
+        !fiscalContext.productionEmissionEnabled) ||
+      !submitLock.tryEnter()
+    ) {
       return;
     }
 
@@ -523,7 +570,22 @@ export function NewInvoiceManager({
     setSubmitError(null);
 
     try {
+      const session = syncInvoiceIdempotency(
+        idempotencyRef.current,
+        intentionFingerprint,
+        () => crypto.randomUUID(),
+      );
+      idempotencyRef.current = session;
+
+      if (isRejectedIntentionBlocked(session, intentionFingerprint)) {
+        setSubmitError(
+          "ARCA rechazó el comprobante. Modificá los datos para emitir de nuevo.",
+        );
+        return;
+      }
+
       const result = await createBillingInvoiceAction({
+        idempotencyKey: session.key,
         clientId: selectedClient.id,
         items: completeRows.map((row) => ({
           rubroId: row.rubroId ?? "",
@@ -537,6 +599,9 @@ export function NewInvoiceManager({
       });
 
       if (!result.success) {
+        if (result.code === "ARCA_INVOICE_REJECTED") {
+          idempotencyRef.current = markInvoiceIdempotencyRejected(session);
+        }
         setSubmitError(result.error);
         return;
       }
@@ -553,20 +618,28 @@ export function NewInvoiceManager({
       router.refresh();
       setIsConfirmOpen(false);
       setCreatedInvoice(result.data);
-      setHasPrintedInvoice(false);
+      setHasPrintedInvoice(
+        result.data.environment !== "MODO_PRUEBA" &&
+          !invoiceFiscalPdfReady(result.data),
+      );
       setPendingLeave(null);
     } finally {
+      submitLock.leave();
       setIsSubmitting(false);
     }
   }, [
     selectedClient,
     canSubmit,
+    fiscalContext.environment,
+    fiscalContext.productionEmissionEnabled,
+    intentionFingerprint,
     completeRows,
     appliedDiscount,
     paymentMethod,
     notes,
     queryClient,
     router,
+    submitLock,
   ]);
 
   const requestCreateConfirm = useCallback(() => {
@@ -658,6 +731,10 @@ export function NewInvoiceManager({
   }, [clientsQuery.data, focusFirstRubro, queryClient]);
 
   if (createdInvoice) {
+    const isTestInvoice = createdInvoice.environment === "MODO_PRUEBA";
+    const showPdfActions =
+      isTestInvoice || invoiceFiscalPdfReady(createdInvoice);
+
     return (
       <div className={styles.page}>
         <div className={styles.successCard} role="status">
@@ -668,7 +745,9 @@ export function NewInvoiceManager({
               aria-hidden
             />
             <h2 className={styles.successTitle}>
-              Factura creada en modo prueba
+              {isTestInvoice
+                ? "Factura creada en modo prueba"
+                : "Factura autorizada"}
             </h2>
             <p className={styles.successNumber}>{createdInvoice.invoiceNumber}</p>
             <p className={styles.successMeta}>
@@ -681,18 +760,21 @@ export function NewInvoiceManager({
               }).format(createdInvoice.totalVisualRounded)}
             </p>
             <p className={styles.successHint}>
-              La factura quedó guardada en el historial. No fue
-              enviada a ARCA y no tiene validez fiscal.
+              {isTestInvoice
+                ? "La factura quedó guardada en el historial. No fue enviada a ARCA y no tiene validez fiscal."
+                : "Autorizada por ARCA"}
             </p>
             <div className={styles.successActions}>
-              <InvoiceDocumentActions
-                invoice={createdInvoice}
-                variant="card"
-                cardActionOrder="success"
-                shareOpen={successShareOpen}
-                onShareOpenChange={setSuccessShareOpen}
-                onPrinted={() => setHasPrintedInvoice(true)}
-              />
+              {showPdfActions ? (
+                <InvoiceDocumentActions
+                  invoice={createdInvoice}
+                  variant="card"
+                  cardActionOrder="success"
+                  shareOpen={successShareOpen}
+                  onShareOpenChange={setSuccessShareOpen}
+                  onPrinted={() => setHasPrintedInvoice(true)}
+                />
+              ) : null}
               <Link
                 href={BILLING_INVOICES_PATH}
                 className={styles.successSecondaryLink}
@@ -724,21 +806,23 @@ export function NewInvoiceManager({
                 Nueva factura
                 <kbd className={styles.shortcutKbd}>F2</kbd>
               </button>
-              <button
-                type="button"
-                className={styles.submitButton}
-                onClick={() => {
-                  void printCreatedInvoice();
-                }}
-                disabled={isLeavePrinting}
-                aria-keyshortcuts="I"
-              >
-                <Printer strokeWidth={ICON_STROKE} aria-hidden />
-                {isLeavePrinting ? "Abriendo…" : "Imprimir"}
-                {!isLeavePrinting ? (
-                  <kbd className={styles.shortcutKbd}>I</kbd>
-                ) : null}
-              </button>
+              {showPdfActions ? (
+                <button
+                  type="button"
+                  className={styles.submitButton}
+                  onClick={() => {
+                    void printCreatedInvoice();
+                  }}
+                  disabled={isLeavePrinting}
+                  aria-keyshortcuts="I"
+                >
+                  <Printer strokeWidth={ICON_STROKE} aria-hidden />
+                  {isLeavePrinting ? "Abriendo…" : "Imprimir"}
+                  {!isLeavePrinting ? (
+                    <kbd className={styles.shortcutKbd}>I</kbd>
+                  ) : null}
+                </button>
+              ) : null}
             </div>
           </div>
           <footer className={styles.successFooter}>
@@ -748,8 +832,9 @@ export function NewInvoiceManager({
               aria-hidden
             />
             <p className={styles.successFooterText}>
-              Recuerde que si desea imprimir, descargar o compartir la factura
-              puede ir a la lista de{" "}
+              {showPdfActions
+                ? "Recuerde que si desea imprimir, descargar o compartir la factura puede ir a la lista de "
+                : "El PDF fiscal todavía no está disponible. Podés ver el comprobante en la lista de "}
               <Link
                 href={BILLING_INVOICES_PATH}
                 className={styles.successInvoicesLink}
@@ -796,15 +881,38 @@ export function NewInvoiceManager({
 
   return (
     <div className={styles.page}>
-      <div className={styles.testModeBanner} role="status">
-        <AlertTriangle
-          className={styles.testModeIcon}
-          strokeWidth={ICON_STROKE}
-          aria-hidden
-        />
-        Modo prueba activo. Las facturas creadas no se envían a ARCA y no
-        tienen validez fiscal.
-      </div>
+      {fiscalContext.environment === "HOMOLOGACION" ? (
+        <div className={styles.homologationBanner} role="status">
+          <span className={styles.environmentBadge}>HOMOLOGACIÓN</span>
+          El comprobante se envía a ARCA para su autorización.
+        </div>
+      ) : fiscalContext.environment === "PRODUCCION" ? (
+        productionEmissionEnabled ? (
+          <div className={styles.productionBanner} role="status">
+            <span className={styles.productionBadge}>PRODUCCIÓN</span>
+            Estás por emitir un comprobante fiscal real.
+          </div>
+        ) : (
+          <div className={styles.testModeBanner} role="status">
+            <AlertTriangle
+              className={styles.testModeIcon}
+              strokeWidth={ICON_STROKE}
+              aria-hidden
+            />
+            {PRODUCTION_EMISSION_DISABLED_MESSAGE}
+          </div>
+        )
+      ) : (
+        <div className={styles.testModeBanner} role="status">
+          <AlertTriangle
+            className={styles.testModeIcon}
+            strokeWidth={ICON_STROKE}
+            aria-hidden
+          />
+          Modo prueba activo. Las facturas creadas no se envían a ARCA y no
+          tienen validez fiscal.
+        </div>
+      )}
 
       <div className={styles.contentLayout}>
         <div className={styles.mainColumn}>
@@ -866,6 +974,8 @@ export function NewInvoiceManager({
             notes={notes}
             canSubmit={canSubmit}
             isSubmitting={isSubmitting}
+            environment={fiscalContext.environment}
+            productionEmissionEnabled={productionEmissionEnabled}
             blockingError={blockingError}
             submitError={submitError}
             validationHints={validationHints}
@@ -893,7 +1003,10 @@ export function NewInvoiceManager({
           ivaPercent={fiscalContext.ivaPercent}
           appliedDiscount={appliedDiscount}
           paymentMethod={paymentMethod}
+          environment={fiscalContext.environment}
+          productionEmissionEnabled={productionEmissionEnabled}
           isSubmitting={isSubmitting}
+          submitError={submitError}
           onConfirm={() => {
             void handleSubmit();
           }}

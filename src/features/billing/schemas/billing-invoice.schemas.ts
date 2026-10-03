@@ -45,6 +45,7 @@ const invoiceItemSchema = z.object({
 });
 
 export const createBillingInvoiceSchema = z.object({
+  idempotencyKey: z.string().uuid("La clave de idempotencia no es válida."),
   clientId: z.string().min(1, "Seleccione un cliente."),
   items: z
     .array(invoiceItemSchema)

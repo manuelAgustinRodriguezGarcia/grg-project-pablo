@@ -135,6 +135,12 @@ enum BillingFiscalEnvironment {
   PRODUCCION
 }
 
+/// Ambiente ARCA con ticket WSAA. MODO_PRUEBA no se persiste.
+enum ArcaAccessEnvironment {
+  HOMOLOGACION
+  PRODUCCION
+}
+
 enum BillingPaymentMethod {
   CONTADO_EFECTIVO
   CONTADO
@@ -666,7 +672,7 @@ model BillingInvoice {
   invoiceType    BillingInvoiceType
   pointOfSale    String
   sequenceNumber Int
-  invoiceNumber  String                     @unique
+  invoiceNumber  String
   issuedAt       DateTime                   @default(now())
 
   clientId                   String?
@@ -704,12 +710,13 @@ model BillingInvoice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  client      BillingClient?              @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  items       BillingInvoiceItem[]
+  client       BillingClient?              @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  items        BillingInvoiceItem[]
   allocations  BillingReceiptAllocation[]
   billingNotes BillingNote[]
+  arcaEmission BillingArcaEmission?
 
-  @@unique([environment, pointOfSale, sequenceNumber])
+  @@unique([environment, pointOfSale, invoiceType, sequenceNumber])
   @@index([issuedAt])
   @@index([clientId])
   @@index([invoiceType])
@@ -839,4 +846,67 @@ model AuditLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+enum BillingArcaEmissionStatus {
+  PREPARED
+  SENDING
+  APPROVED_PENDING_PERSISTENCE
+  REJECTED
+  AMBIGUOUS
+  FAILED_PRE_SEND
+  COMPLETED
+}
+
+/// Intención de emisión ARCA. No guarda ticket, certificado ni SOAP.
+model BillingArcaEmission {
+  id                     String                     @id @default(cuid())
+  idempotencyKey         String                     @unique
+  requestHash            String
+  environment            ArcaAccessEnvironment
+  service                String                     @default("wsfe")
+  status                 BillingArcaEmissionStatus
+  issuerCuit             String
+  pointOfSale            Int
+  invoiceType            BillingInvoiceType
+  voucherType            Int
+  voucherNumber          Int?
+  fiscalRequestSnapshot  Json?
+  arcaResult             String?
+  authorizationCode      String?
+  authorizationExpiresAt DateTime?
+  arcaProcessDate        String?
+  reprocess              String?
+  observations           Json?
+  errors                 Json?
+  events                 Json?
+  lastErrorCode          String?
+  lastErrorMessage       String?
+  /// Intención comercial congelada al crear PREPARED. No se relee el cliente ni el rubro.
+  billingPayloadSnapshot Json?
+  invoiceId              String?                    @unique
+  invoice                BillingInvoice?            @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+
+  @@unique([environment, pointOfSale, voucherType, voucherNumber], map: "BillingArcaEmission_voucher_key")
+  @@index([status])
+}
+
+/// Ticket WSAA cifrado. Token y sign no se guardan en texto plano.
+model ArcaAccessTicketCache {
+  id                     String                @id @default(cuid())
+  environment            ArcaAccessEnvironment
+  service                String
+  certificateFingerprint String
+  encryptedPayload       String
+  iv                     String
+  authTag                String
+  generationTime         DateTime
+  expirationTime         DateTime
+  encryptionVersion      Int                   @default(1)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  @@unique([environment, service, certificateFingerprint], map: "ArcaAccessTicketCache_identity_key")
 }

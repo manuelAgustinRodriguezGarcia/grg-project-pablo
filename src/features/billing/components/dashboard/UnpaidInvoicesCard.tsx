@@ -22,7 +22,7 @@ export function UnpaidInvoicesCard({ invoices }: UnpaidInvoicesCardProps) {
         <h2 className={styles.cardTitle}>Facturas impagas</h2>
       </div>
       {invoices.length === 0 ? (
-        <div className={styles.emptyHint} role="status">
+        <div className={`${styles.emptyHint} ${styles.unpaidEmpty}`} role="status">
           <Sticker className={styles.emptyHintIcon} strokeWidth={ICON_STROKE} aria-hidden />
           <p className={styles.emptyHintText}>No hay facturas con saldo pendiente.</p>
         </div>

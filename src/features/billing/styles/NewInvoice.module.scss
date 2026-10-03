@@ -39,6 +39,73 @@ $invoice-panel-bg: rgba($white, 0.94);
   color: #b45309;
 }
 
+.homologationBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid rgba(#1d4ed8, 0.22);
+  border-radius: $radius-md;
+  background: rgba(#2563eb, 0.08);
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #1e3a8a;
+}
+
+.environmentBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.productionBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid rgba(#0f172a, 0.16);
+  border-radius: $radius-md;
+  background: rgba(#0f172a, 0.05);
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #0f172a;
+}
+
+.productionBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.createConfirmNotice {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #1e3a8a;
+}
+
 .contentLayout {
   display: flex;
   flex-direction: column;

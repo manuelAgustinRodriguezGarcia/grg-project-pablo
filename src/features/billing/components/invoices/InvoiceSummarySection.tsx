@@ -2,6 +2,7 @@
 
 import { useRef, type KeyboardEvent } from "react";
 import type {
+  BillingFiscalEnvironment,
   BillingInvoiceType,
   BillingPaymentMethod,
   BillingPaymentStatus,
@@ -25,8 +26,32 @@ import {
   buildPaymentMethodCells,
   type PickerArrowKey,
 } from "@/features/billing/utils/invoice-keyboard-flow";
-import { Banknote, Percent, ReceiptText, ICON_STROKE } from "@/shared/icons";
+import { PRODUCTION_EMISSION_DISABLED_MESSAGE } from "@/shared/fiscal/production-emission";
+import { Banknote, ICON_STROKE, Percent, ReceiptText } from "@/shared/icons";
 import styles from "@/features/billing/styles/NewInvoice.module.scss";
+
+function submitButtonLabel(
+  environment: BillingFiscalEnvironment,
+  isSubmitting: boolean,
+  productionEmissionEnabled: boolean,
+): string {
+  switch (environment) {
+    case "MODO_PRUEBA":
+      return isSubmitting ? "Creando factura…" : "Crear factura en modo prueba";
+    case "HOMOLOGACION":
+      return isSubmitting ? "Emitiendo factura..." : "Emitir factura";
+    case "PRODUCCION":
+      if (!productionEmissionEnabled) {
+        return PRODUCTION_EMISSION_DISABLED_MESSAGE;
+      }
+
+      return isSubmitting ? "Emitiendo factura..." : "Emitir factura";
+    default: {
+      const unexpected: never = environment;
+      return unexpected;
+    }
+  }
+}
 
 function formatCents(cents: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -93,6 +118,8 @@ type InvoiceSummarySectionProps = {
   notes: string;
   canSubmit: boolean;
   isSubmitting: boolean;
+  environment?: BillingFiscalEnvironment;
+  productionEmissionEnabled?: boolean;
   blockingError: string | null;
   submitError: string | null;
   validationHints: string[];
@@ -115,6 +142,8 @@ export function InvoiceSummarySection({
   notes,
   canSubmit,
   isSubmitting,
+  environment = "MODO_PRUEBA",
+  productionEmissionEnabled = false,
   blockingError,
   submitError,
   validationHints,
@@ -450,7 +479,7 @@ export function InvoiceSummarySection({
           onClick={onSubmit}
           disabled={!canSubmit || isSubmitting}
         >
-          {isSubmitting ? "Creando factura…" : "Crear factura en modo prueba"}
+          {submitButtonLabel(environment, isSubmitting, productionEmissionEnabled)}
         </button>
       ) : null}
     </div>

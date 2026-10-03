@@ -19,6 +19,8 @@ import {
   AUDIT_ENTITY_TYPES,
 } from "@/server/services/audit.constants";
 import { auditService } from "@/server/services/audit.service";
+import { finalizeApprovedArcaEmission } from "@/server/arca/invoices/finalize-approved-arca-emission";
+import { issueArcaInvoice } from "@/server/arca/invoices/issue-arca-invoice";
 import { billingInvoiceService } from "@/server/services/billing-invoice.service";
 import {
   adminUserFixture,
@@ -67,9 +69,17 @@ vi.mock("@/server/services/audit.service", () => ({
 vi.mock("@/server/services/billing-invoice-settlement", () => ({
   releaseOverpaymentsForClient: vi.fn(),
 }));
+vi.mock("@/server/arca/invoices/issue-arca-invoice", () => ({
+  issueArcaInvoice: vi.fn(),
+}));
+vi.mock("@/server/arca/invoices/finalize-approved-arca-emission", () => ({
+  finalizeApprovedArcaEmission: vi.fn(),
+}));
 
 const CLIENT_ID = "clbillingclient0000000001";
 const RUBRO_ID = "clbillingrubro00000000001";
+const IDEMPOTENCY_KEY = "11111111-1111-4111-8111-111111111111";
+const ISSUED_AT = new Date("2026-09-30T15:00:00.000Z");
 
 function createClientFixture(
   overrides: Partial<BillingClient> = {},
@@ -133,6 +143,35 @@ function createSettingsFixture(
   };
 }
 
+const PROD_CERTIFICATE = `-----BEGIN CERTIFICATE-----
+DUMMY-CERT
+-----END CERTIFICATE-----
+`;
+
+const PROD_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
+DUMMY-KEY
+-----END PRIVATE KEY-----
+`;
+
+function encodePem(value: string): string {
+  return Buffer.from(value, "utf8").toString("base64");
+}
+
+function completeProductionSettings(): BillingFiscalSettings {
+  return createSettingsFixture({
+    environment: "PRODUCCION",
+    issuerName: "Emisor SA",
+    issuerCuit: "30712345671",
+    issuerAddress: "Calle 1",
+    issuerCity: "Resistencia",
+    issuerProvince: "Chaco",
+    issuerIvaCondition: "Responsable Inscripto",
+    issuerGrossIncome: "IIBB",
+    issuerActivitiesStartedAt: "2004-03-15",
+    pointOfSale: "0007",
+  });
+}
+
 function mockCreatePassthrough(): void {
   vi.mocked(billingInvoiceRepository.create).mockImplementation(
     async (data: CreateBillingInvoiceData) => {
@@ -166,14 +205,52 @@ function mockCreatePassthrough(): void {
 
 function baseInput() {
   return {
+    idempotencyKey: IDEMPOTENCY_KEY,
     clientId: CLIENT_ID,
     items: [{ rubroId: RUBRO_ID, quantity: 1, unitPrice: 1210 }],
     paymentMethod: "CONTADO_EFECTIVO" as const,
   };
 }
 
+function storedAuthorizedInvoice(): BillingInvoiceWithItems {
+  return {
+    id: "clbillinginvoicearca000001",
+    environment: "HOMOLOGACION",
+    fiscalStatus: "AUTORIZADA",
+    invoiceType: "A",
+    pointOfSale: "0007",
+    sequenceNumber: 3,
+    invoiceNumber: "0007-00000003",
+    cae: "12345678901234",
+    caeExpiresAt: new Date("2026-10-10T00:00:00.000Z"),
+    items: [],
+    allocations: [],
+    billingNotes: [],
+  } as unknown as BillingInvoiceWithItems;
+}
+
+function mockApprovedIssue(): void {
+  vi.mocked(issueArcaInvoice).mockResolvedValue({
+    status: "approved",
+    emissionId: "emission-1",
+    voucherType: 1,
+    voucherNumber: 3,
+    authorizationCode: "12345678901234",
+    authorizationExpiresAt: "20261010",
+  });
+  vi.mocked(finalizeApprovedArcaEmission).mockResolvedValue({
+    status: "completed",
+    emissionId: "emission-1",
+    invoice: { id: "clbillinginvoicearca000001" },
+  } as Awaited<ReturnType<typeof finalizeApprovedArcaEmission>>);
+  vi.mocked(billingInvoiceRepository.findById).mockResolvedValue(
+    storedAuthorizedInvoice(),
+  );
+}
+
 describe("BillingInvoiceService", () => {
   beforeEach(() => {
+    vi.unstubAllEnvs();
     vi.clearAllMocks();
     mockRequireRole(adminUserFixture);
     vi.mocked(billingClientRepository.findById).mockResolvedValue(
@@ -239,6 +316,9 @@ describe("BillingInvoiceService", () => {
         entityType: AUDIT_ENTITY_TYPES.BILLING_INVOICE,
         entityId: invoice.id,
       });
+      expect(issueArcaInvoice).not.toHaveBeenCalled();
+      expect(finalizeApprovedArcaEmission).not.toHaveBeenCalled();
+      expect(billingInvoiceRepository.getNextSequenceNumber).toHaveBeenCalled();
     });
 
     it("crea Factura B para cliente con DNI consumidor final", async () => {
@@ -470,14 +550,307 @@ describe("BillingInvoiceService", () => {
       ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
     });
 
-    it("bloquea la emisión si el ambiente no es modo prueba", async () => {
+    it("bloquea producción si el kill switch no es exactamente true", async () => {
       vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
-        createSettingsFixture({ environment: "HOMOLOGACION" }),
+        createSettingsFixture({ environment: "PRODUCCION" }),
+      );
+
+      for (const value of [undefined, "false", "TRUE", "1", " yes "]) {
+        if (value === undefined) {
+          vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "");
+          delete process.env.ARCA_PRODUCTION_EMISSION_ENABLED;
+        } else {
+          vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", value);
+        }
+
+        await expect(
+          billingInvoiceService.createInvoice(baseInput()),
+        ).rejects.toMatchObject({
+          code: "PRODUCTION_EMISSION_DISABLED",
+          message: "La emisión en producción no está habilitada.",
+        });
+      }
+
+      expect(issueArcaInvoice).not.toHaveBeenCalled();
+      expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("no llama a ARCA si la configuración fiscal de producción está incompleta", async () => {
+      vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "true");
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "PRODUCCION",
+          issuerName: "Emisor SA",
+          issuerCuit: "30712345671",
+        }),
       );
 
       await expect(
         billingInvoiceService.createInvoice(baseInput()),
-      ).rejects.toMatchObject({ code: "ENVIRONMENT_NOT_SUPPORTED" });
+      ).rejects.toMatchObject({
+        code: "ARCA_PRODUCTION_CONFIGURATION_INCOMPLETE",
+      });
+      expect(issueArcaInvoice).not.toHaveBeenCalled();
+    });
+
+    it("no llama a ARCA si faltan las credenciales productivas", async () => {
+      vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "true");
+      vi.stubEnv("ARCA_PROD_CERT_B64", "");
+      vi.stubEnv("ARCA_PROD_PRIVATE_KEY_B64", "");
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        completeProductionSettings(),
+      );
+
+      await expect(
+        billingInvoiceService.createInvoice(baseInput()),
+      ).rejects.toMatchObject({
+        code: "ARCA_CONFIGURATION_ERROR",
+        message: "Las credenciales de ARCA para producción no están disponibles.",
+      });
+      expect(issueArcaInvoice).not.toHaveBeenCalled();
+    });
+
+    it("con flag y configuración completa entra al mismo flujo de emisión", async () => {
+      vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "true");
+      vi.stubEnv("ARCA_PROD_CERT_B64", encodePem(PROD_CERTIFICATE));
+      vi.stubEnv("ARCA_PROD_PRIVATE_KEY_B64", encodePem(PROD_PRIVATE_KEY));
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        completeProductionSettings(),
+      );
+      mockApprovedIssue();
+      vi.mocked(billingInvoiceRepository.findById).mockResolvedValue({
+        ...storedAuthorizedInvoice(),
+        environment: "PRODUCCION",
+      });
+
+      const invoice = await billingInvoiceService.createInvoice(baseInput(), {
+        now: ISSUED_AT,
+      });
+
+      expect(issueArcaInvoice).toHaveBeenCalledTimes(1);
+      expect(issueArcaInvoice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          environment: "PRODUCCION",
+          invoiceType: "A",
+          pointOfSale: 7,
+        }),
+      );
+      expect(finalizeApprovedArcaEmission).toHaveBeenCalledWith("emission-1");
+      expect(invoice.environment).toBe("PRODUCCION");
+    });
+
+    it("en homologación emite aunque el kill switch esté cerrado", async () => {
+      vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "false");
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      mockApprovedIssue();
+
+      await billingInvoiceService.createInvoice(baseInput(), { now: ISSUED_AT });
+
+      expect(issueArcaInvoice).toHaveBeenCalledWith(
+        expect.objectContaining({ environment: "HOMOLOGACION" }),
+      );
+    });
+
+    it("en modo prueba no usa el kill switch ni ARCA", async () => {
+      vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "false");
+
+      const invoice = await billingInvoiceService.createInvoice(baseInput());
+
+      expect(invoice.environment).toBe("MODO_PRUEBA");
+      expect(issueArcaInvoice).not.toHaveBeenCalled();
+    });
+
+    it("en homologación arma el snapshot, emite una vez y persiste la factura autorizada", async () => {
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      mockApprovedIssue();
+
+      const invoice = await billingInvoiceService.createInvoice(baseInput(), {
+        now: ISSUED_AT,
+      });
+
+      expect(issueArcaInvoice).toHaveBeenCalledTimes(1);
+      expect(finalizeApprovedArcaEmission).toHaveBeenCalledTimes(1);
+      expect(finalizeApprovedArcaEmission).toHaveBeenCalledWith("emission-1");
+      expect(billingInvoiceRepository.getNextSequenceNumber).not.toHaveBeenCalled();
+      expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
+      expect(invoice.id).toBe("clbillinginvoicearca000001");
+      expect(invoice.fiscalStatus).toBe("AUTORIZADA");
+      expect(invoice.invoiceNumber).toBe("0007-00000003");
+
+      const request = vi.mocked(issueArcaInvoice).mock.calls[0][0];
+      expect(request.idempotencyKey).toBe(IDEMPOTENCY_KEY);
+      expect(request.environment).toBe("HOMOLOGACION");
+      expect(request.voucherDate).toBe(ISSUED_AT);
+      expect(request.billing.issuedAt).toBe(ISSUED_AT.toISOString());
+      expect(request.billing.client.name).toBe("GOMEZ SRL");
+      expect(request.billing.items[0]?.description).toBe(
+        "Embragues y componentes",
+      );
+      expect(request.totals.totalCents).toBe(request.billing.financial.totalCents);
+      expect(request.totals.netCents).toBe(request.billing.financial.netCents);
+      expect(request.billing.financial.totalVisualRoundedCents).toBe(121000);
+      expect(request.totals).not.toHaveProperty("totalVisualRoundedCents");
+      expect(
+        vi.mocked(issueArcaInvoice).mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        vi.mocked(finalizeApprovedArcaEmission).mock.invocationCallOrder[0],
+      );
+      expect(auditService.logOperationSafe).toHaveBeenCalledWith(
+        expect.objectContaining({ entityId: invoice.id }),
+      );
+    });
+
+    it("no finaliza si ARCA rechaza el comprobante", async () => {
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      vi.mocked(issueArcaInvoice).mockResolvedValue({
+        status: "rejected",
+        emissionId: "emission-1",
+        voucherType: 1,
+        voucherNumber: 3,
+      });
+
+      await expect(
+        billingInvoiceService.createInvoice(baseInput(), { now: ISSUED_AT }),
+      ).rejects.toMatchObject({
+        code: "ARCA_INVOICE_REJECTED",
+        message: "ARCA rechazó el comprobante.",
+      });
+      expect(finalizeApprovedArcaEmission).not.toHaveBeenCalled();
+      expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("no finaliza si el estado en ARCA queda ambiguo", async () => {
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      vi.mocked(issueArcaInvoice).mockResolvedValue({
+        status: "ambiguous",
+        emissionId: "emission-1",
+        voucherType: 1,
+        voucherNumber: 3,
+        code: "ARCA_AMBIGUOUS_VOUCHER_MISMATCH",
+      });
+
+      await expect(
+        billingInvoiceService.createInvoice(baseInput(), { now: ISSUED_AT }),
+      ).rejects.toMatchObject({
+        code: "ARCA_EMISSION_STATUS_UNCERTAIN",
+        message:
+          "No se pudo confirmar el estado del comprobante en ARCA. Volvé a intentar sin modificar la factura.",
+      });
+      expect(finalizeApprovedArcaEmission).not.toHaveBeenCalled();
+      expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("no finaliza si la emisión falla antes del envío", async () => {
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      vi.mocked(issueArcaInvoice).mockResolvedValue({
+        status: "failed_pre_send",
+        emissionId: "emission-1",
+        code: "INVALID_TICKET",
+        message: "No se pudo obtener el ticket.",
+      });
+
+      await expect(
+        billingInvoiceService.createInvoice(baseInput(), { now: ISSUED_AT }),
+      ).rejects.toMatchObject({
+        code: "ARCA_EMISSION_FAILED_PRE_SEND",
+        message: "No se pudo obtener el ticket.",
+      });
+      expect(finalizeApprovedArcaEmission).not.toHaveBeenCalled();
+      expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("informa persistencia pendiente si ARCA aprobó y el guardado local falla", async () => {
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      mockApprovedIssue();
+      vi.mocked(finalizeApprovedArcaEmission).mockRejectedValue(
+        new Error("SOAP token Sign private key"),
+      );
+
+      await expect(
+        billingInvoiceService.createInvoice(baseInput(), { now: ISSUED_AT }),
+      ).rejects.toMatchObject({
+        code: "ARCA_APPROVED_LOCAL_PERSISTENCE_PENDING",
+        message:
+          "ARCA autorizó el comprobante, pero no pudo completarse el guardado local. Volvé a intentar sin modificar la factura.",
+      });
+      expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
+      expect(auditService.logOperationSafe).not.toHaveBeenCalled();
+    });
+
+    it("reintenta la misma clave sin crear otra factura local", async () => {
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      mockApprovedIssue();
+      vi.mocked(issueArcaInvoice)
+        .mockResolvedValueOnce({
+          status: "approved",
+          emissionId: "emission-1",
+          voucherType: 1,
+          voucherNumber: 3,
+          authorizationCode: "12345678901234",
+          authorizationExpiresAt: "20261010",
+        })
+        .mockResolvedValueOnce({
+          status: "completed",
+          emissionId: "emission-1",
+          voucherType: 1,
+          voucherNumber: 3,
+          authorizationCode: "12345678901234",
+          authorizationExpiresAt: "20261010",
+        });
+
+      const first = await billingInvoiceService.createInvoice(baseInput(), {
+        now: ISSUED_AT,
+      });
+      const second = await billingInvoiceService.createInvoice(baseInput(), {
+        now: ISSUED_AT,
+      });
+
+      expect(first.id).toBe(second.id);
+      expect(issueArcaInvoice).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(issueArcaInvoice).mock.calls[0][0].idempotencyKey).toBe(
+        IDEMPOTENCY_KEY,
+      );
+      expect(vi.mocked(issueArcaInvoice).mock.calls[1][0].idempotencyKey).toBe(
+        IDEMPOTENCY_KEY,
+      );
+      expect(finalizeApprovedArcaEmission).toHaveBeenCalledTimes(2);
+      expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
+      expect(billingInvoiceRepository.getNextSequenceNumber).not.toHaveBeenCalled();
     });
 
     it("reintenta la numeración ante un conflicto de unicidad", async () => {

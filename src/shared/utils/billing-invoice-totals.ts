@@ -60,6 +60,12 @@ export type InvoiceTotals = {
   /** Factura A: neto sin IVA. Factura B: bruto con IVA (PRD §14.3/§14.4). */
   subtotalCents: number;
   discountCents: number;
+  /**
+   * Neto fiscal después del descuento. Es el valor que ya produce
+   * extractNetCents sobre el bruto descontado. En Factura B no es
+   * subtotalCents.
+   */
+  netCents: number;
   ivaCents: number;
   totalCents: number;
   totalVisualRoundedCents: number;
@@ -136,6 +142,7 @@ export function computeInvoiceTotals(input: InvoiceTotalsInput): InvoiceTotals {
     lineTotalsCents,
     subtotalCents,
     discountCents,
+    netCents: netAfterDiscountCents,
     ivaCents,
     totalCents,
     totalVisualRoundedCents: roundVisualTotalCents(totalCents),

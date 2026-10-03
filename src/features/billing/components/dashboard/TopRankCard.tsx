@@ -117,7 +117,7 @@ export function TopRankCard({
       </div>
       <div className={scrollableList ? styles.rankListWrap : undefined}>
         {rankedItems.length === 0 ? (
-          <p className={styles.emptyHint} role="status">
+          <p className={`${styles.emptyHint} ${styles.rankEmpty}`} role="status">
             {emptyLabel}
           </p>
         ) : (

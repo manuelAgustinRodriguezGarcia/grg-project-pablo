@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildFiscalInvoiceNumber,
   buildTestInvoiceNumber,
   GENERIC_BILLING_CLIENT_NAME,
   determineInvoiceType,
@@ -15,12 +16,12 @@ describe("determineInvoiceType", () => {
     expect(determineInvoiceType("DNI", "CONSUMIDOR_FINAL")).toBe("B");
     expect(determineInvoiceType("CUIT", "EXENTO")).toBe("B");
     expect(determineInvoiceType("CUIT", "CONSUMIDOR_FINAL")).toBe("B");
-    expect(determineInvoiceType("CUIT", "MONOTRIBUTISTA")).toBe("B");
+    expect(determineInvoiceType("CUIT", "MONOTRIBUTISTA")).toBe("A");
     expect(determineInvoiceType("CUIT", "RESPONSABLE_INSCRIPTO")).toBe("A");
     expect(determineInvoiceType("CUIT", "RESPONSABLE_NO_INSCRIPTO")).toBe("B");
   });
 
-  it("solo genera Factura A con CUIT + Responsable Inscripto", () => {
+  it("sin CUIT no genera Factura A", () => {
     expect(determineInvoiceType("DNI", "RESPONSABLE_INSCRIPTO")).toBe("B");
     expect(determineInvoiceType("NINGUNO", "RESPONSABLE_INSCRIPTO")).toBe("B");
   });
@@ -97,6 +98,13 @@ describe("buildTestInvoiceNumber", () => {
     expect(buildTestInvoiceNumber("0007", 999999999)).toBe(
       "0007-PRUEBA-999999999",
     );
+  });
+});
+
+describe("buildFiscalInvoiceNumber", () => {
+  it("arma el comprobante fiscal sin la marca de prueba", () => {
+    expect(buildFiscalInvoiceNumber(7, 3)).toBe("0007-00000003");
+    expect(buildFiscalInvoiceNumber("0007", 3)).toBe("0007-00000003");
   });
 });
 

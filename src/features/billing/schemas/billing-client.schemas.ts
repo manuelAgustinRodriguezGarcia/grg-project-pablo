@@ -1,4 +1,9 @@
 import { z } from "zod";
+import type {
+  BillingIdentificationType,
+  BillingIvaCondition,
+} from "@/generated/prisma/client";
+import { clientFiscalPairError } from "@/shared/fiscal/billing-client-fiscal-rules";
 
 export const billingIdentificationTypeSchema = z.enum([
   "CUIT",
@@ -53,17 +58,57 @@ const billingClientBaseSchema = z.object({
     .nullable(),
 });
 
-export const createBillingClientSchema = billingClientBaseSchema;
+function addFiscalPairIssue(
+  value: {
+    identificationType: BillingIdentificationType;
+    ivaCondition: BillingIvaCondition;
+  },
+  context: z.RefinementCtx,
+  existingIvaCondition?: BillingIvaCondition | null,
+): void {
+  const message = clientFiscalPairError({
+    identificationType: value.identificationType,
+    ivaCondition: value.ivaCondition,
+    existingIvaCondition,
+  });
 
-export const updateBillingClientSchema = billingClientBaseSchema.extend({
-  id: z.string().min(1, "Identificador de cliente inválido."),
-  code: z
-    .string()
-    .trim()
-    .min(4, "El código de cliente es obligatorio.")
-    .max(24, "El código no puede superar 24 caracteres.")
-    .optional(),
-});
+  if (!message) {
+    return;
+  }
+
+  context.addIssue({
+    code: "custom",
+    message,
+    path: ["ivaCondition"],
+  });
+}
+
+export const createBillingClientSchema = billingClientBaseSchema.superRefine(
+  (value, context) => {
+    addFiscalPairIssue(value, context);
+  },
+);
+
+export const updateBillingClientSchema = billingClientBaseSchema
+  .extend({
+    id: z.string().min(1, "Identificador de cliente inválido."),
+    code: z
+      .string()
+      .trim()
+      .min(4, "El código de cliente es obligatorio.")
+      .max(24, "El código no puede superar 24 caracteres.")
+      .optional(),
+  })
+  .superRefine((value, context) => {
+    if (
+      value.ivaCondition === "RESPONSABLE_NO_INSCRIPTO" &&
+      value.identificationType === "CUIT"
+    ) {
+      return;
+    }
+
+    addFiscalPairIssue(value, context);
+  });
 
 export const billingClientIdSchema = z.object({
   clientId: z.string().min(1, "Identificador de cliente inválido."),

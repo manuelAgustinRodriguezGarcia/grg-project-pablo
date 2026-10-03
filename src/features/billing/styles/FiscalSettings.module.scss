@@ -225,6 +225,27 @@
   color: $navy;
 }
 
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 0.9rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.warning {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(#b7791f, 0.35);
+  border-radius: $radius-md;
+  background: rgba(#b7791f, 0.12);
+  color: $navy;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
 .metaNote {
   margin: 0;
   font-size: 0.82rem;

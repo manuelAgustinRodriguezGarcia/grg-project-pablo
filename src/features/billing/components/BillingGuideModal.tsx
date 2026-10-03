@@ -31,6 +31,14 @@ type BillingGuideModalProps = {
 type GuideScreen = "home" | "category" | "article";
 
 const CLOSE_ANIMATION_MS = 180;
+const FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "a[href]",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ");
 
 function prefersReducedMotion(): boolean {
   return (
@@ -116,12 +124,14 @@ function GuideArticleBody({
       ) : null}
 
       {visualActions.length > 0 ? (
-        <div className={styles.visualActions} aria-hidden>
+        <div className={styles.visualActions}>
           {visualActions.map((action) => {
             const ActionIcon = action.icon;
             return (
               <span key={action.id} className={styles.visualAction}>
-                {ActionIcon ? <ActionIcon strokeWidth={ICON_STROKE} /> : null}
+                {ActionIcon ? (
+                  <ActionIcon strokeWidth={ICON_STROKE} aria-hidden />
+                ) : null}
                 {action.label}
               </span>
             );
@@ -161,6 +171,8 @@ export function BillingGuideModal({ userRole, onClose }: BillingGuideModalProps)
   const [isClosing, setIsClosing] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   const selectedCategory = categoryId
     ? findBillingGuideCategory(categories, categoryId)
@@ -205,16 +217,71 @@ export function BillingGuideModal({ userRole, onClose }: BillingGuideModalProps)
   }, [goHome, screen]);
 
   useEffect(() => {
+    previouslyFocusedRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     return () => {
       if (closeTimerRef.current !== null) {
         window.clearTimeout(closeTimerRef.current);
       }
+      document.body.style.overflow = previousOverflow;
+      previouslyFocusedRef.current?.focus();
     };
   }, []);
 
   useEffect(() => {
     headingRef.current?.focus();
   }, [screen, categoryId, articleId]);
+
+  useEffect(() => {
+    function handleTab(event: KeyboardEvent) {
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const dialog = dialogRef.current;
+      if (!dialog) {
+        return;
+      }
+
+      const focusable = [
+        ...dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ];
+      if (focusable.length === 0) {
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      const index =
+        active instanceof HTMLElement ? focusable.indexOf(active) : -1;
+
+      if (index === -1 || !dialog.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first)?.focus();
+        return;
+      }
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last?.focus();
+        return;
+      }
+
+      if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleTab);
+    return () => document.removeEventListener("keydown", handleTab);
+  }, []);
 
   useEscapeToClose(requestClose, !isClosing);
 
@@ -236,9 +303,9 @@ export function BillingGuideModal({ userRole, onClose }: BillingGuideModalProps)
 
   const CategoryIcon = selectedCategory?.icon;
   const labelledBy =
-    screen === "article"
+    screen === "article" && selectedArticle
       ? "billing-guide-article-title"
-      : screen === "category"
+      : screen === "category" && selectedCategory
         ? "billing-guide-category-title"
         : "billing-guide-title";
 
@@ -259,6 +326,7 @@ export function BillingGuideModal({ userRole, onClose }: BillingGuideModalProps)
       }}
     >
       <div
+        ref={dialogRef}
         className={`${modalStyles.modalCard} ${styles.card}`}
         role="dialog"
         aria-modal="true"

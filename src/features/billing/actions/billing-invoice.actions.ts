@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { AuthError } from "@/server/auth";
+import { AuthError } from "@/server/auth/errors";
 import { getSafeClientMessage } from "@/server/errors/sanitize-error";
+import { isArcaProductionEmissionEnabled } from "@/server/arca/config/production-emission";
 import { billingFiscalSettingsService } from "@/server/services/billing-fiscal-settings.service";
 import { billingInvoiceService } from "@/server/services/billing-invoice.service";
 import { BillingInvoiceError } from "@/server/services/billing-invoice.errors";
@@ -44,6 +45,15 @@ export async function getBillingFiscalContextAction(): Promise<
         genericClientLimit: settings.genericClientLimit.toNumber(),
         pointOfSale: settings.pointOfSale,
         environment: settings.environment,
+        issuerName: settings.issuerName,
+        issuerCuit: settings.issuerCuit,
+        issuerAddress: settings.issuerAddress,
+        issuerCity: settings.issuerCity,
+        issuerProvince: settings.issuerProvince,
+        issuerIvaCondition: settings.issuerIvaCondition,
+        issuerGrossIncome: settings.issuerGrossIncome,
+        issuerActivitiesStartedAt: settings.issuerActivitiesStartedAt,
+        productionEmissionEnabled: isArcaProductionEmissionEnabled(),
       },
     };
   } catch (error) {

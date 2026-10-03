@@ -73,7 +73,7 @@ export function CollectionStatusChart({
           </ul>
         </div>
       ) : (
-        <p className={styles.emptyHint} role="status">
+        <p className={`${styles.emptyHint} ${styles.collectionEmpty}`} role="status">
           Todavía no hay cobranzas este mes.
         </p>
       )}

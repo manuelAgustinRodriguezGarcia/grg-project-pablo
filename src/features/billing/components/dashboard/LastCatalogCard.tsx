@@ -31,7 +31,7 @@ export function LastCatalogCard({ catalog }: LastCatalogCardProps) {
           </div>
         </>
       ) : (
-        <p className={styles.realMeta}>Todavía no hay catálogos cargados.</p>
+        <p className={styles.emptyHint}>Todavía no hay catálogos cargados.</p>
       )}
     </>
   );
