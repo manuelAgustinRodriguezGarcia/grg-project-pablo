@@ -185,6 +185,12 @@ enum BillingNoteKind {
   DEBIT
 }
 
+/// Estado del documento BillingNote. La emisión ARCA vive en BillingArcaEmission.
+enum BillingNoteFiscalStatus {
+  INTERNA
+  AUTORIZADA
+}
+
 /// Perfil local sincronizado con Supabase Auth (`auth.users.id` → `User.id`).
 model User {
   id           String     @id @db.Uuid
@@ -786,15 +792,17 @@ model BillingReceiptAllocation {
   @@index([invoiceId])
 }
 
-/// Nota de crédito o débito asociada a una factura (modo prueba).
+/// Nota de crédito o débito. Interna legacy o fiscal autorizada.
 model BillingNote {
   id             String                   @id @default(cuid())
   kind           BillingNoteKind
   environment    BillingFiscalEnvironment @default(MODO_PRUEBA)
+  fiscalStatus   BillingNoteFiscalStatus  @default(INTERNA)
   invoiceType    BillingInvoiceType
   pointOfSale    String
   sequenceNumber Int
-  noteNumber     String                   @unique
+  noteNumber     String
+  voucherType    Int?
   issuedAt       DateTime                 @default(now())
 
   invoiceId String
@@ -806,12 +814,15 @@ model BillingNote {
   clientIdentificationNumber String?
   clientIvaCondition         BillingIvaCondition
 
-  amount      Decimal @db.Decimal(18, 2)
-  ivaPercent  Decimal @db.Decimal(5, 2)
-  ivaAmount   Decimal @db.Decimal(18, 2)
-  netAmount   Decimal @db.Decimal(18, 2)
+  amount      Decimal   @db.Decimal(18, 2)
+  ivaPercent  Decimal   @db.Decimal(5, 2)
+  ivaAmount   Decimal   @db.Decimal(18, 2)
+  netAmount   Decimal   @db.Decimal(18, 2)
   reason      String
-  pdfPath     String?
+  cae          String?
+  caeExpiresAt DateTime?
+  qrUrl        String?
+  pdfPath      String?
 
   createdByUserId String @db.Uuid
   printedAt       DateTime?
@@ -820,11 +831,12 @@ model BillingNote {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  invoice   BillingInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  client    BillingClient? @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  createdBy User           @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  invoice      BillingInvoice      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  client       BillingClient?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy    User                @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  arcaEmission BillingArcaEmission?
 
-  @@unique([kind, sequenceNumber])
+  @@unique([environment, pointOfSale, kind, invoiceType, sequenceNumber], map: "BillingNote_series_key")
   @@index([invoiceId])
   @@index([issuedAt])
   @@index([kind])
@@ -886,6 +898,9 @@ model BillingArcaEmission {
   billingPayloadSnapshot Json?
   invoiceId              String?                    @unique
   invoice                BillingInvoice?            @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  /// CHECK BillingArcaEmission_single_document: invoiceId y noteId no pueden estar ambos presentes.
+  noteId                 String?                    @unique
+  note                   BillingNote?               @relation(fields: [noteId], references: [id], onDelete: Restrict)
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
 

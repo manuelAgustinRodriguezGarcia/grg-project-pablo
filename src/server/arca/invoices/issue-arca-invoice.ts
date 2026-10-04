@@ -4,6 +4,7 @@ import {
   buildArcaCaeRequest,
   type ArcaCaeFiscalRequest,
 } from "@/server/arca/adapters/billing-invoice-to-cae";
+import { isArcaProductionEmissionEnabled } from "@/server/arca/config/production-emission";
 import { ArcaEmissionError } from "@/server/arca/errors/arca-emission.error";
 import { ArcaWsfeError } from "@/server/arca/errors/arca-wsfe.error";
 import {
@@ -23,7 +24,9 @@ import {
   hashArcaFiscalRequest,
   type ArcaFiscalHashInput,
 } from "@/server/arca/invoices/fiscal-request-hash";
+import { BillingInvoiceError } from "@/server/services/billing-invoice.errors";
 import { voucherTypeForClass } from "@/shared/fiscal/arca-fiscal-mapping";
+import { PRODUCTION_EMISSION_DISABLED_MESSAGE } from "@/shared/fiscal/production-emission";
 import { normalizeIssuerCuit } from "@/server/arca/utils/cuit";
 import { parseArcaPointOfSale } from "@/server/arca/utils/point-of-sale";
 import type { ArcaEnvironment } from "@/server/arca/types/arca.types";
@@ -408,6 +411,17 @@ async function failPreSend(
   };
 }
 
+function assertUnsentProductionAllowed(environment: ArcaEnvironment): void {
+  if (environment !== "PRODUCCION" || isArcaProductionEmissionEnabled()) {
+    return;
+  }
+
+  throw new BillingInvoiceError(
+    PRODUCTION_EMISSION_DISABLED_MESSAGE,
+    "PRODUCTION_EMISSION_DISABLED",
+  );
+}
+
 async function emitNew(
   emission: ArcaEmissionRecord,
   input: IssueArcaInvoiceInput,
@@ -419,6 +433,7 @@ async function emitNew(
   let fiscalRequest: ArcaCaeFiscalRequest;
 
   try {
+    assertUnsentProductionAllowed(emission.environment);
     ticket = await dependencies.getAccessTicket(input.environment);
     const last = await dependencies.getLastAuthorizedVoucher({
       environment: input.environment,
@@ -439,6 +454,13 @@ async function emitNew(
       ivaPercent: input.ivaPercent,
     });
   } catch (error) {
+    if (
+      error instanceof BillingInvoiceError &&
+      error.code === "PRODUCTION_EMISSION_DISABLED"
+    ) {
+      throw error;
+    }
+
     const safe = safeMessage(error);
     return failPreSend(dependencies.store, emission.id, safe.code, safe.message);
   }

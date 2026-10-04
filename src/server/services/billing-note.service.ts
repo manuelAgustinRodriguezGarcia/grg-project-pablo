@@ -2,8 +2,11 @@ import type { BillingNoteKind } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { requirePermission } from "@/server/auth";
 import { prisma } from "@/server/database/prisma";
+import { arcaEmissionRepository } from "@/server/arca/repositories/arca-emission.repository";
+import { isArcaNoteBillingSnapshot } from "@/server/arca/notes/note-payload-snapshot";
 import { buildNotePdf } from "@/server/pdf/build-note-pdf";
 import { resolveInvoicePdfIssuer } from "@/server/pdf/invoice-pdf-issuer";
+import type { InvoicePdfIssuer } from "@/server/pdf/invoice-pdf.types";
 import { loadRothamelLogoPng } from "@/server/pdf/load-rothamel-logo";
 import { billingFiscalSettingsRepository } from "@/server/repositories/billing-fiscal-settings.repository";
 import { billingInvoiceRepository } from "@/server/repositories/billing-invoice.repository";
@@ -13,6 +16,11 @@ import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/server/services/audit.const
 import { auditService } from "@/server/services/audit.service";
 import { syncInvoiceSettlement, loadInvoiceSettlementSums } from "@/server/services/billing-invoice-settlement";
 import {
+  LEGACY_NOTE_INVOICE_ENVIRONMENT_MESSAGE,
+  LEGACY_NOTES_DISABLED_MESSAGE,
+  legacyInternalNotesAllowed,
+} from "@/features/billing/utils/legacy-notes";
+import {
   creditNoteCapCents,
   invoiceOutstandingCents,
   splitGrossIvaCents,
@@ -21,6 +29,23 @@ import { buildNoteNumber } from "@/features/billing/utils/note-number";
 import { centsToPesos, pesosToCents } from "@/shared/utils/billing-invoice-totals";
 
 const NUMBER_GENERATION_MAX_ATTEMPTS = 5;
+
+async function issuerFromAuthorizedNote(noteId: string): Promise<InvoicePdfIssuer> {
+  const emission = await arcaEmissionRepository.findByNoteId(noteId);
+  const snapshot = emission?.billingPayloadSnapshot;
+
+  const issuer =
+    snapshot && isArcaNoteBillingSnapshot(snapshot) ? snapshot.issuerSnapshot : null;
+
+  if (!issuer?.name?.trim() || !issuer.cuit?.trim()) {
+    throw new BillingInvoiceError(
+      "La nota autorizada no tiene el emisor fiscal de la emisión.",
+      "NOTE_FISCAL_ISSUER_MISSING",
+    );
+  }
+
+  return issuer;
+}
 
 export type CreateBillingNoteInput = {
   kind: BillingNoteKind;
@@ -41,11 +66,25 @@ export class BillingNoteService {
 
   async createNote(input: CreateBillingNoteInput) {
     const { profile: admin } = await requirePermission("movements.create");
+    const settings = await billingFiscalSettingsRepository.getOrCreate();
+    if (!legacyInternalNotesAllowed(settings.environment)) {
+      throw new BillingInvoiceError(
+        LEGACY_NOTES_DISABLED_MESSAGE,
+        "LEGACY_NOTES_DISABLED",
+      );
+    }
+
     const invoice = await billingInvoiceRepository.findById(input.invoiceId);
     if (!invoice) {
       throw new BillingInvoiceError(
         "Factura no encontrada.",
         "BILLING_INVOICE_NOT_FOUND",
+      );
+    }
+    if (!legacyInternalNotesAllowed(invoice.environment)) {
+      throw new BillingInvoiceError(
+        LEGACY_NOTE_INVOICE_ENVIRONMENT_MESSAGE,
+        "LEGACY_NOTE_INVOICE_ENVIRONMENT",
       );
     }
 
@@ -59,7 +98,6 @@ export class BillingNoteService {
       throw validationError("El importe tiene que ser mayor a cero.");
     }
 
-    const settings = await billingFiscalSettingsRepository.getOrCreate();
     const totalCents = pesosToCents(invoice.totalVisualRounded.toNumber());
 
     for (let attempt = 0; attempt < NUMBER_GENERATION_MAX_ATTEMPTS; attempt += 1) {
@@ -123,10 +161,15 @@ export class BillingNoteService {
             data: {
               kind: input.kind,
               environment: settings.environment,
+              fiscalStatus: "INTERNA",
               invoiceType: invoice.invoiceType,
               pointOfSale: settings.pointOfSale,
               sequenceNumber,
               noteNumber,
+              voucherType: null,
+              cae: null,
+              caeExpiresAt: null,
+              qrUrl: null,
               invoiceId: invoice.id,
               clientId: invoice.clientId,
               clientCode: invoice.clientCode,
@@ -197,11 +240,15 @@ export class BillingNoteService {
       );
     }
 
-    const [settings, logoPng] = await Promise.all([
-      billingFiscalSettingsRepository.getOrCreate(),
+    const authorized = note.fiscalStatus === "AUTORIZADA";
+    const [issuer, logoPng] = await Promise.all([
+      authorized
+        ? issuerFromAuthorizedNote(note.id)
+        : billingFiscalSettingsRepository
+            .getOrCreate()
+            .then((settings) => resolveInvoicePdfIssuer(settings)),
       loadRothamelLogoPng(),
     ]);
-
     const bytes = await buildNotePdf({
       kind: note.kind,
       noteNumber: note.noteNumber,
@@ -217,10 +264,18 @@ export class BillingNoteService {
       clientCode: note.clientCode,
       clientIdentificationType: note.clientIdentificationType,
       clientIdentificationNumber: note.clientIdentificationNumber,
+      clientIvaCondition: note.clientIvaCondition,
       createdByName: note.createdBy.name,
-      issuer: resolveInvoicePdfIssuer(settings),
+      issuer,
       logoPng,
       environment: note.environment,
+      fiscalStatus: note.fiscalStatus,
+      pointOfSale: note.pointOfSale,
+      sequenceNumber: note.sequenceNumber,
+      voucherType: note.voucherType,
+      cae: note.cae,
+      caeExpiresAt: note.caeExpiresAt,
+      associatedIssuedAt: note.invoice.issuedAt,
     });
 
     const prefix = note.kind === "CREDIT" ? "Nota-credito" : "Nota-debito";

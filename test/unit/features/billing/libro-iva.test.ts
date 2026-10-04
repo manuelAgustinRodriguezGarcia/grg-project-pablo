@@ -77,6 +77,43 @@ describe("year-month value", () => {
   });
 });
 
+describe("buildLibroIvaRows fiscales", () => {
+  it("usa el número y los importes de la nota, con signo según el tipo", () => {
+    const rows = buildLibroIvaRows(
+      [invoice({ invoiceNumber: "0007-00000009", totalVisualRounded: 9999 })],
+      [
+        note({
+          kind: "CREDIT",
+          noteNumber: "0007-00000004",
+          invoiceNumber: "0007-00000009",
+          netAmount: 100,
+          ivaAmount: 21,
+          amount: 121,
+        }),
+        note({
+          kind: "DEBIT",
+          invoiceType: "B",
+          noteNumber: "0007-00000005",
+          netAmount: 50,
+          ivaAmount: 10.5,
+          amount: 60.5,
+        }),
+      ],
+    );
+    const credit = rows.find((row) => row.number === "0007-00000004");
+    const debit = rows.find((row) => row.number === "0007-00000005");
+
+    expect(credit).toMatchObject({
+      netAmount: -100,
+      ivaAmount: -21,
+      total: -121,
+      associatedNumber: "0007-00000009",
+    });
+    expect(debit).toMatchObject({ netAmount: 50, ivaAmount: 10.5, total: 60.5 });
+    expect(credit?.total).not.toBe(9999);
+  });
+});
+
 describe("buildLibroIvaRows", () => {
   it("suma facturas y ND, resta NC, y no mezcla letras", () => {
     const rows = buildLibroIvaRows(
@@ -285,7 +322,10 @@ describe("Libro IVA diario blocks", () => {
       numberTo: "0007-PRUEBA-000000003",
       ivaPercent: 21,
     });
-    expect(sections[1]?.rows.map((row) => row.tipo)).toEqual(["NC A", "ND B"]);
+    expect(sections[1]?.rows.map((row) => row.tipo)).toEqual([
+      "Nota de Crédito A",
+      "Nota de Débito B",
+    ]);
   });
 });
 

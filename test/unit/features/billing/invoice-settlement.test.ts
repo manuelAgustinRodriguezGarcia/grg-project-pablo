@@ -6,6 +6,7 @@ import {
   invoiceOutstandingCents,
   invoiceOverpaymentCents,
   invoicePaymentStatusFromSettlement,
+  persistedFiscalStatusAfterSettlement,
   planOverallocationRelease,
   splitGrossIvaCents,
 } from "@/features/billing/utils/invoice-settlement";
@@ -113,6 +114,65 @@ describe("invoice-settlement", () => {
         pesosToCents(1000),
       ),
     ).toBe("AJUSTADA_ND");
+  });
+
+  it("una factura autorizada con NC parcial sigue autorizada y baja el saldo", () => {
+    const total = pesosToCents(1000);
+    const credit = pesosToCents(300);
+    const commercial = invoiceFiscalStatusFromNotes(credit, 0, total);
+
+    expect(commercial).toBe("AJUSTADA_NC");
+    expect(persistedFiscalStatusAfterSettlement("AUTORIZADA", commercial)).toBe(
+      "AUTORIZADA",
+    );
+    expect(invoiceOutstandingCents(total, credit, 0, 0)).toBe(pesosToCents(700));
+  });
+
+  it("una factura autorizada con ND sigue autorizada y sube el saldo", () => {
+    const total = pesosToCents(1000);
+    const debit = pesosToCents(200);
+    const commercial = invoiceFiscalStatusFromNotes(0, debit, total);
+
+    expect(commercial).toBe("AJUSTADA_ND");
+    expect(persistedFiscalStatusAfterSettlement("AUTORIZADA", commercial)).toBe(
+      "AUTORIZADA",
+    );
+    expect(invoiceOutstandingCents(total, 0, debit, 0)).toBe(pesosToCents(1200));
+  });
+
+  it("una NC total sobre factura autorizada anula el saldo y conserva la autorización", () => {
+    const total = pesosToCents(1000);
+    const credit = pesosToCents(1000);
+    const commercial = invoiceFiscalStatusFromNotes(credit, 0, total);
+    const outstanding = invoiceOutstandingCents(total, credit, 0, 0);
+    const paymentStatus = invoicePaymentStatusFromSettlement(
+      commercial,
+      outstanding,
+      total,
+      "CUENTA_CORRIENTE",
+    );
+
+    expect(commercial).toBe("ANULADA_NC");
+    expect(persistedFiscalStatusAfterSettlement("AUTORIZADA", commercial)).toBe(
+      "AUTORIZADA",
+    );
+    expect(outstanding).toBe(0);
+    expect(paymentStatus).toBe("ANULADA");
+    expect(
+      effectiveInvoicePaymentStatus("CUENTA_CORRIENTE", paymentStatus, "AUTORIZADA"),
+    ).toBe("ANULADA");
+    expect(
+      effectiveInvoicePaymentStatus("CONTADO_EFECTIVO", paymentStatus, "AUTORIZADA"),
+    ).toBe("ANULADA");
+  });
+
+  it("en modo prueba el estado comercial de la nota sigue escribiéndose", () => {
+    expect(
+      persistedFiscalStatusAfterSettlement("MODO_PRUEBA", "AJUSTADA_NC"),
+    ).toBe("AJUSTADA_NC");
+    expect(
+      persistedFiscalStatusAfterSettlement("MODO_PRUEBA", "ANULADA_NC"),
+    ).toBe("ANULADA_NC");
   });
 
   it("desglosa IVA de un importe con IVA incluido", () => {

@@ -48,6 +48,8 @@ function note(
   return {
     id: "note-1",
     kind: "CREDIT",
+    fiscalStatus: "INTERNA",
+    environment: "MODO_PRUEBA",
     noteNumber: "0007-PRUEBA-NC-000000001",
     issuedAt: new Date("2026-08-22T12:00:00"),
     invoiceId: "inv-1",

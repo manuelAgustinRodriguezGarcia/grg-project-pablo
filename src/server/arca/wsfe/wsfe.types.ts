@@ -23,6 +23,15 @@ export type ArcaVatRate = {
   amount: number;
 };
 
+/** Comprobante asociado de WSFEv1. issuedAt es YYYYMMDD cuando está presente. */
+export type ArcaAssociatedVoucher = {
+  type: number;
+  pointOfSale: number;
+  number: number;
+  issuerCuit?: string;
+  issuedAt?: string;
+};
+
 export type ArcaCaeRequest = {
   environment: ArcaEnvironment | "MODO_PRUEBA";
   accessTicket: ArcaAccessTicket;
@@ -45,6 +54,7 @@ export type ArcaCaeRequest = {
   currencyRate: number;
   receiverVatConditionId: number;
   vatBreakdown: ArcaVatRate[];
+  associatedVouchers?: ArcaAssociatedVoucher[];
 };
 
 export type ArcaCaeHeader = {

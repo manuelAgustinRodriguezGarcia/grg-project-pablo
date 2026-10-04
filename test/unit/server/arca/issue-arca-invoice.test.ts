@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ArcaEmissionError } from "@/server/arca/errors/arca-emission.error";
 import { ArcaWsfeError } from "@/server/arca/errors/arca-wsfe.error";
 import {
@@ -260,6 +260,7 @@ function createHarness(lastNumber = 2) {
         lastErrorCode: null,
         lastErrorMessage: null,
         invoiceId: null,
+        noteId: null,
       };
       rows.set(row.id, row);
       return row;
@@ -455,6 +456,9 @@ describe("hashArcaFiscalRequest", () => {
 });
 
 describe("issueArcaInvoice", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
   it("crea la intención, toma el último número y llama a CAE una vez", async () => {
     const harness = createHarness(2);
     const result = await issueArcaInvoice(
@@ -485,6 +489,7 @@ describe("issueArcaInvoice", () => {
   ] as const)(
     "en producción factura %s con último %i solicita el número %i",
     async (invoiceType, lastNumber, expectedNumber, idempotencyKey) => {
+      vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "true");
       const harness = createHarness(lastNumber);
       const result = await issueArcaInvoice(
         invoiceInput({
@@ -598,6 +603,7 @@ describe("issueArcaInvoice", () => {
         lastErrorMessage: null,
         billingPayloadSnapshot: null,
         invoiceId: null,
+        noteId: null,
       };
       harness.rows.set(row.id, row);
 
@@ -789,4 +795,126 @@ describe("issueArcaInvoice", () => {
     expect([...harness.rows.values()][0]?.status).toBe("FAILED_PRE_SEND");
     expect([...harness.rows.values()][0]?.voucherNumber).toBeNull();
   });
+
+  it("no envía un PREPARED de producción si el kill switch se apagó", async () => {
+    vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "true");
+    const harness = createHarness(2);
+    const base = harness.dependencies();
+    let blockSending = true;
+    const store: ArcaEmissionStore = {
+      ...base.store,
+      async updateSending(id, data) {
+        if (blockSending) {
+          blockSending = false;
+          throw new Error("corte antes de enviar");
+        }
+
+        return base.store.updateSending(id, data);
+      },
+    };
+    const input = invoiceInput({ environment: "PRODUCCION" });
+
+    await expect(issueArcaInvoice(input, { ...base, store })).rejects.toThrow(
+      "corte antes de enviar",
+    );
+    const stored = JSON.stringify(
+      [...harness.rows.values()][0]?.billingPayloadSnapshot,
+    );
+    vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "false");
+
+    await expect(issueArcaInvoice(input, { ...base, store })).rejects.toMatchObject({
+      code: "PRODUCTION_EMISSION_DISABLED",
+    });
+    expect(harness.requestCae).not.toHaveBeenCalled();
+    expect(harness.getAccessTicket).toHaveBeenCalledTimes(1);
+    expect(harness.rows.size).toBe(1);
+    expect([...harness.rows.values()][0]?.status).toBe("PREPARED");
+    expect(
+      JSON.stringify([...harness.rows.values()][0]?.billingPayloadSnapshot),
+    ).toBe(stored);
+  });
+
+  it("consulta una emisión ambigua de producción sin pedir otro CAE", async () => {
+    vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "true");
+    const harness = createHarness(2);
+    harness.requestCae.mockRejectedValueOnce(
+      new ArcaWsfeError("No se pudo conectar con WSFEv1.", "NETWORK_ERROR"),
+    );
+    const input = invoiceInput({ environment: "PRODUCCION" });
+    const ambiguous = await issueArcaInvoice(input, harness.dependencies());
+
+    expect(ambiguous.status).toBe("ambiguous");
+    const stored = JSON.stringify(
+      [...harness.rows.values()][0]?.billingPayloadSnapshot,
+    );
+    vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "false");
+    harness.reconcile.mockResolvedValue({
+      status: "authorized",
+      authorizationCode: "12345678901234",
+      expirationDate: "20261010",
+      emissionType: "CAE",
+      result: "A",
+    });
+    const recovered = await issueArcaInvoice(input, harness.dependencies());
+
+    expect(recovered.status).toBe("approved");
+    expect(harness.requestCae).toHaveBeenCalledTimes(1);
+    expect(harness.getLastAuthorizedVoucher).toHaveBeenCalledTimes(1);
+    expect(harness.reconcile).toHaveBeenCalledTimes(1);
+    expect(harness.rows.size).toBe(1);
+    expect(
+      JSON.stringify([...harness.rows.values()][0]?.billingPayloadSnapshot),
+    ).toBe(stored);
+  });
+
+  it.each(["APPROVED_PENDING_PERSISTENCE", "COMPLETED", "REJECTED"] as const)(
+    "recupera producción en %s con el kill switch apagado y sin ARCA",
+    async (status) => {
+      vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "false");
+      const harness = createHarness();
+      const input = invoiceInput({ environment: "PRODUCCION" });
+      const row: ArcaEmissionRecord = {
+        id: "emission-seed",
+        idempotencyKey: input.idempotencyKey,
+        requestHash: hashArcaFiscalRequest(input),
+        environment: "PRODUCCION",
+        service: "wsfe",
+        status,
+        issuerCuit: ISSUER_CUIT,
+        pointOfSale: 7,
+        invoiceType: "B",
+        voucherType: 6,
+        voucherNumber: 3,
+        fiscalRequestSnapshot: null,
+        arcaResult: status === "REJECTED" ? "R" : "A",
+        authorizationCode: status === "REJECTED" ? null : "12345678901234",
+        authorizationExpiresAt: new Date("2026-10-10T00:00:00.000Z"),
+        arcaProcessDate: null,
+        reprocess: "N",
+        observations: [],
+        errors: [],
+        events: [],
+        lastErrorCode: null,
+        lastErrorMessage: null,
+        billingPayloadSnapshot: null,
+        invoiceId: status === "COMPLETED" ? "invoice-1" : null,
+        noteId: null,
+      };
+      harness.rows.set(row.id, row);
+
+      const result = await issueArcaInvoice(input, harness.dependencies());
+
+      expect(result.status).toBe(
+        status === "COMPLETED"
+          ? "completed"
+          : status === "REJECTED"
+            ? "rejected"
+            : "approved",
+      );
+      expect(harness.requestCae).not.toHaveBeenCalled();
+      expect(harness.reconcile).not.toHaveBeenCalled();
+      expect(harness.getAccessTicket).not.toHaveBeenCalled();
+      expect(harness.rows.size).toBe(1);
+    },
+  );
 });

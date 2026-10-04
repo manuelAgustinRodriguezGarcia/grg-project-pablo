@@ -4,6 +4,8 @@ import type {
   BillingIdentificationType,
   BillingInvoiceFiscalStatus,
   BillingInvoiceType,
+  BillingNoteFiscalStatus,
+  BillingNoteKind,
 } from "@/generated/prisma/client";
 import { formatArcaVoucherDate } from "@/server/arca/adapters/billing-invoice-to-cae";
 import { ArcaQrError } from "@/server/arca/qr/arca-qr.error";
@@ -11,6 +13,7 @@ import { normalizeIssuerCuit } from "@/server/arca/utils/cuit";
 import { parseArcaPointOfSale } from "@/server/arca/utils/point-of-sale";
 import {
   ARCA_DOCUMENT_TYPE,
+  voucherTypeForBillingNote,
   voucherTypeForClass,
 } from "@/shared/fiscal/arca-fiscal-mapping";
 import {
@@ -52,6 +55,11 @@ export type ArcaQrSource = {
   pointOfSale: string;
   sequenceNumber: number | null;
   invoiceType: BillingInvoiceType;
+  /**
+   * Tipo WSFE ya conocido. Factura A/B lo omite y sigue resolviendo 1 o 6
+   * desde la letra. Una nota autorizada lo informa con su voucherType.
+   */
+  voucherType?: number;
   total: number;
   issuedAt: Date;
   issuerCuit: string | null;
@@ -158,6 +166,28 @@ function pointOfSaleNumber(value: string): number {
   }
 }
 
+function explicitVoucherType(value: number): number {
+  switch (value) {
+    case 1:
+    case 2:
+    case 3:
+    case 6:
+    case 7:
+    case 8:
+      return value;
+    default:
+      throw incomplete("El tipo de comprobante no es válido.");
+  }
+}
+
+function tipoCmp(source: ArcaQrSource): number {
+  if (source.voucherType == null) {
+    return voucherTypeForClass(source.invoiceType);
+  }
+
+  return explicitVoucherType(source.voucherType);
+}
+
 function sequenceNumber(value: number | null): number {
   if (value == null || !Number.isSafeInteger(value) || value < 1) {
     throw incomplete("El número de comprobante no es válido.");
@@ -222,7 +252,7 @@ export function buildArcaQrPayload(source: ArcaQrSource): ArcaQrPayload {
     fecha: fiscalDate(source.issuedAt),
     cuit: issuerCuitNumber(source.issuerCuit),
     ptoVta: pointOfSaleNumber(source.pointOfSale),
-    tipoCmp: voucherTypeForClass(source.invoiceType),
+    tipoCmp: tipoCmp(source),
     nroCmp: sequenceNumber(source.sequenceNumber),
     importe: fiscalImporte(source.total),
     moneda: "PES",
@@ -231,6 +261,56 @@ export function buildArcaQrPayload(source: ArcaQrSource): ArcaQrPayload {
     tipoCodAut: "E",
     codAut: requireCae(source.cae),
   };
+}
+
+export type ArcaNoteQrSource = {
+  fiscalStatus: BillingNoteFiscalStatus;
+  environment: BillingFiscalEnvironment;
+  kind: BillingNoteKind;
+  invoiceType: BillingInvoiceType;
+  voucherType: number | null;
+  cae: string | null;
+  pointOfSale: string;
+  sequenceNumber: number | null;
+  amount: number;
+  issuedAt: Date;
+  issuerCuit: string | null;
+  clientIdentificationType: BillingIdentificationType;
+  clientIdentificationNumber: string | null;
+};
+
+export function buildArcaNoteQrPayload(source: ArcaNoteQrSource): ArcaQrPayload {
+  if (source.fiscalStatus !== "AUTORIZADA") {
+    throw incomplete("El QR fiscal no corresponde a una nota interna.");
+  }
+
+  const voucherType = voucherTypeForBillingNote(source.kind, source.invoiceType);
+
+  if (source.voucherType !== voucherType) {
+    throw incomplete("El tipo de comprobante de la nota no es válido.");
+  }
+
+  return buildArcaQrPayload({
+    environment: source.environment,
+    fiscalStatus: "AUTORIZADA",
+    cae: source.cae,
+    pointOfSale: source.pointOfSale,
+    sequenceNumber: source.sequenceNumber,
+    invoiceType: source.invoiceType,
+    voucherType,
+    total: source.amount,
+    issuedAt: source.issuedAt,
+    issuerCuit: source.issuerCuit,
+    clientIdentificationType: source.clientIdentificationType,
+    clientIdentificationNumber: source.clientIdentificationNumber,
+  });
+}
+
+export function buildArcaNoteQrUrl(source: ArcaNoteQrSource): string {
+  const json = JSON.stringify(buildArcaNoteQrPayload(source));
+  const encoded = Buffer.from(json, "utf8").toString("base64");
+
+  return `${ARCA_QR_URL_PREFIX}${encoded}`;
 }
 
 export function buildArcaQrUrl(source: ArcaQrSource): string {

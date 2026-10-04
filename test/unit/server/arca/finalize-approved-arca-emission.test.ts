@@ -160,6 +160,7 @@ function emission(
     lastErrorMessage: null,
     billingPayloadSnapshot: billing,
     invoiceId: null,
+    noteId: null,
     ...overrides,
   };
 }

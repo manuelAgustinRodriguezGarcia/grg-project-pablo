@@ -81,6 +81,21 @@ export function invoiceFiscalStatusFromNotes(
   return "MODO_PRUEBA";
 }
 
+/**
+ * El estado comercial de las notas no puede borrar una autorización ARCA ya persistida.
+ * El cálculo de saldo y de payment status sigue usando el estado comercial.
+ */
+export function persistedFiscalStatusAfterSettlement(
+  currentStatus: BillingInvoiceFiscalStatus,
+  commercialStatus: BillingInvoiceFiscalStatus,
+): BillingInvoiceFiscalStatus {
+  if (currentStatus === "AUTORIZADA") {
+    return "AUTORIZADA";
+  }
+
+  return commercialStatus;
+}
+
 export function invoicePaymentStatusFromSettlement(
   fiscalStatus: BillingInvoiceFiscalStatus,
   outstandingCents: number,
@@ -103,7 +118,7 @@ export function effectiveInvoicePaymentStatus(
   paymentStatus: BillingPaymentStatus,
   fiscalStatus: BillingInvoiceFiscalStatus,
 ): BillingPaymentStatus {
-  if (fiscalStatus === "ANULADA_NC") {
+  if (fiscalStatus === "ANULADA_NC" || paymentStatus === "ANULADA") {
     return "ANULADA";
   }
 

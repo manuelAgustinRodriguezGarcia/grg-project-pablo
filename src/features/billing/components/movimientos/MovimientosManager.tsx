@@ -30,6 +30,7 @@ import {
   filterMovementList,
   type BillingMovementKind,
 } from "@/features/billing/utils/movement-list";
+import type { BillingFiscalEnvironment } from "@/generated/prisma/client";
 import styles from "@/features/billing/styles/ClientsManager.module.scss";
 
 type MovementKindFilter = "all" | BillingMovementKind;
@@ -39,6 +40,8 @@ type MovimientosManagerProps = {
   initialReceipts: BillingReceiptListItem[];
   initialNotes: BillingNoteListItem[];
   clients: BillingClientListItem[];
+  fiscalEnvironment: BillingFiscalEnvironment;
+  noteProductionEmissionEnabled?: boolean;
   canManageMovements?: boolean;
   canUpdateMovements?: boolean;
 };
@@ -48,6 +51,8 @@ export function MovimientosManager({
   initialReceipts,
   initialNotes,
   clients,
+  fiscalEnvironment,
+  noteProductionEmissionEnabled = false,
   canManageMovements = false,
   canUpdateMovements = false,
 }: MovimientosManagerProps) {
@@ -323,6 +328,8 @@ export function MovimientosManager({
         <NoteFormModal
           mode={noteForm}
           invoices={invoices}
+          fiscalEnvironment={fiscalEnvironment}
+          noteProductionEmissionEnabled={noteProductionEmissionEnabled}
           onClose={() => setNoteForm(null)}
         />
       ) : null}

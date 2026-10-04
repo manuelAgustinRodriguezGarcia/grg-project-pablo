@@ -5,7 +5,12 @@ import type {
 } from "@/generated/prisma/client";
 import type { ArcaCaeFiscalRequest } from "@/server/arca/adapters/billing-invoice-to-cae";
 import type { ArcaBillingPersistenceSnapshot } from "@/server/arca/invoices/billing-payload-snapshot";
+import type { ArcaNotePersistenceSnapshot } from "@/server/arca/notes/note-payload-snapshot";
 import type { ArcaEnvironment } from "@/server/arca/types/arca.types";
+
+export type ArcaStoredCommercialSnapshot =
+  | ArcaBillingPersistenceSnapshot
+  | ArcaNotePersistenceSnapshot;
 
 export type ArcaCodedItem = {
   code: string;
@@ -35,8 +40,9 @@ export type ArcaEmissionRecord = {
   events: ArcaCodedItem[];
   lastErrorCode: string | null;
   lastErrorMessage: string | null;
-  billingPayloadSnapshot: ArcaBillingPersistenceSnapshot | null;
+  billingPayloadSnapshot: ArcaStoredCommercialSnapshot | null;
   invoiceId: string | null;
+  noteId: string | null;
 };
 
 export type CreatePreparedEmission = {
@@ -47,7 +53,7 @@ export type CreatePreparedEmission = {
   pointOfSale: number;
   invoiceType: BillingInvoiceType;
   voucherType: number;
-  billingPayloadSnapshot: ArcaBillingPersistenceSnapshot;
+  billingPayloadSnapshot: ArcaStoredCommercialSnapshot;
 };
 
 export type SendingEmissionUpdate = {

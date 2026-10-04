@@ -14,3 +14,11 @@ export const createBillingNoteSchema = z.object({
 });
 
 export type CreateBillingNoteFormInput = z.infer<typeof createBillingNoteSchema>;
+
+export const issueBillingNoteSchema = createBillingNoteSchema
+  .extend({
+    idempotencyKey: z.string().uuid("La clave de idempotencia no es válida."),
+  })
+  .strict();
+
+export type IssueBillingNoteFormInput = z.infer<typeof issueBillingNoteSchema>;

@@ -1,4 +1,7 @@
 import type {
+  BillingFiscalEnvironment,
+  BillingInvoiceType,
+  BillingNoteFiscalStatus,
   BillingNoteKind,
   BillingReceiptPaymentMethod,
 } from "@/generated/prisma/client";
@@ -35,6 +38,9 @@ export type BillingMovementListItem = {
   printedAt: Date | null;
   downloadedAt: Date | null;
   sharedAt: Date | null;
+  noteFiscalStatus?: BillingNoteFiscalStatus;
+  noteEnvironment?: BillingFiscalEnvironment;
+  noteInvoiceType?: BillingInvoiceType;
 };
 
 export type MovementListFilters = {
@@ -177,6 +183,9 @@ export function buildNoteMovements(
     ],
     invoiceNumbers: `${note.invoiceType} ${note.invoiceNumber}`,
     notes: note.reason,
+    noteFiscalStatus: note.fiscalStatus,
+    noteEnvironment: note.environment,
+    noteInvoiceType: note.invoiceType,
     clientEmail: null,
     clientWhatsapp: null,
     printedAt: note.printedAt,

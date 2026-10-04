@@ -31,7 +31,10 @@ import {
 } from "@/features/billing/utils/billing-metrics";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import { filterInvoiceList, invoiceCanIssueReceipt, parsePaymentStatusFilter } from "@/features/billing/utils/invoice-list";
-import type { BillingPaymentStatus } from "@/generated/prisma/client";
+import type {
+  BillingFiscalEnvironment,
+  BillingPaymentStatus,
+} from "@/generated/prisma/client";
 import { replaceSearchParams } from "@/shared/lib/replace-search-params";
 import styles from "@/features/billing/styles/ClientsManager.module.scss";
 
@@ -56,6 +59,8 @@ function resolveOpenInvoiceId(
 type ComprobantesManagerProps = {
   initialInvoices: BillingInvoiceListItem[];
   clients: BillingClientListItem[];
+  fiscalEnvironment: BillingFiscalEnvironment;
+  noteProductionEmissionEnabled?: boolean;
   openInvoiceId?: string;
   initialPaymentStatus?: string;
 };
@@ -63,6 +68,8 @@ type ComprobantesManagerProps = {
 export function ComprobantesManager({
   initialInvoices,
   clients,
+  fiscalEnvironment,
+  noteProductionEmissionEnabled = false,
   openInvoiceId,
   initialPaymentStatus,
 }: ComprobantesManagerProps) {
@@ -300,6 +307,8 @@ export function ComprobantesManager({
         <NoteFormModal
           mode={noteForm}
           invoices={invoicesQuery.data ?? []}
+          fiscalEnvironment={fiscalEnvironment}
+          noteProductionEmissionEnabled={noteProductionEmissionEnabled}
           onClose={() => setNoteForm(null)}
         />
       ) : null}

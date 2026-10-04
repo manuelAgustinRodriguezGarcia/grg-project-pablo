@@ -10,6 +10,7 @@ import { ArcaConfigurationError } from "@/server/arca/errors/arca-configuration.
 import { ArcaEmissionError } from "@/server/arca/errors/arca-emission.error";
 import { getArcaCredentials } from "@/server/arca/config/credentials";
 import { isArcaProductionEmissionEnabled } from "@/server/arca/config/production-emission";
+import type { ArcaEmissionRecord } from "@/server/arca/invoices/emission-store";
 import { finalizeApprovedArcaEmission } from "@/server/arca/invoices/finalize-approved-arca-emission";
 import {
   issueArcaInvoice,
@@ -19,6 +20,7 @@ import { ArcaQrError } from "@/server/arca/qr/arca-qr.error";
 import type { ArcaEnvironment } from "@/server/arca/types/arca.types";
 import { normalizeIssuerCuit } from "@/server/arca/utils/cuit";
 import { parseArcaPointOfSale } from "@/server/arca/utils/point-of-sale";
+import { arcaEmissionRepository } from "@/server/arca/repositories/arca-emission.repository";
 import { requirePermission } from "@/server/auth";
 import { buildInvoicePdf } from "@/server/pdf/build-invoice-pdf";
 import {
@@ -340,6 +342,20 @@ export class BillingInvoiceService {
     const { profile: admin } = await requirePermission("invoices.create");
     const idempotencyKey = assertIdempotencyKey(input.idempotencyKey);
     const prepared = await this.prepareInvoice(input);
+    const existing = await arcaEmissionRepository.findByIdempotencyKey(
+      idempotencyKey,
+    );
+
+    if (existing) {
+      return this.createArcaInvoice(
+        admin.id,
+        prepared,
+        idempotencyKey,
+        options.now ?? new Date(),
+        existing.environment,
+        existing,
+      );
+    }
 
     switch (prepared.settings.environment) {
       case "MODO_PRUEBA":
@@ -504,12 +520,17 @@ export class BillingInvoiceService {
     idempotencyKey: string,
     issuedAt: Date,
     environment: ArcaEnvironment,
+    existing?: ArcaEmissionRecord,
   ): Promise<BillingInvoiceWithItems> {
     let result: IssueArcaInvoiceResult;
 
     try {
-      const pointOfSale = parseArcaPointOfSale(prepared.settings.pointOfSale);
-      const issuerCuit = normalizeIssuerCuit(prepared.settings.issuerCuit);
+      const pointOfSale = existing
+        ? existing.pointOfSale
+        : parseArcaPointOfSale(prepared.settings.pointOfSale);
+      const issuerCuit = existing
+        ? existing.issuerCuit
+        : normalizeIssuerCuit(prepared.settings.issuerCuit);
       const billing = buildArcaBillingPersistenceSnapshot({
         issuedAt,
         pointOfSale,
@@ -548,11 +569,22 @@ export class BillingInvoiceService {
         billing,
       });
     } catch (error) {
+      if (error instanceof BillingInvoiceError) {
+        throw error;
+      }
+
       if (error instanceof ArcaConfigurationError) {
         throw new BillingInvoiceError(
           safePreSendMessage(error.message),
           "ARCA_EMISSION_FAILED_PRE_SEND",
         );
+      }
+
+      if (
+        error instanceof ArcaEmissionError &&
+        error.code === "ARCA_IDEMPOTENCY_CONFLICT"
+      ) {
+        throw new BillingInvoiceError(error.message, "ARCA_IDEMPOTENCY_CONFLICT");
       }
 
       if (error instanceof ArcaEmissionError) {

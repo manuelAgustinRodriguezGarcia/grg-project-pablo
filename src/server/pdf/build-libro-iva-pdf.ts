@@ -298,9 +298,9 @@ export async function buildLibroIvaPdf(
 }
 
 const Z_SIMPLE_COLUMNS = [
-  { key: "tipo", label: "Tipo", width: 84 },
-  { key: "numberFrom", label: "N° Desde", width: 118 },
-  { key: "numberTo", label: "N° Hasta", width: 118 },
+  { key: "tipo", label: "Tipo", width: 112 },
+  { key: "numberFrom", label: "N° Desde", width: 104 },
+  { key: "numberTo", label: "N° Hasta", width: 104 },
   { key: "ivaPct", label: "IVA %", width: 46 },
   { key: "neto", label: "Neto S/IVA", width: 124 },
   { key: "ivaAmt", label: "IVA", width: 124 },

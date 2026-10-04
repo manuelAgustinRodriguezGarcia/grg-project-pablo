@@ -5,6 +5,7 @@ import {
   creditNoteCapCents,
   invoiceFiscalStatusFromNotes,
   invoiceOutstandingCents,
+  persistedFiscalStatusAfterSettlement,
   invoiceOverpaymentCents,
   invoicePaymentStatusFromSettlement,
   planOverallocationRelease,
@@ -93,7 +94,7 @@ export async function syncInvoiceSettlement(
 }> {
   const invoice = await tx.billingInvoice.findUniqueOrThrow({
     where: { id: invoiceId },
-    select: { paymentMethod: true },
+    select: { paymentMethod: true, fiscalStatus: true },
   });
   const totalCents = pesosToCents(totalVisualRounded);
   let sums = await loadInvoiceSettlementSums(tx, invoiceId);
@@ -113,13 +114,17 @@ export async function syncInvoiceSettlement(
     sums.debitCents,
     sums.allocatedCents,
   );
-  const fiscalStatus = invoiceFiscalStatusFromNotes(
+  const commercialFiscalStatus = invoiceFiscalStatusFromNotes(
     sums.creditCents,
     sums.debitCents,
     totalCents,
   );
+  const fiscalStatus = persistedFiscalStatusAfterSettlement(
+    invoice.fiscalStatus,
+    commercialFiscalStatus,
+  );
   const paymentStatus = invoicePaymentStatusFromSettlement(
-    fiscalStatus,
+    commercialFiscalStatus,
     outstandingCents,
     totalCents,
     invoice.paymentMethod,

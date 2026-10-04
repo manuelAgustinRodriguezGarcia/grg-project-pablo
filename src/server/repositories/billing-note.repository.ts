@@ -8,6 +8,7 @@ import type {
   User,
 } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
+import { libroIvaNoteFiscalStatus } from "@/features/billing/utils/libro-iva";
 import { prisma } from "@/server/database/prisma";
 
 const noteListInclude = {
@@ -17,6 +18,7 @@ const noteListInclude = {
       id: true,
       invoiceNumber: true,
       invoiceType: true,
+      issuedAt: true,
     },
   },
 } satisfies Prisma.BillingNoteInclude;
@@ -27,6 +29,7 @@ export type BillingNoteWithRelations = BillingNote & {
     id: string;
     invoiceNumber: string;
     invoiceType: BillingInvoiceType;
+    issuedAt: Date;
   };
 };
 
@@ -70,9 +73,12 @@ export class BillingNoteRepository {
   async findIssuedBetween(
     from: Date,
     to: Date,
+    environment: BillingFiscalEnvironment,
   ): Promise<BillingNoteWithRelations[]> {
     return prisma.billingNote.findMany({
       where: {
+        environment,
+        fiscalStatus: libroIvaNoteFiscalStatus(environment),
         issuedAt: {
           gte: from,
           lt: to,

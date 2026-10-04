@@ -1,7 +1,9 @@
 import type {
+  BillingFiscalEnvironment,
   BillingIdentificationType,
   BillingInvoiceType,
   BillingIvaCondition,
+  BillingNoteFiscalStatus,
   BillingNoteKind,
 } from "@/generated/prisma/client";
 import { IVA_CONDITION_SHORT_LABELS } from "@/features/billing/types/billing-client.types";
@@ -104,6 +106,22 @@ export function parseYearMonthValue(
   }
 
   return { year, month };
+}
+
+export function libroIvaNoteFiscalStatus(
+  environment: BillingFiscalEnvironment,
+): BillingNoteFiscalStatus {
+  switch (environment) {
+    case "MODO_PRUEBA":
+      return "INTERNA";
+    case "HOMOLOGACION":
+    case "PRODUCCION":
+      return "AUTORIZADA";
+    default: {
+      const unexpected: never = environment;
+      return unexpected;
+    }
+  }
 }
 
 export function libroIvaDocKindLabel(kind: LibroIvaDocKind): string {
@@ -458,9 +476,9 @@ function zSimpleTipoLabel(row: LibroIvaRow): string {
     case "FACTURA":
       return `Factura ${row.letter}`;
     case "NC":
-      return `NC ${row.letter}`;
+      return `Nota de Crédito ${row.letter}`;
     case "ND":
-      return `ND ${row.letter}`;
+      return `Nota de Débito ${row.letter}`;
     default: {
       const exhaustive: never = row.docKind;
       return exhaustive;

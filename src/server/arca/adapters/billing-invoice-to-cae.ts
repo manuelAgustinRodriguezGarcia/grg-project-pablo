@@ -137,6 +137,13 @@ export function formatArcaVoucherDate(value: Date | string): string {
       return calendarStamp(Number(iso[1]), Number(iso[2]), Number(iso[3]));
     }
 
+    if (value.includes("T")) {
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) {
+        return formatArcaVoucherDate(parsed);
+      }
+    }
+
     throw new Error("La fecha del comprobante no es válida.");
   }
 

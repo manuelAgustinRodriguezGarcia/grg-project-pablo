@@ -1,7 +1,13 @@
 import "server-only";
 import { ArcaWsfeError } from "@/server/arca/errors/arca-wsfe.error";
-import type { ArcaCaeRequest } from "@/server/arca/wsfe/wsfe.types";
-import type { FeCaeRequestXml } from "@/server/arca/wsfe/wsfe-soap";
+import type {
+  ArcaAssociatedVoucher,
+  ArcaCaeRequest,
+} from "@/server/arca/wsfe/wsfe.types";
+import type {
+  FeCaeAssociatedVoucherXml,
+  FeCaeRequestXml,
+} from "@/server/arca/wsfe/wsfe-soap";
 
 const CURRENCY_ID_PATTERN = /^[A-Z]{3}$/;
 const VOUCHER_DATE_PATTERN = /^(\d{4})(\d{2})(\d{2})$/;
@@ -134,6 +140,8 @@ export function serializeCaeRequest(input: ArcaCaeRequest): FeCaeRequestXml {
     throw invalidCaeRequest();
   }
 
+  const associatedVouchers = serializeAssociatedVouchers(input.associatedVouchers);
+
   return {
     pointOfSale,
     voucherType,
@@ -153,5 +161,35 @@ export function serializeCaeRequest(input: ArcaCaeRequest): FeCaeRequestXml {
     currencyRate,
     receiverVatConditionId,
     vatLines,
+    ...(associatedVouchers ? { associatedVouchers } : {}),
   };
+}
+
+function serializeAssociatedVouchers(
+  vouchers: ArcaAssociatedVoucher[] | undefined,
+): FeCaeAssociatedVoucherXml[] | undefined {
+  if (!vouchers || vouchers.length === 0) {
+    return undefined;
+  }
+
+  return vouchers.map((voucher) => {
+    const serialized: FeCaeAssociatedVoucherXml = {
+      type: assertSafeInteger(voucher.type, 1),
+      pointOfSale: assertSafeInteger(voucher.pointOfSale, 1, 99999),
+      number: assertSafeInteger(voucher.number, 1),
+    };
+
+    if (voucher.issuerCuit !== undefined) {
+      if (!/^\d{11}$/.test(voucher.issuerCuit)) {
+        throw invalidCaeRequest();
+      }
+      serialized.issuerCuit = voucher.issuerCuit;
+    }
+
+    if (voucher.issuedAt !== undefined) {
+      serialized.issuedAt = assertVoucherDate(voucher.issuedAt);
+    }
+
+    return serialized;
+  });
 }

@@ -7,6 +7,7 @@ import type {
   BillingInvoiceType,
   BillingIvaCondition,
   BillingNote,
+  BillingNoteFiscalStatus,
   BillingNoteKind,
   BillingPaymentMethod,
   BillingPaymentStatus,
@@ -188,6 +189,9 @@ export type BillingInvoiceListItem = {
 export type BillingInvoiceNoteView = {
   id: string;
   kind: BillingNoteKind;
+  invoiceType: BillingInvoiceType;
+  fiscalStatus: BillingNoteFiscalStatus;
+  environment: BillingFiscalEnvironment;
   noteNumber: string;
   issuedAt: Date;
   amount: number;
@@ -293,6 +297,9 @@ export function toBillingInvoiceListItem(
     billingNotes: (invoice.billingNotes ?? []).map((note) => ({
       id: note.id,
       kind: note.kind,
+      invoiceType: note.invoiceType,
+      fiscalStatus: note.fiscalStatus,
+      environment: note.environment,
       noteNumber: note.noteNumber,
       issuedAt: note.issuedAt,
       amount: note.amount.toNumber(),

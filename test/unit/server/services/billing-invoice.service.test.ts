@@ -5,6 +5,7 @@ import type {
   BillingRubro,
 } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
+import { ArcaEmissionError } from "@/server/arca/errors/arca-emission.error";
 import { AuthForbiddenError } from "@/server/auth/errors";
 import { billingClientRepository } from "@/server/repositories/billing-client.repository";
 import { billingFiscalSettingsRepository } from "@/server/repositories/billing-fiscal-settings.repository";
@@ -19,6 +20,7 @@ import {
   AUDIT_ENTITY_TYPES,
 } from "@/server/services/audit.constants";
 import { auditService } from "@/server/services/audit.service";
+import { arcaEmissionRepository } from "@/server/arca/repositories/arca-emission.repository";
 import { finalizeApprovedArcaEmission } from "@/server/arca/invoices/finalize-approved-arca-emission";
 import { issueArcaInvoice } from "@/server/arca/invoices/issue-arca-invoice";
 import { billingInvoiceService } from "@/server/services/billing-invoice.service";
@@ -68,6 +70,11 @@ vi.mock("@/server/services/audit.service", () => ({
 }));
 vi.mock("@/server/services/billing-invoice-settlement", () => ({
   releaseOverpaymentsForClient: vi.fn(),
+}));
+vi.mock("@/server/arca/repositories/arca-emission.repository", () => ({
+  arcaEmissionRepository: {
+    findByIdempotencyKey: vi.fn(),
+  },
 }));
 vi.mock("@/server/arca/invoices/issue-arca-invoice", () => ({
   issueArcaInvoice: vi.fn(),
@@ -269,6 +276,7 @@ describe("BillingInvoiceService", () => {
       billingInvoiceRepository.isUniqueConstraintError,
     ).mockReturnValue(false);
     mockCreatePassthrough();
+    vi.mocked(arcaEmissionRepository.findByIdempotencyKey).mockResolvedValue(null);
   });
 
   describe("createInvoice", () => {
@@ -851,6 +859,118 @@ describe("BillingInvoiceService", () => {
       expect(finalizeApprovedArcaEmission).toHaveBeenCalledTimes(2);
       expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
       expect(billingInvoiceRepository.getNextSequenceNumber).not.toHaveBeenCalled();
+    });
+
+    it("recupera una emisión de producción con kill switch apagado y configuración incompleta", async () => {
+      vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "false");
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "PRODUCCION",
+          pointOfSale: "",
+          issuerName: "EMISOR NUEVO",
+          issuerCuit: null,
+          issuerAddress: null,
+          issuerGrossIncome: null,
+          issuerActivitiesStartedAt: null,
+        }),
+      );
+      vi.mocked(arcaEmissionRepository.findByIdempotencyKey).mockResolvedValue({
+        environment: "PRODUCCION",
+        issuerCuit: "30712345671",
+        pointOfSale: 7,
+      } as never);
+      mockApprovedIssue();
+
+      const invoice = await billingInvoiceService.createInvoice(baseInput(), {
+        now: ISSUED_AT,
+      });
+
+      expect(issueArcaInvoice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          environment: "PRODUCCION",
+          issuerCuit: "30712345671",
+          pointOfSale: 7,
+          idempotencyKey: IDEMPOTENCY_KEY,
+        }),
+      );
+      expect(finalizeApprovedArcaEmission).toHaveBeenCalledWith("emission-1");
+      expect(invoice.id).toBe("clbillinginvoicearca000001");
+      expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("devuelve la factura completada sin exigir la configuración vigente", async () => {
+      vi.stubEnv("ARCA_PRODUCTION_EMISSION_ENABLED", "false");
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "PRODUCCION",
+          pointOfSale: "",
+          issuerCuit: null,
+          issuerName: null,
+        }),
+      );
+      vi.mocked(arcaEmissionRepository.findByIdempotencyKey).mockResolvedValue({
+        environment: "PRODUCCION",
+        issuerCuit: "30712345671",
+        pointOfSale: 7,
+      } as never);
+      vi.mocked(issueArcaInvoice).mockResolvedValue({
+        status: "completed",
+        emissionId: "emission-1",
+        voucherType: 1,
+        voucherNumber: 3,
+        authorizationCode: "12345678901234",
+        authorizationExpiresAt: "20261010",
+      });
+      vi.mocked(finalizeApprovedArcaEmission).mockResolvedValue({
+        status: "completed",
+        emissionId: "emission-1",
+        invoice: { id: "clbillinginvoicearca000001" },
+      } as Awaited<ReturnType<typeof finalizeApprovedArcaEmission>>);
+      vi.mocked(billingInvoiceRepository.findById).mockResolvedValue({
+        ...storedAuthorizedInvoice(),
+        environment: "PRODUCCION",
+      });
+
+      const invoice = await billingInvoiceService.createInvoice(baseInput(), {
+        now: ISSUED_AT,
+      });
+
+      expect(invoice.id).toBe("clbillinginvoicearca000001");
+      expect(issueArcaInvoice).toHaveBeenCalledTimes(1);
+      expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("mantiene el conflicto si la misma clave llega con otro importe", async () => {
+      vi.mocked(arcaEmissionRepository.findByIdempotencyKey).mockResolvedValue({
+        environment: "PRODUCCION",
+        issuerCuit: "30712345671",
+        pointOfSale: 7,
+      } as never);
+      vi.mocked(issueArcaInvoice).mockRejectedValue(
+        new ArcaEmissionError(
+          "La clave de idempotencia ya se usó con otros datos.",
+          "ARCA_IDEMPOTENCY_CONFLICT",
+        ),
+      );
+
+      await expect(
+        billingInvoiceService.createInvoice(
+          {
+            ...baseInput(),
+            items: [{ rubroId: RUBRO_ID, quantity: 2, unitPrice: 1210 }],
+          },
+          { now: ISSUED_AT },
+        ),
+      ).rejects.toMatchObject({
+        code: "ARCA_IDEMPOTENCY_CONFLICT",
+      });
+      expect(issueArcaInvoice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idempotencyKey: IDEMPOTENCY_KEY,
+          issuerCuit: "30712345671",
+        }),
+      );
+      expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
     });
 
     it("reintenta la numeración ante un conflicto de unicidad", async () => {

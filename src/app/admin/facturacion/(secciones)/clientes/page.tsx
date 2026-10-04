@@ -7,7 +7,9 @@ import {
   BILLING_CLIENT_HISTORY_QUERY,
   BILLING_CLIENT_ID_QUERY,
 } from "@/features/billing/data/billingNav";
+import { isArcaNoteProductionEmissionEnabled } from "@/server/arca/config/production-emission";
 import { requirePermissionOrRedirect } from "@/server/auth";
+import { billingFiscalSettingsRepository } from "@/server/repositories/billing-fiscal-settings.repository";
 
 export const metadata: Metadata = {
   title: "Clientes",
@@ -34,15 +36,18 @@ export default async function FacturacionClientesPage({
   const auth = await requirePermissionOrRedirect("clients.read", "/admin");
   const adminAuth = toAdminUiAuth(auth.profile);
   const params = await searchParams;
-  const [clientsResult, invoicesResult] = await Promise.all([
+  const [clientsResult, invoicesResult, fiscalSettings] = await Promise.all([
     listBillingClientsAction(),
     listBillingInvoicesAction(),
+    billingFiscalSettingsRepository.getOrCreate(),
   ]);
 
   return (
     <ClientsManager
       initialClients={clientsResult.success ? clientsResult.data : []}
       initialInvoices={invoicesResult.success ? invoicesResult.data : []}
+      fiscalEnvironment={fiscalSettings.environment}
+      noteProductionEmissionEnabled={isArcaNoteProductionEmissionEnabled()}
       openClientId={firstParam(params[BILLING_CLIENT_ID_QUERY]) || undefined}
       openClientHistory={firstParam(params[BILLING_CLIENT_HISTORY_QUERY]) === "1"}
       canCreateClient={adminAuth.canCreateClient}

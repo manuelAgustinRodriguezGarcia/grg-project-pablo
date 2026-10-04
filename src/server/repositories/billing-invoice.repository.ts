@@ -158,9 +158,14 @@ export class BillingInvoiceRepository {
     return (result._max.sequenceNumber ?? 0) + 1;
   }
 
-  async findIssuedBetween(from: Date, to: Date): Promise<BillingInvoiceWithItems[]> {
+  async findIssuedBetween(
+    from: Date,
+    to: Date,
+    environment: BillingFiscalEnvironment,
+  ): Promise<BillingInvoiceWithItems[]> {
     return prisma.billingInvoice.findMany({
       where: {
+        environment,
         issuedAt: {
           gte: from,
           lt: to,

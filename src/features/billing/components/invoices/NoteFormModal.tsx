@@ -5,9 +5,13 @@ import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { adminQueryKeys } from "@/features/admin/query-keys";
 import { createBillingNoteAction } from "@/features/billing/actions/billing-note.actions";
+import { issueBillingNoteAction } from "@/features/billing/actions/issue-billing-note.action";
 import { BillingIssueSuccessModal } from "@/features/billing/components/BillingIssueSuccessModal";
 import { InvoiceSearchPicker } from "@/features/billing/components/invoices/InvoiceSearchPicker";
-import type { BillingInvoiceListItem } from "@/features/billing/types/billing-invoice.types";
+import {
+  fiscalEnvironmentListLabel,
+  type BillingInvoiceListItem,
+} from "@/features/billing/types/billing-invoice.types";
 import {
   NOTE_KIND_LABELS,
   type BillingNoteListItem,
@@ -23,7 +27,22 @@ import {
   maskPesosInput,
   parsePesosInput,
 } from "@/features/billing/utils/receipt-allocation";
-import type { BillingNoteKind } from "@/generated/prisma/client";
+import {
+  LEGACY_NOTES_DISABLED_MESSAGE,
+  legacyInternalNotesAllowed,
+} from "@/features/billing/utils/legacy-notes";
+import { createSubmitLock } from "@/features/billing/utils/invoice-idempotency";
+import {
+  discardNoteIdempotency,
+  noteIntentionFingerprint,
+  syncNoteIdempotency,
+  type NoteIdempotencySession,
+} from "@/features/billing/utils/note-idempotency";
+import { NOTE_PRODUCTION_EMISSION_DISABLED_MESSAGE } from "@/shared/fiscal/production-emission";
+import type {
+  BillingFiscalEnvironment,
+  BillingNoteKind,
+} from "@/generated/prisma/client";
 import { centsToPesos, pesosToCents } from "@/shared/utils/billing-invoice-totals";
 import { ICON_STROKE, UserRoundArrowLeft, X } from "@/shared/icons";
 import modalStyles from "@/features/prices/styles/PriceColumnEditModal.module.scss";
@@ -37,8 +56,16 @@ export type NoteFormMode = {
 type NoteFormModalProps = {
   mode: NoteFormMode;
   invoices: BillingInvoiceListItem[];
+  fiscalEnvironment: BillingFiscalEnvironment;
+  noteProductionEmissionEnabled?: boolean;
   onClose: () => void;
 };
+
+const HOMOLOGATION_WARNING =
+  "Este comprobante se emitirá en el entorno de homologación de ARCA y no tendrá validez fiscal de producción.";
+
+const PRODUCTION_CONFIRM_WARNING =
+  "Se emitirá una Nota de Crédito/Débito real ante ARCA. Una vez autorizada no puede eliminarse ni renumerarse.";
 
 const CLOSE_ANIMATION_MS = 180;
 
@@ -50,6 +77,26 @@ const INVOICE_DATE_FORMATTER = new Intl.DateTimeFormat("es-AR", {
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function noteFormSubtitle(
+  kind: BillingNoteKind,
+  legacyNotesAllowed: boolean,
+): string {
+  if (!legacyNotesAllowed) {
+    return LEGACY_NOTES_DISABLED_MESSAGE;
+  }
+
+  switch (kind) {
+    case "CREDIT":
+      return "Ajuste el importe de una factura ya emitida.";
+    case "DEBIT":
+      return "Aumente el saldo de una factura de cuenta corriente.";
+    default: {
+      const unexpected: never = kind;
+      return unexpected;
+    }
+  }
 }
 
 function availableAmount(
@@ -64,6 +111,42 @@ function availableAmount(
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
+    }
+  }
+}
+
+function noteEffectCopy(kind: BillingNoteKind): string {
+  switch (kind) {
+    case "CREDIT":
+      return "Reduce el saldo de la factura asociada.";
+    case "DEBIT":
+      return "Aumenta el saldo de la factura asociada.";
+    default: {
+      const unexpected: never = kind;
+      return unexpected;
+    }
+  }
+}
+
+function fiscalConfirmLabel(
+  environment: BillingFiscalEnvironment,
+  kind: BillingNoteKind,
+  isBusy: boolean,
+): string {
+  if (isBusy) {
+    return "Emitiendo…";
+  }
+
+  switch (environment) {
+    case "MODO_PRUEBA":
+      return "Emitir nota";
+    case "HOMOLOGACION":
+      return "Emitir en homologación";
+    case "PRODUCCION":
+      return kind === "CREDIT" ? "Emitir Nota de Crédito" : "Emitir Nota de Débito";
+    default: {
+      const unexpected: never = environment;
+      return unexpected;
     }
   }
 }
@@ -84,7 +167,13 @@ function invoiceMatchesPickerQuery(
   );
 }
 
-export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
+export function NoteFormModal({
+  mode,
+  invoices,
+  fiscalEnvironment,
+  noteProductionEmissionEnabled = false,
+  onClose,
+}: NoteFormModalProps) {
   const queryClient = useQueryClient();
   const lockedInvoiceId = mode.invoiceId ?? null;
   const [invoiceId, setInvoiceId] = useState(lockedInvoiceId ?? "");
@@ -94,10 +183,20 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [fiscalFailure, setFiscalFailure] = useState<
+    "ambiguous" | "rejected" | "error" | null
+  >(null);
   const [createdNote, setCreatedNote] = useState<BillingNoteListItem | null>(
     null,
   );
+  const [issuedFiscal, setIssuedFiscal] = useState<{
+    id: string;
+    noteNumber: string;
+  } | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const idempotencyRef = useRef<NoteIdempotencySession | null>(null);
+  const submitLockRef = useRef(createSubmitLock());
 
   useEffect(() => {
     return () => {
@@ -128,12 +227,17 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
     finishAfterClose(onClose);
   }
 
-  useEscapeToClose(requestClose, !isBusy && createdNote === null);
+  useEscapeToClose(
+    requestClose,
+    !isBusy && createdNote === null && issuedFiscal === null,
+  );
 
   function resetCreateForm() {
     setAmountPesos("");
     setReason("");
     setError(null);
+    setConfirming(false);
+    setFiscalFailure(null);
     if (!lockedInvoiceId) {
       setInvoiceId("");
       setInvoiceQuery("");
@@ -177,6 +281,7 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
     setInvoiceQuery("");
     setAmountPesos("");
     setError(null);
+    setFiscalFailure(null);
   }
 
   function fillAvailable() {
@@ -186,49 +291,39 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
     setAmountPesos(formatPesosInput(availableCents));
   }
 
-  async function handleSubmit() {
-    setError(null);
+  const legacyNotesAllowed = legacyInternalNotesAllowed(fiscalEnvironment);
+  const productionBlocked =
+    fiscalEnvironment === "PRODUCCION" && !noteProductionEmissionEnabled;
+  const fiscalNotes = !legacyNotesAllowed;
 
+  function readIntention():
+    | { ok: false; error: string }
+    | { ok: true; amountCents: number; trimmedReason: string } {
     if (!invoiceId) {
-      setError("Elegí una factura.");
-      return;
+      return { ok: false, error: "Elegí una factura." };
     }
 
     const amountCents = parsePesosInput(amountPesos) ?? 0;
     if (amountCents <= 0) {
-      setError("El importe tiene que ser mayor a cero.");
-      return;
+      return { ok: false, error: "El importe tiene que ser mayor a cero." };
     }
 
     if (mode.kind === "CREDIT" && amountCents > availableCents) {
-      setError(
-        `El importe no puede superar ${formatArsExact(available)}.`,
-      );
-      return;
+      return {
+        ok: false,
+        error: `El importe no puede superar ${formatArsExact(available)}.`,
+      };
     }
 
     const trimmedReason = reason.trim();
     if (!trimmedReason) {
-      setError("Indicá el motivo.");
-      return;
+      return { ok: false, error: "Indicá el motivo." };
     }
 
-    setIsBusy(true);
-    const result = await createBillingNoteAction({
-      kind: mode.kind,
-      invoiceId,
-      amount: centsToPesos(amountCents),
-      reason: trimmedReason,
-    });
-    setIsBusy(false);
+    return { ok: true, amountCents, trimmedReason };
+  }
 
-    if (!result.success) {
-      setError(result.error);
-      return;
-    }
-
-    setCreatedNote(result.data);
-
+  async function refreshBillingQueries() {
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: adminQueryKeys.billingInvoices(),
@@ -239,7 +334,125 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
       queryClient.invalidateQueries({
         queryKey: adminQueryKeys.billingReceipts(),
       }),
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.billingClients(),
+      }),
     ]);
+  }
+
+  async function submitLegacy(amountCents: number, trimmedReason: string) {
+    if (!submitLockRef.current.tryEnter()) {
+      return;
+    }
+
+    setIsBusy(true);
+    try {
+      const result = await createBillingNoteAction({
+        kind: mode.kind,
+        invoiceId,
+        amount: centsToPesos(amountCents),
+        reason: trimmedReason,
+      });
+
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+
+      setCreatedNote(result.data);
+      await refreshBillingQueries();
+    } finally {
+      setIsBusy(false);
+      submitLockRef.current.leave();
+    }
+  }
+
+  async function submitFiscal(amountCents: number, trimmedReason: string) {
+    if (!submitLockRef.current.tryEnter()) {
+      return;
+    }
+
+    const fingerprint = noteIntentionFingerprint({
+      kind: mode.kind,
+      invoiceId,
+      amountCents,
+      reason: trimmedReason,
+    });
+    const session = syncNoteIdempotency(
+      idempotencyRef.current,
+      fingerprint,
+      () => crypto.randomUUID(),
+    );
+    idempotencyRef.current = session;
+    setIsBusy(true);
+    setError(null);
+
+    try {
+      const result = await issueBillingNoteAction({
+        kind: mode.kind,
+        invoiceId,
+        amount: centsToPesos(amountCents),
+        reason: trimmedReason,
+        idempotencyKey: session.key,
+      });
+
+      if (!result.ok) {
+        setError(result.message);
+        setFiscalFailure(
+          result.emissionStatus === "ambiguous"
+            ? "ambiguous"
+            : result.emissionStatus === "rejected"
+              ? "rejected"
+              : "error",
+        );
+        return;
+      }
+
+      setFiscalFailure(null);
+
+      idempotencyRef.current = discardNoteIdempotency();
+      setIssuedFiscal({
+        id: result.note.id,
+        noteNumber: result.note.noteNumber,
+      });
+      setConfirming(false);
+      await refreshBillingQueries();
+    } finally {
+      setIsBusy(false);
+      submitLockRef.current.leave();
+    }
+  }
+
+  async function handleSubmit() {
+    setError(null);
+
+    if (productionBlocked) {
+      setError(NOTE_PRODUCTION_EMISSION_DISABLED_MESSAGE);
+      return;
+    }
+
+    const intention = readIntention();
+    if (!intention.ok) {
+      setError(intention.error);
+      return;
+    }
+
+    if (legacyNotesAllowed) {
+      await submitLegacy(intention.amountCents, intention.trimmedReason);
+      return;
+    }
+
+    setConfirming(true);
+  }
+
+  async function handleFiscalConfirm() {
+    const intention = readIntention();
+    if (!intention.ok) {
+      setError(intention.error);
+      return;
+    }
+
+    await submitFiscal(intention.amountCents, intention.trimmedReason);
   }
 
   if (typeof document === "undefined") {
@@ -247,10 +460,24 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
   }
 
   const title = `Nueva ${NOTE_KIND_LABELS[mode.kind].toLocaleLowerCase("es-AR")}`;
-  const subtitle =
-    mode.kind === "CREDIT"
-      ? "Ajuste el importe de una factura ya emitida."
-      : "Aumente el saldo de una factura de cuenta corriente.";
+  const subtitle = legacyNotesAllowed
+    ? noteFormSubtitle(mode.kind, true)
+    : fiscalEnvironmentListLabel(fiscalEnvironment);
+  const issuedDocument = createdNote
+    ? {
+        id: createdNote.id,
+        number: createdNote.noteNumber,
+        meta: `${createdNote.clientName} · ${createdNote.invoiceType} ${createdNote.invoiceNumber} · ${formatArsExact(createdNote.amount)}`,
+      }
+    : issuedFiscal
+      ? {
+          id: issuedFiscal.id,
+          number: issuedFiscal.noteNumber,
+          meta: selectedInvoice
+            ? `${NOTE_KIND_LABELS[mode.kind]} · ${selectedInvoice.clientName} · ${selectedInvoice.invoiceType} ${selectedInvoice.invoiceNumber} · ${amountPesos}`
+            : NOTE_KIND_LABELS[mode.kind],
+        }
+      : null;
 
   return createPortal(
     <div
@@ -264,18 +491,19 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
         }
       }}
     >
-      {createdNote ? (
+      {issuedDocument ? (
         <BillingIssueSuccessModal
           kind={mode.kind}
           embedded
-          documentId={createdNote.id}
-          documentNumber={createdNote.noteNumber}
-          meta={`${createdNote.clientName} · ${createdNote.invoiceType} ${createdNote.invoiceNumber} · ${formatArsExact(createdNote.amount)}`}
+          documentId={issuedDocument.id}
+          documentNumber={issuedDocument.number}
+          meta={issuedDocument.meta}
           clientWhatsapp={selectedInvoice?.clientWhatsapp ?? null}
           clientEmail={selectedInvoice?.clientEmail ?? null}
           onCreateAnother={() => {
             resetCreateForm();
             setCreatedNote(null);
+            setIssuedFiscal(null);
           }}
           onClose={() => finishAfterClose(onClose)}
         />
@@ -305,6 +533,69 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
         </header>
 
         <div className={styles.modalSheet}>
+        {confirming ? (
+          <>
+            <div className={styles.receiptModalBody}>
+              <p className={styles.invoiceDetailSubtitle}>
+                {fiscalEnvironment === "HOMOLOGACION" ? "HOMOLOGACIÓN" : fiscalEnvironmentListLabel(fiscalEnvironment)}
+              </p>
+              <p className={styles.receiptSelectedClientName}>
+                {NOTE_KIND_LABELS[mode.kind]}
+              </p>
+              <p className={styles.invoiceMeta}>
+                Factura {selectedInvoice ? `${selectedInvoice.invoiceType} ${selectedInvoice.invoiceNumber}` : "—"}
+              </p>
+              <p className={styles.invoiceMeta}>
+                Cliente {selectedInvoice?.clientName ?? "—"}
+              </p>
+              <p className={styles.invoiceMeta}>Importe {amountPesos || "0,00"}</p>
+              <p className={styles.invoiceMeta}>Motivo {reason.trim()}</p>
+              <p className={styles.invoiceMeta}>
+                Ambiente {fiscalEnvironmentListLabel(fiscalEnvironment)}
+              </p>
+              <p className={styles.invoiceMeta}>{noteEffectCopy(mode.kind)}</p>
+              {fiscalEnvironment === "HOMOLOGACION" ? (
+                <p className={styles.invoiceDetailSubtitle}>{HOMOLOGATION_WARNING}</p>
+              ) : null}
+              {fiscalEnvironment === "PRODUCCION" && noteProductionEmissionEnabled ? (
+                <p className={styles.invoiceDetailSubtitle}>{PRODUCTION_CONFIRM_WARNING}</p>
+              ) : null}
+              {error ? (
+                <p className={styles.inlineError} role="alert">
+                  {error}
+                </p>
+              ) : null}
+            </div>
+            <div className={`${modalStyles.modalActions} ${styles.receiptModalFooter}`}>
+              <button
+                type="button"
+                className={styles.receiptFillAllButton}
+                onClick={() => {
+                  if (isBusy) {
+                    return;
+                  }
+                  setConfirming(false);
+                }}
+                disabled={isBusy}
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                className={modalStyles.modalSaveButton}
+                onClick={() => {
+                  void handleFiscalConfirm();
+                }}
+                disabled={isBusy || productionBlocked || fiscalFailure === "rejected"}
+              >
+                {fiscalFailure === "ambiguous"
+                  ? "Reintentar consulta"
+                  : fiscalConfirmLabel(fiscalEnvironment, mode.kind, isBusy)}
+              </button>
+            </div>
+          </>
+        ) : (
+        <>
         <div className={styles.receiptModalBody}>
           <div className={styles.receiptField}>
             <label
@@ -387,9 +678,10 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
                     spellCheck={false}
                     value={amountPesos}
                     disabled={isBusy || !selectedInvoice}
-                    onChange={(event) =>
-                      setAmountPesos(maskPesosInput(event.target.value))
-                    }
+                    onChange={(event) => {
+                      setAmountPesos(maskPesosInput(event.target.value));
+                      setFiscalFailure(null);
+                    }}
                   />
                 </div>
                 <button
@@ -417,9 +709,30 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
               placeholder="Motivo de la nota…"
               value={reason}
               disabled={isBusy}
-              onChange={(event) => setReason(event.target.value)}
+              onChange={(event) => {
+                setReason(event.target.value);
+                setFiscalFailure(null);
+              }}
             />
           </div>
+
+          {fiscalEnvironment === "HOMOLOGACION" ? (
+            <p className={styles.invoiceDetailSubtitle}>
+              HOMOLOGACIÓN. {HOMOLOGATION_WARNING}
+            </p>
+          ) : null}
+
+          {productionBlocked ? (
+            <p className={styles.inlineError} role="alert">
+              {NOTE_PRODUCTION_EMISSION_DISABLED_MESSAGE}
+            </p>
+          ) : null}
+
+          {fiscalNotes ? (
+            <p className={styles.invoiceMeta}>
+              {NOTE_KIND_LABELS[mode.kind]} · {fiscalEnvironmentListLabel(fiscalEnvironment)} · {noteEffectCopy(mode.kind)}
+            </p>
+          ) : null}
 
           {error ? (
             <p className={styles.inlineError} role="alert">
@@ -435,11 +748,17 @@ export function NoteFormModal({ mode, invoices, onClose }: NoteFormModalProps) {
             onClick={() => {
               void handleSubmit();
             }}
-            disabled={isBusy}
+            disabled={isBusy || productionBlocked}
           >
-            {isBusy ? "Emitiendo…" : "Emitir nota"}
-          </button>
-        </div>
+            {isBusy
+              ? "Emitiendo…"
+              : legacyNotesAllowed
+                ? "Emitir nota"
+                : "Revisar emisión"}
+            </button>
+          </div>
+        </>
+        )}
         </div>
       </div>
       )}

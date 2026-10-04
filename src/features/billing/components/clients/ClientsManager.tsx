@@ -51,11 +51,14 @@ import { normalizeIdentificationDigits } from "@/shared/utils/identification";
 import { centsToPesos } from "@/shared/utils/billing-invoice-totals";
 import { clientAvailableCreditCents } from "@/features/billing/utils/receipt-allocation";
 import { replaceSearchParams } from "@/shared/lib/replace-search-params";
+import type { BillingFiscalEnvironment } from "@/generated/prisma/client";
 import styles from "@/features/billing/styles/ClientsManager.module.scss";
 
 type ClientsManagerProps = {
   initialClients: BillingClientListItem[];
   initialInvoices?: BillingInvoiceListItem[];
+  fiscalEnvironment: BillingFiscalEnvironment;
+  noteProductionEmissionEnabled?: boolean;
   openClientId?: string;
   openClientHistory?: boolean;
   canCreateClient?: boolean;
@@ -83,6 +86,8 @@ function toActionPayload(values: ClientFormValues, includeCode: boolean) {
 export function ClientsManager({
   initialClients,
   initialInvoices = [],
+  fiscalEnvironment,
+  noteProductionEmissionEnabled = false,
   openClientId,
   openClientHistory = false,
   canCreateClient = false,
@@ -442,6 +447,8 @@ export function ClientsManager({
         <NoteFormModal
           mode={noteForm}
           invoices={invoicesQuery.data ?? []}
+          fiscalEnvironment={fiscalEnvironment}
+          noteProductionEmissionEnabled={noteProductionEmissionEnabled}
           onClose={() => setNoteForm(null)}
         />
       ) : null}

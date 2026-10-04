@@ -1,9 +1,12 @@
 import type {
+  BillingFiscalEnvironment,
   BillingIdentificationType,
   BillingInvoiceType,
   BillingIvaCondition,
+  BillingNoteFiscalStatus,
   BillingNoteKind,
 } from "@/generated/prisma/client";
+import { fiscalEnvironmentListLabel } from "@/features/billing/types/billing-invoice.types";
 import type { BillingNoteWithRelations } from "@/server/repositories/billing-note.repository";
 
 export type BillingNoteActionResult<T = void> =
@@ -23,6 +26,8 @@ export const NOTE_KIND_SHORT_LABELS: Record<BillingNoteKind, string> = {
 export type BillingNoteListItem = {
   id: string;
   kind: BillingNoteKind;
+  fiscalStatus: BillingNoteFiscalStatus;
+  environment: BillingFiscalEnvironment;
   noteNumber: string;
   issuedAt: Date;
   invoiceId: string;
@@ -44,12 +49,26 @@ export type BillingNoteListItem = {
   sharedAt: Date | null;
 };
 
+export function authorizedNoteListMeta(note: {
+  fiscalStatus: BillingNoteFiscalStatus;
+  invoiceType: BillingInvoiceType;
+  environment: BillingFiscalEnvironment;
+}): string | null {
+  if (note.fiscalStatus !== "AUTORIZADA") {
+    return null;
+  }
+
+  return `${note.invoiceType} · AUTORIZADA · ${fiscalEnvironmentListLabel(note.environment)}`;
+}
+
 export function toBillingNoteListItem(
   note: BillingNoteWithRelations,
 ): BillingNoteListItem {
   return {
     id: note.id,
     kind: note.kind,
+    fiscalStatus: note.fiscalStatus,
+    environment: note.environment,
     noteNumber: note.noteNumber,
     issuedAt: note.issuedAt,
     invoiceId: note.invoiceId,

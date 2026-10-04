@@ -5,7 +5,9 @@ import { listBillingInvoicesAction } from "@/features/billing/actions/billing-in
 import { listBillingNotesAction } from "@/features/billing/actions/billing-note.actions";
 import { listBillingReceiptsAction } from "@/features/billing/actions/billing-receipt.actions";
 import { MovimientosManager } from "@/features/billing/components/movimientos/MovimientosManager";
+import { isArcaNoteProductionEmissionEnabled } from "@/server/arca/config/production-emission";
 import { requirePermissionOrRedirect } from "@/server/auth";
+import { billingFiscalSettingsRepository } from "@/server/repositories/billing-fiscal-settings.repository";
 
 export const metadata: Metadata = {
   title: "Movimientos",
@@ -14,12 +16,13 @@ export const metadata: Metadata = {
 export default async function FacturacionMovimientosPage() {
   const auth = await requirePermissionOrRedirect("movements.read", "/admin");
   const adminAuth = toAdminUiAuth(auth.profile);
-  const [invoicesResult, receiptsResult, notesResult, clientsResult] =
+  const [invoicesResult, receiptsResult, notesResult, clientsResult, fiscalSettings] =
     await Promise.all([
       listBillingInvoicesAction(),
       listBillingReceiptsAction(),
       listBillingNotesAction(),
       listBillingClientsAction(),
+      billingFiscalSettingsRepository.getOrCreate(),
     ]);
 
   return (
@@ -28,6 +31,8 @@ export default async function FacturacionMovimientosPage() {
       initialReceipts={receiptsResult.success ? receiptsResult.data : []}
       initialNotes={notesResult.success ? notesResult.data : []}
       clients={clientsResult.success ? clientsResult.data : []}
+      fiscalEnvironment={fiscalSettings.environment}
+      noteProductionEmissionEnabled={isArcaNoteProductionEmissionEnabled()}
       canManageMovements={adminAuth.canManageMovements}
       canUpdateMovements={adminAuth.canUpdateMovements}
     />

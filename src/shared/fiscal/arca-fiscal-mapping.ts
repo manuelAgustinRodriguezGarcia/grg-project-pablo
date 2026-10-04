@@ -1,7 +1,8 @@
 import type {
   BillingIdentificationType,
-  BillingIvaCondition,
   BillingInvoiceType,
+  BillingIvaCondition,
+  BillingNoteKind,
 } from "@/generated/prisma/client";
 
 export const UNSUPPORTED_ARCA_VAT_CONDITION = "UNSUPPORTED_ARCA_VAT_CONDITION";
@@ -113,6 +114,40 @@ export function voucherTypeForClass(voucherClass: BillingInvoiceType): number {
       return ARCA_VOUCHER_TYPE.FACTURA_B;
     default: {
       const unexpected: never = voucherClass;
+      return unexpected;
+    }
+  }
+}
+
+export function voucherTypeForBillingNote(
+  kind: BillingNoteKind,
+  invoiceType: BillingInvoiceType,
+): number {
+  switch (invoiceType) {
+    case "A":
+      switch (kind) {
+        case "DEBIT":
+          return ARCA_VOUCHER_TYPE.NOTA_DEBITO_A;
+        case "CREDIT":
+          return ARCA_VOUCHER_TYPE.NOTA_CREDITO_A;
+        default: {
+          const unexpected: never = kind;
+          return unexpected;
+        }
+      }
+    case "B":
+      switch (kind) {
+        case "DEBIT":
+          return ARCA_VOUCHER_TYPE.NOTA_DEBITO_B;
+        case "CREDIT":
+          return ARCA_VOUCHER_TYPE.NOTA_CREDITO_B;
+        default: {
+          const unexpected: never = kind;
+          return unexpected;
+        }
+      }
+    default: {
+      const unexpected: never = invoiceType;
       return unexpected;
     }
   }

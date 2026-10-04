@@ -17,6 +17,7 @@ import {
   printReceiptPdf,
   receiptPdfFilename,
 } from "@/features/billing/utils/invoice-pdf-client";
+import { authorizedNoteListMeta } from "@/features/billing/types/billing-note.types";
 import {
   movementKindEmptyCopy,
   movementKindLabel,
@@ -57,6 +58,22 @@ function movementKindBadgeClass(kind: BillingMovementKind): string {
       return _exhaustive;
     }
   }
+}
+
+function movementFiscalMeta(movement: BillingMovementListItem): string | null {
+  if (
+    !movement.noteFiscalStatus ||
+    !movement.noteEnvironment ||
+    !movement.noteInvoiceType
+  ) {
+    return null;
+  }
+
+  return authorizedNoteListMeta({
+    fiscalStatus: movement.noteFiscalStatus,
+    environment: movement.noteEnvironment,
+    invoiceType: movement.noteInvoiceType,
+  });
 }
 
 function movementRowClass(kind: BillingMovementKind): string | undefined {
@@ -394,6 +411,9 @@ export function MovimientosTable({
                   </td>
                   <td className={styles.invoiceNumberCell}>
                     {movement.number}
+                    {movementFiscalMeta(movement) ? (
+                      <p className={styles.invoiceMeta}>{movementFiscalMeta(movement)}</p>
+                    ) : null}
                     <DocumentActivityBadges activity={movement} />
                   </td>
                   <td className={styles.clientIdentityCell}>
@@ -452,6 +472,9 @@ export function MovimientosTable({
               <div className={styles.clientCardHeader}>
                 <div>
                   <p className={styles.clientCardCode}>{movement.number}</p>
+                  {movementFiscalMeta(movement) ? (
+                    <p className={styles.invoiceMeta}>{movementFiscalMeta(movement)}</p>
+                  ) : null}
                   <DocumentActivityBadges activity={movement} />
                   <h2 className={styles.clientCardName}>{movement.clientName}</h2>
                   <p className={styles.invoiceMeta}>

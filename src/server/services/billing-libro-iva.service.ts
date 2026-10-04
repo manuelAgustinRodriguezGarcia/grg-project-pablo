@@ -14,6 +14,7 @@ import { billingNoteRepository } from "@/server/repositories/billing-note.reposi
 import { BillingInvoiceError } from "@/server/services/billing-invoice.errors";
 import {
   buildLibroIvaRows,
+  libroIvaNoteFiscalStatus,
   libroIvaCustomPeriodLabel,
   libroIvaCustomRange,
   libroIvaDayRange,
@@ -43,12 +44,21 @@ function parseDailyVariant(
 
 export class BillingLibroIvaService {
   private async loadRows(range: LibroIvaRange) {
-    const [invoices, notes, settings] = await Promise.all([
-      billingInvoiceRepository.findIssuedBetween(range.from, range.to),
-      billingNoteRepository.findIssuedBetween(range.from, range.to),
-      billingFiscalSettingsRepository.getOrCreate(),
+    const settings = await billingFiscalSettingsRepository.getOrCreate();
+    const [invoices, notes] = await Promise.all([
+      billingInvoiceRepository.findIssuedBetween(
+        range.from,
+        range.to,
+        settings.environment,
+      ),
+      billingNoteRepository.findIssuedBetween(
+        range.from,
+        range.to,
+        settings.environment,
+      ),
     ]);
 
+    const noteStatus = libroIvaNoteFiscalStatus(settings.environment);
     const rows = buildLibroIvaRows(
       invoices.map((invoice) => ({
         issuedAt: invoice.issuedAt,
@@ -66,7 +76,9 @@ export class BillingLibroIvaService {
         total: invoice.total.toNumber(),
         totalVisualRounded: invoice.totalVisualRounded.toNumber(),
       })),
-      notes.map((note) => ({
+      notes
+        .filter((note) => note.fiscalStatus === noteStatus)
+        .map((note) => ({
         kind: note.kind,
         issuedAt: note.issuedAt,
         invoiceType: note.invoiceType,

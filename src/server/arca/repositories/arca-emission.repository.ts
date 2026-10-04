@@ -3,6 +3,11 @@ import type { BillingArcaEmission } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import type { ArcaCaeFiscalRequest } from "@/server/arca/adapters/billing-invoice-to-cae";
 import { parseBillingPayloadSnapshot } from "@/server/arca/invoices/billing-payload-snapshot";
+import type { ArcaStoredCommercialSnapshot } from "@/server/arca/invoices/emission-store";
+import {
+  isNoteSnapshotJson,
+  parseArcaNoteBillingSnapshot,
+} from "@/server/arca/notes/note-payload-snapshot";
 import type {
   ApprovedEmissionUpdate,
   ArcaCodedItem,
@@ -77,6 +82,16 @@ function readEnvironment(value: BillingArcaEmission["environment"]): ArcaEnviron
   }
 }
 
+function readCommercial(
+  value: Prisma.JsonValue | null,
+): ArcaStoredCommercialSnapshot | null {
+  if (isNoteSnapshotJson(value)) {
+    return parseArcaNoteBillingSnapshot(value);
+  }
+
+  return parseBillingPayloadSnapshot(value);
+}
+
 function toRecord(row: BillingArcaEmission): ArcaEmissionRecord {
   return {
     id: row.id,
@@ -101,8 +116,9 @@ function toRecord(row: BillingArcaEmission): ArcaEmissionRecord {
     events: codedItems(row.events),
     lastErrorCode: row.lastErrorCode,
     lastErrorMessage: row.lastErrorMessage,
-    billingPayloadSnapshot: parseBillingPayloadSnapshot(row.billingPayloadSnapshot),
+    billingPayloadSnapshot: readCommercial(row.billingPayloadSnapshot),
     invoiceId: row.invoiceId,
+    noteId: row.noteId,
   };
 }
 
@@ -140,7 +156,9 @@ async function updateOrThrow(
   }
 }
 
-export const arcaEmissionRepository: ArcaEmissionStore = {
+export const arcaEmissionRepository: ArcaEmissionStore & {
+  findByNoteId(noteId: string): Promise<ArcaEmissionRecord | null>;
+} = {
   async findByIdempotencyKey(key) {
     const row = await prisma.billingArcaEmission.findUnique({
       where: { idempotencyKey: key },
@@ -150,6 +168,11 @@ export const arcaEmissionRepository: ArcaEmissionStore = {
 
   async findById(id) {
     const row = await prisma.billingArcaEmission.findUnique({ where: { id } });
+    return row ? toRecord(row) : null;
+  },
+
+  async findByNoteId(noteId: string) {
+    const row = await prisma.billingArcaEmission.findUnique({ where: { noteId } });
     return row ? toRecord(row) : null;
   },
 
@@ -247,6 +270,21 @@ export async function markArcaEmissionCompleted(
     data: {
       status: "COMPLETED",
       invoiceId,
+    },
+  });
+  return toRecord(row);
+}
+
+export async function markArcaNoteEmissionCompleted(
+  id: string,
+  noteId: string,
+  db: EmissionDb,
+): Promise<ArcaEmissionRecord> {
+  const row = await db.billingArcaEmission.update({
+    where: { id },
+    data: {
+      status: "COMPLETED",
+      noteId,
     },
   });
   return toRecord(row);

@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import type { BillingInvoiceNoteView } from "@/features/billing/types/billing-invoice.types";
-import { NOTE_KIND_SHORT_LABELS } from "@/features/billing/types/billing-note.types";
+import {
+  authorizedNoteListMeta,
+  NOTE_KIND_SHORT_LABELS,
+} from "@/features/billing/types/billing-note.types";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import { useBillingDocumentActivity } from "@/features/billing/hooks/useBillingDocumentActivity";
 import {
@@ -83,7 +86,10 @@ export function InvoiceNotesPanel({
         <p className={styles.proofHint}>{emptyHint}</p>
       ) : (
         <ul className={styles.receiptList}>
-          {notes.map((note) => (
+          {notes.map((note) => {
+            const fiscalMeta = authorizedNoteListMeta(note);
+
+            return (
             <li key={note.id} className={styles.receiptListItem}>
               <div className={styles.receiptListItemBody}>
                 <div className={styles.receiptListItemHeader}>
@@ -97,6 +103,9 @@ export function InvoiceNotesPanel({
                   </p>
                 </div>
                 <p className={styles.proofFileName}>{note.noteNumber}</p>
+                {fiscalMeta ? (
+                  <p className={styles.invoiceMeta}>{fiscalMeta}</p>
+                ) : null}
                 <p className={styles.invoiceMeta}>
                   {formatArsExact(note.amount)} · {note.createdByName}
                 </p>
@@ -128,7 +137,8 @@ export function InvoiceNotesPanel({
                 Descargar PDF
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

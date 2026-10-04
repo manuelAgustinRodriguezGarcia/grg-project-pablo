@@ -13,6 +13,7 @@ import type { ArcaCaeFiscalRequest } from "@/server/arca/adapters/billing-invoic
 import { formatArcaVoucherDate } from "@/server/arca/adapters/billing-invoice-to-cae";
 import { ArcaEmissionError } from "@/server/arca/errors/arca-emission.error";
 import type { ArcaBillingPersistenceSnapshot } from "@/server/arca/invoices/billing-payload-snapshot";
+import { isArcaNoteBillingSnapshot } from "@/server/arca/notes/note-payload-snapshot";
 import type { ArcaEmissionRecord } from "@/server/arca/invoices/emission-store";
 import { toFiscalCents } from "@/server/arca/wsfe/wsfe-cae-request";
 import {
@@ -162,11 +163,13 @@ function centsFromFiscal(value: number, message: string): number {
 function requireBilling(
   emission: ArcaEmissionRecord,
 ): ArcaBillingPersistenceSnapshot {
-  if (!emission.billingPayloadSnapshot) {
+  const snapshot = emission.billingPayloadSnapshot;
+
+  if (!snapshot || isArcaNoteBillingSnapshot(snapshot)) {
     throw incomplete("Falta el snapshot comercial de la emisión.");
   }
 
-  return emission.billingPayloadSnapshot;
+  return snapshot;
 }
 
 function requireFiscal(emission: ArcaEmissionRecord): ArcaCaeFiscalRequest {

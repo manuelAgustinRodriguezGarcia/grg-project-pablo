@@ -5,6 +5,7 @@ import {
   UNSUPPORTED_ARCA_VAT_CONDITION,
   UnsupportedArcaVatConditionError,
   resolveArcaFiscalProfile,
+  voucherTypeForBillingNote,
 } from "@/shared/fiscal/arca-fiscal-mapping";
 import { determineInvoiceType } from "@/shared/utils/billing-invoice-rules";
 
@@ -77,10 +78,32 @@ describe("resolveArcaFiscalProfile", () => {
     }
   });
 
-  it("reserva los tipos de nota de débito y crédito sin usarlos", () => {
+  it("reserva los tipos de nota de débito y crédito", () => {
     expect(ARCA_VOUCHER_TYPE.NOTA_DEBITO_A).toBe(2);
     expect(ARCA_VOUCHER_TYPE.NOTA_CREDITO_A).toBe(3);
     expect(ARCA_VOUCHER_TYPE.NOTA_DEBITO_B).toBe(7);
     expect(ARCA_VOUCHER_TYPE.NOTA_CREDITO_B).toBe(8);
+  });
+});
+
+describe("voucherTypeForBillingNote", () => {
+  it("mapea débito A a 2", () => {
+    expect(voucherTypeForBillingNote("DEBIT", "A")).toBe(2);
+    expect(voucherTypeForBillingNote("DEBIT", "A")).toBe(ARCA_VOUCHER_TYPE.NOTA_DEBITO_A);
+  });
+
+  it("mapea crédito A a 3", () => {
+    expect(voucherTypeForBillingNote("CREDIT", "A")).toBe(3);
+    expect(voucherTypeForBillingNote("CREDIT", "A")).toBe(ARCA_VOUCHER_TYPE.NOTA_CREDITO_A);
+  });
+
+  it("mapea débito B a 7", () => {
+    expect(voucherTypeForBillingNote("DEBIT", "B")).toBe(7);
+    expect(voucherTypeForBillingNote("DEBIT", "B")).toBe(ARCA_VOUCHER_TYPE.NOTA_DEBITO_B);
+  });
+
+  it("mapea crédito B a 8", () => {
+    expect(voucherTypeForBillingNote("CREDIT", "B")).toBe(8);
+    expect(voucherTypeForBillingNote("CREDIT", "B")).toBe(ARCA_VOUCHER_TYPE.NOTA_CREDITO_B);
   });
 });

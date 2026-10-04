@@ -75,6 +75,14 @@ export type FeCaeVatLineXml = {
   amount: string;
 };
 
+export type FeCaeAssociatedVoucherXml = {
+  type: number;
+  pointOfSale: number;
+  number: number;
+  issuerCuit?: string;
+  issuedAt?: string;
+};
+
 export type FeCaeRequestXml = {
   pointOfSale: number;
   voucherType: number;
@@ -94,7 +102,34 @@ export type FeCaeRequestXml = {
   currencyRate: string;
   receiverVatConditionId: number;
   vatLines: FeCaeVatLineXml[];
+  associatedVouchers?: FeCaeAssociatedVoucherXml[];
 };
+
+function buildAssociatedVouchersXml(
+  vouchers: FeCaeAssociatedVoucherXml[] | undefined,
+): string[] {
+  if (!vouchers || vouchers.length === 0) {
+    return [];
+  }
+
+  return [
+    "        <CbtesAsoc>",
+    ...vouchers.flatMap((voucher) => [
+      "          <CbteAsoc>",
+      `            <Tipo>${voucher.type}</Tipo>`,
+      `            <PtoVta>${voucher.pointOfSale}</PtoVta>`,
+      `            <Nro>${voucher.number}</Nro>`,
+      ...(voucher.issuerCuit
+        ? [`            <Cuit>${escapeXml(voucher.issuerCuit)}</Cuit>`]
+        : []),
+      ...(voucher.issuedAt
+        ? [`            <CbteFch>${escapeXml(voucher.issuedAt)}</CbteFch>`]
+        : []),
+      "          </CbteAsoc>",
+    ]),
+    "        </CbtesAsoc>",
+  ];
+}
 
 function buildVatXml(lines: FeCaeVatLineXml[]): string[] {
   if (lines.length === 0) {
@@ -146,6 +181,7 @@ export function buildFeCaeSolicitarXml(input: {
     `        <MonId>${escapeXml(request.currencyId)}</MonId>`,
     `        <MonCotiz>${request.currencyRate}</MonCotiz>`,
     `        <CondicionIVAReceptorId>${request.receiverVatConditionId}</CondicionIVAReceptorId>`,
+    ...buildAssociatedVouchersXml(request.associatedVouchers),
     ...buildVatXml(request.vatLines),
     "      </FECAEDetRequest>",
     "    </FeDetReq>",
