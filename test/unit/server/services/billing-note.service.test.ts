@@ -31,6 +31,7 @@ vi.mock("@/server/auth", () => ({
 vi.mock("@/server/repositories/billing-fiscal-settings.repository", () => ({
   billingFiscalSettingsRepository: {
     getOrCreate: vi.fn(),
+    readEnvironment: vi.fn(),
   },
 }));
 vi.mock("@/server/repositories/billing-invoice.repository", () => ({
@@ -272,6 +273,10 @@ describe("BillingNoteService.createNote", () => {
       },
     } as never);
 
+    vi.mocked(billingFiscalSettingsRepository.readEnvironment).mockResolvedValue(
+      "PRODUCCION",
+    );
+
     await billingNoteService.generateNotePdf("note-1");
 
     expect(billingFiscalSettingsRepository.getOrCreate).not.toHaveBeenCalled();
@@ -288,6 +293,9 @@ describe("BillingNoteService.createNote", () => {
 
   it("una nota autorizada sin issuerSnapshot falla", async () => {
     authorizedNote();
+    vi.mocked(billingFiscalSettingsRepository.readEnvironment).mockResolvedValue(
+      "PRODUCCION",
+    );
     vi.mocked(arcaEmissionRepository.findByNoteId).mockResolvedValue({
       billingPayloadSnapshot: null,
     } as never);
@@ -301,6 +309,9 @@ describe("BillingNoteService.createNote", () => {
   it("una nota interna sigue usando el emisor de la configuración vigente", async () => {
     vi.mocked(loadRothamelLogoPng).mockResolvedValue(null);
     vi.mocked(buildNotePdf).mockResolvedValue(new Uint8Array([1]));
+    vi.mocked(billingFiscalSettingsRepository.readEnvironment).mockResolvedValue(
+      "MODO_PRUEBA",
+    );
     vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue({
       environment: "MODO_PRUEBA",
       issuerName: "ROTHAMEL NUEVO",

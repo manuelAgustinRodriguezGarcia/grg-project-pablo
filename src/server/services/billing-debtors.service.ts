@@ -2,6 +2,10 @@ import { requirePermission } from "@/server/auth";
 import { buildDebtorsXlsx } from "@/server/excel/build-debtors-xlsx";
 import { billingInvoiceRepository } from "@/server/repositories/billing-invoice.repository";
 import {
+  readActiveFiscalEnvironment,
+  scopeInvoicesForFiscalEnvironment,
+} from "@/server/services/billing-fiscal-scope";
+import {
   buildDebtorClients,
   filterDebtorClients,
   invoiceMatchesDateRange,
@@ -17,7 +21,11 @@ export class BillingDebtorsService {
     sort: DebtorSortOrder;
   }): Promise<{ bytes: Uint8Array; filename: string }> {
     await requirePermission("debts.read");
-    const invoices = (await billingInvoiceRepository.findAllOrdered())
+    const environment = await readActiveFiscalEnvironment();
+    const invoices = scopeInvoicesForFiscalEnvironment(
+      await billingInvoiceRepository.findAllOrdered(environment),
+      environment,
+    )
       .map(toBillingInvoiceListItem)
       .filter((invoice) =>
         invoiceMatchesDateRange(invoice, input.fromDate, input.toDate),

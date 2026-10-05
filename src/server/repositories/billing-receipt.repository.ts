@@ -1,4 +1,5 @@
 import type {
+  BillingFiscalEnvironment,
   BillingInvoiceType,
   BillingReceipt,
   BillingReceiptAllocation,
@@ -19,6 +20,7 @@ const receiptListInclude = {
           id: true,
           invoiceNumber: true,
           invoiceType: true,
+          environment: true,
         },
       },
     },
@@ -34,6 +36,7 @@ export type BillingReceiptWithRelations = BillingReceipt & {
         id: string;
         invoiceNumber: string;
         invoiceType: BillingInvoiceType;
+        environment: BillingFiscalEnvironment;
       };
     }
   >;
@@ -57,8 +60,17 @@ export class BillingReceiptRepository {
     });
   }
 
-  async findAllOrdered(): Promise<BillingReceiptWithRelations[]> {
+  async findAllOrdered(
+    environment: BillingFiscalEnvironment,
+  ): Promise<BillingReceiptWithRelations[]> {
     return prisma.billingReceipt.findMany({
+      where: {
+        allocations: {
+          none: {
+            invoice: { environment: { not: environment } },
+          },
+        },
+      },
       orderBy: [{ issuedAt: "desc" }, { sequenceNumber: "desc" }],
       include: receiptListInclude,
     });

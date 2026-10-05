@@ -62,6 +62,11 @@ import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { buildArcaBillingPersistenceSnapshot } from "./billing-invoice-arca-snapshot";
 import { BillingInvoiceError } from "./billing-invoice.errors";
+import {
+  readActiveFiscalEnvironment,
+  scopeFiscalDocuments,
+  scopeInvoicesForFiscalEnvironment,
+} from "./billing-fiscal-scope";
 import { releaseOverpaymentsForClient } from "./billing-invoice-settlement";
 
 const NUMBER_GENERATION_MAX_ATTEMPTS = 5;
@@ -313,7 +318,9 @@ type PreparedInvoice = {
 export class BillingInvoiceService {
   async listInvoices(): Promise<BillingInvoiceWithItems[]> {
     await requirePermission("invoices.read");
-    return billingInvoiceRepository.findAllOrdered();
+    const environment = await readActiveFiscalEnvironment();
+    const invoices = await billingInvoiceRepository.findAllOrdered(environment);
+    return scopeInvoicesForFiscalEnvironment(invoices, environment);
   }
 
   async releaseClientOverpayments(clientId: string): Promise<void> {
@@ -332,7 +339,19 @@ export class BillingInvoiceService {
       );
     }
 
-    return invoice;
+    const environment = await readActiveFiscalEnvironment();
+
+    if (invoice.environment !== environment) {
+      throw new BillingInvoiceError(
+        "Factura no encontrada.",
+        "BILLING_INVOICE_NOT_FOUND",
+      );
+    }
+
+    return {
+      ...invoice,
+      billingNotes: scopeFiscalDocuments(invoice.billingNotes, environment),
+    };
   }
 
   async createInvoice(

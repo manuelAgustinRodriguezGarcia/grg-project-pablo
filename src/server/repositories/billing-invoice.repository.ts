@@ -90,10 +90,19 @@ export type CreateBillingInvoiceData = {
 type InvoiceDb = Prisma.TransactionClient | typeof prisma;
 
 export class BillingInvoiceRepository {
-  async findAllOrdered(): Promise<BillingInvoiceWithItems[]> {
+  async findAllOrdered(
+    environment: BillingFiscalEnvironment,
+  ): Promise<BillingInvoiceWithItems[]> {
     return prisma.billingInvoice.findMany({
+      where: { environment },
       orderBy: [{ issuedAt: "desc" }, { sequenceNumber: "desc" }],
-      include: invoiceListInclude,
+      include: {
+        ...invoiceListInclude,
+        billingNotes: {
+          ...invoiceListInclude.billingNotes,
+          where: { environment },
+        },
+      },
     });
   }
 

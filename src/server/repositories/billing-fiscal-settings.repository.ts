@@ -1,4 +1,7 @@
-import type { BillingFiscalSettings } from "@/generated/prisma/client";
+import type {
+  BillingFiscalEnvironment,
+  BillingFiscalSettings,
+} from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/database/prisma";
 
@@ -10,6 +13,15 @@ export class BillingFiscalSettingsRepository {
    * valores por defecto del schema (IVA 21%, límite $400.000, PV 0007,
    * ambiente modo prueba) si todavía no existe.
    */
+  async readEnvironment(): Promise<BillingFiscalEnvironment | null> {
+    const settings = await prisma.billingFiscalSettings.findUnique({
+      where: { id: BILLING_FISCAL_SETTINGS_ID },
+      select: { environment: true },
+    });
+
+    return settings?.environment ?? null;
+  }
+
   async getOrCreate(): Promise<BillingFiscalSettings> {
     return prisma.billingFiscalSettings.upsert({
       where: { id: BILLING_FISCAL_SETTINGS_ID },

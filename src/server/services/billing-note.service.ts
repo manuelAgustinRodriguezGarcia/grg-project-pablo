@@ -12,6 +12,10 @@ import { billingFiscalSettingsRepository } from "@/server/repositories/billing-f
 import { billingInvoiceRepository } from "@/server/repositories/billing-invoice.repository";
 import { billingNoteRepository } from "@/server/repositories/billing-note.repository";
 import { BillingInvoiceError } from "@/server/services/billing-invoice.errors";
+import {
+  readActiveFiscalEnvironment,
+  scopeFiscalDocuments,
+} from "@/server/services/billing-fiscal-scope";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/server/services/audit.constants";
 import { auditService } from "@/server/services/audit.service";
 import { syncInvoiceSettlement, loadInvoiceSettlementSums } from "@/server/services/billing-invoice-settlement";
@@ -61,7 +65,9 @@ function validationError(message: string): BillingInvoiceError {
 export class BillingNoteService {
   async listNotes() {
     await requirePermission("movements.read");
-    return billingNoteRepository.findAllOrdered();
+    const environment = await readActiveFiscalEnvironment();
+    const notes = await billingNoteRepository.findAllOrdered(environment);
+    return scopeFiscalDocuments(notes, environment);
   }
 
   async createNote(input: CreateBillingNoteInput) {
@@ -234,6 +240,15 @@ export class BillingNoteService {
     await requirePermission("movements.read");
     const note = await billingNoteRepository.findById(noteId);
     if (!note) {
+      throw new BillingInvoiceError(
+        "Nota no encontrada.",
+        "BILLING_NOTE_NOT_FOUND",
+      );
+    }
+
+    const environment = await readActiveFiscalEnvironment();
+
+    if (note.environment !== environment) {
       throw new BillingInvoiceError(
         "Nota no encontrada.",
         "BILLING_NOTE_NOT_FOUND",

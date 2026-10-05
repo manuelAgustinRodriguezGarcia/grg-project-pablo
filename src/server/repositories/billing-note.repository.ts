@@ -63,8 +63,11 @@ export class BillingNoteRepository {
     });
   }
 
-  async findAllOrdered(): Promise<BillingNoteWithRelations[]> {
+  async findAllOrdered(
+    environment: BillingFiscalEnvironment,
+  ): Promise<BillingNoteWithRelations[]> {
     return prisma.billingNote.findMany({
+      where: { environment },
       orderBy: [{ issuedAt: "desc" }, { sequenceNumber: "desc" }],
       include: noteListInclude,
     });

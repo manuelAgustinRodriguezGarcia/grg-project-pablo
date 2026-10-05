@@ -20,6 +20,10 @@ import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/server/services/audit.const
 import { auditService } from "@/server/services/audit.service";
 import { syncInvoiceSettlement, releaseOverpaymentsForClient } from "@/server/services/billing-invoice-settlement";
 import { BillingInvoiceError } from "@/server/services/billing-invoice.errors";
+import {
+  readActiveFiscalEnvironment,
+  scopeReceiptsToFiscalEnvironment,
+} from "@/server/services/billing-fiscal-scope";
 import { buildReceiptNumber, formatReceiptNumber } from "@/features/billing/utils/receipt-number";
 import { remainingCents, splitApplyWithCredit } from "@/features/billing/utils/receipt-allocation";
 import { centsToPesos, pesosToCents } from "@/shared/utils/billing-invoice-totals";
@@ -157,6 +161,18 @@ async function outstandingPesosForInvoice(
   return centsToPesos(outstandingCents);
 }
 
+function assertInvoiceBelongsToEnvironment(
+  invoice: { invoiceNumber: string; environment: string },
+  environment: string,
+): void {
+  if (invoice.environment !== environment) {
+    throw new BillingInvoiceError(
+      `La factura ${invoice.invoiceNumber} no pertenece al ambiente fiscal vigente.`,
+      "VALIDATION_ERROR",
+    );
+  }
+}
+
 function assertInvoiceAcceptsReceipt(invoice: {
   invoiceNumber: string;
   paymentMethod: BillingPaymentMethod;
@@ -190,7 +206,9 @@ async function syncInvoicePaymentStatus(
 export class BillingReceiptService {
   async listReceipts() {
     await requirePermission("movements.read");
-    return billingReceiptRepository.findAllOrdered();
+    const environment = await readActiveFiscalEnvironment();
+    const receipts = await billingReceiptRepository.findAllOrdered(environment);
+    return scopeReceiptsToFiscalEnvironment(receipts, environment);
   }
 
   async createReceipt(input: CreateBillingReceiptInput) {
@@ -227,6 +245,7 @@ export class BillingReceiptService {
       allocations.map((allocation) => allocation.invoiceId),
     );
     const invoicesById = new Map(invoices.map((invoice) => [invoice.id, invoice]));
+    const environment = await readActiveFiscalEnvironment();
 
     for (const allocation of allocations) {
       const invoice = invoicesById.get(allocation.invoiceId);
@@ -236,6 +255,7 @@ export class BillingReceiptService {
           "BILLING_INVOICE_NOT_FOUND",
         );
       }
+      assertInvoiceBelongsToEnvironment(invoice, environment);
       if (invoice.clientId !== client.id) {
         throw new BillingInvoiceError(
           "La factura no pertenece a ese cliente.",
@@ -415,6 +435,19 @@ export class BillingReceiptService {
       );
     }
 
+    const environment = await readActiveFiscalEnvironment();
+    const visibleReceipts = scopeReceiptsToFiscalEnvironment(
+      [receipt],
+      environment,
+    );
+
+    if (visibleReceipts.length === 0) {
+      throw new BillingInvoiceError(
+        "Recibo no encontrado.",
+        "BILLING_RECEIPT_NOT_FOUND",
+      );
+    }
+
     const invoices = await billingInvoiceRepository.findByIds(
       allocations.map((allocation) => allocation.invoiceId),
     );
@@ -428,6 +461,7 @@ export class BillingReceiptService {
           "BILLING_INVOICE_NOT_FOUND",
         );
       }
+      assertInvoiceBelongsToEnvironment(invoice, environment);
       if (invoice.clientId !== receipt.clientId) {
         throw new BillingInvoiceError(
           "La factura no pertenece a ese cliente.",
@@ -515,6 +549,15 @@ export class BillingReceiptService {
     const receipt = await billingReceiptRepository.findById(receiptId);
 
     if (!receipt) {
+      throw new BillingInvoiceError(
+        "Recibo no encontrado.",
+        "BILLING_RECEIPT_NOT_FOUND",
+      );
+    }
+
+    const environment = await readActiveFiscalEnvironment();
+
+    if (scopeReceiptsToFiscalEnvironment([receipt], environment).length === 0) {
       throw new BillingInvoiceError(
         "Recibo no encontrado.",
         "BILLING_RECEIPT_NOT_FOUND",
