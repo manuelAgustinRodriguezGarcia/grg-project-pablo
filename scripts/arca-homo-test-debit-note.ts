@@ -169,9 +169,7 @@ async function verifyEmission(idempotencyKey: string): Promise<string> {
   const { buildBillingMovements } = await import(
     "@/features/billing/utils/movement-list"
   );
-  const { buildLibroIvaRows, libroIvaMonthRange } = await import(
-    "@/features/billing/utils/libro-iva"
-  );
+  const { libroIvaMonthRange } = await import("@/features/billing/utils/libro-iva");
   const { getValidArcaAccessTicket } = await import(
     "@/server/arca/tickets/access-ticket"
   );
@@ -292,40 +290,6 @@ async function verifyEmission(idempotencyKey: string): Promise<string> {
       billingInvoiceRepository.findIssuedBetween(range.from, range.to, "PRODUCCION"),
       billingNoteRepository.findIssuedBetween(range.from, range.to, "PRODUCCION"),
     ]);
-    const libroRows = buildLibroIvaRows(
-      libroInvoices.map((row) => ({
-        issuedAt: row.issuedAt,
-        invoiceType: row.invoiceType,
-        pointOfSale: row.pointOfSale,
-        invoiceNumber: row.invoiceNumber,
-        clientName: row.clientName,
-        clientIdentificationType: row.clientIdentificationType,
-        clientIdentificationNumber: row.clientIdentificationNumber,
-        clientIvaCondition: row.clientIvaCondition,
-        subtotal: row.subtotal.toNumber(),
-        discountAmount: row.discountAmount.toNumber(),
-        ivaPercent: row.ivaPercent.toNumber(),
-        ivaAmount: row.ivaAmount.toNumber(),
-        total: row.total.toNumber(),
-        totalVisualRounded: row.totalVisualRounded.toNumber(),
-      })),
-      libroNotes.map((row) => ({
-        kind: row.kind,
-        issuedAt: row.issuedAt,
-        invoiceType: row.invoiceType,
-        pointOfSale: row.pointOfSale,
-        noteNumber: row.noteNumber,
-        invoiceNumber: row.invoice.invoiceNumber,
-        clientName: row.clientName,
-        clientIdentificationType: row.clientIdentificationType,
-        clientIdentificationNumber: row.clientIdentificationNumber,
-        clientIvaCondition: row.clientIvaCondition,
-        netAmount: row.netAmount.toNumber(),
-        ivaPercent: row.ivaPercent.toNumber(),
-        ivaAmount: row.ivaAmount.toNumber(),
-        amount: row.amount.toNumber(),
-      })),
-    );
 
     assertHomoDebitNoteProductionIsolation({
       activeEnvironment,
@@ -343,7 +307,8 @@ async function verifyEmission(idempotencyKey: string): Promise<string> {
           (id): id is string => id !== null,
         ),
       ),
-      libroNumbers: libroRows.flatMap((row) => [row.number, row.associatedNumber]),
+      libroInvoiceIds: libroInvoices.map((row) => row.id),
+      libroNoteIds: libroNotes.map((row) => row.id),
     });
 
     const ticket = await getValidArcaAccessTicket("HOMOLOGACION");

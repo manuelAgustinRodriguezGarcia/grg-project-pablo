@@ -494,7 +494,25 @@ describe("verify y el camino normal", () => {
         debtorSourceInvoiceIds: [],
         movementIds: [],
         movementInvoiceIds: [],
-        libroNumbers: [],
+        libroInvoiceIds: [],
+        libroNoteIds: [],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertHomoDebitNoteProductionIsolation({
+        activeEnvironment: "PRODUCCION",
+        invoiceId: HOMO_DEBIT_NOTE_INVOICE_ID,
+        invoiceNumber: "0007-00000002",
+        noteId: "note-1",
+        noteNumber: "0007-00000001",
+        activeInvoiceIds: [],
+        productionNoteIds: [],
+        dashboardInvoiceIds: [],
+        debtorSourceInvoiceIds: [],
+        movementIds: [],
+        movementInvoiceIds: [],
+        libroInvoiceIds: ["factura-produccion"],
+        libroNoteIds: [],
       }),
     ).not.toThrow();
     expect(() =>
@@ -510,7 +528,25 @@ describe("verify y el camino normal", () => {
         debtorSourceInvoiceIds: [],
         movementIds: [],
         movementInvoiceIds: [],
-        libroNumbers: [],
+        libroInvoiceIds: [],
+        libroNoteIds: [],
+      }),
+    ).toThrow(/alcance productivo/);
+    expect(() =>
+      assertHomoDebitNoteProductionIsolation({
+        activeEnvironment: "PRODUCCION",
+        invoiceId: HOMO_DEBIT_NOTE_INVOICE_ID,
+        invoiceNumber: "0007-00000002",
+        noteId: "cmuv9agjm00013cf0g0ohdvny",
+        noteNumber: "0007-00000001",
+        activeInvoiceIds: [],
+        productionNoteIds: [],
+        dashboardInvoiceIds: [],
+        debtorSourceInvoiceIds: [],
+        movementIds: [],
+        movementInvoiceIds: [],
+        libroInvoiceIds: [],
+        libroNoteIds: ["cmuv9agjm00013cf0g0ohdvny"],
       }),
     ).toThrow(/alcance productivo/);
   });

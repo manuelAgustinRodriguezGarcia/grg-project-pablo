@@ -871,7 +871,8 @@ export function assertHomoDebitNoteProductionIsolation(input: {
   debtorSourceInvoiceIds: readonly string[];
   movementIds: readonly string[];
   movementInvoiceIds: readonly string[];
-  libroNumbers: readonly string[];
+  libroInvoiceIds: readonly string[];
+  libroNoteIds: readonly string[];
 }): void {
   if (input.activeEnvironment !== "PRODUCCION") {
     throw new HomoDebitNoteAbort("BillingFiscalSettings no está en PRODUCCION.");
@@ -884,8 +885,8 @@ export function assertHomoDebitNoteProductionIsolation(input: {
     input.debtorSourceInvoiceIds.includes(input.invoiceId) ||
     input.movementIds.includes(input.noteId) ||
     input.movementInvoiceIds.includes(input.invoiceId) ||
-    input.libroNumbers.includes(input.invoiceNumber) ||
-    input.libroNumbers.includes(input.noteNumber);
+    input.libroInvoiceIds.includes(input.invoiceId) ||
+    input.libroNoteIds.includes(input.noteId);
 
   if (present) {
     throw new HomoDebitNoteAbort(
