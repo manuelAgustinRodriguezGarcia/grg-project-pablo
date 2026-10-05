@@ -65,7 +65,6 @@ export type NotePdfInput = {
   clientCode: string;
   clientIdentificationType: BillingIdentificationType;
   clientIdentificationNumber: string | null;
-  createdByName: string;
   issuer: InvoicePdfIssuer;
   logoPng: Uint8Array | null;
   environment: BillingFiscalEnvironment;
@@ -419,15 +418,6 @@ export async function buildNotePdf(input: NotePdfInput): Promise<Uint8Array> {
     });
     y -= 13;
   }
-
-  y -= 16;
-  drawPdfText(page, `Emitida por ${input.createdByName}`, {
-    x: PAGE_MARGIN,
-    y,
-    size: 8,
-    font,
-    color: PDF_GRAY,
-  });
 
   if (presentation !== "internal") {
     await drawFiscalFooter(pdf, page, font, bold, input);

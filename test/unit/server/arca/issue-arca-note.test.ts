@@ -1814,7 +1814,6 @@ describe("issuerSnapshot de la nota", () => {
         clientIdentificationType: "CUIT",
         clientIdentificationNumber: CLIENT_CUIT,
         clientIvaCondition: "RESPONSABLE_INSCRIPTO",
-        createdByName: "Admin",
         issuer: snapshot.issuerSnapshot,
         logoPng: null,
         environment: "HOMOLOGACION",

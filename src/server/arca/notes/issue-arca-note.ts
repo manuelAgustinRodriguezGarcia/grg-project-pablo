@@ -351,7 +351,7 @@ function assertAssociatedInvoice(invoice: ArcaNoteEmissionSource["invoice"]): vo
   }
 }
 
-function assertCommercialLimits(
+export function assertCommercialLimits(
   source: ArcaNoteEmissionSource,
   kind: BillingNoteKind,
   amountCents: number,

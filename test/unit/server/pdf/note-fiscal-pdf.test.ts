@@ -62,7 +62,6 @@ function fiscalNote(overrides: Partial<NotePdfInput> = {}): NotePdfInput {
     clientIdentificationType: "CUIT",
     clientIdentificationNumber: "30500010912",
     clientIvaCondition: "RESPONSABLE_INSCRIPTO",
-    createdByName: "Admin",
     issuer: {
       name: "EMISOR GUARDADO",
       cuit: "30712345671",
@@ -113,6 +112,7 @@ describe("PDF fiscal de nota", () => {
     expect(text).toContain("30/09/2026");
     expect(text).toContain("CLIENTE SNAPSHOT SA");
     expect(text).toContain("EMISOR GUARDADO");
+    expect(text).not.toContain("Emitida por");
     expect(text).not.toContain("invoice-1");
     expect(text).not.toContain("HOMOLOGACIÓN - SIN VALIDEZ FISCAL DE PRODUCCIÓN");
     expect(text).not.toContain("MODO PRUEBA");
@@ -146,6 +146,7 @@ describe("PDF fiscal de nota", () => {
     );
 
     expect(text).toContain("MODO PRUEBA - NO VALIDO COMO COMPROBANTE FISCAL");
+    expect(text).not.toContain("Emitida por");
     expect(text).not.toContain(`CAE: ${CAE}`);
     expect(text).not.toContain("Comprobante asociado");
     expect(text).not.toMatch(/\/[A-Za-z0-9.-]+\s+Do/);

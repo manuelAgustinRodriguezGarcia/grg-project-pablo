@@ -169,7 +169,6 @@ async function main(): Promise<void> {
         invoiceId: invoice.id,
       },
       include: {
-        createdBy: { select: { name: true } },
         invoice: { select: { invoiceNumber: true, invoiceType: true, issuedAt: true } },
       },
     });
@@ -241,7 +240,6 @@ async function main(): Promise<void> {
       clientIdentificationType: note.clientIdentificationType,
       clientIdentificationNumber: note.clientIdentificationNumber,
       clientIvaCondition: note.clientIvaCondition,
-      createdByName: note.createdBy.name,
       issuer: {
         name: issuer.name,
         cuit: issuer.cuit,

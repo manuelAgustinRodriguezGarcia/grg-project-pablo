@@ -280,7 +280,6 @@ export class BillingNoteService {
       clientIdentificationType: note.clientIdentificationType,
       clientIdentificationNumber: note.clientIdentificationNumber,
       clientIvaCondition: note.clientIvaCondition,
-      createdByName: note.createdBy.name,
       issuer,
       logoPng,
       environment: note.environment,
