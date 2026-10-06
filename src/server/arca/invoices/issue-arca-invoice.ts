@@ -2,6 +2,7 @@ import "server-only";
 import type { BillingInvoiceType } from "@/generated/prisma/client";
 import {
   buildArcaCaeRequest,
+  formatArcaVoucherDate,
   type ArcaCaeFiscalRequest,
 } from "@/server/arca/adapters/billing-invoice-to-cae";
 import { isArcaProductionEmissionEnabled } from "@/server/arca/config/production-emission";
@@ -24,7 +25,10 @@ import {
   hashArcaFiscalRequest,
   type ArcaFiscalHashInput,
 } from "@/server/arca/invoices/fiscal-request-hash";
-import { BillingInvoiceError } from "@/server/services/billing-invoice.errors";
+import {
+  ARCA_RETRY_FISCAL_DATE_CHANGED_MESSAGE,
+  BillingInvoiceError,
+} from "@/server/services/billing-invoice.errors";
 import { voucherTypeForClass } from "@/shared/fiscal/arca-fiscal-mapping";
 import { PRODUCTION_EMISSION_DISABLED_MESSAGE } from "@/shared/fiscal/production-emission";
 import { normalizeIssuerCuit } from "@/server/arca/utils/cuit";
@@ -64,6 +68,8 @@ const LOCAL_REQUEST_CODES = new Set([
 
 export type IssueArcaInvoiceInput = ArcaFiscalHashInput & {
   idempotencyKey: string;
+  /** Reloj de la operación. No entra al requestHash. */
+  now?: Date;
 };
 
 export type IssueArcaInvoiceResult =
@@ -422,6 +428,25 @@ function assertUnsentProductionAllowed(environment: ArcaEnvironment): void {
   );
 }
 
+function assertUnsentRetryOnOriginalFiscalDay(
+  status: ArcaEmissionRecord["status"],
+  voucherDate: Date | string,
+  now: Date | undefined,
+): void {
+  if (!now || (status !== "PREPARED" && status !== "FAILED_PRE_SEND")) {
+    return;
+  }
+
+  if (formatArcaVoucherDate(voucherDate) === formatArcaVoucherDate(now)) {
+    return;
+  }
+
+  throw new BillingInvoiceError(
+    ARCA_RETRY_FISCAL_DATE_CHANGED_MESSAGE,
+    "ARCA_RETRY_FISCAL_DATE_CHANGED",
+  );
+}
+
 async function emitNew(
   emission: ArcaEmissionRecord,
   input: IssueArcaInvoiceInput,
@@ -429,6 +454,12 @@ async function emitNew(
   pointOfSale: number,
   dependencies: ResolvedDependencies,
 ): Promise<IssueArcaInvoiceResult> {
+  assertUnsentRetryOnOriginalFiscalDay(
+    emission.status,
+    input.voucherDate,
+    input.now,
+  );
+
   let ticket: ArcaAccessTicket;
   let fiscalRequest: ArcaCaeFiscalRequest;
 

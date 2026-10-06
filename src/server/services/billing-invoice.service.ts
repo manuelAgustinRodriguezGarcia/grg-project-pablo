@@ -7,10 +7,13 @@ import type {
 } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { ArcaConfigurationError } from "@/server/arca/errors/arca-configuration.error";
+import { formatArcaVoucherDate } from "@/server/arca/adapters/billing-invoice-to-cae";
 import { ArcaEmissionError } from "@/server/arca/errors/arca-emission.error";
 import { getArcaCredentials } from "@/server/arca/config/credentials";
 import { isArcaProductionEmissionEnabled } from "@/server/arca/config/production-emission";
 import type { ArcaEmissionRecord } from "@/server/arca/invoices/emission-store";
+import { parseBillingPayloadSnapshot } from "@/server/arca/invoices/billing-payload-snapshot";
+import { hashArcaFiscalRequest } from "@/server/arca/invoices/fiscal-request-hash";
 import { finalizeApprovedArcaEmission } from "@/server/arca/invoices/finalize-approved-arca-emission";
 import {
   issueArcaInvoice,
@@ -61,7 +64,10 @@ import {
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
 import { buildArcaBillingPersistenceSnapshot } from "./billing-invoice-arca-snapshot";
-import { BillingInvoiceError } from "./billing-invoice.errors";
+import {
+  ARCA_RETRY_FISCAL_DATE_CHANGED_MESSAGE,
+  BillingInvoiceError,
+} from "./billing-invoice.errors";
 import {
   readActiveFiscalEnvironment,
   scopeFiscalDocuments,
@@ -279,6 +285,46 @@ async function requireActiveRubros(
   return rubrosById;
 }
 
+function persistedInvoiceIssuedAt(existing: ArcaEmissionRecord): Date {
+  const snapshot = parseBillingPayloadSnapshot(existing.billingPayloadSnapshot);
+
+  if (!snapshot) {
+    throw new BillingInvoiceError(
+      "No se pudo retomar el comprobante.",
+      "ARCA_EMISSION_FAILED_PRE_SEND",
+    );
+  }
+
+  return new Date(snapshot.issuedAt);
+}
+
+function assertUnsentRetryFiscalDay(
+  existing: ArcaEmissionRecord | undefined,
+  request: Parameters<typeof hashArcaFiscalRequest>[0],
+  issuedAt: Date,
+  operationNow: Date,
+): void {
+  if (
+    !existing ||
+    (existing.status !== "PREPARED" && existing.status !== "FAILED_PRE_SEND") ||
+    formatArcaVoucherDate(issuedAt) === formatArcaVoucherDate(operationNow)
+  ) {
+    return;
+  }
+
+  if (hashArcaFiscalRequest(request) !== existing.requestHash) {
+    throw new BillingInvoiceError(
+      "La clave de idempotencia ya se usó con otros datos.",
+      "ARCA_IDEMPOTENCY_CONFLICT",
+    );
+  }
+
+  throw new BillingInvoiceError(
+    ARCA_RETRY_FISCAL_DATE_CHANGED_MESSAGE,
+    "ARCA_RETRY_FISCAL_DATE_CHANGED",
+  );
+}
+
 function assertIdempotencyKey(value: string): string {
   const key = value.trim();
 
@@ -361,6 +407,7 @@ export class BillingInvoiceService {
     const { profile: admin } = await requirePermission("invoices.create");
     const idempotencyKey = assertIdempotencyKey(input.idempotencyKey);
     const prepared = await this.prepareInvoice(input);
+    const operationNow = options.now ?? new Date();
     const existing = await arcaEmissionRepository.findByIdempotencyKey(
       idempotencyKey,
     );
@@ -370,9 +417,10 @@ export class BillingInvoiceService {
         admin.id,
         prepared,
         idempotencyKey,
-        options.now ?? new Date(),
+        persistedInvoiceIssuedAt(existing),
         existing.environment,
         existing,
+        operationNow,
       );
     }
 
@@ -384,8 +432,10 @@ export class BillingInvoiceService {
           admin.id,
           prepared,
           idempotencyKey,
-          options.now ?? new Date(),
+          operationNow,
           "HOMOLOGACION",
+          undefined,
+          operationNow,
         );
       case "PRODUCCION":
         assertProductionEmissionReady(prepared.settings);
@@ -393,8 +443,10 @@ export class BillingInvoiceService {
           admin.id,
           prepared,
           idempotencyKey,
-          options.now ?? new Date(),
+          operationNow,
           "PRODUCCION",
+          undefined,
+          operationNow,
         );
       default: {
         const unexpected: never = prepared.settings.environment;
@@ -540,6 +592,7 @@ export class BillingInvoiceService {
     issuedAt: Date,
     environment: ArcaEnvironment,
     existing?: ArcaEmissionRecord,
+    operationNow: Date = issuedAt,
   ): Promise<BillingInvoiceWithItems> {
     let result: IssueArcaInvoiceResult;
 
@@ -564,8 +617,7 @@ export class BillingInvoiceService {
         paymentStatus: paymentStatusForMethod(prepared.paymentMethod),
         notes: prepared.notes,
       });
-      result = await issueArcaInvoice({
-        idempotencyKey,
+      const fiscalRequest = {
         environment,
         issuerCuit,
         pointOfSale,
@@ -586,6 +638,12 @@ export class BillingInvoiceService {
         },
         ivaPercent: prepared.ivaPercent,
         billing,
+      };
+      assertUnsentRetryFiscalDay(existing, fiscalRequest, issuedAt, operationNow);
+      result = await issueArcaInvoice({
+        ...fiscalRequest,
+        idempotencyKey,
+        now: operationNow,
       });
     } catch (error) {
       if (error instanceof BillingInvoiceError) {

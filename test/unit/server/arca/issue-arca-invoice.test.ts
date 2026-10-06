@@ -42,6 +42,7 @@ type InvoiceInputOverrides = {
   ivaPercent?: number;
   client?: Partial<IssueArcaInvoiceInput["client"]>;
   totals?: Partial<IssueArcaInvoiceInput["totals"]>;
+  now?: Date;
   billing?: {
     issuedAt?: string;
     pointOfSale?: number;
@@ -87,6 +88,7 @@ function invoiceInput(overrides: InvoiceInputOverrides = {}): IssueArcaInvoiceIn
     ivaPercent,
     client,
     totals,
+    now: overrides.now,
     billing: {
       issuedAt: billing?.issuedAt ?? "2026-09-30T15:00:00.000Z",
       pointOfSale: billing?.pointOfSale ?? pointOfSale,
@@ -917,4 +919,203 @@ describe("issueArcaInvoice", () => {
       expect(harness.rows.size).toBe(1);
     },
   );
+});
+
+const ORIGINAL_ISSUED_AT = new Date("2026-10-06T12:48:12.682Z");
+const SAME_FISCAL_DAY = new Date("2026-10-06T13:09:26.277Z");
+const NEXT_FISCAL_DAY = new Date("2026-10-07T15:00:00.000Z");
+
+function datedInput(now?: Date): IssueArcaInvoiceInput {
+  return invoiceInput({
+    voucherDate: ORIGINAL_ISSUED_AT,
+    now,
+    billing: { issuedAt: ORIGINAL_ISSUED_AT.toISOString() },
+  });
+}
+
+describe("retry de una factura con issuedAt congelado", () => {
+  it("reutiliza el issuedAt original y sigue hacia el último autorizado", async () => {
+    const harness = createHarness(4);
+    harness.getLastAuthorizedVoucher.mockRejectedValueOnce(
+      new ArcaWsfeError("No se pudo conectar con WSFEv1.", "NETWORK_ERROR"),
+    );
+    const first = await issueArcaInvoice(
+      datedInput(ORIGINAL_ISSUED_AT),
+      harness.dependencies(),
+    );
+
+    expect(first.status).toBe("failed_pre_send");
+    expect([...harness.rows.values()][0]?.status).toBe("FAILED_PRE_SEND");
+    harness.getAccessTicket.mockClear();
+    harness.getLastAuthorizedVoucher.mockClear();
+
+    const retry = await issueArcaInvoice(
+      datedInput(SAME_FISCAL_DAY),
+      harness.dependencies(),
+    );
+
+    expect(retry.status).toBe("approved");
+    expect(harness.getLastAuthorizedVoucher).toHaveBeenCalledTimes(1);
+    expect([...harness.rows.values()][0]?.billingPayloadSnapshot).toMatchObject({
+      issuedAt: ORIGINAL_ISSUED_AT.toISOString(),
+    });
+  });
+
+  it("rechaza otro importe el mismo día sin llamar a ARCA", async () => {
+    const harness = createHarness(4);
+    harness.getLastAuthorizedVoucher.mockRejectedValueOnce(
+      new ArcaWsfeError("No se pudo conectar con WSFEv1.", "NETWORK_ERROR"),
+    );
+    await issueArcaInvoice(datedInput(ORIGINAL_ISSUED_AT), harness.dependencies());
+    harness.getAccessTicket.mockClear();
+    harness.getLastAuthorizedVoucher.mockClear();
+    harness.requestCae.mockClear();
+    const changed = datedInput(SAME_FISCAL_DAY);
+    changed.totals = {
+      ...changed.totals,
+      netCents: 200_000,
+      vatCents: 42_000,
+      totalCents: 242_000,
+    };
+    changed.billing.financial = {
+      ...changed.billing.financial,
+      netCents: 200_000,
+      ivaAmountCents: 42_000,
+      totalCents: 242_000,
+      subtotalCents: 200_000,
+      totalVisualRoundedCents: 242_000,
+    };
+
+    await expect(
+      issueArcaInvoice(changed, harness.dependencies()),
+    ).rejects.toMatchObject({ code: "ARCA_IDEMPOTENCY_CONFLICT" });
+    expect(harness.getAccessTicket).not.toHaveBeenCalled();
+    expect(harness.getLastAuthorizedVoucher).not.toHaveBeenCalled();
+    expect(harness.requestCae).not.toHaveBeenCalled();
+    expect([...harness.rows.values()][0]?.status).toBe("FAILED_PRE_SEND");
+  });
+
+  it.each([
+    ["ítem", (input: IssueArcaInvoiceInput) => {
+      input.billing.items[0].description = "Otro filtro";
+    }],
+    ["notas", (input: IssueArcaInvoiceInput) => {
+      input.billing.notes = "urgente";
+    }],
+    ["pago", (input: IssueArcaInvoiceInput) => {
+      input.billing.paymentMethod = "TARJETA";
+    }],
+  ] as const)("rechaza un cambio de %s sin llamar a ARCA", async (_label, change) => {
+    const harness = createHarness(4);
+    harness.getLastAuthorizedVoucher.mockRejectedValueOnce(
+      new ArcaWsfeError("No se pudo conectar con WSFEv1.", "NETWORK_ERROR"),
+    );
+    await issueArcaInvoice(datedInput(ORIGINAL_ISSUED_AT), harness.dependencies());
+    harness.getAccessTicket.mockClear();
+    harness.getLastAuthorizedVoucher.mockClear();
+    const changed = datedInput(SAME_FISCAL_DAY);
+    change(changed);
+
+    await expect(
+      issueArcaInvoice(changed, harness.dependencies()),
+    ).rejects.toMatchObject({ code: "ARCA_IDEMPOTENCY_CONFLICT" });
+    expect(harness.getAccessTicket).not.toHaveBeenCalled();
+    expect(harness.getLastAuthorizedVoucher).not.toHaveBeenCalled();
+  });
+
+  it("no reanuda un FAILED_PRE_SEND de otro día fiscal ni lo modifica", async () => {
+    const harness = createHarness(4);
+    harness.getLastAuthorizedVoucher.mockRejectedValueOnce(
+      new ArcaWsfeError("No se pudo conectar con WSFEv1.", "NETWORK_ERROR"),
+    );
+    await issueArcaInvoice(datedInput(ORIGINAL_ISSUED_AT), harness.dependencies());
+    const before = structuredClone([...harness.rows.values()][0]);
+    harness.getAccessTicket.mockClear();
+    harness.getLastAuthorizedVoucher.mockClear();
+    harness.requestCae.mockClear();
+
+    await expect(
+      issueArcaInvoice(datedInput(NEXT_FISCAL_DAY), harness.dependencies()),
+    ).rejects.toMatchObject({ code: "ARCA_RETRY_FISCAL_DATE_CHANGED" });
+
+    expect(harness.getAccessTicket).not.toHaveBeenCalled();
+    expect(harness.getLastAuthorizedVoucher).not.toHaveBeenCalled();
+    expect(harness.requestCae).not.toHaveBeenCalled();
+    expect([...harness.rows.values()][0]).toEqual(before);
+  });
+
+  it.each(["SENDING", "AMBIGUOUS"] as const)(
+    "reconcilia %s aunque la fecha fiscal actual sea posterior",
+    async (status) => {
+      const harness = createHarness(2);
+      harness.requestCae.mockRejectedValueOnce(
+        new ArcaWsfeError("No se pudo conectar con WSFEv1.", "NETWORK_ERROR"),
+      );
+      await issueArcaInvoice(invoiceInput(), harness.dependencies());
+      const row = [...harness.rows.values()][0];
+      if (row) {
+        row.status = status;
+      }
+      harness.reconcile.mockResolvedValue({
+        status: "authorized",
+        authorizationCode: "12345678901234",
+        expirationDate: "20261010",
+        emissionType: "CAE",
+        result: "A",
+      });
+      harness.getAccessTicket.mockClear();
+      harness.requestCae.mockClear();
+      harness.getLastAuthorizedVoucher.mockClear();
+
+      const result = await issueArcaInvoice(
+        { ...invoiceInput(), now: NEXT_FISCAL_DAY },
+        harness.dependencies(),
+      );
+
+      expect(result.status).toBe("approved");
+      expect(harness.reconcile).toHaveBeenCalledTimes(1);
+      expect(harness.requestCae).not.toHaveBeenCalled();
+      expect(harness.getLastAuthorizedVoucher).not.toHaveBeenCalled();
+    },
+  );
+
+  it("finaliza una aprobación pendiente aunque la fecha fiscal actual sea posterior", async () => {
+    const harness = createHarness(2);
+    const approvedResult = await issueArcaInvoice(
+      invoiceInput(),
+      harness.dependencies(),
+    );
+    expect(approvedResult.status).toBe("approved");
+    harness.getAccessTicket.mockClear();
+    harness.requestCae.mockClear();
+
+    const again = await issueArcaInvoice(
+      { ...invoiceInput(), now: NEXT_FISCAL_DAY },
+      harness.dependencies(),
+    );
+
+    expect(again.status).toBe("approved");
+    expect(harness.getAccessTicket).not.toHaveBeenCalled();
+    expect(harness.requestCae).not.toHaveBeenCalled();
+  });
+
+  it("devuelve una emisión completada aunque la fecha fiscal actual sea posterior", async () => {
+    const harness = createHarness(2);
+    await issueArcaInvoice(invoiceInput(), harness.dependencies());
+    const row = [...harness.rows.values()][0];
+    if (row) {
+      row.status = "COMPLETED";
+    }
+    harness.getAccessTicket.mockClear();
+    harness.requestCae.mockClear();
+
+    const again = await issueArcaInvoice(
+      { ...invoiceInput(), now: NEXT_FISCAL_DAY },
+      harness.dependencies(),
+    );
+
+    expect(again.status).toBe("completed");
+    expect(harness.getAccessTicket).not.toHaveBeenCalled();
+    expect(harness.requestCae).not.toHaveBeenCalled();
+  });
 });

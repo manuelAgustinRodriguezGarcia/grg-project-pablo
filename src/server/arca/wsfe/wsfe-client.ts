@@ -1,6 +1,9 @@
 import "server-only";
 import { resolveArcaEndpoints } from "@/server/arca/config/endpoints";
-import { ArcaWsfeError } from "@/server/arca/errors/arca-wsfe.error";
+import {
+  ArcaWsfeError,
+  type ArcaWsfeNetworkFailure,
+} from "@/server/arca/errors/arca-wsfe.error";
 import type { ArcaEnvironment } from "@/server/arca/types/arca.types";
 import { normalizeIssuerCuit } from "@/server/arca/utils/cuit";
 import { parseArcaPointOfSale } from "@/server/arca/utils/point-of-sale";
@@ -93,6 +96,45 @@ function assertUsableTicket(
   }
 }
 
+function readNetworkCode(value: unknown): string | undefined {
+  if (!value || typeof value !== "object" || !("code" in value)) {
+    return undefined;
+  }
+
+  const code = (value as { code?: unknown }).code;
+  if (typeof code !== "string" && typeof code !== "number") {
+    return undefined;
+  }
+
+  const text = String(code).slice(0, 64);
+  if (/token|sign|certificate|private key|BEGIN /i.test(text)) {
+    return undefined;
+  }
+
+  return text;
+}
+
+function sanitizeNetworkFailure(error: unknown): ArcaWsfeNetworkFailure {
+  const name = error instanceof Error ? error.name.slice(0, 64) : "Error";
+  const code = readNetworkCode(error);
+  const causeCode =
+    error instanceof Error ? readNetworkCode(error.cause) : undefined;
+
+  return {
+    name,
+    ...(code ? { code } : {}),
+    ...(causeCode ? { causeCode } : {}),
+  };
+}
+
+function wsfeNetworkError(error: unknown): ArcaWsfeError {
+  const networkFailure = sanitizeNetworkFailure(error);
+  console.error("[wsfe] network", networkFailure);
+  return new ArcaWsfeError("No se pudo conectar con WSFEv1.", "NETWORK_ERROR", {
+    networkFailure,
+  });
+}
+
 async function postWsfe(url: string, soapAction: string, soap: string): Promise<Response> {
   try {
     return await fetch(url, {
@@ -104,8 +146,8 @@ async function postWsfe(url: string, soapAction: string, soap: string): Promise<
       body: soap,
       signal: AbortSignal.timeout(WSFE_TIMEOUT_MS),
     });
-  } catch {
-    throw new ArcaWsfeError("No se pudo conectar con WSFEv1.", "NETWORK_ERROR");
+  } catch (error) {
+    throw wsfeNetworkError(error);
   }
 }
 

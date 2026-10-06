@@ -16,6 +16,7 @@ export type BillingInvoiceErrorCode =
   | "ARCA_APPROVED_LOCAL_PERSISTENCE_PENDING"
   | "ARCA_EMISSION_FAILED_PRE_SEND"
   | "ARCA_IDEMPOTENCY_CONFLICT"
+  | "ARCA_RETRY_FISCAL_DATE_CHANGED"
   | "ARCA_QR_DATA_INCOMPLETE"
   | "NUMBER_GENERATION_FAILED"
   | "BILLING_INVOICE_NOT_FOUND"
@@ -23,6 +24,9 @@ export type BillingInvoiceErrorCode =
   | "NOTE_FISCAL_ISSUER_MISSING"
   | "BILLING_RECEIPT_NOT_FOUND"
   | "SALDO_CHANGED";
+
+export const ARCA_RETRY_FISCAL_DATE_CHANGED_MESSAGE =
+  "Este intento pertenece a una fecha fiscal anterior y no puede reanudarse automáticamente. Volvé a cargar el formulario para iniciar una nueva operación.";
 
 export class BillingInvoiceError extends Error {
   readonly code: BillingInvoiceErrorCode;

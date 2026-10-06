@@ -14,12 +14,19 @@ export type ArcaWsfeErrorCode =
   | "INVALID_VOUCHER_QUERY"
   | "VOUCHER_NOT_FOUND";
 
+export type ArcaWsfeNetworkFailure = {
+  name: string;
+  code?: string;
+  causeCode?: string;
+};
+
 export class ArcaWsfeError extends Error {
   readonly code: ArcaWsfeErrorCode;
   readonly faultCode?: string;
   readonly faultString?: string;
   readonly httpStatus?: number;
   readonly remoteErrors?: ArcaWsfeRemoteError[];
+  readonly networkFailure?: ArcaWsfeNetworkFailure;
 
   constructor(
     message: string,
@@ -29,14 +36,27 @@ export class ArcaWsfeError extends Error {
       faultString?: string;
       httpStatus?: number;
       remoteErrors?: ArcaWsfeRemoteError[];
+      networkFailure?: ArcaWsfeNetworkFailure;
     },
   ) {
-    super(message);
+    const failure = details?.networkFailure;
+    const cause = failure ? sanitizedNetworkCause(failure) : undefined;
+    super(message, cause ? { cause } : undefined);
     this.name = "ArcaWsfeError";
     this.code = code;
     this.faultCode = details?.faultCode;
     this.faultString = details?.faultString;
     this.httpStatus = details?.httpStatus;
     this.remoteErrors = details?.remoteErrors;
+    this.networkFailure = failure;
   }
+}
+
+function sanitizedNetworkCause(failure: ArcaWsfeNetworkFailure): Error {
+  const cause = new Error("WSFEv1 network failure");
+  cause.name = failure.name;
+  if (failure.code) {
+    (cause as Error & { code?: string }).code = failure.code;
+  }
+  return cause;
 }

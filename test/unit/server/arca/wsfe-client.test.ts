@@ -220,6 +220,42 @@ describe("getMaxRecordsPerRequest", () => {
     ).rejects.toMatchObject({ code: "NETWORK_ERROR" });
   });
 
+  it("conserva el código de red y no el secreto del fallo original", async () => {
+    const secret = "token-super-secreto-sign-clave-privada";
+    const cause = Object.assign(new Error(`detalle ${secret}`), {
+      code: "UND_ERR_CONNECT_TIMEOUT",
+    });
+    const failure = Object.assign(new Error(`fetch failed ${secret}`), {
+      code: "ETIMEDOUT",
+      cause,
+    });
+    failure.name = "TimeoutError";
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(failure)));
+
+    await expect(
+      getMaxRecordsPerRequest({
+        environment: "HOMOLOGACION",
+        accessTicket: ticket(),
+        issuerCuit: CUIT,
+        now: NOW,
+      }),
+    ).rejects.toMatchObject({
+      message: "No se pudo conectar con WSFEv1.",
+      code: "NETWORK_ERROR",
+      networkFailure: {
+        name: "TimeoutError",
+        code: "ETIMEDOUT",
+        causeCode: "UND_ERR_CONNECT_TIMEOUT",
+      },
+    });
+
+    const logged = JSON.stringify(errorLog.mock.calls);
+    expect(logged).not.toContain(secret);
+    expect(logged).toContain("ETIMEDOUT");
+    errorLog.mockRestore();
+  });
+
   it("detecta un SOAP Fault y no incluye secretos", async () => {
     mockFetch(
       envelope(

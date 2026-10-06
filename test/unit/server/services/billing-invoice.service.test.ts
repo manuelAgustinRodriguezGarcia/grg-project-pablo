@@ -21,8 +21,13 @@ import {
 } from "@/server/services/audit.constants";
 import { auditService } from "@/server/services/audit.service";
 import { arcaEmissionRepository } from "@/server/arca/repositories/arca-emission.repository";
+import { hashArcaFiscalRequest } from "@/server/arca/invoices/fiscal-request-hash";
 import { finalizeApprovedArcaEmission } from "@/server/arca/invoices/finalize-approved-arca-emission";
-import { issueArcaInvoice } from "@/server/arca/invoices/issue-arca-invoice";
+import {
+  issueArcaInvoice,
+  type IssueArcaInvoiceInput,
+} from "@/server/arca/invoices/issue-arca-invoice";
+import { ARCA_RETRY_FISCAL_DATE_CHANGED_MESSAGE } from "@/server/services/billing-invoice.errors";
 import { billingInvoiceService } from "@/server/services/billing-invoice.service";
 import {
   adminUserFixture,
@@ -87,6 +92,55 @@ const CLIENT_ID = "clbillingclient0000000001";
 const RUBRO_ID = "clbillingrubro00000000001";
 const IDEMPOTENCY_KEY = "11111111-1111-4111-8111-111111111111";
 const ISSUED_AT = new Date("2026-09-30T15:00:00.000Z");
+
+function persistedSnapshot(issuedAt = ISSUED_AT) {
+  return {
+    issuedAt: issuedAt.toISOString(),
+    pointOfSale: 7,
+    invoiceType: "A" as const,
+    client: {
+      id: CLIENT_ID,
+      code: "GOMEZ-0001",
+      name: "GOMEZ SRL",
+      address: "Av. Siempreviva 742",
+      city: "Resistencia",
+      province: "Chaco",
+      email: "gomez@mail.com",
+      whatsapp: "+5493624000000",
+      identificationType: "CUIT" as const,
+      identificationNumber: "30500010912",
+      ivaCondition: "RESPONSABLE_INSCRIPTO" as const,
+    },
+    items: [
+      {
+        rubroId: RUBRO_ID,
+        rubroCode: "EMB-0001",
+        rubroName: "Embragues",
+        description: "Embragues y componentes",
+        quantity: 1,
+        unitPriceCents: 121000,
+        lineTotalCents: 121000,
+        sortOrder: 0,
+      },
+    ],
+    financial: {
+      subtotalCents: 100000,
+      discountPercent: 0,
+      discountAmountCents: 0,
+      ivaPercent: 21,
+      ivaAmountCents: 21000,
+      totalCents: 121000,
+      totalVisualRoundedCents: 121000,
+      netCents: 100000,
+      nonTaxedCents: 0,
+      exemptCents: 0,
+      taxCents: 0,
+    },
+    paymentMethod: "CONTADO_EFECTIVO" as const,
+    paymentStatus: "PAGA" as const,
+    notes: null,
+  };
+}
 
 function createClientFixture(
   overrides: Partial<BillingClient> = {},
@@ -878,6 +932,8 @@ describe("BillingInvoiceService", () => {
         environment: "PRODUCCION",
         issuerCuit: "30712345671",
         pointOfSale: 7,
+        status: "APPROVED_PENDING_PERSISTENCE",
+        billingPayloadSnapshot: persistedSnapshot(),
       } as never);
       mockApprovedIssue();
 
@@ -912,6 +968,8 @@ describe("BillingInvoiceService", () => {
         environment: "PRODUCCION",
         issuerCuit: "30712345671",
         pointOfSale: 7,
+        status: "COMPLETED",
+        billingPayloadSnapshot: persistedSnapshot(),
       } as never);
       vi.mocked(issueArcaInvoice).mockResolvedValue({
         status: "completed",
@@ -945,6 +1003,8 @@ describe("BillingInvoiceService", () => {
         environment: "PRODUCCION",
         issuerCuit: "30712345671",
         pointOfSale: 7,
+        status: "FAILED_PRE_SEND",
+        billingPayloadSnapshot: persistedSnapshot(),
       } as never);
       vi.mocked(issueArcaInvoice).mockRejectedValue(
         new ArcaEmissionError(
@@ -971,6 +1031,145 @@ describe("BillingInvoiceService", () => {
         }),
       );
       expect(billingInvoiceRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("reutiliza el issuedAt persistido en un retry del mismo día fiscal", async () => {
+      const issuedAt = new Date("2026-10-06T12:48:12.682Z");
+      const retryNow = new Date("2026-10-06T13:09:26.277Z");
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      vi.mocked(arcaEmissionRepository.findByIdempotencyKey).mockResolvedValue({
+        environment: "HOMOLOGACION",
+        issuerCuit: "30712345671",
+        pointOfSale: 7,
+        status: "FAILED_PRE_SEND",
+        requestHash: "same-day-hash-is-checked-later",
+        billingPayloadSnapshot: persistedSnapshot(issuedAt),
+      } as never);
+      mockApprovedIssue();
+
+      await billingInvoiceService.createInvoice(baseInput(), { now: retryNow });
+
+      const request = vi.mocked(issueArcaInvoice).mock.calls[0]?.[0];
+      expect(request?.billing.issuedAt).toBe(issuedAt.toISOString());
+      expect(request?.voucherDate).toEqual(issuedAt);
+      expect(request?.now).toEqual(retryNow);
+    });
+
+    it("mantiene el conflicto si el mismo día cambian notas o el pago", async () => {
+      const issuedAt = new Date("2026-10-06T12:48:12.682Z");
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      vi.mocked(arcaEmissionRepository.findByIdempotencyKey).mockResolvedValue({
+        environment: "HOMOLOGACION",
+        issuerCuit: "30712345671",
+        pointOfSale: 7,
+        status: "FAILED_PRE_SEND",
+        billingPayloadSnapshot: persistedSnapshot(issuedAt),
+      } as never);
+      vi.mocked(issueArcaInvoice).mockRejectedValue(
+        new ArcaEmissionError(
+          "La clave de idempotencia ya se usó con otros datos.",
+          "ARCA_IDEMPOTENCY_CONFLICT",
+        ),
+      );
+
+      await expect(
+        billingInvoiceService.createInvoice(
+          { ...baseInput(), notes: "urgente", paymentMethod: "TARJETA" },
+          { now: new Date("2026-10-06T13:09:26.277Z") },
+        ),
+      ).rejects.toMatchObject({ code: "ARCA_IDEMPOTENCY_CONFLICT" });
+
+      const request = vi.mocked(issueArcaInvoice).mock.calls[0]?.[0];
+      expect(request?.billing.issuedAt).toBe(issuedAt.toISOString());
+      expect(request?.billing.notes).toBe("urgente");
+      expect(request?.billing.paymentMethod).toBe("TARJETA");
+    });
+
+    it("no llama a la emisión si el día fiscal cambió y la intención es la misma", async () => {
+      const issuedAt = new Date("2026-10-06T12:48:12.682Z");
+      let captured: IssueArcaInvoiceInput | undefined;
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      vi.mocked(issueArcaInvoice).mockImplementation(async (input) => {
+        captured = input;
+        return {
+          status: "failed_pre_send",
+          emissionId: "emission-1",
+          code: "NETWORK_ERROR",
+          message: "No se pudo conectar con WSFEv1.",
+        };
+      });
+
+      await expect(
+        billingInvoiceService.createInvoice(baseInput(), { now: issuedAt }),
+      ).rejects.toMatchObject({ code: "ARCA_EMISSION_FAILED_PRE_SEND" });
+
+      if (!captured) {
+        throw new Error("No se capturó el pedido fiscal.");
+      }
+
+      vi.mocked(arcaEmissionRepository.findByIdempotencyKey).mockResolvedValue({
+        environment: "HOMOLOGACION",
+        issuerCuit: captured.issuerCuit,
+        pointOfSale: captured.pointOfSale,
+        status: "FAILED_PRE_SEND",
+        requestHash: hashArcaFiscalRequest(captured),
+        billingPayloadSnapshot: captured.billing,
+      } as never);
+
+      await expect(
+        billingInvoiceService.createInvoice(baseInput(), {
+          now: new Date("2026-10-07T15:00:00.000Z"),
+        }),
+      ).rejects.toMatchObject({
+        code: "ARCA_RETRY_FISCAL_DATE_CHANGED",
+        message: ARCA_RETRY_FISCAL_DATE_CHANGED_MESSAGE,
+      });
+      expect(issueArcaInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it("prioriza el conflicto de datos si el día fiscal cambió y el importe también", async () => {
+      vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue(
+        createSettingsFixture({
+          environment: "HOMOLOGACION",
+          issuerCuit: "30712345671",
+        }),
+      );
+      vi.mocked(arcaEmissionRepository.findByIdempotencyKey).mockResolvedValue({
+        environment: "HOMOLOGACION",
+        issuerCuit: "30712345671",
+        pointOfSale: 7,
+        status: "FAILED_PRE_SEND",
+        requestHash: "hash-de-otra-intencion",
+        billingPayloadSnapshot: persistedSnapshot(
+          new Date("2026-10-06T12:48:12.682Z"),
+        ),
+      } as never);
+
+      await expect(
+        billingInvoiceService.createInvoice(
+          {
+            ...baseInput(),
+            items: [{ rubroId: RUBRO_ID, quantity: 2, unitPrice: 1210 }],
+          },
+          { now: new Date("2026-10-07T15:00:00.000Z") },
+        ),
+      ).rejects.toMatchObject({ code: "ARCA_IDEMPOTENCY_CONFLICT" });
+      expect(issueArcaInvoice).not.toHaveBeenCalled();
     });
 
     it("reintenta la numeración ante un conflicto de unicidad", async () => {
