@@ -1,4 +1,5 @@
 import "server-only";
+import https from "node:https";
 import { resolveArcaEndpoints } from "@/server/arca/config/endpoints";
 import {
   ArcaWsfeError,
@@ -28,10 +29,12 @@ import {
   FE_COMP_TOT_X_REQUEST_ACTION,
   FE_COMP_ULTIMO_AUTORIZADO,
   FE_COMP_ULTIMO_AUTORIZADO_ACTION,
+  FE_DUMMY_ACTION,
   buildFeCaeSolicitarXml,
   buildFeCompConsultarXml,
   buildFeCompTotXRequestXml,
   buildFeCompUltimoAutorizadoXml,
+  buildFeDummyXml,
   buildWsfeAuthXml,
   buildWsfeEnvelope,
 } from "@/server/arca/wsfe/wsfe-soap";
@@ -46,6 +49,13 @@ import type {
 
 const WSFE_TIMEOUT_MS = 15_000;
 const WSFE_SERVICE = "wsfe";
+const PRODUCTION_WSFE_HOST = "servicios1.afip.gov.ar";
+
+const productionWsfeAgent = new https.Agent({
+  keepAlive: false,
+  rejectUnauthorized: true,
+  ciphers: "DEFAULT@SECLEVEL=1",
+});
 
 type WsfeEnvironment = ArcaEnvironment | "MODO_PRUEBA";
 
@@ -135,8 +145,194 @@ function wsfeNetworkError(error: unknown): ArcaWsfeError {
   });
 }
 
+function isProductionWsfeUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname === PRODUCTION_WSFE_HOST;
+  } catch {
+    return false;
+  }
+}
+
+function postProductionWsfe(
+  url: string,
+  soapAction: string,
+  soap: string,
+): Promise<Response> {
+  const target = new URL(url);
+  const body = Buffer.from(soap, "utf8");
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    function finish(error: unknown, response?: Response): void {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(response ?? new Response("", { status: 0 }));
+    }
+
+    const request = https.request(
+      {
+        protocol: target.protocol,
+        hostname: target.hostname,
+        port: target.port || 443,
+        path: `${target.pathname}${target.search}`,
+        method: "POST",
+        headers: {
+          "Content-Type": "text/xml; charset=utf-8",
+          SOAPAction: `"${soapAction}"`,
+          "Content-Length": body.length,
+        },
+        agent: productionWsfeAgent,
+        rejectUnauthorized: true,
+      },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer | string) => {
+          chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+        });
+        response.on("end", () => {
+          finish(
+            undefined,
+            new Response(Buffer.concat(chunks), {
+              status: response.statusCode ?? 0,
+            }),
+          );
+        });
+        response.on("error", (error) => {
+          finish(error);
+        });
+      },
+    );
+
+    timer = setTimeout(() => {
+      const error = new Error("The operation was aborted due to timeout");
+      error.name = "TimeoutError";
+      request.destroy(error);
+    }, WSFE_TIMEOUT_MS);
+
+    request.on("error", (error) => {
+      finish(error);
+    });
+    request.write(body);
+    request.end();
+  });
+}
+
+type DummyStatusTag = "AppServer" | "DbServer" | "AuthServer";
+
+type ProductionWsfeDummyRuntime = {
+  nodeVersion: string;
+  opensslVersion: string;
+  vercelRegion?: string;
+};
+
+export type ProductionWsfeDummyProbe = (
+  | {
+      ok: true;
+      httpStatus: number;
+      appServer: string;
+      dbServer: string;
+      authServer: string;
+    }
+  | {
+      ok: false;
+      code: "NETWORK_ERROR" | "HTTP_ERROR" | "INVALID_RESPONSE";
+      httpStatus?: number;
+      network?: ArcaWsfeNetworkFailure;
+      appServer?: string;
+      dbServer?: string;
+      authServer?: string;
+    }
+) &
+  ProductionWsfeDummyRuntime;
+
+function productionWsfeDummyRuntime(): ProductionWsfeDummyRuntime {
+  const region = process.env.VERCEL_REGION;
+  return {
+    nodeVersion: process.version,
+    opensslVersion: process.versions.openssl ?? "",
+    ...(typeof region === "string" && /^[a-z]{3}\d$/.test(region)
+      ? { vercelRegion: region }
+      : {}),
+  };
+}
+
+function readDummyStatus(xml: string, tag: DummyStatusTag): string | undefined {
+  const match = new RegExp(`<${tag}>([^<]{1,32})</${tag}>`).exec(xml);
+  const value = match?.[1]?.trim();
+  if (!value || !/^[A-Za-z0-9 ._-]+$/.test(value)) {
+    return undefined;
+  }
+  return value;
+}
+
+export async function probeProductionWsfeDummy(): Promise<ProductionWsfeDummyProbe> {
+  const endpoints = resolveArcaEndpoints("PRODUCCION");
+
+  try {
+    const response = await postWsfe(
+      endpoints.wsfeUrl,
+      FE_DUMMY_ACTION,
+      buildWsfeEnvelope(buildFeDummyXml()),
+    );
+    const runtime = productionWsfeDummyRuntime();
+    const httpStatus = response.status;
+    if (httpStatus < 200 || httpStatus >= 300) {
+      return { ok: false, code: "HTTP_ERROR", httpStatus, ...runtime };
+    }
+
+    const xml = (await response.text()).slice(0, 8_192);
+    const appServer = readDummyStatus(xml, "AppServer");
+    const dbServer = readDummyStatus(xml, "DbServer");
+    const authServer = readDummyStatus(xml, "AuthServer");
+    if (!appServer || !dbServer || !authServer) {
+      return { ok: false, code: "INVALID_RESPONSE", httpStatus, ...runtime };
+    }
+
+    if (appServer === "OK" && dbServer === "OK" && authServer === "OK") {
+      return { ok: true, httpStatus, appServer, dbServer, authServer, ...runtime };
+    }
+
+    return {
+      ok: false,
+      code: "INVALID_RESPONSE",
+      httpStatus,
+      appServer,
+      dbServer,
+      authServer,
+      ...runtime,
+    };
+  } catch (error) {
+    const runtime = productionWsfeDummyRuntime();
+    if (error instanceof ArcaWsfeError && error.code === "NETWORK_ERROR") {
+      return {
+        ok: false,
+        code: "NETWORK_ERROR",
+        ...(error.networkFailure ? { network: error.networkFailure } : {}),
+        ...runtime,
+      };
+    }
+
+    return { ok: false, code: "NETWORK_ERROR", ...runtime };
+  }
+}
+
 async function postWsfe(url: string, soapAction: string, soap: string): Promise<Response> {
   try {
+    if (isProductionWsfeUrl(url)) {
+      return await postProductionWsfe(url, soapAction, soap);
+    }
+
     return await fetch(url, {
       method: "POST",
       headers: {

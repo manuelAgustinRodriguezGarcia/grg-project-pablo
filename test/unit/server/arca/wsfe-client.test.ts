@@ -1,3 +1,6 @@
+import { EventEmitter } from "node:events";
+import type { IncomingMessage } from "node:http";
+import https from "node:https";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveArcaEndpoints } from "@/server/arca/config/endpoints";
 import { ArcaConfigurationError } from "@/server/arca/errors/arca-configuration.error";
@@ -5,6 +8,7 @@ import { ArcaWsfeError } from "@/server/arca/errors/arca-wsfe.error";
 import {
   getLastAuthorizedVoucher,
   getMaxRecordsPerRequest,
+  probeProductionWsfeDummy,
 } from "@/server/arca/wsfe/wsfe-client";
 import type { ArcaAccessTicket } from "@/server/arca/wsaa/wsaa.types";
 
@@ -93,6 +97,60 @@ function forbidFetch(): ReturnType<typeof vi.fn> {
   return fetchMock;
 }
 
+function mockProductionHttps(body: string, status = 200): {
+  fetchMock: ReturnType<typeof vi.fn>;
+  requestMock: ReturnType<typeof vi.spyOn>;
+  soap: () => string;
+} {
+  const chunks: Buffer[] = [];
+  const fetchMock = forbidFetch();
+  const requestMock = vi.spyOn(https, "request").mockImplementation(((
+    options: https.RequestOptions,
+    callback?: (response: IncomingMessage) => void,
+  ) => {
+    const req = new EventEmitter() as https.ClientRequest;
+    req.write = ((chunk: string | Uint8Array) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      return true;
+    }) as https.ClientRequest["write"];
+    req.end = (() => {
+      queueMicrotask(() => {
+        const response = new EventEmitter() as IncomingMessage;
+        response.statusCode = status;
+        callback?.(response);
+        response.emit("data", Buffer.from(body));
+        response.emit("end");
+      });
+      return req;
+    }) as https.ClientRequest["end"];
+    req.destroy = ((error?: Error) => {
+      if (error) {
+        queueMicrotask(() => {
+          req.emit("error", error);
+        });
+      }
+      return req;
+    }) as https.ClientRequest["destroy"];
+    void options;
+    return req;
+  }) as typeof https.request);
+  return {
+    fetchMock,
+    requestMock,
+    soap: () => Buffer.concat(chunks).toString("utf8"),
+  };
+}
+
+function productionRequestOptions(
+  requestMock: ReturnType<typeof vi.spyOn>,
+): https.RequestOptions {
+  const options = requestMock.mock.calls[0]?.[0] as https.RequestOptions | undefined;
+  if (!options || typeof options === "string" || options instanceof URL) {
+    throw new Error("El request de producción no recibió opciones.");
+  }
+  return options;
+}
+
 function safeText(error: ArcaWsfeError): string {
   return JSON.stringify({
     message: error.message,
@@ -104,6 +162,8 @@ function safeText(error: ArcaWsfeError): string {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe("getMaxRecordsPerRequest", () => {
@@ -137,24 +197,92 @@ describe("getMaxRecordsPerRequest", () => {
   });
 
   it("producción consulta en el endpoint WSFE de producción", async () => {
-    const fetchMock = mockFetch(totXml({ regXReq: "250" }));
+    const { fetchMock, requestMock } = mockProductionHttps(totXml({ regXReq: "250" }));
     const production = resolveArcaEndpoints("PRODUCCION");
     const homologacion = resolveArcaEndpoints("HOMOLOGACION");
 
-    await getMaxRecordsPerRequest({
+    const result = await getMaxRecordsPerRequest({
       environment: "PRODUCCION",
       accessTicket: ticket({ environment: "PRODUCCION" }),
       issuerCuit: CUIT,
       now: NOW,
     });
 
+    expect(result.maxRecords).toBe(250);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    const options = productionRequestOptions(requestMock);
+    const agent = options.agent;
+    expect(options.hostname).toBe("servicios1.afip.gov.ar");
+    expect(options.path).toBe("/wsfev1/service.asmx");
+    expect(options.method).toBe("POST");
+    expect(options.headers).toMatchObject({
+      SOAPAction: '"http://ar.gov.afip.dif.FEV1/FECompTotXRequest"',
+    });
+    expect(agent).toBeInstanceOf(https.Agent);
+    expect(agent).toMatchObject({
+      options: {
+        rejectUnauthorized: true,
+        ciphers: "DEFAULT@SECLEVEL=1",
+      },
+    });
+    expect(production.wsfeUrl).toBe("https://servicios1.afip.gov.ar/wsfev1/service.asmx");
+    expect(production.wsfeUrl).not.toBe(homologacion.wsfeUrl);
+  });
+
+  it("homologación no usa el agente TLS de producción", async () => {
+    const fetchMock = mockFetch(totXml({ regXReq: "250" }));
+    const requestMock = vi.spyOn(https, "request");
+
+    await getMaxRecordsPerRequest({
+      environment: "HOMOLOGACION",
+      accessTicket: ticket(),
+      issuerCuit: CUIT,
+      now: NOW,
+    });
+
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(production.wsfeUrl);
-    expect(url).not.toBe(homologacion.wsfeUrl);
-    expect(url.toLowerCase()).not.toContain("homo");
-    expect(String(init.body)).toContain("<FECompTotXRequest");
-    expect(String(init.body)).not.toContain("FECAESolicitar");
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it("registra ERR_SSL_DH_KEY_TOO_SMALL sin bajar la verificación del certificado", async () => {
+    forbidFetch();
+    vi.spyOn(https, "request").mockImplementation(((
+      _options: https.RequestOptions,
+      _callback?: (response: IncomingMessage) => void,
+    ) => {
+      const req = new EventEmitter() as https.ClientRequest;
+      req.write = () => true;
+      req.end = (() => {
+        queueMicrotask(() => {
+          const error = new Error("DH key too small") as NodeJS.ErrnoException;
+          error.code = "ERR_SSL_DH_KEY_TOO_SMALL";
+          req.emit("error", error);
+        });
+        return req;
+      }) as https.ClientRequest["end"];
+      req.destroy = (() => req) as https.ClientRequest["destroy"];
+      return req;
+    }) as typeof https.request);
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(
+      getMaxRecordsPerRequest({
+        environment: "PRODUCCION",
+        accessTicket: ticket({ environment: "PRODUCCION" }),
+        issuerCuit: CUIT,
+        now: NOW,
+      }),
+    ).rejects.toMatchObject({
+      message: "No se pudo conectar con WSFEv1.",
+      code: "NETWORK_ERROR",
+      networkFailure: { code: "ERR_SSL_DH_KEY_TOO_SMALL" },
+    });
+
+    const logged = JSON.stringify(errorLog.mock.calls);
+    expect(logged).toContain("ERR_SSL_DH_KEY_TOO_SMALL");
+    expect(logged).not.toContain(TOKEN);
+    expect(logged).not.toContain(SIGN);
   });
 
   it("rechaza una respuesta con Errors", async () => {
@@ -282,10 +410,9 @@ describe("getMaxRecordsPerRequest", () => {
 
 describe("getLastAuthorizedVoucher", () => {
   it("producción consulta Factura A en el endpoint de producción y acepta 0", async () => {
-    const fetchMock = mockFetch(
+    const { fetchMock, requestMock } = mockProductionHttps(
       lastXml({ pointOfSale: "7", voucherType: "1", lastNumber: "0" }),
     );
-    const production = resolveArcaEndpoints("PRODUCCION");
 
     const result = await getLastAuthorizedVoucher({
       environment: "PRODUCCION",
@@ -296,11 +423,13 @@ describe("getLastAuthorizedVoucher", () => {
       now: NOW,
     });
 
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(production.wsfeUrl);
-    expect(url.toLowerCase()).not.toContain("homo");
-    expect(String(init.body)).toContain("<CbteTipo>1</CbteTipo>");
-    expect(String(init.body)).not.toContain("FECAESolicitar");
+    expect(fetchMock).not.toHaveBeenCalled();
+    const options = productionRequestOptions(requestMock);
+    expect(options.hostname).toBe("servicios1.afip.gov.ar");
+    expect(options.path).toBe("/wsfev1/service.asmx");
+    expect(options.headers).toMatchObject({
+      SOAPAction: '"http://ar.gov.afip.dif.FEV1/FECompUltimoAutorizado"',
+    });
     expect(result).toMatchObject({
       pointOfSale: 7,
       voucherType: 1,
@@ -475,5 +604,110 @@ describe("validaciones previas de WSFEv1", () => {
       }),
     ).rejects.toBeInstanceOf(ArcaConfigurationError);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+function dummyRuntime(region?: string): {
+  nodeVersion: string;
+  opensslVersion: string;
+  vercelRegion?: string;
+} {
+  return {
+    nodeVersion: process.version,
+    opensslVersion: process.versions.openssl ?? "",
+    ...(region ? { vercelRegion: region } : {}),
+  };
+}
+
+describe("probeProductionWsfeDummy", () => {
+  it("consulta FEDummy solo en el transporte de producción", async () => {
+    vi.stubEnv("VERCEL_REGION", "iad1");
+    const { fetchMock, requestMock, soap } = mockProductionHttps(
+      envelope(
+        [
+          "<FEDummyResponse>",
+          "  <FEDummyResult>",
+          "    <AppServer>OK</AppServer>",
+          "    <DbServer>OK</DbServer>",
+          "    <AuthServer>OK</AuthServer>",
+          "  </FEDummyResult>",
+          "</FEDummyResponse>",
+        ].join(""),
+      ),
+    );
+
+    const result = await probeProductionWsfeDummy();
+
+    expect(result).toEqual({
+      ok: true,
+      httpStatus: 200,
+      appServer: "OK",
+      dbServer: "OK",
+      authServer: "OK",
+      ...dummyRuntime("iad1"),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    const options = productionRequestOptions(requestMock);
+    expect(options.hostname).toBe("servicios1.afip.gov.ar");
+    expect(options.path).toBe("/wsfev1/service.asmx");
+    expect(options.method).toBe("POST");
+    expect(options.headers).toMatchObject({
+      SOAPAction: '"http://ar.gov.afip.dif.FEV1/FEDummy"',
+    });
+    expect(options.agent).toMatchObject({
+      options: {
+        rejectUnauthorized: true,
+        ciphers: "DEFAULT@SECLEVEL=1",
+      },
+    });
+    const body = soap();
+    expect(body).toContain('<FEDummy xmlns="http://ar.gov.afip.dif.FEV1/"/>');
+    expect(body).not.toContain("<Auth");
+    expect(body).not.toContain("<Token");
+    expect(body).not.toContain("<Sign");
+    expect(body).not.toContain("FECAESolicitar");
+    expect(body).not.toContain("FECompUltimoAutorizado");
+    expect(body).not.toContain("PtoVta");
+  });
+
+  it("devuelve el fallo TLS sanitizado y conserva el log de red", async () => {
+    vi.stubEnv("VERCEL_REGION", "");
+    forbidFetch();
+    vi.spyOn(https, "request").mockImplementation(((
+      _options: https.RequestOptions,
+      _callback?: (response: IncomingMessage) => void,
+    ) => {
+      const req = new EventEmitter() as https.ClientRequest;
+      req.write = () => true;
+      req.end = (() => {
+        queueMicrotask(() => {
+          const error = new Error("DH key too small") as NodeJS.ErrnoException;
+          error.code = "ERR_SSL_DH_KEY_TOO_SMALL";
+          req.emit("error", error);
+        });
+        return req;
+      }) as https.ClientRequest["end"];
+      req.destroy = (() => req) as https.ClientRequest["destroy"];
+      return req;
+    }) as typeof https.request);
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const result = await probeProductionWsfeDummy();
+
+    expect(result).toEqual({
+      ok: false,
+      code: "NETWORK_ERROR",
+      network: {
+        name: "Error",
+        code: "ERR_SSL_DH_KEY_TOO_SMALL",
+      },
+      ...dummyRuntime(),
+    });
+    expect(errorLog).toHaveBeenCalledWith(
+      "[wsfe] network",
+      expect.objectContaining({ code: "ERR_SSL_DH_KEY_TOO_SMALL" }),
+    );
+    expect(JSON.stringify(result)).not.toMatch(/TOKEN|SIGN|BEGIN /i);
   });
 });

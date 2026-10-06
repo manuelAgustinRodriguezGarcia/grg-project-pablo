@@ -2,11 +2,13 @@ import "server-only";
 
 export const WSFE_NAMESPACE = "http://ar.gov.afip.dif.FEV1/";
 
+export const FE_DUMMY = "FEDummy";
 export const FE_COMP_TOT_X_REQUEST = "FECompTotXRequest";
 export const FE_COMP_ULTIMO_AUTORIZADO = "FECompUltimoAutorizado";
 export const FE_CAE_SOLICITAR = "FECAESolicitar";
 export const FE_COMP_CONSULTAR = "FECompConsultar";
 
+export const FE_DUMMY_ACTION = `${WSFE_NAMESPACE}${FE_DUMMY}`;
 export const FE_COMP_TOT_X_REQUEST_ACTION = `${WSFE_NAMESPACE}${FE_COMP_TOT_X_REQUEST}`;
 export const FE_COMP_ULTIMO_AUTORIZADO_ACTION = `${WSFE_NAMESPACE}${FE_COMP_ULTIMO_AUTORIZADO}`;
 export const FE_CAE_SOLICITAR_ACTION = `${WSFE_NAMESPACE}${FE_CAE_SOLICITAR}`;
@@ -45,6 +47,10 @@ export function buildWsfeEnvelope(operationXml: string): string {
     "  </soapenv:Body>",
     "</soapenv:Envelope>",
   ].join("\n");
+}
+
+export function buildFeDummyXml(): string {
+  return `<${FE_DUMMY} xmlns="${WSFE_NAMESPACE}"/>`;
 }
 
 export function buildFeCompTotXRequestXml(authXml: string): string {
