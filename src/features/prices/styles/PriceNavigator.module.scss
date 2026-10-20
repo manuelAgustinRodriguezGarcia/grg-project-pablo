@@ -222,6 +222,7 @@ $price-shadow:
   display: flex;
   flex-shrink: 0;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
 }
 
@@ -1123,10 +1124,8 @@ $price-shadow:
     overflow: auto;
   }
 
-  .listSearchWrap {
-    flex: 1 1 12rem;
-    width: 100%;
-    margin-left: 0;
+  .sectionHeader {
+    flex-wrap: wrap;
   }
 
   .metaChipUpdated {

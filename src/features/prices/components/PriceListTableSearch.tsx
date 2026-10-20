@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MIN_GLOBAL_QUERY_CHARS } from "@/server/search/search-query-plan";
 import { ICON_STROKE, Search, X } from "@/shared/icons";
-import styles from "@/features/prices/styles/PriceNavigator.module.scss";
+import styles from "@/features/catalog/styles/CatalogNavigator.module.scss";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -62,15 +62,15 @@ export function PriceListTableSearch({
   }
 
   return (
-    <div className={styles.listSearchWrap}>
+    <div className={styles.headerSearchWrap}>
       <Search
-        className={styles.listSearchIcon}
+        className={styles.headerSearchIcon}
         strokeWidth={ICON_STROKE}
         aria-hidden
       />
       <input
         type="search"
-        className={`${styles.listSearch} ${searchInput ? styles.listSearchWithClear : ""}`}
+        className={`${styles.headerSearch} ${searchInput ? styles.headerSearchWithClear : ""}`}
         placeholder="Buscar por código, equivalencias u otros datos..."
         value={searchInput}
         onChange={(event) => setSearchInput(event.target.value)}
@@ -85,7 +85,7 @@ export function PriceListTableSearch({
       {searchInput ? (
         <button
           type="button"
-          className={styles.listSearchClear}
+          className={styles.headerSearchClear}
           onClick={clearSearch}
           aria-label="Limpiar búsqueda"
         >

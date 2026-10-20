@@ -6,7 +6,6 @@ import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkelet
 import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPills";
 import { toActiveFilterPillsFromState } from "@/features/catalog/utils/column-filter-state";
 import { ChevronLeft, ChevronRight, Pencil, Receipt, Trash2, ICON_STROKE } from "@/shared/icons";
-import { PriceListTableSearch } from "@/features/prices/components/PriceListTableSearch";
 import { sortPriceColumnsByConfiguredOrder } from "@/features/prices/utils/price-table-columns";
 import { PriceCellValue } from "@/features/prices/components/PriceCellValue";
 import { PriceColumnHeaderCell } from "@/features/prices/components/PriceColumnHeaderCell";
@@ -27,9 +26,7 @@ type PriceItemTableProps = {
   isAdmin: boolean;
   priceListId: string;
   searchQuery: string;
-  listName: string;
-  listSearchResetKey: string;
-  onSearchSubmit: (value: string) => void;
+  isSearchPending?: boolean;
   enableColumnFilters?: boolean;
   columnFilters?: ColumnFilterInput[];
   onColumnFilterChange?: (
@@ -116,9 +113,7 @@ export const PriceItemTable = memo(function PriceItemTable({
   isAdmin,
   priceListId,
   searchQuery,
-  listName,
-  listSearchResetKey,
-  onSearchSubmit,
+  isSearchPending = false,
   enableColumnFilters = false,
   columnFilters = [],
   onColumnFilterChange,
@@ -133,7 +128,6 @@ export const PriceItemTable = memo(function PriceItemTable({
 }: PriceItemTableProps) {
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [openFilterColumnId, setOpenFilterColumnId] = useState<string | null>(null);
-  const [isSearchPending, setIsSearchPending] = useState(false);
 
   useTableHeaderScrollProgress(
     tableWrapRef,
@@ -178,33 +172,20 @@ export const PriceItemTable = memo(function PriceItemTable({
 
   const firstFilterableColumnId = sortedColumns[0]?.id ?? null;
   const hasActiveFilters = enableColumnFilters && activeFilterPills.length > 0;
-  const showListSearch = Boolean(listName);
   const showFilterOverlay =
     (isFilterRefreshing || isSearchPending) && Boolean(data);
 
-  const tableToolbar =
-    showListSearch || hasActiveFilters ? (
-      <div className={`${filterStyles.tableToolbar} ${styles.priceTableToolbar}`}>
-        <div className={filterStyles.tableToolbarFilters}>
-          {hasActiveFilters ? (
-            <ActiveFilterPills
-              filters={activeFilterPills}
-              onRemove={handleRemoveFilter}
-              onClearAll={onClearColumnFilters}
-            />
-          ) : null}
-        </div>
-        {showListSearch ? (
-          <PriceListTableSearch
-            listName={listName}
-            committedQuery={searchQuery}
-            onSearchSubmit={onSearchSubmit}
-            onPendingChange={setIsSearchPending}
-            resetKey={listSearchResetKey}
-          />
-        ) : null}
+  const tableToolbar = hasActiveFilters ? (
+    <div className={`${filterStyles.tableToolbar} ${styles.priceTableToolbar}`}>
+      <div className={filterStyles.tableToolbarFilters}>
+        <ActiveFilterPills
+          filters={activeFilterPills}
+          onRemove={handleRemoveFilter}
+          onClearAll={onClearColumnFilters}
+        />
       </div>
-    ) : null;
+    </div>
+  ) : null;
 
   if (!hasAnyLists) {
     return (

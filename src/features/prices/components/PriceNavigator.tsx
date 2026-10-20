@@ -25,6 +25,7 @@ import {
   LazyPriceSupplierEditModal,
 } from "@/features/prices/components/LazyPriceModals";
 import { PriceItemTable } from "@/features/prices/components/PriceItemTable";
+import { PriceListTableSearch } from "@/features/prices/components/PriceListTableSearch";
 import type { PriceListFormValues } from "@/features/prices/components/PriceListFormModal";
 import { PriceListSelectorPanel } from "@/features/prices/components/PriceListSelectorPanel";
 import { PricePageChrome } from "@/features/prices/components/PricePageChrome";
@@ -100,6 +101,7 @@ export function PriceNavigator({
 
   const [page, setPage] = useState(1);
   const [listSearchQuery, setListSearchQuery] = useState("");
+  const [isSearchPending, setIsSearchPending] = useState(false);
   const [columnFilters, setColumnFilters] = useState<ColumnFilterInput[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [successToastKey, setSuccessToastKey] = useState(0);
@@ -530,6 +532,16 @@ export function PriceNavigator({
         <div className={styles.body}>
           <PricePageChrome
             onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
+            search={
+              <PriceListTableSearch
+                listName={activeList?.name ?? "la lista"}
+                committedQuery={listSearchQuery}
+                onSearchSubmit={handleSearchSubmit}
+                onPendingChange={setIsSearchPending}
+                resetKey={activeListId}
+                disabled={!activeListId}
+              />
+            }
             supplierBanner={
               activeList ? (
                 <PriceSupplierBanner
@@ -585,9 +597,7 @@ export function PriceNavigator({
             canEdit={canEdit}
             priceListId={activeListId}
             searchQuery={listSearchQuery}
-            listName={activeList?.name ?? ""}
-            listSearchResetKey={activeListId}
-            onSearchSubmit={handleSearchSubmit}
+            isSearchPending={isSearchPending}
             enableColumnFilters
             columnFilters={columnFilters}
             onColumnFilterChange={handleColumnFilterChange}
