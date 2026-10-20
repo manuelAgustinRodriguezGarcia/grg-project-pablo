@@ -118,7 +118,7 @@ describe("PriceItemService", () => {
     ]);
   });
 
-  it("listItems busca solo código, equivalencias y otros datos", async () => {
+  it("listItems busca las columnas de texto de la lista y no el precio", async () => {
     vi.mocked(priceListService.getPriceList).mockResolvedValue({
       id: PRICE_LIST_ID,
       name: "Nueva",
@@ -173,12 +173,8 @@ describe("PriceItemService", () => {
       expect.objectContaining({ normalizedQuery: "6205", includeNormalizedText: false }),
       {
         includePrimaryCode: true,
-        descriptionRole: null,
-        amountRole: null,
-        dynamicFields: [
-          { key: "equivalencias", role: "equivalence" },
-          { key: "otros_datos", role: "other" },
-        ],
+        includeDescription: false,
+        dynamicKeys: ["equivalencias", "otros_datos"],
       },
     );
     expect(priceItemRepository.findByPriceListPaginated).not.toHaveBeenCalled();

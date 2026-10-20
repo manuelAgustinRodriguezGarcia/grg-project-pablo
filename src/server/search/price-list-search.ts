@@ -1,7 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import { VALID_JSON_COLUMN_KEY } from "@/server/filters/json-column-key";
 import type { SearchQueryPlan } from "@/server/search/search-query-plan";
-import { normalizeHeaderNameForSemantics } from "@/shared/import/header-semantics";
 
 const CODE_SEPARATORS = "-_./\\=*.,()";
 const FIELD_SEPARATOR = "\u001f";
@@ -15,73 +14,31 @@ export type PriceListSearchColumn = {
   isPrice: boolean;
 };
 
-export type PriceListSearchFieldRole = "equivalence" | "other";
-
 export type PriceListSearchSources = {
   includePrimaryCode: boolean;
-  descriptionRole: PriceListSearchFieldRole | null;
-  amountRole: PriceListSearchFieldRole | null;
-  dynamicFields: Array<{ key: string; role: PriceListSearchFieldRole }>;
+  includeDescription: boolean;
+  dynamicKeys: string[];
 };
-
-function emptySources(): PriceListSearchSources {
-  return {
-    includePrimaryCode: false,
-    descriptionRole: null,
-    amountRole: null,
-    dynamicFields: [],
-  };
-}
-
-function columnLabels(column: PriceListSearchColumn): string[] {
-  return [column.displayName, column.originalName, column.internalKey.replace(/[_-]+/g, " ")]
-    .map((label) => normalizeHeaderNameForSemantics(label).toLowerCase())
-    .filter((label) => label.length > 0);
-}
-
-function isEquivalenceLabel(label: string): boolean {
-  return label.includes("equivalen");
-}
-
-function isOtherDataLabel(label: string): boolean {
-  const compact = label.replace(/[^a-z0-9]+/g, "");
-  return label.includes("otros datos") || compact.includes("otrosdatos");
-}
-
-function resolveRole(column: PriceListSearchColumn): PriceListSearchFieldRole | null {
-  const labels = columnLabels(column);
-  if (labels.some(isEquivalenceLabel)) {
-    return "equivalence";
-  }
-  if (labels.some(isOtherDataLabel)) {
-    return "other";
-  }
-  return null;
-}
 
 export function resolvePriceListSearchSources(
   columns: PriceListSearchColumn[],
 ): PriceListSearchSources {
-  const sources = emptySources();
+  const dynamicKeys: string[] = [];
+  let includePrimaryCode = false;
+  let includeDescription = false;
 
   for (const column of columns) {
-    if (column.isPrimaryCode) {
-      sources.includePrimaryCode = true;
+    if (column.isPrice) {
       continue;
     }
 
-    const role = resolveRole(column);
-    if (!role) {
+    if (column.isPrimaryCode) {
+      includePrimaryCode = true;
       continue;
     }
 
     if (column.isDescription) {
-      sources.descriptionRole = role;
-      continue;
-    }
-
-    if (column.isPrice) {
-      sources.amountRole = role;
+      includeDescription = true;
       continue;
     }
 
@@ -89,18 +46,21 @@ export function resolvePriceListSearchSources(
       continue;
     }
 
-    sources.dynamicFields.push({ key: column.internalKey, role });
+    dynamicKeys.push(column.internalKey);
   }
 
-  return sources;
+  return {
+    includePrimaryCode,
+    includeDescription,
+    dynamicKeys,
+  };
 }
 
 export function priceListSearchSourcesAreEmpty(sources: PriceListSearchSources): boolean {
   return (
     !sources.includePrimaryCode &&
-    sources.descriptionRole === null &&
-    sources.amountRole === null &&
-    sources.dynamicFields.length === 0
+    !sources.includeDescription &&
+    sources.dynamicKeys.length === 0
   );
 }
 
@@ -120,48 +80,19 @@ function normalizedSql(expression: Prisma.Sql): Prisma.Sql {
   return Prisma.sql`upper(translate(regexp_replace(COALESCE(${expression}, ''), '[[:space:]]+', '', 'g'), ${CODE_SEPARATORS}, ''))`;
 }
 
-function textExpressions(sources: PriceListSearchSources): Prisma.Sql[] {
+function fieldExpressions(sources: PriceListSearchSources): Prisma.Sql[] {
   const expressions: Prisma.Sql[] = [];
 
   if (sources.includePrimaryCode) {
     expressions.push(Prisma.sql`"primaryCode"`);
   }
 
-  if (sources.descriptionRole) {
+  if (sources.includeDescription) {
     expressions.push(Prisma.sql`"description"`);
   }
 
-  if (sources.amountRole) {
-    expressions.push(Prisma.sql`"amount"::text`);
-  }
-
-  for (const field of sources.dynamicFields) {
-    expressions.push(Prisma.sql`"dynamicData"->>${field.key}`);
-  }
-
-  return expressions;
-}
-
-function codeExpressions(sources: PriceListSearchSources): Prisma.Sql[] {
-  const expressions: Prisma.Sql[] = [];
-
-  if (sources.includePrimaryCode) {
-    expressions.push(Prisma.sql`"primaryCode"`);
-  }
-
-  if (sources.descriptionRole === "equivalence") {
-    expressions.push(Prisma.sql`"description"`);
-  }
-
-  if (sources.amountRole === "equivalence") {
-    expressions.push(Prisma.sql`"amount"::text`);
-  }
-
-  for (const field of sources.dynamicFields) {
-    if (field.role !== "equivalence") {
-      continue;
-    }
-    expressions.push(Prisma.sql`"dynamicData"->>${field.key}`);
+  for (const key of sources.dynamicKeys) {
+    expressions.push(Prisma.sql`"dynamicData"->>${key}`);
   }
 
   return expressions;
@@ -186,13 +117,13 @@ export function buildScopedPriceItemSearchSql(
     return Prisma.sql`FALSE`;
   }
 
-  const conditions: Prisma.Sql[] = [];
-  const fields = textExpressions(sources);
+  const fields = fieldExpressions(sources);
   const rawText = Prisma.sql`concat_ws(' ', ${Prisma.join(fields, ", ")})`;
   const normalizedText = Prisma.sql`concat_ws(${FIELD_SEPARATOR}, ${Prisma.join(
     fields.map((field) => normalizedSql(field)),
     ", ",
   )})`;
+  const conditions: Prisma.Sql[] = [];
 
   if (plan.tokens.length > 0) {
     conditions.push(Prisma.sql`(${tokenAnd(rawText, plan.tokens.map(containsPattern), "ILIKE")})`);
@@ -210,21 +141,9 @@ export function buildScopedPriceItemSearchSql(
     );
   }
 
-  if (plan.normalizedQuery) {
+  if (plan.normalizedQuery && sources.includePrimaryCode) {
     const prefix = startsWithPattern(plan.normalizedQuery);
-
-    if (sources.includePrimaryCode) {
-      conditions.push(Prisma.sql`COALESCE("normalizedCode", '') LIKE ${prefix} ESCAPE '\\'`);
-    }
-
-    for (const expression of codeExpressions(sources)) {
-      conditions.push(Prisma.sql`EXISTS (
-        SELECT 1
-        FROM regexp_split_to_table(COALESCE(${expression}, ''), '[[:space:]=|/;,]+') AS raw_token
-        WHERE raw_token <> ''
-          AND ${normalizedSql(Prisma.sql`raw_token`)} LIKE ${prefix} ESCAPE '\\'
-      )`);
-    }
+    conditions.push(Prisma.sql`COALESCE("normalizedCode", '') LIKE ${prefix} ESCAPE '\\'`);
   }
 
   if (conditions.length === 0) {

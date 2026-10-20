@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPills";
@@ -41,6 +41,7 @@ type PriceItemTableProps = {
   onEditItem?: (item: PriceItemTableRow) => void;
   onDeleteItem?: (item: PriceItemTableRow) => void;
   columnDetails: PriceColumnListItem[];
+  highlightedItemId?: string | null;
 };
 
 function formatHeaderLines(displayName: string): string[] {
@@ -125,6 +126,7 @@ export const PriceItemTable = memo(function PriceItemTable({
   onEditItem,
   onDeleteItem,
   columnDetails,
+  highlightedItemId = null,
 }: PriceItemTableProps) {
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [openFilterColumnId, setOpenFilterColumnId] = useState<string | null>(null);
@@ -133,6 +135,17 @@ export const PriceItemTable = memo(function PriceItemTable({
     tableWrapRef,
     data ? `${data.items.length}-${data.pagination.page}` : null,
   );
+
+  useEffect(() => {
+    if (!highlightedItemId) {
+      return;
+    }
+
+    const row = tableWrapRef.current?.querySelector(
+      `[data-item-id="${highlightedItemId}"]`,
+    );
+    row?.scrollIntoView({ block: "nearest" });
+  }, [highlightedItemId]);
 
   const sortedColumns = useMemo(() => {
     if (!data) {
@@ -338,7 +351,11 @@ export const PriceItemTable = memo(function PriceItemTable({
             </thead>
             <tbody className={styles.tbodyFade}>
               {items.map((item) => (
-                <tr key={item.id}>
+                <tr
+                  key={item.id}
+                  data-item-id={item.id}
+                  className={item.id === highlightedItemId ? styles.searchHitRow : undefined}
+                >
                   {sortedColumns.map((column) => (
                     <td
                       key={`${item.id}-${column.id}`}
