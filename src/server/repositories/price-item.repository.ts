@@ -5,6 +5,11 @@ import { parseBetweenFilterValue } from "@/server/filters/column-filter-range";
 import { buildJsonTextContainsCondition } from "@/server/filters/column-filter-text-contains";
 import type { JsonTextColumnFilter } from "@/server/filters/column-filter.types";
 import { VALID_JSON_COLUMN_KEY } from "@/server/filters/json-column-key";
+import {
+  buildScopedPriceItemSearchSql,
+  type PriceListSearchSources,
+} from "@/server/search/price-list-search";
+import type { SearchQueryPlan } from "@/server/search/search-query-plan";
 
 const NUMERIC_TEXT_PATTERN = "^-?[0-9]+([.,][0-9]+)?$";
 
@@ -73,29 +78,18 @@ export class PriceItemRepository {
     return this.findPaginated({ priceListId, ...extraWhere }, options);
   }
 
-  async findByPriceListPaginatedWithTextSearch(
+  async findByPriceListPaginatedWithScopedSearch(
     priceListId: string,
     options: PriceItemPaginationOptions,
-    textTerm: string,
-    normalizedQuery: string,
+    plan: SearchQueryPlan,
+    sources: PriceListSearchSources,
   ): Promise<PaginatedPriceItems> {
     const page = Math.max(1, options.page);
     const pageSize = Math.min(Math.max(1, options.pageSize), 200);
     const skip = (page - 1) * pageSize;
-    const pattern = `%${escapeIlikePattern(textTerm)}%`;
-    const normalizedPattern = `%${escapeIlikePattern(normalizedQuery)}%`;
-
     const searchCondition = Prisma.sql`
       "priceListId" = ${priceListId}
-      AND (
-        COALESCE("indexedText", '') ILIKE ${pattern}
-        OR COALESCE("normalizedIndexedText", '') ILIKE ${normalizedPattern}
-        OR COALESCE("primaryCode", '') ILIKE ${pattern}
-        OR COALESCE("description", '') ILIKE ${pattern}
-        OR COALESCE("amount"::text, '') ILIKE ${pattern}
-        OR COALESCE("normalizedCode", '') ILIKE ${normalizedPattern}
-        OR COALESCE("dynamicData"::text, '') ILIKE ${pattern}
-      )
+      AND ${buildScopedPriceItemSearchSql(plan, sources)}
     `;
 
     const [items, countResult] = await Promise.all([
@@ -123,6 +117,21 @@ export class PriceItemRepository {
       pageSize,
       totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
     };
+  }
+
+  async findIdsMatchingScopedSearch(
+    priceListId: string,
+    plan: SearchQueryPlan,
+    sources: PriceListSearchSources,
+  ): Promise<string[]> {
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "PriceItem"
+      WHERE "priceListId" = ${priceListId}
+      AND ${buildScopedPriceItemSearchSql(plan, sources)}
+    `;
+
+    return rows.map((row) => row.id);
   }
 
   async findPaginated(

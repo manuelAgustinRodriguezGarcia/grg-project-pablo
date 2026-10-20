@@ -7,6 +7,7 @@ import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPil
 import { toActiveFilterPillsFromState } from "@/features/catalog/utils/column-filter-state";
 import { ChevronLeft, ChevronRight, Pencil, Receipt, Trash2, ICON_STROKE } from "@/shared/icons";
 import { PriceListTableSearch } from "@/features/prices/components/PriceListTableSearch";
+import { sortPriceColumnsByConfiguredOrder } from "@/features/prices/utils/price-table-columns";
 import { PriceCellValue } from "@/features/prices/components/PriceCellValue";
 import { PriceColumnHeaderCell } from "@/features/prices/components/PriceColumnHeaderCell";
 import type { PriceItemTableColumn } from "@/features/prices/types/price-item-table.types";
@@ -144,13 +145,15 @@ export const PriceItemTable = memo(function PriceItemTable({
       return [];
     }
 
-    return [...data.columns].sort((left, right) => {
-      const leftOrder =
-        columnDetails.find((column) => column.id === left.id)?.order ?? 0;
-      const rightOrder =
-        columnDetails.find((column) => column.id === right.id)?.order ?? 0;
-      return leftOrder - rightOrder || left.displayName.localeCompare(right.displayName, "es");
-    });
+    const orderById = new Map<string, number>();
+    for (const column of data.columns) {
+      orderById.set(column.id, column.order);
+    }
+    for (const column of columnDetails) {
+      orderById.set(column.id, column.order);
+    }
+
+    return sortPriceColumnsByConfiguredOrder(data.columns, orderById);
   }, [columnDetails, data]);
 
   const columnDetailsById = useMemo(
@@ -181,7 +184,7 @@ export const PriceItemTable = memo(function PriceItemTable({
 
   const tableToolbar =
     showListSearch || hasActiveFilters ? (
-      <div className={filterStyles.tableToolbar}>
+      <div className={`${filterStyles.tableToolbar} ${styles.priceTableToolbar}`}>
         <div className={filterStyles.tableToolbarFilters}>
           {hasActiveFilters ? (
             <ActiveFilterPills

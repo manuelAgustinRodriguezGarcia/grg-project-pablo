@@ -26,12 +26,12 @@ import { visibilityService } from "@/server/services/visibility.service";
 import { SearchError } from "./search.errors";
 import { resolveSearchableKeys } from "./search-config.resolver";
 import {
-  isCompactNumericQuery,
   normalizeIndexedText,
   normalizeSearchTerm,
   normalizeTextContains,
   splitSearchTokens,
 } from "./search-normalizer";
+import { buildSearchQueryPlan, MIN_GLOBAL_QUERY_CHARS } from "./search-query-plan";
 import type {
   CatalogSearchResponse,
   GlobalFieldFilter,
@@ -76,7 +76,6 @@ function groupColumnsByFolderId(
 }
 
 const GLOBAL_ENTITY_LIMIT = 25;
-const MIN_GLOBAL_QUERY_CHARS = 2;
 
 export type BuildFolderProductWhereInput = {
   folderId: string;
@@ -130,47 +129,6 @@ function buildFieldTokenConditions(
   };
 }
 
-function buildTextSearchConditions(textTerm: string): Prisma.ProductWhereInput[] {
-  const tokens = splitSearchTokens(textTerm);
-  if (tokens.length === 0) {
-    return [];
-  }
-
-  const conditions: Prisma.ProductWhereInput[] = [
-    buildFieldTokenConditions("indexedText", tokens),
-    buildFieldTokenConditions("originalText", tokens),
-  ];
-
-  // Compact numeric codes (e.g. "30210") already match via indexedText /
-  // primary code. Searching glued normalizedIndexedText would also hit
-  // concatenations of unrelated short numbers like "30.2" + "10".
-  if (isCompactNumericQuery(textTerm)) {
-    return conditions;
-  }
-
-  const normalizedTokens = tokens
-    .map((token) => normalizeSearchTerm(token))
-    .filter((token) => token.length > 0);
-
-  if (normalizedTokens.length > 0) {
-    conditions.push(
-      buildFieldTokenConditions("normalizedIndexedText", normalizedTokens),
-    );
-  }
-
-  const compactQuery = normalizeSearchTerm(textTerm);
-  if (compactQuery) {
-    conditions.push({
-      normalizedIndexedText: {
-        contains: compactQuery,
-        mode: "insensitive",
-      },
-    });
-  }
-
-  return conditions;
-}
-
 function buildCodeSearchConditions(normalizedQuery: string): Prisma.ProductWhereInput[] {
   return [
     { normalizedCode: normalizedQuery },
@@ -191,25 +149,37 @@ function buildCodeSearchConditions(normalizedQuery: string): Prisma.ProductWhere
 export function buildProductSearchWhere(
   query: string,
 ): Prisma.ProductWhereInput | null {
-  const trimmed = query.trim();
-  if (!trimmed) {
+  const plan = buildSearchQueryPlan(query);
+  if (!plan) {
     return null;
   }
 
-  const normalizedQuery = normalizeSearchTerm(trimmed);
-  const textTerm = normalizeTextContains(trimmed);
   const orConditions: Prisma.ProductWhereInput[] = [];
 
-  if (normalizedQuery) {
-    orConditions.push(...buildCodeSearchConditions(normalizedQuery));
+  if (plan.normalizedQuery) {
+    orConditions.push(...buildCodeSearchConditions(plan.normalizedQuery));
   }
 
-  // Siempre buscamos también en el texto indexado (código, descripción y
-  // valores de columnas). Antes se omitía para consultas de una sola palabra
-  // sin separadores (p. ej. "INDIEL"), lo que impedía encontrar coincidencias
-  // en descripción o columnas cuando el término no era el código primario.
-  if (textTerm) {
-    orConditions.push(...buildTextSearchConditions(textTerm));
+  if (plan.tokens.length > 0) {
+    orConditions.push(
+      buildFieldTokenConditions("indexedText", plan.tokens),
+      buildFieldTokenConditions("originalText", plan.tokens),
+    );
+
+    if (plan.includeNormalizedText && plan.normalizedTokens.length > 0) {
+      orConditions.push(
+        buildFieldTokenConditions("normalizedIndexedText", plan.normalizedTokens),
+      );
+    }
+
+    if (plan.includeNormalizedText && plan.compactQuery) {
+      orConditions.push({
+        normalizedIndexedText: {
+          contains: plan.compactQuery,
+          mode: "insensitive",
+        },
+      });
+    }
   }
 
   if (orConditions.length === 0) {

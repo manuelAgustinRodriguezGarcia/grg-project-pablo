@@ -3,6 +3,7 @@
 import {
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -10,6 +11,7 @@ import {
   type ReactNode,
   type TransitionEvent,
 } from "react";
+import { filterOptionsByLabel } from "@/features/catalog/utils/filter-dropdown-options";
 import { ICON_STROKE, Pencil, Trash2 } from "@/shared/icons";
 import { CATALOG_COVER_FALLBACK_SRC } from "@/features/catalog/utils/catalog-cover";
 import { scrollOptionIntoMenu } from "@/features/catalog/utils/catalog-view";
@@ -44,6 +46,10 @@ type CustomDropdownProps = {
   placeholder?: string;
   preferPlaceholderWithoutOptions?: boolean;
   autoOpenToken?: number;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  searchLabel?: string;
+  searchEmptyMessage?: string;
 };
 
 function DropdownRevealText({
@@ -365,12 +371,23 @@ export function CustomDropdown({
   placeholder,
   preferPlaceholderWithoutOptions = false,
   autoOpenToken = 0,
+  searchable = false,
+  searchPlaceholder = "Buscar",
+  searchLabel = "Buscar",
+  searchEmptyMessage = "Sin resultados",
 }: CustomDropdownProps) {
   const listboxId = useId();
+  const searchId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isPointerInside, setIsPointerInside] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredOptions = useMemo(
+    () => (searchable ? filterOptionsByLabel(options, searchQuery) : [...options]),
+    [options, searchQuery, searchable],
+  );
 
   const selectedOption =
     selectedId !== ""
@@ -408,13 +425,25 @@ export function CustomDropdown({
 
   useEffect(() => {
     if (!isOpen) {
+      setSearchQuery("");
       setActiveIndex(-1);
       return;
     }
 
-    const selectedIndex = options.findIndex((option) => option.id === selectedId);
-    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
-  }, [isOpen, options, selectedId]);
+    const selectedIndex = filteredOptions.findIndex((option) => option.id === selectedId);
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : filteredOptions.length > 0 ? 0 : -1);
+  }, [filteredOptions, isOpen, selectedId]);
+
+  useEffect(() => {
+    if (!isOpen || !searchable) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      searchRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen, searchable]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -445,14 +474,14 @@ export function CustomDropdown({
         return;
       }
 
-      if (options.length === 0) {
+      if (filteredOptions.length === 0) {
         return;
       }
 
       if (event.key === "ArrowDown") {
         event.preventDefault();
         setActiveIndex((current) =>
-          current < options.length - 1 ? current + 1 : 0,
+          current < filteredOptions.length - 1 ? current + 1 : 0,
         );
         return;
       }
@@ -460,20 +489,20 @@ export function CustomDropdown({
       if (event.key === "ArrowUp") {
         event.preventDefault();
         setActiveIndex((current) =>
-          current <= 0 ? options.length - 1 : current - 1,
+          current <= 0 ? filteredOptions.length - 1 : current - 1,
         );
         return;
       }
 
       if (event.key === "Enter") {
-        if (activeIndex < 0 || activeIndex >= options.length) {
+        if (activeIndex < 0 || activeIndex >= filteredOptions.length) {
           return;
         }
         const target = event.target as HTMLElement | null;
         if (target?.closest('li[role="option"] button')) {
           return;
         }
-        const option = options[activeIndex];
+        const option = filteredOptions[activeIndex];
         if (!option) {
           return;
         }
@@ -490,7 +519,7 @@ export function CustomDropdown({
       document.removeEventListener("mousedown", handlePointerDown, true);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, isPointerInside, options, activeIndex, onSelect]);
+  }, [activeIndex, filteredOptions, isOpen, isPointerInside, onSelect]);
 
   function handleSelect(optionId: string) {
     onSelect(optionId);
@@ -581,33 +610,90 @@ export function CustomDropdown({
       </div>
 
       {isOpen && options.length > 0 ? (
-        <ul
-          id={listboxId}
-          className={styles.dropdownMenu}
-          role="listbox"
-          aria-label={label}
-        >
-          {options.map((option, index) => {
-            const isSelected = selectedId !== "" && option.id === selectedId;
-            const optionId = `${listboxId}-option-${index}`;
+        searchable ? (
+          <div className={styles.dropdownMenu}>
+            <input
+              ref={searchRef}
+              id={searchId}
+              type="search"
+              className={styles.dropdownSearch}
+              value={searchQuery}
+              placeholder={searchPlaceholder}
+              aria-label={searchLabel}
+              aria-controls={listboxId}
+              aria-autocomplete="list"
+              autoComplete="off"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setIsOpen(false);
+                }
+              }}
+            />
+            <ul
+              id={listboxId}
+              className={styles.dropdownMenuList}
+              role="listbox"
+              aria-label={label}
+            >
+              {filteredOptions.map((option, index) => {
+                const isSelected = selectedId !== "" && option.id === selectedId;
+                const optionId = `${listboxId}-option-${index}`;
 
-            return (
-              <DropdownOptionRow
-                key={option.id}
-                option={option}
-                optionId={optionId}
-                isSelected={isSelected}
-                isHighlighted={index === activeIndex}
-                hasOptionActions={hasOptionActions}
-                onSelect={handleSelect}
-                onOptionEdit={onOptionEdit}
-                onOptionDelete={onOptionDelete}
-                onRequestClose={() => setIsOpen(false)}
-                onHighlight={() => setActiveIndex(index)}
-              />
-            );
-          })}
-        </ul>
+                return (
+                  <DropdownOptionRow
+                    key={option.id}
+                    option={option}
+                    optionId={optionId}
+                    isSelected={isSelected}
+                    isHighlighted={index === activeIndex}
+                    hasOptionActions={hasOptionActions}
+                    onSelect={handleSelect}
+                    onOptionEdit={onOptionEdit}
+                    onOptionDelete={onOptionDelete}
+                    onRequestClose={() => setIsOpen(false)}
+                    onHighlight={() => setActiveIndex(index)}
+                  />
+                );
+              })}
+            </ul>
+            {filteredOptions.length === 0 ? (
+              <p className={styles.dropdownSearchEmpty} role="status">
+                {searchEmptyMessage}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <ul
+            id={listboxId}
+            className={styles.dropdownMenu}
+            role="listbox"
+            aria-label={label}
+          >
+            {options.map((option, index) => {
+              const isSelected = selectedId !== "" && option.id === selectedId;
+              const optionId = `${listboxId}-option-${index}`;
+
+              return (
+                <DropdownOptionRow
+                  key={option.id}
+                  option={option}
+                  optionId={optionId}
+                  isSelected={isSelected}
+                  isHighlighted={index === activeIndex}
+                  hasOptionActions={hasOptionActions}
+                  onSelect={handleSelect}
+                  onOptionEdit={onOptionEdit}
+                  onOptionDelete={onOptionDelete}
+                  onRequestClose={() => setIsOpen(false)}
+                  onHighlight={() => setActiveIndex(index)}
+                />
+              );
+            })}
+          </ul>
+        )
       ) : null}
     </div>
   );

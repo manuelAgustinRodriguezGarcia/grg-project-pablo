@@ -5,6 +5,7 @@ export type PriceItemTableColumn = {
   originalName: string;
   dataType: string;
   visibleToNormalUser: boolean;
+  order: number;
   isPrimaryCode: boolean;
   isDescription: boolean;
   isPrice: boolean;

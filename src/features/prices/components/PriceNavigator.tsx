@@ -263,6 +263,22 @@ export function PriceNavigator({
     placeholderData: keepPreviousData,
   });
 
+  useEffect(() => {
+    const totalPages = itemsQuery.data?.pagination.totalPages;
+    if (totalPages === undefined || itemsQuery.isPlaceholderData) {
+      return;
+    }
+
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+      return;
+    }
+
+    if (totalPages === 0 && page > 1) {
+      setPage(1);
+    }
+  }, [itemsQuery.data?.pagination.totalPages, itemsQuery.isPlaceholderData, page]);
+
   const itemTable =
     activeListId && itemsQuery.data?.priceList.id === activeListId
       ? itemsQuery.data
@@ -294,7 +310,7 @@ export function PriceNavigator({
       displayName: column.displayName,
       internalKey: column.internalKey,
       dataType: column.dataType,
-      order: 0,
+      order: column.order,
       visibleToNormalUser: column.visibleToNormalUser,
       isSearchable: false,
       isFilterable: false,

@@ -24,7 +24,8 @@ vi.mock("@/server/auth", () => ({
 vi.mock("@/server/repositories/price-item.repository", () => ({
   priceItemRepository: {
     findByPriceListPaginated: vi.fn(),
-    findByPriceListPaginatedWithTextSearch: vi.fn(),
+    findByPriceListPaginatedWithScopedSearch: vi.fn(),
+    findIdsMatchingScopedSearch: vi.fn(),
     findPaginated: vi.fn(),
     findIdsMatchingJsonTextFilters: vi.fn(),
     findIdsMatchingAmountContainsFilters: vi.fn(),
@@ -101,6 +102,7 @@ const itemFixture = {
   dynamicData: {},
   originalText: null,
   indexedText: "ABC-1 Repuesto 100.5",
+  normalizedIndexedText: "ABC1REPUESTO1005",
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -116,23 +118,43 @@ describe("PriceItemService", () => {
     ]);
   });
 
-  it("listItems busca en todas las columnas de la lista", async () => {
+  it("listItems busca solo código, equivalencias y otros datos", async () => {
     vi.mocked(priceListService.getPriceList).mockResolvedValue({
       id: PRICE_LIST_ID,
       name: "Nueva",
     } as never);
     vi.mocked(priceColumnRepository.findByPriceListIdOrdered).mockResolvedValue([
-      columnFixture,
+      { ...columnFixture, order: 2 },
       {
         ...columnFixture,
-        id: "col-montadora",
-        internalKey: "montadora",
-        displayName: "Montadora",
+        id: "col-equiv",
+        internalKey: "equivalencias",
+        originalName: "Equivalencias",
+        displayName: "Equivalencias",
+        order: 0,
         isPrimaryCode: false,
-        isSearchable: false,
+      },
+      {
+        ...columnFixture,
+        id: "col-otros",
+        internalKey: "otros_datos",
+        originalName: "Otros datos",
+        displayName: "Otros datos",
+        order: 1,
+        isPrimaryCode: false,
+      },
+      {
+        ...columnFixture,
+        id: "col-precio",
+        internalKey: "precio",
+        originalName: "Precio",
+        displayName: "Precio",
+        order: 3,
+        isPrimaryCode: false,
+        isPrice: true,
       },
     ]);
-    vi.mocked(priceItemRepository.findByPriceListPaginatedWithTextSearch).mockResolvedValue({
+    vi.mocked(priceItemRepository.findByPriceListPaginatedWithScopedSearch).mockResolvedValue({
       items: [itemFixture],
       total: 1,
       page: 1,
@@ -142,17 +164,48 @@ describe("PriceItemService", () => {
 
     const result = await priceItemService.listItems({
       priceListId: PRICE_LIST_ID,
-      query: "fiat",
+      query: "6205",
     });
 
-    expect(priceItemRepository.findByPriceListPaginatedWithTextSearch).toHaveBeenCalledWith(
+    expect(priceItemRepository.findByPriceListPaginatedWithScopedSearch).toHaveBeenCalledWith(
       PRICE_LIST_ID,
       { page: 1, pageSize: 50 },
-      "fiat",
-      "FIAT",
+      expect.objectContaining({ normalizedQuery: "6205", includeNormalizedText: false }),
+      {
+        includePrimaryCode: true,
+        descriptionRole: null,
+        amountRole: null,
+        dynamicFields: [
+          { key: "equivalencias", role: "equivalence" },
+          { key: "otros_datos", role: "other" },
+        ],
+      },
     );
     expect(priceItemRepository.findByPriceListPaginated).not.toHaveBeenCalled();
+    expect(result.columns.map((column) => column.order)).toEqual([2, 0, 1, 3]);
     expect(result.items).toHaveLength(1);
+  });
+
+  it("ignora búsquedas de un solo carácter", async () => {
+    vi.mocked(priceListService.getPriceList).mockResolvedValue({
+      id: PRICE_LIST_ID,
+      name: "Nueva",
+    } as never);
+    vi.mocked(priceItemRepository.findByPriceListPaginated).mockResolvedValue({
+      items: [itemFixture],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      totalPages: 1,
+    });
+
+    await priceItemService.listItems({
+      priceListId: PRICE_LIST_ID,
+      query: "a",
+    });
+
+    expect(priceItemRepository.findByPriceListPaginatedWithScopedSearch).not.toHaveBeenCalled();
+    expect(priceItemRepository.findByPriceListPaginated).toHaveBeenCalled();
   });
 
   it("listItems aplica filtros de columna acumulables", async () => {
@@ -180,7 +233,7 @@ describe("PriceItemService", () => {
     });
 
     expect(priceItemRepository.findPaginated).toHaveBeenCalled();
-    expect(priceItemRepository.findByPriceListPaginatedWithTextSearch).not.toHaveBeenCalled();
+    expect(priceItemRepository.findByPriceListPaginatedWithScopedSearch).not.toHaveBeenCalled();
     expect(result.items).toHaveLength(1);
   });
 

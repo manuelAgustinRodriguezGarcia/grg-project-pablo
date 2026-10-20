@@ -44,6 +44,10 @@ export function PriceListSelectorPanel({
         emptyMessage="Sin listas de precios"
         placeholder="Seleccione una lista"
         preferPlaceholderWithoutOptions
+        searchable
+        searchPlaceholder="Buscar lista de precios"
+        searchLabel="Buscar lista de precios"
+        searchEmptyMessage="No se encontraron listas de precios"
       />
     </section>
   );

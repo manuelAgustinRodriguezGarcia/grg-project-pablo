@@ -434,13 +434,18 @@ $price-shadow:
   border-bottom: 1px solid rgba($green, 0.08);
 }
 
+.priceTableToolbar {
+  flex-wrap: wrap;
+}
+
 .listSearchWrap {
   position: relative;
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  width: 22rem;
+  width: min(34rem, 100%);
   max-width: 100%;
+  margin-left: auto;
 }
 
 .listSearchIcon {
@@ -1119,7 +1124,9 @@ $price-shadow:
   }
 
   .listSearchWrap {
+    flex: 1 1 12rem;
     width: 100%;
+    margin-left: 0;
   }
 
   .metaChipUpdated {

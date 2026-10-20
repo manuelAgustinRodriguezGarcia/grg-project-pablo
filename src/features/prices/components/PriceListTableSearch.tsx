@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { MIN_GLOBAL_QUERY_CHARS } from "@/server/search/search-query-plan";
 import { ICON_STROKE, Search, X } from "@/shared/icons";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
 const SEARCH_DEBOUNCE_MS = 300;
+
+function toSearchQuery(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.length >= MIN_GLOBAL_QUERY_CHARS ? trimmed : "";
+}
 
 type PriceListTableSearchProps = {
   listName: string;
@@ -41,14 +47,14 @@ export function PriceListTableSearch({
     }
 
     const timeout = window.setTimeout(() => {
-      onSearchSubmit(searchInput.trim());
+      onSearchSubmit(toSearchQuery(searchInput));
     }, SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeout);
   }, [onSearchSubmit, searchInput]);
 
   useEffect(() => {
-    onPendingChange?.(searchInput.trim() !== committedQuery);
+    onPendingChange?.(toSearchQuery(searchInput) !== committedQuery);
   }, [committedQuery, onPendingChange, searchInput]);
 
   function clearSearch() {
@@ -65,7 +71,7 @@ export function PriceListTableSearch({
       <input
         type="search"
         className={`${styles.listSearch} ${searchInput ? styles.listSearchWithClear : ""}`}
-        placeholder={`Búsqueda en ${listName}`}
+        placeholder="Buscar por código, equivalencias u otros datos..."
         value={searchInput}
         onChange={(event) => setSearchInput(event.target.value)}
         onKeyDown={(event) => {
@@ -74,7 +80,7 @@ export function PriceListTableSearch({
           }
         }}
         disabled={disabled}
-        aria-label={`Búsqueda en ${listName}`}
+        aria-label={`Buscar por código, equivalencias u otros datos en ${listName}`}
       />
       {searchInput ? (
         <button
