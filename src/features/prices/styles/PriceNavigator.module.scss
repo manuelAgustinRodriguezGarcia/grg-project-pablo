@@ -233,15 +233,63 @@ $price-shadow:
   top: calc(100% + 0.4rem);
   right: 0;
   z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   width: min(68rem, calc(100vw - 2.5rem));
-  max-height: min(22rem, 70vh);
-  overflow: auto;
+  max-height: min(30rem, 75vh);
+  padding: 0.55rem;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid rgba($blue, 0.18);
   border-radius: $radius-md;
   background: $white;
   box-shadow:
     0 12px 36px rgba($navy, 0.12),
     0 2px 8px rgba($navy, 0.06);
+}
+
+.searchResultsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.searchResultsGroupHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.15rem 0.35rem;
+  font-family: $font-sans;
+}
+
+.searchResultsGroupName {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: $navy;
+}
+
+.searchResultsGroupCount {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: rgba($navy, 0.6);
+}
+
+.searchResultsGroupMore {
+  margin: 0;
+  padding: 0 0.35rem;
+  font-family: $font-sans;
+  font-size: 0.75rem;
+  color: rgba($navy, 0.6);
+}
+
+.searchResultsTableWrap {
+  overflow-x: auto;
+  border: 1px solid $ledger-line;
+  border-radius: $radius-sm;
 }
 
 .searchResultsTable {
@@ -255,9 +303,6 @@ $price-shadow:
 }
 
 .searchResultsHead {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   padding: 0.55rem 0.75rem;
   background: $price-heading-bg;
   box-shadow: inset 0 -1px 0 rgba($green, 0.12);
@@ -291,10 +336,6 @@ $price-shadow:
   vertical-align: middle;
 }
 
-.searchResultsEmpty {
-  padding: 0.85rem 0.75rem;
-  color: rgba($navy, 0.62);
-}
 
 .sectionTitle {
   display: inline-flex;

@@ -134,6 +134,60 @@ export class PriceItemRepository {
     return rows.map((row) => row.id);
   }
 
+  async searchAcrossPriceLists(
+    scopes: Array<{ priceListId: string; sources: PriceListSearchSources }>,
+    plan: SearchQueryPlan,
+    perListLimit: number,
+  ): Promise<Array<PriceItem & { searchTotal: number }>> {
+    if (scopes.length === 0) {
+      return [];
+    }
+
+    const scopeConditions = scopes.map(
+      (scope) =>
+        Prisma.sql`("priceListId" = ${scope.priceListId} AND ${buildScopedPriceItemSearchSql(plan, scope.sources)})`,
+    );
+
+    const rows = await prisma.$queryRaw<
+      Array<PriceItem & { searchRank: bigint; searchTotal: bigint }>
+    >`
+      SELECT *
+      FROM (
+        SELECT
+          "PriceItem".*,
+          ROW_NUMBER() OVER (
+            PARTITION BY "priceListId"
+            ORDER BY "updatedAt" DESC, "id" ASC
+          ) AS "searchRank",
+          COUNT(*) OVER (PARTITION BY "priceListId") AS "searchTotal"
+        FROM "PriceItem"
+        WHERE ${Prisma.join(scopeConditions, " OR ")}
+      ) AS ranked
+      WHERE "searchRank" <= ${perListLimit}
+      ORDER BY "updatedAt" DESC, "id" ASC
+    `;
+
+    return rows.map(({ searchRank: _rank, searchTotal, ...item }) => ({
+      ...(item as PriceItem),
+      searchTotal: Number(searchTotal),
+    }));
+  }
+
+  async countItemsBefore(
+    priceListId: string,
+    item: { id: string; updatedAt: Date },
+  ): Promise<number> {
+    return prisma.priceItem.count({
+      where: {
+        priceListId,
+        OR: [
+          { updatedAt: { gt: item.updatedAt } },
+          { updatedAt: item.updatedAt, id: { lt: item.id } },
+        ],
+      },
+    });
+  }
+
   async findPaginated(
     where: Prisma.PriceItemWhereInput,
     options: PriceItemPaginationOptions,

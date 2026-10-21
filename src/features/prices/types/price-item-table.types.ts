@@ -22,6 +22,21 @@ export type PriceItemTableRow = {
   updatedAt: string;
 };
 
+export type PriceGlobalSearchGroup = {
+  priceList: {
+    id: string;
+    name: string;
+  };
+  columns: PriceItemTableColumn[];
+  items: PriceItemTableRow[];
+  total: number;
+};
+
+export type PriceGlobalSearchResponse = {
+  query: string;
+  groups: PriceGlobalSearchGroup[];
+};
+
 export type PriceItemTableResponse = {
   priceList: {
     id: string;

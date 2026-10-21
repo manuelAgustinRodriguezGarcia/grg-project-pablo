@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   useAdminSectionTransition,
@@ -37,13 +37,23 @@ import type { PriceItemTableResponse } from "@/features/prices/types/price-item-
 import type { PriceItemTableRow } from "@/features/prices/types/price-item-table.types";
 import type { PriceListListItem } from "@/features/prices/types/price-list.types";
 import { sortByName } from "@/features/catalog/utils/sortByName";
-import { sortPriceColumnsByConfiguredOrder } from "@/features/prices/utils/price-table-columns";
+import {
+  PriceGlobalSearch,
+  type PriceGlobalSearchHit,
+} from "@/features/prices/components/PriceGlobalSearch";
 import type { ColumnFilterInput } from "@/server/filters/column-filter.types";
+import { MIN_GLOBAL_QUERY_CHARS } from "@/server/search/search-query-plan";
 import { FloatingToast } from "@/shared/components/FloatingToast";
 import { useReplaceSearchParams } from "@/shared/hooks/useReplaceSearchParams";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
 const PAGE_SIZE = 50;
+const SEARCH_DEBOUNCE_MS = 300;
+
+function toListSearchQuery(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.length >= MIN_GLOBAL_QUERY_CHARS ? trimmed : "";
+}
 
 type PriceNavigatorProps = {
   initialPriceLists: PriceListListItem[];
@@ -101,9 +111,12 @@ export function PriceNavigator({
   }, [activeListId, replaceParams]);
 
   const [page, setPage] = useState(1);
+  const [listSearchInput, setListSearchInput] = useState("");
   const [listSearchQuery, setListSearchQuery] = useState("");
+  const [pinnedItemId, setPinnedItemId] = useState<string | null>(null);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
-  const [isSearchPending, setIsSearchPending] = useState(false);
+  const clearRequestRef = useRef(0);
+  const isClearingSearchRef = useRef(false);
   const [columnFilters, setColumnFilters] = useState<ColumnFilterInput[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [successToastKey, setSuccessToastKey] = useState(0);
@@ -180,12 +193,6 @@ export function PriceNavigator({
     [activeList, notifySuccess, router],
   );
 
-  const handleSearchSubmit = useCallback((query: string) => {
-    setListSearchQuery(query);
-    setHighlightedItemId(null);
-    setPage(1);
-  }, []);
-
   const serializedColumnFilters = useMemo(
     () => serializeColumnFilters(columnFilters),
     [columnFilters],
@@ -234,6 +241,7 @@ export function PriceNavigator({
       page,
       listSearchQuery,
       serializedColumnFilters,
+      pinnedItemId ?? undefined,
     ),
     queryFn: async ({ signal }): Promise<PriceItemTableResponse> => {
       const params = new URLSearchParams({
@@ -241,7 +249,9 @@ export function PriceNavigator({
         pageSize: String(PAGE_SIZE),
       });
 
-      if (listSearchQuery) {
+      if (pinnedItemId) {
+        params.set("itemId", pinnedItemId);
+      } else if (listSearchQuery) {
         params.set("q", listSearchQuery);
       }
 
@@ -328,31 +338,119 @@ export function PriceNavigator({
     }));
   }, [activeListId, columnsQuery.data, isAdmin, itemsQuery.data?.columns]);
 
-  const searchColumns = useMemo(() => {
-    const columns = itemTable?.columns ?? [];
-    const orderById = new Map<string, number>();
+  const isPinnedSearch =
+    pinnedItemId !== null && listSearchInput.trim() === listSearchQuery;
+  const isSearchPending =
+    !isPinnedSearch && toListSearchQuery(listSearchInput) !== listSearchQuery;
 
-    for (const column of columns) {
-      orderById.set(column.id, column.order);
-    }
+  const clearListSearch = useCallback(async () => {
+    const anchorId =
+      highlightedItemId ??
+      pinnedItemId ??
+      (listSearchQuery ? (itemTable?.items[0]?.id ?? null) : null);
+    const requestId = clearRequestRef.current + 1;
+    clearRequestRef.current = requestId;
+    isClearingSearchRef.current = true;
 
-    for (const column of columnDetails) {
-      if (orderById.has(column.id)) {
-        orderById.set(column.id, column.order);
+    let nextPage = 1;
+    if (anchorId && activeListId && columnFilters.length === 0) {
+      try {
+        const response = await fetch(
+          `/api/admin/price-lists/${activeListId}/items/${anchorId}/position?pageSize=${PAGE_SIZE}`,
+        );
+        if (response.ok) {
+          nextPage = ((await response.json()) as { page: number }).page;
+        }
+      } catch {
+        nextPage = 1;
       }
     }
 
-    return sortPriceColumnsByConfiguredOrder(columns, orderById);
-  }, [columnDetails, itemTable?.columns]);
+    if (requestId !== clearRequestRef.current) {
+      return;
+    }
 
-  const searchResultsReady =
-    Boolean(listSearchQuery) && !isSearchPending && !itemsQuery.isFetching;
+    isClearingSearchRef.current = false;
+    setListSearchQuery("");
+    setPinnedItemId(null);
+    setPage(nextPage);
+    setHighlightedItemId(anchorId);
+  }, [
+    activeListId,
+    columnFilters.length,
+    highlightedItemId,
+    itemTable?.items,
+    listSearchQuery,
+    pinnedItemId,
+  ]);
+
+  const commitListSearch = useCallback(
+    (nextQuery: string) => {
+      if (nextQuery === listSearchQuery && !pinnedItemId) {
+        return;
+      }
+
+      if (!nextQuery) {
+        if (listSearchQuery && !isClearingSearchRef.current) {
+          void clearListSearch();
+        }
+        return;
+      }
+
+      clearRequestRef.current += 1;
+      isClearingSearchRef.current = false;
+      setListSearchQuery(nextQuery);
+      setPinnedItemId(null);
+      setHighlightedItemId(null);
+      setPage(1);
+    },
+    [clearListSearch, listSearchQuery, pinnedItemId],
+  );
+
+  const commitListSearchRef = useRef(commitListSearch);
+  useEffect(() => {
+    commitListSearchRef.current = commitListSearch;
+  }, [commitListSearch]);
+
+  useEffect(() => {
+    if (!isSearchPending) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      commitListSearchRef.current(toListSearchQuery(listSearchInput));
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [isSearchPending, listSearchInput]);
+
+  const handleClearListSearch = useCallback(() => {
+    setListSearchInput("");
+    commitListSearch("");
+  }, [commitListSearch]);
+
+  const handleSelectGlobalHit = useCallback((hit: PriceGlobalSearchHit) => {
+    const code = hit.item.primaryCode?.trim() || hit.query.trim();
+    clearRequestRef.current += 1;
+    isClearingSearchRef.current = false;
+    setSelectedListId(hit.priceListId);
+    setColumnFilters([]);
+    setPage(1);
+    setListSearchInput(code);
+    setListSearchQuery(code);
+    setPinnedItemId(hit.item.id);
+    setHighlightedItemId(hit.item.id);
+  }, []);
 
   const handleSelectList = useCallback((listId: string) => {
+    clearRequestRef.current += 1;
+    isClearingSearchRef.current = false;
     setSelectedListId(listId);
     setPage(1);
     setColumnFilters([]);
+    setListSearchInput("");
     setListSearchQuery("");
+    setPinnedItemId(null);
     setHighlightedItemId(null);
   }, []);
 
@@ -557,19 +655,9 @@ export function PriceNavigator({
           <PricePageChrome
             onImportExcelClick={isAdmin ? handleImportExcelClick : undefined}
             search={
-              <PriceListTableSearch
-                listName={activeList?.name ?? "la lista"}
-                committedQuery={listSearchQuery}
-                columns={searchColumns}
-                items={searchResultsReady ? (itemTable?.items ?? []) : []}
-                total={searchResultsReady ? (itemTable?.pagination.total ?? 0) : 0}
-                isLoading={Boolean(listSearchQuery) && (isSearchPending || itemsQuery.isFetching)}
-                error={listSearchQuery ? itemsError : null}
-                onSearchSubmit={handleSearchSubmit}
-                onActivateItem={setHighlightedItemId}
-                onPendingChange={setIsSearchPending}
-                resetKey={activeListId}
-                disabled={!activeListId}
+              <PriceGlobalSearch
+                onSelectHit={handleSelectGlobalHit}
+                disabled={sortedLists.length === 0}
               />
             }
             supplierBanner={
@@ -629,6 +717,15 @@ export function PriceNavigator({
             searchQuery={listSearchQuery}
             isSearchPending={isSearchPending}
             highlightedItemId={highlightedItemId}
+            search={
+              <PriceListTableSearch
+                listName={activeList?.name ?? "la lista"}
+                value={listSearchInput}
+                onChange={setListSearchInput}
+                onClear={handleClearListSearch}
+                disabled={!activeListId}
+              />
+            }
             enableColumnFilters
             columnFilters={columnFilters}
             onColumnFilterChange={handleColumnFilterChange}

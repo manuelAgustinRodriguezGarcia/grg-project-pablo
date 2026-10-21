@@ -1,6 +1,14 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPills";
@@ -42,6 +50,7 @@ type PriceItemTableProps = {
   onDeleteItem?: (item: PriceItemTableRow) => void;
   columnDetails: PriceColumnListItem[];
   highlightedItemId?: string | null;
+  search?: ReactNode;
 };
 
 function formatHeaderLines(displayName: string): string[] {
@@ -54,6 +63,10 @@ function formatHeaderLines(displayName: string): string[] {
   }
 
   return [normalized];
+}
+
+function formatResultCount(total: number): string {
+  return total === 1 ? "1 resultado" : `${total.toLocaleString("es-AR")} resultados`;
 }
 
 function getCellValue(
@@ -127,6 +140,7 @@ export const PriceItemTable = memo(function PriceItemTable({
   onDeleteItem,
   columnDetails,
   highlightedItemId = null,
+  search,
 }: PriceItemTableProps) {
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [openFilterColumnId, setOpenFilterColumnId] = useState<string | null>(null);
@@ -144,8 +158,8 @@ export const PriceItemTable = memo(function PriceItemTable({
     const row = tableWrapRef.current?.querySelector(
       `[data-item-id="${highlightedItemId}"]`,
     );
-    row?.scrollIntoView({ block: "nearest" });
-  }, [highlightedItemId]);
+    row?.scrollIntoView({ block: "center" });
+  }, [data?.items, highlightedItemId]);
 
   const sortedColumns = useMemo(() => {
     if (!data) {
@@ -188,17 +202,21 @@ export const PriceItemTable = memo(function PriceItemTable({
   const showFilterOverlay =
     (isFilterRefreshing || isSearchPending) && Boolean(data);
 
-  const tableToolbar = hasActiveFilters ? (
-    <div className={`${filterStyles.tableToolbar} ${styles.priceTableToolbar}`}>
-      <div className={filterStyles.tableToolbarFilters}>
-        <ActiveFilterPills
-          filters={activeFilterPills}
-          onRemove={handleRemoveFilter}
-          onClearAll={onClearColumnFilters}
-        />
+  const tableToolbar =
+    hasActiveFilters || search ? (
+      <div className={`${filterStyles.tableToolbar} ${styles.priceTableToolbar}`}>
+        {hasActiveFilters ? (
+          <div className={filterStyles.tableToolbarFilters}>
+            <ActiveFilterPills
+              filters={activeFilterPills}
+              onRemove={handleRemoveFilter}
+              onClearAll={onClearColumnFilters}
+            />
+          </div>
+        ) : null}
+        {search}
       </div>
-    </div>
-  ) : null;
+    ) : null;
 
   if (!hasAnyLists) {
     return (
@@ -414,9 +432,9 @@ export const PriceItemTable = memo(function PriceItemTable({
         <footer className={styles.tableFooter}>
           <p className={styles.tableSummary}>
             {trimmedSearchQuery
-              ? `${pagination.total.toLocaleString("es-AR")} resultados para «${trimmedSearchQuery}»`
+              ? `${formatResultCount(pagination.total)} para «${trimmedSearchQuery}»`
               : hasActiveFilters
-                ? `${pagination.total.toLocaleString("es-AR")} resultados con filtros`
+                ? `${formatResultCount(pagination.total)} con filtros`
                 : `Mostrando ${from} a ${to} de ${pagination.total.toLocaleString("es-AR")} ítems`}
           </p>
 

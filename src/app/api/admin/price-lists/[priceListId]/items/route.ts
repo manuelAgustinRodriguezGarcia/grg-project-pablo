@@ -34,6 +34,7 @@ export async function GET(request: Request, context: RouteContext) {
       page: searchParams.get("page") ?? undefined,
       pageSize: searchParams.get("pageSize") ?? undefined,
       q: searchParams.get("q") ?? undefined,
+      itemId: searchParams.get("itemId") ?? undefined,
       filters: searchParams.get("filters") ?? undefined,
     });
 
@@ -52,6 +53,7 @@ export async function GET(request: Request, context: RouteContext) {
       page: parsed.data.page,
       pageSize: parsed.data.pageSize,
       query: parsed.data.q,
+      itemId: parsed.data.itemId,
       filters: parsed.data.filters,
     });
 

@@ -39,6 +39,9 @@ export const adminQueryKeys = {
   globalSearch: (query: string, pageSize: number) =>
     ["admin", "global-search", query, pageSize] as const,
 
+  priceGlobalSearch: (query: string) =>
+    ["admin", "price-items", "global-search", query] as const,
+
   priceColumns: (listId?: string) =>
     listId === undefined
       ? (["admin", "price-columns"] as const)
@@ -49,6 +52,7 @@ export const adminQueryKeys = {
     page?: number,
     search?: string,
     serializedFilters?: string,
+    pinnedItemId?: string,
   ) => {
     if (listId === undefined) {
       return ["admin", "price-items"] as const;
@@ -61,6 +65,7 @@ export const adminQueryKeys = {
       page,
       search,
       serializedFilters,
+      pinnedItemId ?? "",
     ] as const;
   },
 
