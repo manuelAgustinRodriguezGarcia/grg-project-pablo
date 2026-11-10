@@ -21,9 +21,23 @@ vi.mock("@/features/billing/actions/issue-billing-note.action", () => ({
 vi.mock("@/features/billing/components/BillingIssueSuccessModal", () => ({
   BillingIssueSuccessModal: ({
     documentNumber,
+    meta,
+    authorizedByArca,
   }: {
     documentNumber: string;
-  }) => <p>{documentNumber}</p>,
+    meta: string;
+    authorizedByArca?: boolean;
+  }) => (
+    <div>
+      <p>{documentNumber}</p>
+      <p>{meta}</p>
+      <p>
+        {authorizedByArca
+          ? "Autorizada por ARCA"
+          : "No fue enviado a ARCA"}
+      </p>
+    </div>
+  ),
 }));
 
 afterEach(() => {
@@ -150,6 +164,7 @@ describe("NoteFormModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Emitir nota" }));
 
     expect(await screen.findByText("0007-PRUEBA-NC-000000001")).toBeTruthy();
+    expect(screen.getByText("No fue enviado a ARCA")).toBeTruthy();
     expect(createBillingNoteAction).toHaveBeenCalledTimes(1);
     expect(issueBillingNoteAction).not.toHaveBeenCalled();
   });
@@ -180,6 +195,8 @@ describe("NoteFormModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Emitir en homologación" }));
 
     expect(await screen.findByText("0007-00000012")).toBeTruthy();
+    expect(screen.getByText("Autorizada por ARCA")).toBeTruthy();
+    expect(screen.getByText(/\$\s*50,00/)).toBeTruthy();
     expect(issueBillingNoteAction).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: "CREDIT",

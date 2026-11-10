@@ -528,6 +528,7 @@ export class PriceImportService {
                 originalText: item.originalText,
                 indexedText,
                 normalizedIndexedText: normalizeIndexedText(indexedText),
+                sourceRow: item.rowNumber,
               };
             }),
           );

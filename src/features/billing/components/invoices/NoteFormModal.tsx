@@ -474,7 +474,7 @@ export function NoteFormModal({
           id: issuedFiscal.id,
           number: issuedFiscal.noteNumber,
           meta: selectedInvoice
-            ? `${NOTE_KIND_LABELS[mode.kind]} · ${selectedInvoice.clientName} · ${selectedInvoice.invoiceType} ${selectedInvoice.invoiceNumber} · ${amountPesos}`
+            ? `${NOTE_KIND_LABELS[mode.kind]} · ${selectedInvoice.clientName} · ${selectedInvoice.invoiceType} ${selectedInvoice.invoiceNumber} · ${formatArsExact(centsToPesos(parsePesosInput(amountPesos) ?? 0))}`
             : NOTE_KIND_LABELS[mode.kind],
         }
       : null;
@@ -498,6 +498,7 @@ export function NoteFormModal({
           documentId={issuedDocument.id}
           documentNumber={issuedDocument.number}
           meta={issuedDocument.meta}
+          authorizedByArca={issuedFiscal !== null && createdNote === null}
           clientWhatsapp={selectedInvoice?.clientWhatsapp ?? null}
           clientEmail={selectedInvoice?.clientEmail ?? null}
           onCreateAnother={() => {

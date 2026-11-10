@@ -7,6 +7,7 @@ import { useAdminSectionTransition } from "@/features/admin/components/AdminSect
 import { BILLING_MOVIMIENTOS_PATH } from "@/features/billing/data/billingNav";
 import { useBillingDocumentActivity } from "@/features/billing/hooks/useBillingDocumentActivity";
 import {
+  isTypingTarget,
   useBillingSuccessShortcuts,
 } from "@/features/billing/hooks/useBillingModalKeyboard";
 import type { BillingDocumentKind } from "@/features/billing/types/billing-document-activity";
@@ -51,6 +52,8 @@ type BillingIssueSuccessModalProps = {
   meta: string;
   clientWhatsapp?: string | null;
   clientEmail?: string | null;
+  /** La nota ya fue autorizada por ARCA. El aviso interno queda para recibos y notas de modo prueba. */
+  authorizedByArca?: boolean;
   embedded?: boolean;
   onCreateAnother: () => void;
   onClose: () => void;
@@ -109,6 +112,7 @@ export function BillingIssueSuccessModal({
   meta,
   clientWhatsapp = null,
   clientEmail = null,
+  authorizedByArca = false,
   embedded = false,
   onCreateAnother,
   onClose,
@@ -125,6 +129,7 @@ export function BillingIssueSuccessModal({
   const closeTimerRef = useRef<number | null>(null);
   const whatsappDigits = toWhatsAppDigits(clientWhatsapp);
   const email = clientEmail?.trim() || null;
+  const canShare = Boolean(whatsappDigits || email);
   const shareCaption = `${copy.title} ${documentNumber}`;
   const shareSubject = `${copy.title} ${documentNumber} - Rothamel Repuestos`;
 
@@ -245,6 +250,31 @@ export function BillingIssueSuccessModal({
     requestClose();
   }
 
+  const shortcutsEnabled = !isClosing && busyAction === null;
+
+  useEffect(() => {
+    if (!shortcutsEnabled) {
+      return;
+    }
+
+    function handleCreateNew(event: KeyboardEvent) {
+      if (event.ctrlKey || event.metaKey || event.altKey || isTypingTarget(event.target)) {
+        return;
+      }
+
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      if (key !== "n" && event.code !== "KeyN") {
+        return;
+      }
+
+      event.preventDefault();
+      onCreateAnother();
+    }
+
+    document.addEventListener("keydown", handleCreateNew);
+    return () => document.removeEventListener("keydown", handleCreateNew);
+  }, [onCreateAnother, shortcutsEnabled]);
+
   useBillingSuccessShortcuts(
     {
       onPrint: () => {
@@ -253,12 +283,12 @@ export function BillingIssueSuccessModal({
       onDownload: () => {
         void runDownload();
       },
-      onShare: () => setShareOpen(true),
+      onShare: canShare ? () => setShareOpen(true) : undefined,
       onCreateNew: onCreateAnother,
       onList: goToList,
       onClose: requestClose,
     },
-    !isClosing && busyAction === null,
+    shortcutsEnabled,
   );
 
   const dialog = (
@@ -290,8 +320,9 @@ export function BillingIssueSuccessModal({
         <p className={styles.issueSuccessNumber}>{documentNumber}</p>
         <p className={styles.issueSuccessMeta}>{meta}</p>
         <p className={styles.issueSuccessHint}>
-          El comprobante quedó guardado. No fue enviado a ARCA y no tiene
-          validez fiscal.
+          {authorizedByArca
+            ? "Autorizada por ARCA"
+            : "El comprobante quedó guardado. No fue enviado a ARCA y no tiene validez fiscal."}
         </p>
         {error ? (
           <p className={styles.inlineError} role="alert">
@@ -326,11 +357,11 @@ export function BillingIssueSuccessModal({
                 type="button"
                 className={styles.issueSuccessSecondary}
                 onClick={() => setShareOpen((current) => !current)}
-                disabled={busyAction !== null}
+                disabled={!canShare || busyAction !== null}
               >
                 <Share2 strokeWidth={ICON_STROKE} aria-hidden />
                 Compartir
-                <kbd className={styles.shortcutKbd}>C</kbd>
+                {canShare ? <kbd className={styles.shortcutKbd}>C</kbd> : null}
               </button>
               {shareOpen ? (
                 <div className={styles.shareMenu} role="menu">

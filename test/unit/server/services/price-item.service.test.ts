@@ -101,6 +101,8 @@ const itemFixture = {
   dynamicData: {},
   originalText: null,
   indexedText: "ABC-1 Repuesto 100.5",
+  normalizedIndexedText: "ABC1REPUESTO1005",
+  sourceRow: 4,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -110,10 +112,40 @@ describe("PriceItemService", () => {
     vi.clearAllMocks();
     mockRequireAuth(adminUserFixture);
     mockRequireRole(adminUserFixture);
-    vi.mocked(priceListService.requirePriceListForAdmin).mockResolvedValue(undefined);
+    vi.mocked(priceListService.requirePriceListForAdmin).mockResolvedValue(
+      undefined as never,
+    );
     vi.mocked(priceColumnRepository.findByPriceListIdOrdered).mockResolvedValue([
       columnFixture,
     ]);
+  });
+
+  it("listItems sin búsqueda usa el listado paginado", async () => {
+    vi.mocked(priceListService.getPriceList).mockResolvedValue({
+      id: PRICE_LIST_ID,
+      name: "Nueva",
+    } as never);
+    vi.mocked(priceItemRepository.findByPriceListPaginated).mockResolvedValue({
+      items: [itemFixture],
+      total: 80,
+      page: 2,
+      pageSize: 50,
+      totalPages: 2,
+    });
+
+    const result = await priceItemService.listItems({
+      priceListId: PRICE_LIST_ID,
+      page: 2,
+      pageSize: 50,
+      query: "   ",
+    });
+
+    expect(priceItemRepository.findByPriceListPaginated).toHaveBeenCalledWith(
+      PRICE_LIST_ID,
+      { page: 2, pageSize: 50 },
+    );
+    expect(priceItemRepository.findByPriceListPaginatedWithTextSearch).not.toHaveBeenCalled();
+    expect(result.pagination.page).toBe(2);
   });
 
   it("listItems busca en todas las columnas de la lista", async () => {
@@ -196,12 +228,39 @@ describe("PriceItemService", () => {
     });
 
     expect(result.primaryCode).toBe("ABC-2");
+    const updatePayload = vi.mocked(priceItemRepository.update).mock.calls[0]?.[1];
+    expect(updatePayload).not.toHaveProperty("sourceRow");
+    expect(updatePayload).toEqual(
+      expect.objectContaining({
+        primaryCode: "ABC-2",
+      }),
+    );
     expect(auditService.logOperationSafe).toHaveBeenCalledWith({
       userId: adminUserFixture.id,
       action: AUDIT_ACTIONS.PRICE_ITEM_UPDATED,
       entityType: AUDIT_ENTITY_TYPES.PRICE_ITEM,
       entityId: "item-1",
     });
+  });
+
+  it("createItem manual no asigna sourceRow", async () => {
+    vi.mocked(priceItemRepository.create).mockResolvedValue({
+      ...itemFixture,
+      id: "item-manual",
+      primaryCode: "MAN-1",
+      sourceRow: null,
+    });
+
+    await priceItemService.createItem(PRICE_LIST_ID, { codigo: "MAN-1" });
+
+    const createPayload = vi.mocked(priceItemRepository.create).mock.calls[0]?.[0];
+    expect(createPayload).toEqual(
+      expect.objectContaining({
+        priceListId: PRICE_LIST_ID,
+        primaryCode: "MAN-1",
+      }),
+    );
+    expect(createPayload).not.toHaveProperty("sourceRow");
   });
 
   it("deleteItem elimina y audita", async () => {

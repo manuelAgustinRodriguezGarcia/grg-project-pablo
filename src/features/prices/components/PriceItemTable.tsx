@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPills";
@@ -131,8 +131,36 @@ export const PriceItemTable = memo(function PriceItemTable({
   columnDetails,
 }: PriceItemTableProps) {
   const tableWrapRef = useRef<HTMLDivElement>(null);
+  const pendingScrollResetPageRef = useRef<number | null>(null);
   const [openFilterColumnId, setOpenFilterColumnId] = useState<string | null>(null);
   const [isSearchPending, setIsSearchPending] = useState(false);
+
+  const resetTableScroll = useCallback(() => {
+    const wrap = tableWrapRef.current;
+    if (!wrap) {
+      return;
+    }
+
+    wrap.scrollTop = 0;
+  }, []);
+
+  const handlePageChange = useCallback(
+    (nextPage: number) => {
+      pendingScrollResetPageRef.current = nextPage;
+      resetTableScroll();
+      onPageChange(nextPage);
+    },
+    [onPageChange, resetTableScroll],
+  );
+
+  useLayoutEffect(() => {
+    if (pendingScrollResetPageRef.current !== data?.pagination.page) {
+      return;
+    }
+
+    pendingScrollResetPageRef.current = null;
+    resetTableScroll();
+  }, [data?.pagination.page, resetTableScroll]);
 
   useTableHeaderScrollProgress(
     tableWrapRef,
@@ -424,7 +452,7 @@ export const PriceItemTable = memo(function PriceItemTable({
               type="button"
               className={styles.paginationButton}
               disabled={pagination.page <= 1 || isLoading || showFilterOverlay}
-              onClick={() => onPageChange(pagination.page - 1)}
+              onClick={() => handlePageChange(pagination.page - 1)}
               aria-label="Página anterior"
             >
               <ChevronLeft strokeWidth={ICON_STROKE} aria-hidden />
@@ -438,7 +466,7 @@ export const PriceItemTable = memo(function PriceItemTable({
               type="button"
               className={styles.paginationButton}
               disabled={pagination.page >= pagination.totalPages || isLoading || showFilterOverlay}
-              onClick={() => onPageChange(pagination.page + 1)}
+              onClick={() => handlePageChange(pagination.page + 1)}
               aria-label="Página siguiente"
             >
               <ChevronRight strokeWidth={ICON_STROKE} aria-hidden />

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useBeginAdminSectionNavigation } from "@/features/admin/components/AdminSectionTransition";
 import { InvoiceDocumentActions } from "@/features/billing/components/invoices/InvoiceDocumentActions";
 import { InvoiceNotesPanel } from "@/features/billing/components/invoices/InvoiceNotesPanel";
 import { InvoiceReceiptsPanel } from "@/features/billing/components/invoices/InvoiceReceiptsPanel";
@@ -164,8 +165,10 @@ export function InvoiceDetailModal({
   onOpenClientHistory,
 }: InvoiceDetailModalProps) {
   const router = useRouter();
+  const beginNavigation = useBeginAdminSectionNavigation();
   const [isClosing, setIsClosing] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
+  const historyNavigationRef = useRef(false);
 
   const requestClose = useCallback(
     (afterClose?: () => void) => {
@@ -210,6 +213,10 @@ export function InvoiceDetailModal({
   const isOnAccount = invoice.paymentMethod === "CUENTA_CORRIENTE";
 
   function handleOpenClientHistory() {
+    if (historyNavigationRef.current || isClosing) {
+      return;
+    }
+
     if (onOpenClientHistory) {
       requestClose(onOpenClientHistory);
       return;
@@ -219,10 +226,11 @@ export function InvoiceDetailModal({
       return;
     }
 
-    const clientId = invoice.clientId;
-    requestClose(() => {
-      router.push(billingClientHistoryHref(clientId));
-    });
+    historyNavigationRef.current = true;
+    const href = billingClientHistoryHref(invoice.clientId);
+    beginNavigation(href, { exact: true });
+    onClose();
+    router.push(href);
   }
 
   return createPortal(

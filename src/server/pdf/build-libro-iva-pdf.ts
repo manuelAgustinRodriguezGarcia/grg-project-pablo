@@ -100,8 +100,100 @@ type DailyColumnKey =
   | (typeof DAILY_COLUMNS)[number]["key"]
   | (typeof DAILY_COLUMNS_WITH_LETTER)[number]["key"];
 
-function dailyColumnsForBlock(block: LibroIvaDailyBlock) {
-  return block.showLetterColumn ? DAILY_COLUMNS_WITH_LETTER : DAILY_COLUMNS;
+type DetailColumn<K extends string> = {
+  key: K;
+  label: string;
+  width: number;
+};
+
+/** Coincide con `maxWidth: column.width - 6` al dibujar cada celda. */
+const CELL_TEXT_INSET = 6;
+/** Piso de producción: PV de 4 dígitos y comprobante de 8. */
+const FISCAL_NUMBER_SAMPLE = "9999-99999999";
+
+function numeroColumnWidth(font: PDFFont, numbers: readonly string[]): number {
+  let textWidth = font.widthOfTextAtSize(FISCAL_NUMBER_SAMPLE, FONT_SIZE);
+
+  for (const number of numbers) {
+    const width = font.widthOfTextAtSize(toWinAnsi(number), FONT_SIZE);
+    if (width > textWidth) {
+      textWidth = width;
+    }
+  }
+
+  return Math.ceil(textWidth + CELL_TEXT_INSET);
+}
+
+function fitNumeroClienteColumns<K extends string>(
+  columns: readonly DetailColumn<K>[],
+  numeroWidth: number,
+): DetailColumn<K>[] {
+  const numero = columns.find((column) => column.key === "numero");
+  const cliente = columns.find((column) => column.key === "cliente");
+  if (!numero || !cliente) {
+    return columns.map((column) => ({ ...column }));
+  }
+
+  const pairWidth = numero.width + cliente.width;
+  const nextNumero = Math.min(numeroWidth, pairWidth);
+
+  return columns.map((column) => {
+    if (column.key === "numero") {
+      return { ...column, width: nextNumero };
+    }
+    if (column.key === "cliente") {
+      return { ...column, width: pairWidth - nextNumero };
+    }
+    return { ...column };
+  });
+}
+
+export function layoutMonthlyLibroIvaColumns(
+  font: PDFFont,
+  numbers: readonly string[],
+) {
+  return fitNumeroClienteColumns(
+    MONTHLY_COLUMNS,
+    numeroColumnWidth(font, numbers),
+  );
+}
+
+export function layoutDailyLibroIvaColumns(
+  font: PDFFont,
+  numbers: readonly string[],
+) {
+  return fitNumeroClienteColumns(
+    DAILY_COLUMNS,
+    numeroColumnWidth(font, numbers),
+  );
+}
+
+export function layoutDailyLetterLibroIvaColumns(
+  font: PDFFont,
+  numbers: readonly string[],
+) {
+  return fitNumeroClienteColumns(
+    DAILY_COLUMNS_WITH_LETTER,
+    numeroColumnWidth(font, numbers),
+  );
+}
+
+function numbersInDailyBlocks(
+  blocks: readonly LibroIvaDailyBlock[],
+  showLetterColumn: boolean,
+): string[] {
+  const numbers: string[] = [];
+
+  for (const block of blocks) {
+    if (block.showLetterColumn !== showLetterColumn) {
+      continue;
+    }
+    for (const row of block.displayRows) {
+      numbers.push(row.number);
+    }
+  }
+
+  return numbers;
 }
 
 export type LibroIvaPdfInput = {
@@ -252,6 +344,10 @@ export async function buildLibroIvaPdf(
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const testMode = input.environment === "MODO_PRUEBA";
   const period = input.periodText ?? periodLabel(input.year, input.month);
+  const columns = layoutMonthlyLibroIvaColumns(
+    font,
+    input.rows.map((row) => row.number),
+  );
 
   const sheets = (["A", "B"] as const).map((letter) => ({
     title: `Facturas ${letter}`,
@@ -277,6 +373,7 @@ export async function buildLibroIvaPdf(
       testMode,
       font,
       bold,
+      columns,
       pageOffset,
       documentPageCount,
     });
@@ -327,6 +424,14 @@ async function buildLibroIvaDailyDetailedPdf(
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const testMode = input.environment === "MODO_PRUEBA";
   const blocks = buildLibroIvaDailyBlocks(input.rows);
+  const standardColumns = layoutDailyLibroIvaColumns(
+    font,
+    numbersInDailyBlocks(blocks, false),
+  );
+  const letterColumns = layoutDailyLetterLibroIvaColumns(
+    font,
+    numbersInDailyBlocks(blocks, true),
+  );
   const period = dayLabel(input.year, input.month, input.day);
   const documentPageCount = countDailyPages(blocks, testMode);
   const subtitle = "Informe Z detallado";
@@ -364,7 +469,14 @@ async function buildLibroIvaDailyDetailedPdf(
         bold,
       });
     }
-    y = drawDailyBlock(page, y, block, font, bold);
+    y = drawDailyBlock(
+      page,
+      y,
+      block,
+      block.showLetterColumn ? letterColumns : standardColumns,
+      font,
+      bold,
+    );
   }
 
   return pdf.save();
@@ -659,6 +771,7 @@ function drawMonthlySheet(
     testMode: boolean;
     font: PDFFont;
     bold: PDFFont;
+    columns: readonly DetailColumn<MonthlyColumnKey>[];
     pageOffset: number;
     documentPageCount: number;
   },
@@ -676,7 +789,7 @@ function drawMonthlySheet(
     bold: options.bold,
   });
 
-  drawTableHeader(page, y, options.bold, MONTHLY_COLUMNS);
+  drawTableHeader(page, y, options.bold, options.columns);
   y -= HEADER_HEIGHT;
 
   if (options.rows.length === 0) {
@@ -687,7 +800,13 @@ function drawMonthlySheet(
       font: options.font,
       color: PDF_GRAY,
     });
-    drawMonthlyTotals(page, y - 40, sumLibroIvaRows([]), options.bold);
+    drawMonthlyTotals(
+      page,
+      y - 40,
+      sumLibroIvaRows([]),
+      options.bold,
+      options.columns,
+    );
     return;
   }
 
@@ -705,11 +824,11 @@ function drawMonthlySheet(
         font: options.font,
         bold: options.bold,
       });
-      drawTableHeader(page, y, options.bold, MONTHLY_COLUMNS);
+      drawTableHeader(page, y, options.bold, options.columns);
       y -= HEADER_HEIGHT;
     }
 
-    drawMonthlyRow(page, y, row, index, options.font);
+    drawMonthlyRow(page, y, row, index, options.font, options.columns);
     y -= ROW_HEIGHT;
   }
 
@@ -728,7 +847,13 @@ function drawMonthlySheet(
     });
   }
 
-  drawMonthlyTotals(page, y - 10, sumLibroIvaRows(options.rows), options.bold);
+  drawMonthlyTotals(
+    page,
+    y - 10,
+    sumLibroIvaRows(options.rows),
+    options.bold,
+    options.columns,
+  );
 }
 
 function drawAbSummaryPage(
@@ -1029,6 +1154,7 @@ function drawMonthlyRow(
   row: LibroIvaRow,
   index: number,
   font: PDFFont,
+  columns: readonly DetailColumn<MonthlyColumnKey>[],
 ): void {
   if (index % 2 === 1) {
     page.drawRectangle({
@@ -1042,7 +1168,7 @@ function drawMonthlyRow(
 
   const color = row.docKind === "NC" ? PDF_GRAY : PDF_NAVY;
   let x = PAGE_MARGIN + 4;
-  for (const column of MONTHLY_COLUMNS) {
+  for (const column of columns) {
     if (MONEY_KEYS.has(column.key)) {
       drawPdfAmountCell(
         page,
@@ -1075,6 +1201,7 @@ function drawMonthlyTotals(
   y: number,
   totals: ReturnType<typeof sumLibroIvaRows>,
   bold: PDFFont,
+  columns: readonly DetailColumn<MonthlyColumnKey>[],
 ): void {
   page.drawRectangle({
     x: PAGE_MARGIN,
@@ -1092,7 +1219,7 @@ function drawMonthlyTotals(
   });
 
   let x = PAGE_MARGIN + 4;
-  for (const column of MONTHLY_COLUMNS) {
+  for (const column of columns) {
     if (column.key === "neto") {
       drawPdfAmountCell(page, totals.netAmount, {
         x,
@@ -1129,10 +1256,10 @@ function drawDailyBlock(
   page: PDFPage,
   startY: number,
   block: LibroIvaDailyBlock,
+  columns: readonly DetailColumn<DailyColumnKey>[],
   font: PDFFont,
   bold: PDFFont,
 ): number {
-  const columns = dailyColumnsForBlock(block);
   let y = startY;
   drawPdfText(page, block.title, {
     x: PAGE_MARGIN,

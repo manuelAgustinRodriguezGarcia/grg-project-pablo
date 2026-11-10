@@ -46,6 +46,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# PDFs de verificación local
+/tmp/
+
 # prisma
 /src/generated
 

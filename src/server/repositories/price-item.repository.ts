@@ -5,6 +5,10 @@ import { parseBetweenFilterValue } from "@/server/filters/column-filter-range";
 import { buildJsonTextContainsCondition } from "@/server/filters/column-filter-text-contains";
 import type { JsonTextColumnFilter } from "@/server/filters/column-filter.types";
 import { VALID_JSON_COLUMN_KEY } from "@/server/filters/json-column-key";
+import {
+  PRICE_ITEM_LIST_ORDER_BY,
+  PRICE_ITEM_LIST_ORDER_BY_SQL,
+} from "@/server/repositories/price-item-list-order";
 
 const NUMERIC_TEXT_PATTERN = "^-?[0-9]+([.,][0-9]+)?$";
 
@@ -62,6 +66,8 @@ export type CreatePriceItemData = {
   originalText?: string | null;
   indexedText?: string | null;
   normalizedIndexedText?: string | null;
+  /** Worksheet row. Omit or null for manual items. */
+  sourceRow?: number | null;
 };
 
 export class PriceItemRepository {
@@ -103,7 +109,7 @@ export class PriceItemRepository {
         SELECT *
         FROM "PriceItem"
         WHERE ${searchCondition}
-        ORDER BY "updatedAt" DESC, "id" ASC
+        ORDER BY ${PRICE_ITEM_LIST_ORDER_BY_SQL}
         LIMIT ${pageSize}
         OFFSET ${skip}
       `,
@@ -136,7 +142,7 @@ export class PriceItemRepository {
     const [items, total] = await Promise.all([
       prisma.priceItem.findMany({
         where,
-        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+        orderBy: PRICE_ITEM_LIST_ORDER_BY,
         skip,
         take: pageSize,
       }),
@@ -230,13 +236,14 @@ export class PriceItemRepository {
         originalText: data.originalText ?? null,
         indexedText: data.indexedText ?? null,
         normalizedIndexedText: data.normalizedIndexedText ?? null,
+        sourceRow: data.sourceRow ?? null,
       },
     });
   }
 
   async update(
     id: string,
-    data: Omit<CreatePriceItemData, "priceListId">,
+    data: Omit<CreatePriceItemData, "priceListId" | "sourceRow">,
   ): Promise<PriceItem> {
     return prisma.priceItem.update({
       where: { id },
@@ -279,6 +286,7 @@ export class PriceItemRepository {
         originalText: item.originalText ?? null,
         indexedText: item.indexedText ?? null,
         normalizedIndexedText: item.normalizedIndexedText ?? null,
+        sourceRow: item.sourceRow ?? null,
       })),
     });
 
@@ -297,6 +305,7 @@ export class PriceItemRepository {
   ): Promise<PriceItem[]> {
     return prisma.priceItem.findMany({
       where: { priceListId },
+      // Sync pages by id. The on-screen table uses PRICE_ITEM_LIST_ORDER_BY.
       orderBy: [{ id: "asc" }],
       take,
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),

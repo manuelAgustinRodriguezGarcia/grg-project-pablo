@@ -494,6 +494,9 @@ model PriceItem {
   originalText          String?  @db.Text
   indexedText           String?  @db.Text
   normalizedIndexedText String?  @db.Text
+  /// Worksheet row (1-based). Null for legacy imports and manual items; not backfilled.
+  /// Table order is sourceRow ASC NULLS LAST, then createdAt ASC, id ASC.
+  sourceRow             Int?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -501,6 +504,7 @@ model PriceItem {
 
   @@index([priceListId])
   @@index([priceListId, updatedAt, id])
+  @@index([priceListId, sourceRow, id])
   @@index([normalizedCode])
   @@index([dynamicData], type: Gin)
 }
