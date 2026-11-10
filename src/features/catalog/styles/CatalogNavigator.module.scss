@@ -2009,6 +2009,57 @@ $table-image-size: 6.25rem;
   list-style: none;
 }
 
+.dropdownMenuList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dropdownSearch {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.75rem;
+  border: 1.5px solid rgba($navy, 0.16);
+  border-radius: $radius-sm;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: $navy;
+
+  &::placeholder {
+    color: rgba($navy, 0.45);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    border-color: rgba($blue, 0.55);
+    box-shadow: 0 0 0 3px rgba($blue, 0.12);
+  }
+
+  &::-webkit-search-cancel-button,
+  &::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+}
+
+.dropdownSearchEmpty {
+  margin: 0.2rem 0.35rem 0.85rem;
+  font-family: $font-sans;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: rgba($navy, 0.62);
+}
+
 .dropdownOptionContent {
   display: flex;
   flex-direction: column;

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/server/database/prisma";
 import { priceItemRepository } from "@/server/repositories/price-item.repository";
 import { PRICE_ITEM_LIST_ORDER_BY } from "@/server/repositories/price-item-list-order";
+import { buildSearchQueryPlan } from "@/server/search/search-query-plan";
 
 vi.mock("@/server/database/prisma", () => ({
   prisma: {
@@ -64,11 +65,12 @@ describe("PriceItemRepository order", () => {
       return Promise.resolve([]);
     }) as never);
 
-    const result = await priceItemRepository.findByPriceListPaginatedWithTextSearch(
+    const plan = buildSearchQueryPlan("filtro");
+    const result = await priceItemRepository.findByPriceListPaginatedWithScopedSearch(
       "list-1",
       { page: 2, pageSize: 50 },
-      "filtro",
-      "FILTRO",
+      plan!,
+      { includePrimaryCode: true, includeDescription: true, dynamicKeys: [] },
     );
 
     const selectCall = vi.mocked(prisma.$queryRaw).mock.calls[0] ?? [];
@@ -79,6 +81,38 @@ describe("PriceItemRepository order", () => {
     expect(selectCall).toContain(50);
     expect(result.page).toBe(2);
     expect(result.total).toBe(3);
+  });
+
+  it("countItemsBefore ubica el ítem con el mismo orden de la tabla", async () => {
+    vi.mocked(prisma.priceItem.count).mockResolvedValue(4);
+    const createdAt = new Date("2026-01-02T00:00:00.000Z");
+
+    const before = await priceItemRepository.countItemsBefore("list-1", {
+      id: "item-9",
+      sourceRow: 10,
+      createdAt,
+    });
+
+    expect(before).toBe(4);
+    expect(prisma.priceItem.count).toHaveBeenCalledWith({
+      where: {
+        priceListId: "list-1",
+        OR: [
+          { sourceRow: { lt: 10 } },
+          {
+            AND: [
+              { sourceRow: 10 },
+              {
+                OR: [
+                  { createdAt: { lt: createdAt } },
+                  { createdAt, id: { lt: "item-9" } },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
   });
 
   it("un alta manual guarda sourceRow nulo y una edición no lo envía", async () => {

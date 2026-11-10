@@ -32,7 +32,16 @@ export const priceItemListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
   q: z.string().optional(),
+  itemId: z.string().trim().min(1).max(100).optional(),
   filters: columnFiltersQuerySchema,
+});
+
+export const priceGlobalSearchQuerySchema = z.object({
+  q: z.string().trim().max(200).default(""),
+});
+
+export const priceItemPositionQuerySchema = z.object({
+  pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 
 export const createPriceItemSchema = z.object({

@@ -53,6 +53,20 @@ export class PriceColumnRepository {
     });
   }
 
+  async findByPriceListIdsOrdered(
+    priceListIds: string[],
+    where: Prisma.PriceColumnWhereInput = {},
+  ): Promise<PriceColumn[]> {
+    if (priceListIds.length === 0) {
+      return [];
+    }
+
+    return prisma.priceColumn.findMany({
+      where: { priceListId: { in: priceListIds }, ...where },
+      orderBy: [{ order: "asc" }, { displayName: "asc" }],
+    });
+  }
+
   async findById(id: string): Promise<PriceColumn | null> {
     return prisma.priceColumn.findUnique({ where: { id } });
   }

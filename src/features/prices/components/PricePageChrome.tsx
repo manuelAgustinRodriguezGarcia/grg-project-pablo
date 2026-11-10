@@ -27,6 +27,7 @@ const ACTION_CARDS: ActionCardConfig[] = [
 type PricePageChromeProps = {
   onImportExcelClick?: () => void;
   supplierBanner?: ReactNode;
+  search?: ReactNode;
   children?: ReactNode;
 };
 
@@ -42,6 +43,7 @@ function handleActionCardClick(
 export function PricePageChrome({
   onImportExcelClick,
   supplierBanner,
+  search,
   children,
 }: PricePageChromeProps) {
   const showActionCards = Boolean(onImportExcelClick);
@@ -58,6 +60,7 @@ export function PricePageChrome({
           />
           Precios
         </h1>
+        {search}
       </div>
 
       {showToolbarColumn || children ? (

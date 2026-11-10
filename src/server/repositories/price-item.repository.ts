@@ -9,6 +9,11 @@ import {
   PRICE_ITEM_LIST_ORDER_BY,
   PRICE_ITEM_LIST_ORDER_BY_SQL,
 } from "@/server/repositories/price-item-list-order";
+import {
+  buildScopedPriceItemSearchSql,
+  type PriceListSearchSources,
+} from "@/server/search/price-list-search";
+import type { SearchQueryPlan } from "@/server/search/search-query-plan";
 
 const NUMERIC_TEXT_PATTERN = "^-?[0-9]+([.,][0-9]+)?$";
 
@@ -79,29 +84,18 @@ export class PriceItemRepository {
     return this.findPaginated({ priceListId, ...extraWhere }, options);
   }
 
-  async findByPriceListPaginatedWithTextSearch(
+  async findByPriceListPaginatedWithScopedSearch(
     priceListId: string,
     options: PriceItemPaginationOptions,
-    textTerm: string,
-    normalizedQuery: string,
+    plan: SearchQueryPlan,
+    sources: PriceListSearchSources,
   ): Promise<PaginatedPriceItems> {
     const page = Math.max(1, options.page);
     const pageSize = Math.min(Math.max(1, options.pageSize), 200);
     const skip = (page - 1) * pageSize;
-    const pattern = `%${escapeIlikePattern(textTerm)}%`;
-    const normalizedPattern = `%${escapeIlikePattern(normalizedQuery)}%`;
-
     const searchCondition = Prisma.sql`
       "priceListId" = ${priceListId}
-      AND (
-        COALESCE("indexedText", '') ILIKE ${pattern}
-        OR COALESCE("normalizedIndexedText", '') ILIKE ${normalizedPattern}
-        OR COALESCE("primaryCode", '') ILIKE ${pattern}
-        OR COALESCE("description", '') ILIKE ${pattern}
-        OR COALESCE("amount"::text, '') ILIKE ${pattern}
-        OR COALESCE("normalizedCode", '') ILIKE ${normalizedPattern}
-        OR COALESCE("dynamicData"::text, '') ILIKE ${pattern}
-      )
+      AND ${buildScopedPriceItemSearchSql(plan, sources)}
     `;
 
     const [items, countResult] = await Promise.all([
@@ -129,6 +123,91 @@ export class PriceItemRepository {
       pageSize,
       totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
     };
+  }
+
+  async findIdsMatchingScopedSearch(
+    priceListId: string,
+    plan: SearchQueryPlan,
+    sources: PriceListSearchSources,
+  ): Promise<string[]> {
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "PriceItem"
+      WHERE "priceListId" = ${priceListId}
+      AND ${buildScopedPriceItemSearchSql(plan, sources)}
+    `;
+
+    return rows.map((row) => row.id);
+  }
+
+  async searchAcrossPriceLists(
+    scopes: Array<{ priceListId: string; sources: PriceListSearchSources }>,
+    plan: SearchQueryPlan,
+    perListLimit: number,
+  ): Promise<Array<PriceItem & { searchTotal: number }>> {
+    if (scopes.length === 0) {
+      return [];
+    }
+
+    const scopeConditions = scopes.map(
+      (scope) =>
+        Prisma.sql`("priceListId" = ${scope.priceListId} AND ${buildScopedPriceItemSearchSql(plan, scope.sources)})`,
+    );
+
+    const rows = await prisma.$queryRaw<
+      Array<PriceItem & { searchRank: bigint; searchTotal: bigint }>
+    >`
+      SELECT *
+      FROM (
+        SELECT
+          "PriceItem".*,
+          ROW_NUMBER() OVER (
+            PARTITION BY "priceListId"
+            ORDER BY "updatedAt" DESC, "id" ASC
+          ) AS "searchRank",
+          COUNT(*) OVER (PARTITION BY "priceListId") AS "searchTotal"
+        FROM "PriceItem"
+        WHERE ${Prisma.join(scopeConditions, " OR ")}
+      ) AS ranked
+      WHERE "searchRank" <= ${perListLimit}
+      ORDER BY "updatedAt" DESC, "id" ASC
+    `;
+
+    return rows.map(({ searchRank: _rank, searchTotal, ...item }) => ({
+      ...(item as PriceItem),
+      searchTotal: Number(searchTotal),
+    }));
+  }
+
+  async countItemsBefore(
+    priceListId: string,
+    item: Pick<PriceItem, "id" | "sourceRow" | "createdAt">,
+  ): Promise<number> {
+    const earlierInSameSlot: Prisma.PriceItemWhereInput = {
+      OR: [
+        { createdAt: { lt: item.createdAt } },
+        { createdAt: item.createdAt, id: { lt: item.id } },
+      ],
+    };
+
+    const where: Prisma.PriceItemWhereInput =
+      item.sourceRow == null
+        ? {
+            priceListId,
+            OR: [
+              { sourceRow: { not: null } },
+              { AND: [{ sourceRow: null }, earlierInSameSlot] },
+            ],
+          }
+        : {
+            priceListId,
+            OR: [
+              { sourceRow: { lt: item.sourceRow } },
+              { AND: [{ sourceRow: item.sourceRow }, earlierInSameSlot] },
+            ],
+          };
+
+    return prisma.priceItem.count({ where });
   }
 
   async findPaginated(

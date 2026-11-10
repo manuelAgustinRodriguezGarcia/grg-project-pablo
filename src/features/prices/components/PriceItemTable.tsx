@@ -1,12 +1,21 @@
 "use client";
 
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTableHeaderScrollProgress } from "@/shared/hooks/useTableHeaderScrollProgress";
 import { AdminTableSkeleton } from "@/features/admin/components/AdminTableSkeleton";
 import { ActiveFilterPills } from "@/features/catalog/components/ActiveFilterPills";
 import { toActiveFilterPillsFromState } from "@/features/catalog/utils/column-filter-state";
 import { ChevronLeft, ChevronRight, Pencil, Receipt, Trash2, ICON_STROKE } from "@/shared/icons";
-import { PriceListTableSearch } from "@/features/prices/components/PriceListTableSearch";
+import { sortPriceColumnsByConfiguredOrder } from "@/features/prices/utils/price-table-columns";
 import { PriceCellValue } from "@/features/prices/components/PriceCellValue";
 import { PriceColumnHeaderCell } from "@/features/prices/components/PriceColumnHeaderCell";
 import type { PriceItemTableColumn } from "@/features/prices/types/price-item-table.types";
@@ -26,9 +35,7 @@ type PriceItemTableProps = {
   isAdmin: boolean;
   priceListId: string;
   searchQuery: string;
-  listName: string;
-  listSearchResetKey: string;
-  onSearchSubmit: (value: string) => void;
+  isSearchPending?: boolean;
   enableColumnFilters?: boolean;
   columnFilters?: ColumnFilterInput[];
   onColumnFilterChange?: (
@@ -43,6 +50,8 @@ type PriceItemTableProps = {
   onEditItem?: (item: PriceItemTableRow) => void;
   onDeleteItem?: (item: PriceItemTableRow) => void;
   columnDetails: PriceColumnListItem[];
+  highlightedItemId?: string | null;
+  search?: ReactNode;
 };
 
 function formatHeaderLines(displayName: string): string[] {
@@ -55,6 +64,10 @@ function formatHeaderLines(displayName: string): string[] {
   }
 
   return [normalized];
+}
+
+function formatResultCount(total: number): string {
+  return total === 1 ? "1 resultado" : `${total.toLocaleString("es-AR")} resultados`;
 }
 
 function getCellValue(
@@ -115,9 +128,7 @@ export const PriceItemTable = memo(function PriceItemTable({
   isAdmin,
   priceListId,
   searchQuery,
-  listName,
-  listSearchResetKey,
-  onSearchSubmit,
+  isSearchPending = false,
   enableColumnFilters = false,
   columnFilters = [],
   onColumnFilterChange,
@@ -129,11 +140,12 @@ export const PriceItemTable = memo(function PriceItemTable({
   onEditItem,
   onDeleteItem,
   columnDetails,
+  highlightedItemId = null,
+  search,
 }: PriceItemTableProps) {
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const pendingScrollResetPageRef = useRef<number | null>(null);
   const [openFilterColumnId, setOpenFilterColumnId] = useState<string | null>(null);
-  const [isSearchPending, setIsSearchPending] = useState(false);
 
   const resetTableScroll = useCallback(() => {
     const wrap = tableWrapRef.current;
@@ -167,18 +179,31 @@ export const PriceItemTable = memo(function PriceItemTable({
     data ? `${data.items.length}-${data.pagination.page}` : null,
   );
 
+  useEffect(() => {
+    if (!highlightedItemId) {
+      return;
+    }
+
+    const row = tableWrapRef.current?.querySelector(
+      `[data-item-id="${highlightedItemId}"]`,
+    );
+    row?.scrollIntoView({ block: "center" });
+  }, [data?.items, highlightedItemId]);
+
   const sortedColumns = useMemo(() => {
     if (!data) {
       return [];
     }
 
-    return [...data.columns].sort((left, right) => {
-      const leftOrder =
-        columnDetails.find((column) => column.id === left.id)?.order ?? 0;
-      const rightOrder =
-        columnDetails.find((column) => column.id === right.id)?.order ?? 0;
-      return leftOrder - rightOrder || left.displayName.localeCompare(right.displayName, "es");
-    });
+    const orderById = new Map<string, number>();
+    for (const column of data.columns) {
+      orderById.set(column.id, column.order);
+    }
+    for (const column of columnDetails) {
+      orderById.set(column.id, column.order);
+    }
+
+    return sortPriceColumnsByConfiguredOrder(data.columns, orderById);
   }, [columnDetails, data]);
 
   const columnDetailsById = useMemo(
@@ -203,31 +228,22 @@ export const PriceItemTable = memo(function PriceItemTable({
 
   const firstFilterableColumnId = sortedColumns[0]?.id ?? null;
   const hasActiveFilters = enableColumnFilters && activeFilterPills.length > 0;
-  const showListSearch = Boolean(listName);
   const showFilterOverlay =
     (isFilterRefreshing || isSearchPending) && Boolean(data);
 
   const tableToolbar =
-    showListSearch || hasActiveFilters ? (
-      <div className={filterStyles.tableToolbar}>
-        <div className={filterStyles.tableToolbarFilters}>
-          {hasActiveFilters ? (
+    hasActiveFilters || search ? (
+      <div className={`${filterStyles.tableToolbar} ${styles.priceTableToolbar}`}>
+        {hasActiveFilters ? (
+          <div className={filterStyles.tableToolbarFilters}>
             <ActiveFilterPills
               filters={activeFilterPills}
               onRemove={handleRemoveFilter}
               onClearAll={onClearColumnFilters}
             />
-          ) : null}
-        </div>
-        {showListSearch ? (
-          <PriceListTableSearch
-            listName={listName}
-            committedQuery={searchQuery}
-            onSearchSubmit={onSearchSubmit}
-            onPendingChange={setIsSearchPending}
-            resetKey={listSearchResetKey}
-          />
+          </div>
         ) : null}
+        {search}
       </div>
     ) : null;
 
@@ -382,7 +398,11 @@ export const PriceItemTable = memo(function PriceItemTable({
             </thead>
             <tbody className={styles.tbodyFade}>
               {items.map((item) => (
-                <tr key={item.id}>
+                <tr
+                  key={item.id}
+                  data-item-id={item.id}
+                  className={item.id === highlightedItemId ? styles.searchHitRow : undefined}
+                >
                   {sortedColumns.map((column) => (
                     <td
                       key={`${item.id}-${column.id}`}
@@ -441,9 +461,9 @@ export const PriceItemTable = memo(function PriceItemTable({
         <footer className={styles.tableFooter}>
           <p className={styles.tableSummary}>
             {trimmedSearchQuery
-              ? `${pagination.total.toLocaleString("es-AR")} resultados para «${trimmedSearchQuery}»`
+              ? `${formatResultCount(pagination.total)} para «${trimmedSearchQuery}»`
               : hasActiveFilters
-                ? `${pagination.total.toLocaleString("es-AR")} resultados con filtros`
+                ? `${formatResultCount(pagination.total)} con filtros`
                 : `Mostrando ${from} a ${to} de ${pagination.total.toLocaleString("es-AR")} ítems`}
           </p>
 

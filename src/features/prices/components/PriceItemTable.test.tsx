@@ -31,6 +31,7 @@ function createTableData(page: number): PriceItemTableResponse {
         displayName: "Código",
         originalName: "Código",
         dataType: "TEXT",
+        order: 0,
         visibleToNormalUser: true,
         isPrimaryCode: true,
         isDescription: false,
@@ -72,9 +73,6 @@ function renderTable(
       isAdmin={false}
       priceListId="list-1"
       searchQuery={searchQuery}
-      listName=""
-      listSearchResetKey="list-1"
-      onSearchSubmit={vi.fn()}
       hasSelectedList
       hasAnyLists
       onPageChange={onPageChange}
@@ -113,9 +111,6 @@ describe("PriceItemTable", () => {
         isAdmin={false}
         priceListId="list-1"
         searchQuery=""
-        listName=""
-        listSearchResetKey="list-1"
-        onSearchSubmit={vi.fn()}
         hasSelectedList
         hasAnyLists
         onPageChange={onPageChange}
@@ -140,9 +135,6 @@ describe("PriceItemTable", () => {
         isAdmin={false}
         priceListId="list-1"
         searchQuery=""
-        listName=""
-        listSearchResetKey="list-1"
-        onSearchSubmit={vi.fn()}
         hasSelectedList
         hasAnyLists
         onPageChange={vi.fn()}

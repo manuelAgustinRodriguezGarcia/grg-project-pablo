@@ -9,12 +9,17 @@ import { priceColumnRepository } from "@/server/repositories/price-column.reposi
 import { priceListService } from "./price-list.service";
 import { PriceItemError } from "./price-item.errors";
 import { visibilityService } from "./visibility.service";
+import { normalizeIndexedText } from "@/server/search/search-normalizer";
+import { priceListRepository } from "@/server/repositories/price-list.repository";
 import {
-  normalizeIndexedText,
-  normalizeSearchTerm,
-  normalizeTextContains,
-  splitSearchTokens,
-} from "@/server/search/search-normalizer";
+  priceListSearchSourcesAreEmpty,
+  resolvePriceListSearchSources,
+  type PriceListSearchSources,
+} from "@/server/search/price-list-search";
+import {
+  buildSearchQueryPlan,
+  MIN_GLOBAL_QUERY_CHARS,
+} from "@/server/search/search-query-plan";
 import { buildIndexedTextForMappedPriceItem } from "./price-field.builder";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./audit.constants";
 import { auditService } from "./audit.service";
@@ -29,6 +34,7 @@ export type PriceItemTableColumn = {
   originalName: string;
   dataType: string;
   visibleToNormalUser: boolean;
+  order: number;
   isPrimaryCode: boolean;
   isDescription: boolean;
   isPrice: boolean;
@@ -60,58 +66,31 @@ export type PriceItemTableResponse = {
   };
 };
 
+export type PriceGlobalSearchGroup = {
+  priceList: {
+    id: string;
+    name: string;
+  };
+  columns: PriceItemTableColumn[];
+  items: PriceItemTableRow[];
+  total: number;
+};
+
+export type PriceGlobalSearchResponse = {
+  query: string;
+  groups: PriceGlobalSearchGroup[];
+};
+
+const GLOBAL_SEARCH_ITEMS_PER_LIST = 8;
+
 export type ListPriceItemsInput = {
   priceListId: string;
   page?: number;
   pageSize?: number;
   query?: string;
+  itemId?: string;
   filters?: ColumnFilterInput[] | unknown;
 };
-
-function buildPriceItemTextSearchWhere(query: string): Prisma.PriceItemWhereInput {
-  const textTerm = normalizeTextContains(query);
-  const normalizedQuery = normalizeSearchTerm(query);
-  const tokens = splitSearchTokens(textTerm);
-  const normalizedTokens = tokens
-    .map((token) => normalizeSearchTerm(token))
-    .filter((token) => token.length > 0);
-
-  const orConditions: Prisma.PriceItemWhereInput[] = [
-    { indexedText: { contains: textTerm, mode: "insensitive" } },
-    { primaryCode: { contains: textTerm, mode: "insensitive" } },
-    { description: { contains: textTerm, mode: "insensitive" } },
-    { normalizedCode: { contains: normalizedQuery, mode: "insensitive" } },
-  ];
-
-  if (normalizedQuery) {
-    orConditions.push({
-      normalizedIndexedText: {
-        contains: normalizedQuery,
-        mode: "insensitive",
-      },
-    });
-  }
-
-  if (normalizedTokens.length === 1) {
-    orConditions.push({
-      normalizedIndexedText: {
-        contains: normalizedTokens[0],
-        mode: "insensitive",
-      },
-    });
-  } else if (normalizedTokens.length > 1) {
-    orConditions.push({
-      AND: normalizedTokens.map((token) => ({
-        normalizedIndexedText: {
-          contains: token,
-          mode: "insensitive" as const,
-        },
-      })),
-    });
-  }
-
-  return { OR: orConditions };
-}
 
 async function listFilteredItems(
   priceListId: string,
@@ -119,15 +98,12 @@ async function listFilteredItems(
   query: string,
   parsedFilters: ColumnFilterInput[],
   columns: PriceColumn[],
+  sources: PriceListSearchSources,
 ): Promise<PaginatedPriceItems> {
   const { prismaFilters, jsonTextFilters, amountContainsFilters } =
     priceColumnFilterService.partitionFilters(parsedFilters, columns);
 
   const andConditions: Prisma.PriceItemWhereInput[] = [{ priceListId }];
-
-  if (query) {
-    andConditions.push(buildPriceItemTextSearchWhere(query));
-  }
 
   if (prismaFilters.length > 0) {
     andConditions.push(priceColumnFilterService.buildFilterWhere(prismaFilters, columns));
@@ -158,6 +134,18 @@ async function listFilteredItems(
     };
   }
 
+  const plan = query ? buildSearchQueryPlan(query) : null;
+  if (plan) {
+    const matchingIds = await priceItemRepository.findIdsMatchingScopedSearch(
+      priceListId,
+      plan,
+      sources,
+    );
+    where = {
+      AND: [where, { id: { in: matchingIds } }],
+    };
+  }
+
   return priceItemRepository.findPaginated(where, paginationOptions);
 }
 
@@ -169,6 +157,7 @@ function toTableColumn(column: PriceColumn): PriceItemTableColumn {
     originalName: column.originalName,
     dataType: column.dataType,
     visibleToNormalUser: column.visibleToNormalUser,
+    order: column.order,
     isPrimaryCode: column.isPrimaryCode,
     isDescription: column.isDescription,
     isPrice: column.isPrice,
@@ -283,7 +272,9 @@ export class PriceItemService {
     const visibleColumnKeys = new Set(columns.map((column) => column.internalKey));
 
     const paginationOptions = { page, pageSize };
-    const query = input.query?.trim() ?? "";
+    const trimmedQuery = input.query?.trim() ?? "";
+    const query =
+      trimmedQuery.length >= MIN_GLOBAL_QUERY_CHARS ? trimmedQuery : "";
     const parsedFilters = priceColumnFilterService.parseFilters(input.filters);
     const filterableKeys = getPriceFilterableColumnKeys(columns);
     priceColumnFilterService.validateFiltersForColumns(
@@ -293,21 +284,29 @@ export class PriceItemService {
       { requireFilterableColumn: false },
     );
 
-    const result: PaginatedPriceItems =
-      parsedFilters.length > 0
+    const sources = resolvePriceListSearchSources(columns);
+    const searchPlan = query ? buildSearchQueryPlan(query) : null;
+    const result: PaginatedPriceItems = input.itemId
+      ? await priceItemRepository.findByPriceListPaginated(
+          input.priceListId,
+          paginationOptions,
+          { id: input.itemId },
+        )
+      : parsedFilters.length > 0
         ? await listFilteredItems(
             input.priceListId,
             paginationOptions,
             query,
             parsedFilters,
             columns,
+            sources,
           )
-        : query
-          ? await priceItemRepository.findByPriceListPaginatedWithTextSearch(
+        : searchPlan
+          ? await priceItemRepository.findByPriceListPaginatedWithScopedSearch(
               input.priceListId,
               paginationOptions,
-              normalizeTextContains(query),
-              normalizeSearchTerm(query),
+              searchPlan,
+              sources,
             )
           : await priceItemRepository.findByPriceListPaginated(
               input.priceListId,
@@ -327,6 +326,92 @@ export class PriceItemService {
         totalPages: result.totalPages,
       },
     };
+  }
+
+  async searchAllLists(rawQuery: string): Promise<PriceGlobalSearchResponse> {
+    const { profile } = await requireAuth();
+    const query = rawQuery.trim();
+    const plan =
+      query.length >= MIN_GLOBAL_QUERY_CHARS ? buildSearchQueryPlan(query) : null;
+
+    if (!plan) {
+      return { query, groups: [] };
+    }
+
+    const lists = await priceListRepository.findAllOrdered(
+      visibilityService.priceListWhereForRole(profile.role),
+    );
+    if (lists.length === 0) {
+      return { query, groups: [] };
+    }
+
+    const columns = await priceColumnRepository.findByPriceListIdsOrdered(
+      lists.map((list) => list.id),
+      visibilityService.priceColumnWhereForRole(profile.role),
+    );
+
+    const columnsByListId = new Map<string, PriceColumn[]>();
+    for (const column of columns) {
+      const listColumns = columnsByListId.get(column.priceListId) ?? [];
+      listColumns.push(column);
+      columnsByListId.set(column.priceListId, listColumns);
+    }
+
+    const scopes = lists
+      .map((list) => ({
+        priceListId: list.id,
+        sources: resolvePriceListSearchSources(columnsByListId.get(list.id) ?? []),
+      }))
+      .filter((scope) => !priceListSearchSourcesAreEmpty(scope.sources));
+
+    const rows = await priceItemRepository.searchAcrossPriceLists(
+      scopes,
+      plan,
+      GLOBAL_SEARCH_ITEMS_PER_LIST,
+    );
+
+    const rowsByListId = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const listRows = rowsByListId.get(row.priceListId) ?? [];
+      listRows.push(row);
+      rowsByListId.set(row.priceListId, listRows);
+    }
+
+    const groups: PriceGlobalSearchGroup[] = [];
+    for (const list of lists) {
+      const listRows = rowsByListId.get(list.id);
+      if (!listRows || listRows.length === 0) {
+        continue;
+      }
+
+      const listColumns = columnsByListId.get(list.id) ?? [];
+      const visibleKeys = new Set(listColumns.map((column) => column.internalKey));
+
+      groups.push({
+        priceList: { id: list.id, name: list.name },
+        columns: listColumns.map(toTableColumn),
+        items: listRows.map((row) => toTableRow(row, visibleKeys, profile.role)),
+        total: listRows[0]!.searchTotal,
+      });
+    }
+
+    return { query, groups };
+  }
+
+  async locateItemPage(
+    priceListId: string,
+    itemId: string,
+    pageSize: number,
+  ): Promise<{ page: number }> {
+    await priceListService.getPriceList(priceListId);
+
+    const item = await priceItemRepository.findById(itemId);
+    if (!item || item.priceListId !== priceListId) {
+      throw new PriceItemError("Ítem no encontrado.", "PRICE_ITEM_NOT_FOUND");
+    }
+
+    const before = await priceItemRepository.countItemsBefore(priceListId, item);
+    return { page: Math.floor(before / pageSize) + 1 };
   }
 
   async createItem(

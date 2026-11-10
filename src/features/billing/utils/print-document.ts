@@ -168,17 +168,45 @@ async function renderPdfPages(blob: Blob): Promise<string[]> {
 
 export async function printPdfBlob(blob: Blob): Promise<void> {
   const imageUrls = await renderPdfPages(blob);
-  const images = imageUrls
-    .map((url) => `<img alt="" src="${url}" />`)
+  const pages = imageUrls
+    .map((url) => `<div class="page"><img alt="" src="${url}" /></div>`)
     .join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Imprimir</title>
     <style>
-      @page { margin: 0; }
-      html, body { margin: 0; padding: 0; background: #fff; }
-      img { display: block; width: 100%; height: auto; break-after: page; page-break-after: always; }
-      img:last-child { break-after: auto; page-break-after: auto; }
+      @page { size: A4 portrait; margin: 0; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        width: 210mm;
+        height: auto !important;
+        overflow: hidden;
+      }
+      .page {
+        box-sizing: border-box;
+        width: 210mm;
+        height: 285mm;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+      .page img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: top center;
+      }
     </style>
-  </head><body>${images}</body></html>`;
+  </head><body>${pages}</body></html>`;
 
   try {
     await printHtmlDocument(html);

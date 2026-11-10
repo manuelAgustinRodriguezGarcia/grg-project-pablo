@@ -5,6 +5,7 @@ export type PriceItemTableColumn = {
   originalName: string;
   dataType: string;
   visibleToNormalUser: boolean;
+  order: number;
   isPrimaryCode: boolean;
   isDescription: boolean;
   isPrice: boolean;
@@ -19,6 +20,21 @@ export type PriceItemTableRow = {
   dynamicData: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+};
+
+export type PriceGlobalSearchGroup = {
+  priceList: {
+    id: string;
+    name: string;
+  };
+  columns: PriceItemTableColumn[];
+  items: PriceItemTableRow[];
+  total: number;
+};
+
+export type PriceGlobalSearchResponse = {
+  query: string;
+  groups: PriceGlobalSearchGroup[];
 };
 
 export type PriceItemTableResponse = {

@@ -1,86 +1,46 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { ICON_STROKE, Search, X } from "@/shared/icons";
 import styles from "@/features/prices/styles/PriceNavigator.module.scss";
 
-const SEARCH_DEBOUNCE_MS = 300;
-
 type PriceListTableSearchProps = {
   listName: string;
-  committedQuery: string;
-  onSearchSubmit: (value: string) => void;
-  onPendingChange?: (isPending: boolean) => void;
-  resetKey?: string;
+  value: string;
+  onChange: (value: string) => void;
+  onClear: () => void;
   disabled?: boolean;
 };
 
 export function PriceListTableSearch({
   listName,
-  committedQuery,
-  onSearchSubmit,
-  onPendingChange,
-  resetKey = "",
+  value,
+  onChange,
+  onClear,
   disabled = false,
 }: PriceListTableSearchProps) {
-  const [searchInput, setSearchInput] = useState("");
-  const skipDebounceRef = useRef(false);
-
-  useEffect(() => {
-    skipDebounceRef.current = true;
-    setSearchInput("");
-    onSearchSubmit("");
-    // Re-seed only when the parent bumps resetKey (list change).
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- paired with resetKey
-  }, [resetKey]);
-
-  useEffect(() => {
-    if (skipDebounceRef.current) {
-      skipDebounceRef.current = false;
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      onSearchSubmit(searchInput.trim());
-    }, SEARCH_DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timeout);
-  }, [onSearchSubmit, searchInput]);
-
-  useEffect(() => {
-    onPendingChange?.(searchInput.trim() !== committedQuery);
-  }, [committedQuery, onPendingChange, searchInput]);
-
-  function clearSearch() {
-    setSearchInput("");
-  }
-
   return (
     <div className={styles.listSearchWrap}>
-      <Search
-        className={styles.listSearchIcon}
-        strokeWidth={ICON_STROKE}
-        aria-hidden
-      />
+      <Search className={styles.listSearchIcon} strokeWidth={ICON_STROKE} aria-hidden />
       <input
         type="search"
-        className={`${styles.listSearch} ${searchInput ? styles.listSearchWithClear : ""}`}
-        placeholder={`Búsqueda en ${listName}`}
-        value={searchInput}
-        onChange={(event) => setSearchInput(event.target.value)}
+        className={`${styles.listSearch} ${value ? styles.listSearchWithClear : ""}`}
+        placeholder="Buscar por código, equivalencias u otros datos..."
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            clearSearch();
+          if (event.key === "Escape" && value) {
+            event.preventDefault();
+            onClear();
           }
         }}
         disabled={disabled}
-        aria-label={`Búsqueda en ${listName}`}
+        aria-label={`Buscar por código, equivalencias u otros datos en ${listName}`}
       />
-      {searchInput ? (
+      {value ? (
         <button
           type="button"
           className={styles.listSearchClear}
-          onClick={clearSearch}
+          onClick={onClear}
           aria-label="Limpiar búsqueda"
         >
           <X strokeWidth={ICON_STROKE} aria-hidden />
