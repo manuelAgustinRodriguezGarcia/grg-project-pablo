@@ -35,7 +35,8 @@ export type Permission =
   | "files.manage"
   | "users.read"
   | "users.manage"
-  | "billing.hub.read";
+  | "billing.hub.read"
+  | "statistics.read";
 
 const ALL_PERMISSIONS: readonly Permission[] = [
   "dashboard.read",
@@ -73,6 +74,7 @@ const ALL_PERMISSIONS: readonly Permission[] = [
   "users.read",
   "users.manage",
   "billing.hub.read",
+  "statistics.read",
 ] as const;
 
 const READ_ALL_EXCEPT_USERS: readonly Permission[] = ALL_PERMISSIONS.filter(
@@ -154,6 +156,10 @@ const ROUTE_PERMISSION_RULES: readonly RoutePermissionRule[] = [
     permission: "invoices.read",
   },
   {
+    prefix: "/admin/facturacion/libros-iva",
+    permission: "invoices.read",
+  },
+  {
     prefix: "/admin/facturacion/clientes",
     permission: "clients.read",
   },
@@ -176,6 +182,10 @@ const ROUTE_PERMISSION_RULES: readonly RoutePermissionRule[] = [
   {
     prefix: "/admin/facturacion/configuracion-fiscal",
     permission: "settings.read",
+  },
+  {
+    prefix: "/admin/facturacion/estadisticas",
+    permission: "statistics.read",
   },
   {
     prefix: "/admin/facturacion",

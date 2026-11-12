@@ -1,3 +1,5 @@
+import type { BillingFiscalEnvironment } from "@/generated/prisma/client";
+
 /**
  * Shared TanStack Query key factories for admin data fetching.
  * Prefer prefix invalidation (e.g. adminQueryKeys.products()) over
@@ -96,4 +98,46 @@ export const adminQueryKeys = {
   billingNotes: () => ["admin", "billing-notes"] as const,
 
   billingFiscalSettings: () => ["admin", "billing-fiscal-settings"] as const,
+
+  billingLibroIvaArchives: (environment?: BillingFiscalEnvironment) =>
+    environment === undefined
+      ? (["admin", "billing-libro-iva-archives"] as const)
+      : (["admin", "billing-libro-iva-archives", environment] as const),
+
+  billingStatisticsRoot: () => ["admin", "billing-statistics"] as const,
+
+  billingStatisticsYear: (environment: BillingFiscalEnvironment, year: number) =>
+    ["admin", "billing-statistics", environment, "year", year] as const,
+
+  billingStatistics: (
+    environment: BillingFiscalEnvironment,
+    resource: "summary" | "clients" | "rubros",
+    search: string,
+  ) => ["admin", "billing-statistics", environment, resource, search] as const,
+
+  billingLibroIvaArchivePresence: (
+    environment?: BillingFiscalEnvironment,
+    ids?: readonly string[],
+  ) => {
+    if (environment === undefined) {
+      return ["admin", "billing-libro-iva-archive-presence"] as const;
+    }
+    if (ids === undefined) {
+      return ["admin", "billing-libro-iva-archive-presence", environment] as const;
+    }
+    return ["admin", "billing-libro-iva-archive-presence", environment, ...ids] as const;
+  },
+
+  billingLibroIvaArchiveDetails: (
+    environment?: BillingFiscalEnvironment,
+    ids?: readonly string[],
+  ) => {
+    if (environment === undefined) {
+      return ["admin", "billing-libro-iva-archive-details"] as const;
+    }
+    if (ids === undefined) {
+      return ["admin", "billing-libro-iva-archive-details", environment] as const;
+    }
+    return ["admin", "billing-libro-iva-archive-details", environment, ...ids] as const;
+  },
 } as const;

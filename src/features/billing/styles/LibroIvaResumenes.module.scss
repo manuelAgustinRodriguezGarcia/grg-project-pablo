@@ -1,0 +1,313 @@
+@use "../../admin/styles/variables" as *;
+
+.filtersBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.filterLabel {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  color: rgba($navy, 0.62);
+}
+
+.results {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 0.5rem;
+}
+
+.resultsCentered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.month {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.yearBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.yearTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 1.05rem;
+  font-weight: 750;
+  line-height: 1;
+  color: $navy;
+}
+
+.yearRule {
+  flex: 1;
+  height: 2px;
+  background: $navy;
+}
+
+.yearBooks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.bookCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: rgba($white, 0.94);
+}
+
+.bookHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.bookIdentity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.monthPill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  background: $navy;
+  color: $white;
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.issuedGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.issuedItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: $radius-md;
+  background: rgba($navy, 0.04);
+}
+
+.issuedLabel {
+  font-family: $font-sans;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  color: rgba($navy, 0.62);
+}
+
+.issuedAmount {
+  font-family: $font-sans;
+  font-size: 1.15rem;
+  font-weight: 750;
+  line-height: 1.2;
+  color: $navy;
+  overflow-wrap: anywhere;
+}
+
+.issuedQuantity {
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+  color: rgba($navy, 0.62);
+}
+
+.downloads {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin: 0 0 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.downloadItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.downloadButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1;
+  color: $navy;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.06);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.fileBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.fileTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: $navy;
+
+  svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex-shrink: 0;
+  }
+}
+
+.fileMeta {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: rgba($navy, 0.62);
+  overflow-wrap: anywhere;
+}
+
+.warning {
+  margin: 0.25rem 0 0;
+  max-width: 36rem;
+  font-family: $font-sans;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #92400e;
+}
+
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.skeletonCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.9rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: rgba($white, 0.94);
+}
+
+.emptyHint {
+  max-width: 28rem;
+}
+
+@media (max-width: 720px) {
+  .bookHeader {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .issuedGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .downloads {
+    grid-template-columns: 1fr;
+    margin-left: 0;
+  }
+}

@@ -40,6 +40,7 @@ import { AdminNavItem } from "./AdminNavItem";
 import styles from "./AdminSidebar.module.scss";
 
 const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed";
+const SIDEBAR_MOTION_MS = 340;
 const DOCK_HREF_SET = new Set<string>(ADMIN_MOBILE_DOCK_HREFS);
 
 type AdminSidebarProps = {
@@ -112,6 +113,18 @@ function getSidebarCollapseServerSnapshot(): boolean {
   return false;
 }
 
+function sidebarWidthPx(collapsed: boolean): number {
+  const root = Number.parseFloat(
+    getComputedStyle(document.documentElement).fontSize,
+  );
+  return (collapsed ? 4.75 : 17.5) * root;
+}
+
+function releasePinnedContent(contentBody: HTMLElement) {
+  contentBody.style.width = "";
+  contentBody.style.maxWidth = "";
+}
+
 export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
   const pathname = usePathname();
   const activePathname = resolveActivePathname(pathname, userRole);
@@ -145,6 +158,9 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
     height: number;
   } | null>(null);
   const [navIndicatorReady, setNavIndicatorReady] = useState(false);
+  const sidebarShellRef = useRef<HTMLDivElement>(null);
+  const sidebarAnimatingRef = useRef(false);
+  const releaseMotionRef = useRef<(() => void) | null>(null);
 
   const activeNavHref =
     navItems.find((item) => isNavItemActive(activePathname, item.href))
@@ -152,13 +168,30 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
   const navIndicatorHref = pendingHref ?? activeNavHref;
 
   const updateNavIndicator = useCallback(() => {
-    const list = navListRef.current;
-    if (!list || !navIndicatorHref) {
-      setNavIndicator(null);
+    if (sidebarAnimatingRef.current) {
       return;
     }
 
-    setNavIndicator(measureNavIndicator(list, navIndicatorHref));
+    const list = navListRef.current;
+    if (!list || !navIndicatorHref) {
+      setNavIndicator((current) => (current === null ? current : null));
+      return;
+    }
+
+    const next = measureNavIndicator(list, navIndicatorHref);
+    setNavIndicator((current) => {
+      if (!next) {
+        return current === null ? current : null;
+      }
+      if (
+        current &&
+        Math.abs(current.top - next.top) < 0.5 &&
+        Math.abs(current.height - next.height) < 0.5
+      ) {
+        return current;
+      }
+      return next;
+    });
   }, [navIndicatorHref]);
 
   const clearMoreCloseTimer = useCallback(() => {
@@ -197,6 +230,9 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
   }, [closeMore, isMoreOpen, openMore]);
 
   useLayoutEffect(() => {
+    if (sidebarAnimatingRef.current) {
+      return;
+    }
     updateNavIndicator();
   }, [updateNavIndicator, isCollapsed]);
 
@@ -263,10 +299,64 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
     };
   }, [closeMore, isMoreOpen]);
 
-  function toggleCollapsed() {
-    const next = !readCollapsedPreference();
+  useEffect(() => {
+    return () => {
+      releaseMotionRef.current?.();
+    };
+  }, []);
+
+  function commitCollapsed(next: boolean) {
     window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
     emitSidebarCollapseChange();
+  }
+
+  function toggleCollapsed() {
+    const next = !readCollapsedPreference();
+    const shell = sidebarShellRef.current;
+    const contentBody = shell?.parentElement?.querySelector<HTMLElement>(
+      "[data-admin-content] > :first-child",
+    );
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    releaseMotionRef.current?.();
+
+    if (shell && contentBody && !reduced) {
+      const from = shell.getBoundingClientRect().width;
+      const delta = sidebarWidthPx(next) - from;
+      const contentWidth =
+        contentBody.parentElement?.getBoundingClientRect().width ??
+        contentBody.getBoundingClientRect().width;
+      contentBody.style.width = `${Math.max(0, contentWidth - delta)}px`;
+      contentBody.style.maxWidth = "none";
+      sidebarAnimatingRef.current = true;
+
+      let settled = false;
+      const release = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        shell.removeEventListener("transitionend", onTransitionEnd);
+        window.clearTimeout(timer);
+        releasePinnedContent(contentBody);
+        sidebarAnimatingRef.current = false;
+        if (releaseMotionRef.current === release) {
+          releaseMotionRef.current = null;
+        }
+        updateNavIndicator();
+      };
+      const onTransitionEnd = (event: TransitionEvent) => {
+        if (event.target !== shell || event.propertyName !== "width") {
+          return;
+        }
+        release();
+      };
+      const timer = window.setTimeout(release, SIDEBAR_MOTION_MS + 80);
+      shell.addEventListener("transitionend", onTransitionEnd);
+      releaseMotionRef.current = release;
+    }
+
+    commitCollapsed(next);
   }
 
   const moreSheet =
@@ -378,6 +468,7 @@ export function AdminSidebar({ userEmail, userRole }: AdminSidebarProps) {
       {moreSheet}
 
       <div
+        ref={sidebarShellRef}
         className={styles.sidebarShell}
         data-collapsed={isCollapsed ? "true" : "false"}
       >

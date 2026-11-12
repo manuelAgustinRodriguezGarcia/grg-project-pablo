@@ -1,3 +1,4 @@
+import { libroIvaMonthlyFilename } from "@/features/billing/utils/libro-iva";
 import { printPdfBlob } from "@/features/billing/utils/print-document";
 
 function invoicePdfUrl(invoiceId: string): string {
@@ -234,7 +235,7 @@ export function libroIvaPdfFilename(
 ): string {
   const monthPart = String(month).padStart(2, "0");
   if (day === undefined) {
-    return `Libro-IVA-${year}-${monthPart}.pdf`;
+    return libroIvaMonthlyFilename(year, month, "pdf");
   }
   const suffix = variant === "detailed" ? "Z-detallado" : "Z-simple";
   return `Libro-IVA-${suffix}-${year}-${monthPart}-${String(day).padStart(2, "0")}.pdf`;
@@ -248,7 +249,7 @@ export function libroIvaXlsxFilename(
 ): string {
   const monthPart = String(month).padStart(2, "0");
   if (day === undefined) {
-    return `Libro-IVA-${year}-${monthPart}.xlsx`;
+    return libroIvaMonthlyFilename(year, month, "xlsx");
   }
   const suffix = variant === "detailed" ? "Z-detallado" : "Z-simple";
   return `Libro-IVA-${suffix}-${year}-${monthPart}-${String(day).padStart(2, "0")}.xlsx`;

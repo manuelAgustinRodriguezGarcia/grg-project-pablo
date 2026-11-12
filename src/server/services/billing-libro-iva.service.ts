@@ -7,20 +7,18 @@ import {
   buildLibroIvaDailyPdf,
   buildLibroIvaPdf,
 } from "@/server/pdf/build-libro-iva-pdf";
-import { resolveInvoicePdfIssuer } from "@/server/pdf/invoice-pdf-issuer";
-import { billingFiscalSettingsRepository } from "@/server/repositories/billing-fiscal-settings.repository";
-import { billingInvoiceRepository } from "@/server/repositories/billing-invoice.repository";
-import { billingNoteRepository } from "@/server/repositories/billing-note.repository";
+import { billingLibroIvaArchiveService } from "@/server/services/billing-libro-iva-archive.service";
+import { loadLibroIvaSource } from "@/server/services/billing-libro-iva-source";
 import { BillingInvoiceError } from "@/server/services/billing-invoice.errors";
 import {
-  buildLibroIvaRows,
-  libroIvaNoteFiscalStatus,
   libroIvaCustomPeriodLabel,
   libroIvaCustomRange,
   libroIvaDayRange,
   libroIvaMonthRange,
+  libroIvaMonthlyFilename,
   parseIsoDateValue,
   type LibroIvaDailyReportVariant,
+  type LibroIvaRow,
 } from "@/features/billing/utils/libro-iva";
 
 type LibroIvaRange = { from: Date; to: Date };
@@ -44,72 +42,34 @@ function parseDailyVariant(
 
 export class BillingLibroIvaService {
   private async loadRows(range: LibroIvaRange) {
-    const settings = await billingFiscalSettingsRepository.getOrCreate();
-    const [invoices, notes] = await Promise.all([
-      billingInvoiceRepository.findIssuedBetween(
-        range.from,
-        range.to,
-        settings.environment,
-      ),
-      billingNoteRepository.findIssuedBetween(
-        range.from,
-        range.to,
-        settings.environment,
-      ),
-    ]);
+    return loadLibroIvaSource(range);
+  }
 
-    const noteStatus = libroIvaNoteFiscalStatus(settings.environment);
-    const rows = buildLibroIvaRows(
-      invoices.map((invoice) => ({
-        issuedAt: invoice.issuedAt,
-        invoiceType: invoice.invoiceType,
-        pointOfSale: invoice.pointOfSale,
-        invoiceNumber: invoice.invoiceNumber,
-        clientName: invoice.clientName,
-        clientIdentificationType: invoice.clientIdentificationType,
-        clientIdentificationNumber: invoice.clientIdentificationNumber,
-        clientIvaCondition: invoice.clientIvaCondition,
-        subtotal: invoice.subtotal.toNumber(),
-        discountAmount: invoice.discountAmount.toNumber(),
-        ivaPercent: invoice.ivaPercent.toNumber(),
-        ivaAmount: invoice.ivaAmount.toNumber(),
-        total: invoice.total.toNumber(),
-        totalVisualRounded: invoice.totalVisualRounded.toNumber(),
-      })),
-      notes
-        .filter((note) => note.fiscalStatus === noteStatus)
-        .map((note) => ({
-        kind: note.kind,
-        issuedAt: note.issuedAt,
-        invoiceType: note.invoiceType,
-        pointOfSale: note.pointOfSale,
-        noteNumber: note.noteNumber,
-        invoiceNumber: note.invoice.invoiceNumber,
-        clientName: note.clientName,
-        clientIdentificationType: note.clientIdentificationType,
-        clientIdentificationNumber: note.clientIdentificationNumber,
-        clientIvaCondition: note.clientIvaCondition,
-        netAmount: note.netAmount.toNumber(),
-        ivaPercent: note.ivaPercent.toNumber(),
-        ivaAmount: note.ivaAmount.toNumber(),
-        amount: note.amount.toNumber(),
-      })),
-    );
-
-    return {
-      rows,
-      issuer: resolveInvoicePdfIssuer(settings),
-      environment: settings.environment,
-      ivaPercent: settings.ivaPercent.toNumber(),
-      pointOfSale: settings.pointOfSale,
-    };
+  private async retainMonthlyDownload(input: {
+    environment: Awaited<ReturnType<typeof loadLibroIvaSource>>["environment"];
+    year: number;
+    month: number;
+    format: "PDF" | "XLSX";
+    bytes: Uint8Array;
+    filename: string;
+    rows: LibroIvaRow[];
+    generatedByUserId: string;
+  }): Promise<void> {
+    try {
+      await billingLibroIvaArchiveService.retainMonthlyCopy(input);
+    } catch (error) {
+      console.error(
+        "[billing-libro-iva-archive] La descarga continúa sin archivado.",
+        error,
+      );
+    }
   }
 
   async generatePdf(year: number, month: number): Promise<{
     bytes: Uint8Array;
     filename: string;
   }> {
-    await requirePermission("invoices.read");
+    const auth = await requirePermission("invoices.read");
 
     let range: LibroIvaRange;
     try {
@@ -129,11 +89,19 @@ export class BillingLibroIvaService {
       ivaPercent,
       pointOfSale,
     });
-
-    return {
+    const filename = libroIvaMonthlyFilename(year, month, "pdf");
+    await this.retainMonthlyDownload({
+      environment,
+      year,
+      month,
+      format: "PDF",
       bytes,
-      filename: `Libro-IVA-${year}-${String(month).padStart(2, "0")}.pdf`,
-    };
+      filename,
+      rows,
+      generatedByUserId: auth.profile.id,
+    });
+
+    return { bytes, filename };
   }
 
   async generateDailyPdf(
@@ -176,7 +144,7 @@ export class BillingLibroIvaService {
     bytes: Uint8Array;
     filename: string;
   }> {
-    await requirePermission("invoices.read");
+    const auth = await requirePermission("invoices.read");
 
     let range: LibroIvaRange;
     try {
@@ -185,7 +153,8 @@ export class BillingLibroIvaService {
       throw new BillingInvoiceError("Indicá un mes válido.", "VALIDATION_ERROR");
     }
 
-    const { rows, issuer, ivaPercent, pointOfSale } = await this.loadRows(range);
+    const { rows, issuer, environment, ivaPercent, pointOfSale } =
+      await this.loadRows(range);
     const bytes = await buildLibroIvaXlsx({
       year,
       month,
@@ -194,11 +163,19 @@ export class BillingLibroIvaService {
       ivaPercent,
       pointOfSale,
     });
-
-    return {
+    const filename = libroIvaMonthlyFilename(year, month, "xlsx");
+    await this.retainMonthlyDownload({
+      environment,
+      year,
+      month,
+      format: "XLSX",
       bytes,
-      filename: `Libro-IVA-${year}-${String(month).padStart(2, "0")}.xlsx`,
-    };
+      filename,
+      rows,
+      generatedByUserId: auth.profile.id,
+    });
+
+    return { bytes, filename };
   }
 
   async generateDailyXlsx(

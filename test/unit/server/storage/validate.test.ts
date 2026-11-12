@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BUCKET_CONFIGS } from "@/server/storage/config";
 import { StorageValidationError } from "@/server/storage/errors";
 import { STORAGE_BUCKETS } from "@/server/storage/types";
 import { normalizeStoragePath, validateUpload } from "@/server/storage/validate";
@@ -83,6 +84,37 @@ describe("validateUpload", () => {
         "catalogo.xlsm",
       ),
     ).not.toThrow();
+  });
+
+  it("acepta PDF y XLSX solo en el bucket privado de libros de IVA", () => {
+    const config = BUCKET_CONFIGS[STORAGE_BUCKETS.BILLING_LIBRO_IVA_ARCHIVES];
+    expect(config.public).toBe(false);
+    expect(config.name).toBe("billing-libro-iva-archives");
+
+    expect(() =>
+      validateUpload(
+        STORAGE_BUCKETS.BILLING_LIBRO_IVA_ARCHIVES,
+        Buffer.from("pdf"),
+        "application/pdf",
+        "Libro-IVA-2026-10.pdf",
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateUpload(
+        STORAGE_BUCKETS.BILLING_LIBRO_IVA_ARCHIVES,
+        Buffer.from("xlsx"),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Libro-IVA-2026-10.xlsx",
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateUpload(
+        STORAGE_BUCKETS.BILLING_LIBRO_IVA_ARCHIVES,
+        Buffer.from("img"),
+        "image/png",
+        "foto.png",
+      ),
+    ).toThrow(/Tipo MIME no permitido/);
   });
 
   it("acepta un upload válido en billing-payment-proofs", () => {

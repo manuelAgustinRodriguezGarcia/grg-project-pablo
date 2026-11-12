@@ -5,6 +5,12 @@ export const STORAGE_BUCKETS = {
   PRODUCT_FIELD_HELP_IMAGES: "product-field-help-images",
   TEMP_IMPORTS: "temp-imports",
   BILLING_PAYMENT_PROOFS: "billing-payment-proofs",
+  /**
+   * Copias históricas de Libros de IVA. Privado: solo el servidor, con service role.
+   * Crearlo a mano con `scripts/sql/billing-libro-iva-archives-bucket.sql`
+   * o con `pnpm storage:setup`. La aplicación no lo crea al descargar.
+   */
+  BILLING_LIBRO_IVA_ARCHIVES: "billing-libro-iva-archives",
 } as const;
 
 export type StorageBucketName =

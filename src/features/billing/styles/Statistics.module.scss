@@ -1,0 +1,535 @@
+@use "../../admin/styles/variables" as *;
+
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: clamp(0.85rem, 2vw, 1.35rem);
+  font-family: $font-sans;
+  color: $navy;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.subtitle,
+.note,
+.gapNote,
+.periodError,
+.rankMeta {
+  margin: 0;
+  max-width: 42rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba($navy, 0.62);
+}
+
+.filters {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+}
+
+.period {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.periodLegend,
+.sectionTitle,
+.panelTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: $navy;
+}
+
+.periodLegend {
+  margin-bottom: 0.7rem;
+  font-size: 0.95rem;
+}
+
+.periodToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+}
+
+.yearSelect {
+  width: min(100%, 8.5rem);
+  margin-bottom: 0;
+}
+
+.monthGrid,
+.sectionSwitch {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.sectionSwitch {
+  grid-template-columns: repeat(2, minmax(0, 12rem));
+  margin-bottom: 0.85rem;
+}
+
+.monthButton,
+.textButton,
+.retryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.28rem 0.35rem;
+  border: 1px solid rgba($navy, 0.15);
+  border-radius: $radius-md;
+  background: $white;
+  font-family: $font-sans;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: rgba($navy, 0.7);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  &:hover:not(:disabled) {
+    border-color: rgba($blue, 0.4);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.monthButtonActive {
+  border-color: $blue;
+  background: rgba($blue, 0.08);
+  color: $blue;
+}
+
+.compareToggle {
+  width: fit-content;
+}
+
+.dateRange {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 0.75rem;
+}
+
+.periodError {
+  margin-top: 0.55rem;
+  color: #dc2626;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  scroll-margin-top: 0.75rem;
+}
+
+.kpiGrid,
+.chartSplit {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.kpiGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kpiGridWide {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.chartSplit {
+  grid-template-columns: minmax(0, 1.4fr) minmax(16rem, 0.85fr);
+}
+
+.counts,
+.reconcile {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counts li,
+.reconcile div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+  font-size: 0.78rem;
+  color: rgba($navy, 0.62);
+}
+
+.counts strong,
+.reconcile dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: $navy;
+}
+
+.panel,
+.entity,
+.errorBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+  scroll-margin-top: 0.75rem;
+}
+
+.panelHeader,
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.panelHeader {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.chartFrame {
+  width: 100%;
+  min-width: 0;
+  min-height: 220px;
+}
+
+.pieLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.7rem;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+}
+
+.legend strong,
+.rankAmount,
+.entityTotal {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.rankList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rankButton {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.28rem;
+  width: 100%;
+  min-height: 0;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    border-color: rgba($blue, 0.35);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.rankButtonActive {
+  border-color: $blue;
+  background: rgba($blue, 0.06);
+}
+
+.rankPos {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba($navy, 0.45);
+}
+
+.rankIdentity,
+.rankFigures {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.rankFigures {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.rankName {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.rankTrack {
+  display: block;
+  width: 100%;
+  height: 0.42rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba($navy, 0.08);
+}
+
+.rankFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: $blue;
+}
+
+.rankFillNegative {
+  background: #dc2626;
+}
+
+.tableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.compareTable {
+  width: 100%;
+  min-width: 36rem;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+
+  th,
+  td {
+    padding: 0.45rem 0.55rem;
+    border-bottom: 1px solid rgba($navy, 0.08);
+    text-align: left;
+    vertical-align: top;
+    white-space: nowrap;
+  }
+
+  th {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba($navy, 0.55);
+  }
+}
+
+.noteActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  white-space: normal;
+}
+
+.shift {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.shiftList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  color: rgba($navy, 0.78);
+  font-size: 0.84rem;
+}
+
+.amountNegative {
+  color: #dc2626;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  margin: 0;
+  color: rgba($navy, 0.62);
+}
+
+.errorBox p {
+  margin: 0;
+}
+
+.retryButton {
+  width: fit-content;
+  border-color: $blue;
+  background: $blue;
+  color: $white;
+
+  &:hover:not(:disabled) {
+    background: $navy-light;
+    color: $white;
+  }
+}
+
+.textButton {
+  width: fit-content;
+  min-height: 2.25rem;
+  border-color: transparent;
+  background: transparent;
+}
+
+.skeleton {
+  min-height: 5.5rem;
+  border-radius: $radius-md;
+  background: linear-gradient(90deg, rgba($navy, 0.05), rgba($navy, 0.1), rgba($navy, 0.05));
+  background-size: 200% 100%;
+  animation: statisticsShimmer 1.2s ease-in-out infinite;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 960px) {
+  .chartSplit {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .kpiGridWide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .kpiGrid,
+  .kpiGridWide,
+  .counts,
+  .reconcile {
+    grid-template-columns: 1fr;
+  }
+
+  .monthGrid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .sectionSwitch {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .monthGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .monthGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .monthButton,
+  .rankButton {
+    animation: none;
+    transition: none;
+  }
+}
+
+@keyframes statisticsShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}

@@ -86,6 +86,37 @@ export function libroIvaMonthRange(
   };
 }
 
+const LIBRO_IVA_MONTH_ABBREVIATIONS = [
+  "ENE",
+  "FEB",
+  "MAR",
+  "ABR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AGO",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DIC",
+] as const;
+
+export function libroIvaMonthAbbreviation(month: number): string {
+  const label = LIBRO_IVA_MONTH_ABBREVIATIONS[month - 1];
+  if (!label) {
+    throw new Error("Indicá un mes válido.");
+  }
+  return label;
+}
+
+export function libroIvaMonthlyFilename(
+  year: number,
+  month: number,
+  extension: "pdf" | "xlsx",
+): string {
+  return `Libro-IVA-${libroIvaMonthAbbreviation(month)}-${year}.${extension}`;
+}
+
 export function toYearMonthValue(date = new Date()): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${date.getFullYear()}-${month}`;
@@ -226,6 +257,67 @@ export function sumLibroIvaRows(rows: LibroIvaRow[]): LibroIvaTotals {
     }),
     { netAmount: 0, ivaAmount: 0, total: 0 },
   );
+}
+
+export type LibroIvaIssuedActivity = {
+  count: number;
+  total: number;
+};
+
+export type LibroIvaIssuedSummary = {
+  facturasA: LibroIvaIssuedActivity;
+  facturasB: LibroIvaIssuedActivity;
+  notasCredito: LibroIvaIssuedActivity;
+  notasDebito: LibroIvaIssuedActivity;
+};
+
+function emptyIssuedActivity(): LibroIvaIssuedActivity {
+  return { count: 0, total: 0 };
+}
+
+function issuedActivity(
+  summary: LibroIvaIssuedSummary,
+  row: LibroIvaRow,
+): LibroIvaIssuedActivity {
+  switch (row.docKind) {
+    case "FACTURA":
+      switch (row.letter) {
+        case "A":
+          return summary.facturasA;
+        case "B":
+          return summary.facturasB;
+        default: {
+          const unexpected: never = row.letter;
+          return unexpected;
+        }
+      }
+    case "NC":
+      return summary.notasCredito;
+    case "ND":
+      return summary.notasDebito;
+    default: {
+      const unexpected: never = row.docKind;
+      return unexpected;
+    }
+  }
+}
+
+/** Cantidad y monto emitido de cada tipo. No modifica los totales firmados del libro. */
+export function summarizeLibroIvaIssued(rows: readonly LibroIvaRow[]): LibroIvaIssuedSummary {
+  const summary: LibroIvaIssuedSummary = {
+    facturasA: emptyIssuedActivity(),
+    facturasB: emptyIssuedActivity(),
+    notasCredito: emptyIssuedActivity(),
+    notasDebito: emptyIssuedActivity(),
+  };
+
+  for (const row of rows) {
+    const activity = issuedActivity(summary, row);
+    activity.count += 1;
+    activity.total += Math.abs(row.total);
+  }
+
+  return summary;
 }
 
 export type LibroIvaAbSummaryRow = {

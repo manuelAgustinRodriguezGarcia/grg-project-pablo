@@ -72,6 +72,16 @@ export const BUCKET_CONFIGS: Record<StorageBucketName, BucketConfig> = {
     ],
     allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".pdf"],
   },
+  [STORAGE_BUCKETS.BILLING_LIBRO_IVA_ARCHIVES]: {
+    name: STORAGE_BUCKETS.BILLING_LIBRO_IVA_ARCHIVES,
+    public: false,
+    maxSizeBytes: 50 * MB,
+    allowedMimeTypes: [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ],
+    allowedExtensions: [".pdf", ".xlsx"],
+  },
 };
 
 export const ALL_STORAGE_BUCKETS = Object.values(STORAGE_BUCKETS);

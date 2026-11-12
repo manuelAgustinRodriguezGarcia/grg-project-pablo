@@ -191,6 +191,16 @@ enum BillingNoteFiscalStatus {
   AUTORIZADA
 }
 
+/// Solo se archivan libros mensuales. El informe Z y los rangos custom no persisten.
+enum BillingLibroIvaBookKind {
+  MONTHLY
+}
+
+enum BillingLibroIvaArchiveFormat {
+  PDF
+  XLSX
+}
+
 /// Perfil local sincronizado con Supabase Auth (`auth.users.id` → `User.id`).
 model User {
   id           String     @id @db.Uuid
@@ -207,6 +217,7 @@ model User {
   offlineSyncManifests OfflineSyncManifest[]
   billingReceiptsCreated BillingReceipt[]
   billingNotesCreated  BillingNote[]
+  billingLibroIvaArchives BillingLibroIvaArchive[]
 
   @@index([status])
 }
@@ -845,6 +856,32 @@ model BillingNote {
   @@index([issuedAt])
   @@index([kind])
   @@index([clientId])
+}
+
+/// Copia histórica del Libro de IVA mensual que el generador ya produjo.
+/// La primera descarga de un mes calendario cerrado conserva esos bytes.
+/// No se reemplaza si después cambian los comprobantes de origen.
+model BillingLibroIvaArchive {
+  id                 String                       @id @default(cuid())
+  environment        BillingFiscalEnvironment
+  bookKind           BillingLibroIvaBookKind
+  year               Int
+  month              Int
+  format             BillingLibroIvaArchiveFormat
+  storagePath        String
+  fileName           String
+  sizeBytes          Int
+  fileSha256         String
+  /// Huella de las filas que recibió el generador. No recalcula IVA.
+  fiscalDataSha256   String
+  generatedAt        DateTime
+  generatedByUserId  String                       @db.Uuid
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+
+  generatedBy User @relation(fields: [generatedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([environment, bookKind, year, month, format], map: "BillingLibroIvaArchive_identity_key")
 }
 
 /// Registro de operaciones importantes (login, CRUD, importaciones, etc.).

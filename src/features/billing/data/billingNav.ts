@@ -1,5 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { UserRole } from "@/generated/prisma/client";
+import { BILLING_STATISTICS_PATH } from "@/features/billing/utils/billing-statistics-period";
+import { canPreviewBillingSections } from "@/shared/auth/billing-section-preview";
 import {
   canAccessRoute,
   hasPermission,
@@ -7,6 +9,8 @@ import {
 } from "@/shared/auth/permissions";
 import {
   ArrowLeftRight,
+  BarChart3,
+  BookCheck,
   BookUser,
   Cog,
   FileText,
@@ -16,6 +20,8 @@ import {
   Tags,
   Wallet,
 } from "@/shared/icons";
+
+export { BILLING_STATISTICS_PATH };
 
 export type BillingSectionTone =
   | "sky"
@@ -38,6 +44,11 @@ export const BILLING_HUB_PATH = "/admin/facturacion";
 export const BILLING_NEW_INVOICE_PATH = `${BILLING_HUB_PATH}/nueva-factura`;
 export const BILLING_NEW_INVOICE_SHORTCUT = "F2";
 export const BILLING_INVOICES_PATH = `${BILLING_HUB_PATH}/facturas`;
+export const BILLING_LIBROS_IVA_PATH = `${BILLING_HUB_PATH}/libros-iva`;
+export const BILLING_LIBRO_IVA_RESUMENES_PATH =
+  `${BILLING_LIBROS_IVA_PATH}/resumenes`;
+export const BILLING_CONFIGURATION_PATH =
+  `${BILLING_HUB_PATH}/configuracion-fiscal`;
 export const BILLING_CLIENTS_PATH = `${BILLING_HUB_PATH}/clientes`;
 export const BILLING_DEBTORS_PATH = `${BILLING_HUB_PATH}/deudores`;
 export const BILLING_MOVIMIENTOS_PATH = `${BILLING_HUB_PATH}/movimientos`;
@@ -111,7 +122,7 @@ export const BILLING_SECTIONS: BillingSectionConfig[] = [
     permission: "movements.read",
   },
   {
-    href: `${BILLING_HUB_PATH}/configuracion-fiscal`,
+    href: BILLING_CONFIGURATION_PATH,
     label: "Configuración",
     description: "IVA, límite de cliente genérico y ambiente de emisión.",
     icon: Cog,
@@ -128,6 +139,7 @@ export type BillingNavMenuItem = {
   icon: LucideIcon;
   iconTone: BillingNavIconTone;
   permission: Permission;
+  exact?: boolean;
 };
 
 export type BillingNavTab = {
@@ -139,12 +151,20 @@ export type BillingNavTab = {
   menuItems?: BillingNavMenuItem[];
 };
 
+function billingHrefPath(href: string): string {
+  return href.split(/[?#]/, 1)[0] ?? href;
+}
+
 export function billingPathMatchesHref(
   path: string,
   href: string,
   exact = false,
 ): boolean {
-  return exact ? path === href : path === href || path.startsWith(`${href}/`);
+  const current = billingHrefPath(path);
+  const target = billingHrefPath(href);
+  return exact
+    ? current === target
+    : current === target || current.startsWith(`${target}/`);
 }
 
 export function billingTabMatchesPath(
@@ -156,7 +176,9 @@ export function billingTabMatchesPath(
   }
 
   return Boolean(
-    tab.menuItems?.some((item) => billingPathMatchesHref(path, item.href)),
+    tab.menuItems?.some((item) =>
+      billingPathMatchesHref(path, item.href, item.exact),
+    ),
   );
 }
 
@@ -164,7 +186,9 @@ export function billingTabCurrentMenuItem(
   path: string,
   tab: BillingNavTab,
 ): BillingNavMenuItem | undefined {
-  return tab.menuItems?.find((item) => billingPathMatchesHref(path, item.href));
+  return tab.menuItems?.find((item) =>
+    billingPathMatchesHref(path, item.href, item.exact),
+  );
 }
 
 function toBillingNavTab(section: BillingSectionConfig): BillingNavTab {
@@ -200,6 +224,29 @@ function toBillingNavTab(section: BillingSectionConfig): BillingNavTab {
   };
 }
 
+function billingSectionTab(href: string): BillingNavTab {
+  const section = BILLING_SECTIONS.find((item) => item.href === href);
+  if (!section) {
+    throw new Error(`Missing billing section ${href}`);
+  }
+
+  return toBillingNavTab(section);
+}
+
+const BILLING_STATISTICS_TAB: BillingNavTab = {
+  href: BILLING_STATISTICS_PATH,
+  label: "Estadísticas",
+  icon: BarChart3,
+  permission: "statistics.read",
+};
+
+const BILLING_LIBROS_TAB: BillingNavTab = {
+  href: BILLING_LIBROS_IVA_PATH,
+  label: "Libros de IVA",
+  icon: BookCheck,
+  permission: "invoices.read",
+};
+
 export const BILLING_NAV_TABS: BillingNavTab[] = [
   {
     href: BILLING_HUB_PATH,
@@ -208,19 +255,33 @@ export const BILLING_NAV_TABS: BillingNavTab[] = [
     exact: true,
     permission: "billing.hub.read",
   },
-  ...BILLING_SECTIONS.filter(
-    (section) =>
-      section.href !== BILLING_NEW_INVOICE_PATH &&
-      section.href !== BILLING_DEBTORS_PATH,
-  ).map(toBillingNavTab),
+  billingSectionTab(BILLING_CLIENTS_PATH),
+  billingSectionTab(`${BILLING_HUB_PATH}/rubros`),
+  billingSectionTab(BILLING_INVOICES_PATH),
+  billingSectionTab(BILLING_MOVIMIENTOS_PATH),
+  BILLING_STATISTICS_TAB,
+  BILLING_LIBROS_TAB,
 ];
+
+const BILLING_PREVIEW_TAB_HREFS = new Set<string>([
+  BILLING_STATISTICS_PATH,
+  BILLING_LIBROS_IVA_PATH,
+]);
 
 export function filterBillingNavTabsForRole(
   role: UserRole,
   tabs: readonly BillingNavTab[] = BILLING_NAV_TABS,
+  email?: string | null,
 ): BillingNavTab[] {
   return tabs
     .map((tab) => {
+      if (
+        BILLING_PREVIEW_TAB_HREFS.has(tab.href) &&
+        !canPreviewBillingSections(email)
+      ) {
+        return null;
+      }
+
       if (!hasPermission(role, tab.permission)) {
         return null;
       }

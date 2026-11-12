@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   downloadLibroIvaCustomPdf,
   downloadLibroIvaCustomXlsx,
@@ -17,6 +18,7 @@ import {
   toYearMonthValue,
   type LibroIvaDailyReportVariant,
 } from "@/features/billing/utils/libro-iva";
+import { forgetLibroIvaArchiveQueries } from "@/features/billing/hooks/useLibroIvaArchivesQuery";
 import { useEscapeToClose } from "@/features/billing/hooks/useBillingModalKeyboard";
 import { CustomDatePicker } from "@/shared/components/CustomDatePicker";
 import { CustomMonthPicker } from "@/shared/components/CustomMonthPicker";
@@ -50,6 +52,7 @@ function isCustomRangeValid(fromValue: string, toValue: string): boolean {
 }
 
 export function LibroIvaDialog({ onClose }: LibroIvaDialogProps) {
+  const queryClient = useQueryClient();
   const [period, setPeriod] = useState<LibroIvaPeriod>("monthly");
   const [dailyVariant, setDailyVariant] =
     useState<LibroIvaDailyReportVariant>("simple");
@@ -93,6 +96,7 @@ export function LibroIvaDialog({ onClose }: LibroIvaDialogProps) {
       setError(null);
       try {
         await task(monthly.year, monthly.month);
+        forgetLibroIvaArchiveQueries(queryClient);
       } catch (caught) {
         setError(
           caught instanceof Error

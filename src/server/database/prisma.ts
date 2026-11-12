@@ -31,7 +31,8 @@ function isPrismaClientCurrent(client: PrismaClient): boolean {
   return (
     typeof client.billingInvoice?.aggregate === "function" &&
     typeof client.billingReceiptAllocation?.groupBy === "function" &&
-    typeof client.billingNote?.findMany === "function"
+    typeof client.billingNote?.findMany === "function" &&
+    typeof client.billingLibroIvaArchive?.findMany === "function"
   );
 }
 

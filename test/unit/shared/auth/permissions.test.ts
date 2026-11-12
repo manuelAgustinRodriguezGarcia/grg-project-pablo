@@ -13,6 +13,9 @@ describe("ROLE_PERMISSIONS", () => {
     ]);
     expect(hasPermission("VISITANTE", "invoices.read")).toBe(false);
     expect(canAccessRoute("VISITANTE", "/admin/facturacion")).toBe(false);
+    expect(
+      canAccessRoute("VISITANTE", "/admin/facturacion/libros-iva/resumenes"),
+    ).toBe(false);
   });
 
   it("VENDEDOR opera facturación sin admin", () => {
@@ -23,6 +26,9 @@ describe("ROLE_PERMISSIONS", () => {
     expect(canAccessRoute("VENDEDOR", "/admin/facturacion/nueva-factura")).toBe(
       true,
     );
+    expect(
+      canAccessRoute("VENDEDOR", "/admin/facturacion/libros-iva/resumenes"),
+    ).toBe(true);
     expect(
       canAccessRoute("VENDEDOR", "/admin/facturacion/configuracion-fiscal"),
     ).toBe(false);
@@ -52,6 +58,39 @@ describe("ROLE_PERMISSIONS", () => {
   it("ADMINISTRADOR tiene acceso total", () => {
     expect(hasPermission("ADMINISTRADOR", "users.manage")).toBe(true);
     expect(hasPermission("ADMINISTRADOR", "catalogs.import")).toBe(true);
+    expect(hasPermission("ADMINISTRADOR", "statistics.read")).toBe(true);
     expect(canAccessRoute("ADMINISTRADOR", "/admin/usuarios")).toBe(true);
+  });
+
+  it("statistics.read queda en administrador y visitante avanzado", () => {
+    expect(hasPermission("VISITANTE_AVANZADO", "statistics.read")).toBe(true);
+    expect(hasPermission("VENDEDOR", "statistics.read")).toBe(false);
+    expect(hasPermission("VISITANTE", "statistics.read")).toBe(false);
+    expect(hasPermission("VENDEDOR", "invoices.read")).toBe(true);
+    expect(canAccessRoute("ADMINISTRADOR", "/admin/facturacion/estadisticas")).toBe(
+      true,
+    );
+    expect(
+      canAccessRoute("VISITANTE_AVANZADO", "/admin/facturacion/estadisticas"),
+    ).toBe(true);
+    expect(
+      canAccessRoute(
+        "VISITANTE_AVANZADO",
+        "/admin/facturacion/configuracion-fiscal",
+      ),
+    ).toBe(true);
+    expect(canAccessRoute("VENDEDOR", "/admin/facturacion/estadisticas")).toBe(
+      false,
+    );
+    expect(canAccessRoute("VISITANTE", "/admin/facturacion/estadisticas")).toBe(
+      false,
+    );
+    expect(canAccessRoute("VENDEDOR", "/admin/facturacion/facturas")).toBe(true);
+    expect(canAccessRoute("VENDEDOR", "/admin/facturacion/libros-iva")).toBe(
+      true,
+    );
+    expect(
+      canAccessRoute("VISITANTE", "/admin/facturacion/libros-iva/resumenes"),
+    ).toBe(false);
   });
 });

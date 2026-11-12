@@ -19,6 +19,7 @@ type TopRankCardProps = {
   rankBy?: RankBy;
   footerHref?: string;
   footerLabel?: string;
+  onFooterClick?: () => void;
   showRankIndex?: boolean;
   scrollableList?: boolean;
   className?: string;
@@ -50,6 +51,7 @@ export function TopRankCard({
   rankBy = "amount",
   footerHref,
   footerLabel,
+  onFooterClick,
   showRankIndex = true,
   scrollableList = false,
   className,
@@ -66,7 +68,7 @@ export function TopRankCard({
   );
   const isGreen = barTone === "green";
   const getBarColor = isGreen ? getGreenScaleColor : getBlueScaleColor;
-  const showFooter = Boolean(footerHref && footerLabel);
+  const showFooter = Boolean(footerLabel && (footerHref || onFooterClick));
 
   const updateScrollHint = useCallback(() => {
     if (!scrollableList) {
@@ -188,9 +190,18 @@ export function TopRankCard({
           </div>
         ) : null}
       </div>
-      {showFooter ? (
+      {showFooter && onFooterClick ? (
+        <button
+          type="button"
+          className={`${styles.cardFooterButton} ${isGreen ? styles.cardFooterButtonGreen : ""}`}
+          onClick={onFooterClick}
+        >
+          {footerLabel}
+        </button>
+      ) : null}
+      {showFooter && !onFooterClick && footerHref ? (
         <Link
-          href={footerHref!}
+          href={footerHref}
           className={`${styles.cardFooterLink} ${isGreen ? styles.cardFooterLinkGreen : ""}`}
         >
           {footerLabel}

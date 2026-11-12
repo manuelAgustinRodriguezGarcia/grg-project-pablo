@@ -16,6 +16,7 @@ export {
   downloadFile,
   ensureStorageBuckets,
   listStorageBuckets,
+  listStorageFileNames,
   storageObjectExists,
   uploadFile,
 } from "./storage.service";

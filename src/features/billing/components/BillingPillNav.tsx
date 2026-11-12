@@ -15,6 +15,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAdminSectionTransition } from "@/features/admin/components/AdminSectionTransition";
 import { useUnsavedInvoiceDraft } from "@/features/billing/components/invoices/UnsavedInvoiceDraftContext";
 import {
+  BILLING_CONFIGURATION_PATH,
+  BILLING_NAV_TABS,
   BILLING_NEW_INVOICE_PATH,
   BILLING_NEW_INVOICE_SHORTCUT,
   billingPathMatchesHref,
@@ -26,7 +28,7 @@ import {
 } from "@/features/billing/data/billingNav";
 import { hasPermission } from "@/shared/auth/permissions";
 import type { UserRole } from "@/generated/prisma/client";
-import { ChevronDown, ICON_STROKE, ReceiptText } from "@/shared/icons";
+import { ChevronDown, Cog, ICON_STROKE, ReceiptText } from "@/shared/icons";
 import styles from "@/features/billing/styles/BillingPillNav.module.scss";
 
 const NEW_INVOICE_TAB: BillingNavTab = {
@@ -35,6 +37,14 @@ const NEW_INVOICE_TAB: BillingNavTab = {
   icon: ReceiptText,
   exact: true,
   permission: "invoices.read",
+};
+
+const SETTINGS_TAB: BillingNavTab = {
+  href: BILLING_CONFIGURATION_PATH,
+  label: "Configuración",
+  icon: Cog,
+  exact: true,
+  permission: "settings.read",
 };
 
 type MobileNavItem = {
@@ -82,6 +92,7 @@ function flattenMobileNavItems(tabs: BillingNavTab[]): MobileNavItem[] {
         label: item.label,
         icon: item.icon,
         iconTone: item.iconTone,
+        exact: item.exact,
       });
     }
   }
@@ -184,10 +195,12 @@ function BillingNavTabWithMenu({
       >
         {menuItems.map((item) => {
           const isPending = Boolean(
-            pendingHref && billingPathMatchesHref(pendingHref, item.href),
+            pendingHref &&
+              billingPathMatchesHref(pendingHref, item.href, item.exact),
           );
           const isActive =
-            !pendingHref && billingPathMatchesHref(pathname, item.href);
+            !pendingHref &&
+            billingPathMatchesHref(pathname, item.href, item.exact);
 
           return (
             <Link
@@ -216,16 +229,23 @@ function BillingNavTabWithMenu({
   );
 }
 
-export function BillingPillNav({ userRole }: { userRole: UserRole }) {
+export function BillingPillNav({
+  userRole,
+  userEmail,
+}: {
+  userRole: UserRole;
+  userEmail?: string | null;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const sectionTransition = useAdminSectionTransition();
   const unsavedDraft = useUnsavedInvoiceDraft();
   const canCreateInvoice = hasPermission(userRole, "invoices.create");
   const canOpenNewInvoice = hasPermission(userRole, "invoices.read");
+  const canOpenSettings = hasPermission(userRole, "settings.read");
   const navTabs = useMemo(
-    () => filterBillingNavTabsForRole(userRole),
-    [userRole],
+    () => filterBillingNavTabsForRole(userRole, BILLING_NAV_TABS, userEmail),
+    [userRole, userEmail],
   );
   const pendingHref = sectionTransition?.pendingHref ?? null;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -245,12 +265,19 @@ export function BillingPillNav({ userRole }: { userRole: UserRole }) {
       return matched;
     }
 
+    if (
+      canOpenSettings &&
+      billingPathMatchesHref(matchPath, BILLING_CONFIGURATION_PATH, true)
+    ) {
+      return SETTINGS_TAB;
+    }
+
     if (matchPath === BILLING_NEW_INVOICE_PATH && canOpenNewInvoice) {
       return NEW_INVOICE_TAB;
     }
 
     return navTabs[0] ?? NEW_INVOICE_TAB;
-  }, [canOpenNewInvoice, navTabs, pathname, pendingHref]);
+  }, [canOpenNewInvoice, canOpenSettings, navTabs, pathname, pendingHref]);
 
   const currentMenuItem = billingTabCurrentMenuItem(
     pendingHref ?? pathname,
@@ -260,6 +287,14 @@ export function BillingPillNav({ userRole }: { userRole: UserRole }) {
   const currentLabel = currentMenuItem?.label ?? currentTab.label;
   const isOnNewInvoice = pathname === BILLING_NEW_INVOICE_PATH;
   const isInvoicing = isOnNewInvoice && !unsavedDraft?.isInvoiceIssued;
+  const isSettingsPending = Boolean(
+    pendingHref &&
+      billingPathMatchesHref(pendingHref, BILLING_CONFIGURATION_PATH, true),
+  );
+  const isSettingsActive =
+    !pendingHref &&
+    canOpenSettings &&
+    billingPathMatchesHref(pathname, BILLING_CONFIGURATION_PATH, true);
 
   const goToNewInvoice = useCallback(() => {
     if (isOnNewInvoice) {
@@ -478,6 +513,31 @@ export function BillingPillNav({ userRole }: { userRole: UserRole }) {
             })}
           </ul>
         </div>
+
+        {canOpenSettings ? (
+          <Link
+            href={BILLING_CONFIGURATION_PATH}
+            className={`${styles.settingsButton} ${
+              isSettingsActive ? styles.settingsButtonCurrent : ""
+            } ${isSettingsPending ? styles.settingsButtonPending : ""}`}
+            aria-label="Configuración"
+            aria-current={isSettingsActive ? "page" : undefined}
+            onClick={(event) =>
+              handleNavClick(
+                event,
+                BILLING_CONFIGURATION_PATH,
+                isSettingsActive,
+                isSettingsPending,
+              )
+            }
+          >
+            <Cog
+              className={styles.settingsIcon}
+              strokeWidth={ICON_STROKE}
+              aria-hidden
+            />
+          </Link>
+        ) : null}
 
         {canOpenNewInvoice ? (
         <Link

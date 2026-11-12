@@ -18,6 +18,7 @@ import {
 } from "@/features/billing/types/billing-note.types";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import { useEscapeToClose } from "@/features/billing/hooks/useBillingModalKeyboard";
+import { invalidateBillingStatistics } from "@/features/billing/hooks/useBillingStatisticsQueries";
 import {
   invoiceCanIssueCreditNote,
   invoiceCanIssueDebitNote,
@@ -337,6 +338,7 @@ export function NoteFormModal({
       queryClient.invalidateQueries({
         queryKey: adminQueryKeys.billingClients(),
       }),
+      invalidateBillingStatistics(queryClient),
     ]);
   }
 

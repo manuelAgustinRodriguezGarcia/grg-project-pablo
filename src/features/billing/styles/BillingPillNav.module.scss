@@ -365,13 +365,64 @@
   gap: 0.4rem;
 }
 
+.settingsButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-right: 0.15rem;
+  border-radius: 50%;
+  background: rgba($blue, 0.1);
+  color: $blue;
+  text-decoration: none;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgba($blue, 0.16);
+      color: $blue;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.settingsIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.settingsButtonCurrent,
+.settingsButton[aria-current="page"] {
+  background: rgba($blue, 0.14);
+  color: $blue;
+}
+
+.settingsButtonPending {
+  background: rgba($blue, 0.16);
+  color: $blue;
+}
+
 .mobileNav {
   display: none;
 }
 
 @media (max-width: 1023px) {
   .inner {
-    padding-right: 1rem;
+    gap: 0.45rem;
+    padding-right: 0.65rem;
+  }
+
+  .settingsButton {
+    margin-right: 0;
   }
 
   .tabs {
@@ -548,6 +599,7 @@
   .tabMenu,
   .newInvoiceButton,
   .newInvoiceButton::before,
+  .settingsButton,
   .mobileTrigger,
   .mobileTriggerChevron,
   .mobileMenu {

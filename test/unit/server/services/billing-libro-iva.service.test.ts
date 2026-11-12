@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BillingFiscalEnvironment } from "@/generated/prisma/client";
+import { requirePermission } from "@/server/auth";
+import { AuthForbiddenError } from "@/server/auth/errors";
 import { buildLibroIvaPdf } from "@/server/pdf/build-libro-iva-pdf";
 import { buildLibroIvaXlsx } from "@/server/excel/build-libro-iva-xlsx";
 import { billingFiscalSettingsRepository } from "@/server/repositories/billing-fiscal-settings.repository";
@@ -7,6 +9,8 @@ import { billingInvoiceRepository } from "@/server/repositories/billing-invoice.
 import { billingNoteRepository } from "@/server/repositories/billing-note.repository";
 import { billingLibroIvaService } from "@/server/services/billing-libro-iva.service";
 import { adminUserFixture, mockRequireRole } from "../../../helpers/mocks/auth";
+
+const retainMonthlyCopy = vi.hoisted(() => vi.fn());
 
 vi.mock("@/server/auth", () => ({
   requireAuth: vi.fn(),
@@ -38,6 +42,11 @@ vi.mock("@/server/pdf/build-libro-iva-pdf", () => ({
 vi.mock("@/server/excel/build-libro-iva-xlsx", () => ({
   buildLibroIvaXlsx: vi.fn(async () => new Uint8Array([1])),
   buildLibroIvaDailyXlsx: vi.fn(async () => new Uint8Array([1])),
+}));
+vi.mock("@/server/services/billing-libro-iva-archive.service", () => ({
+  billingLibroIvaArchiveService: {
+    retainMonthlyCopy,
+  },
 }));
 
 const ISSUED_AT = new Date(2026, 9, 2);
@@ -143,6 +152,7 @@ function filterByEnvironment<T extends { environment: BillingFiscalEnvironment }
 describe("BillingLibroIvaService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    retainMonthlyCopy.mockResolvedValue({ status: "skipped", reason: "month-open" });
     mockRequireRole(adminUserFixture);
     vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue({
       environment: "PRODUCCION",
@@ -232,5 +242,76 @@ describe("BillingLibroIvaService", () => {
     ]);
     expect(xlsxRows.map((row) => row.number)).toEqual(pdfRows.map((row) => row.number));
     expect(pdfRows.map((row) => row.number)).not.toContain("0007-00000004");
+  });
+
+  it("la descarga mensual entrega los bytes recién generados y los pasa al archivo", async () => {
+    const pdf = await billingLibroIvaService.generatePdf(2026, 10);
+    const xlsx = await billingLibroIvaService.generateXlsx(2026, 10);
+
+    expect(Array.from(pdf.bytes)).toEqual([1]);
+    expect(Array.from(xlsx.bytes)).toEqual([1]);
+    expect(pdf.filename).toBe("Libro-IVA-OCT-2026.pdf");
+    expect(xlsx.filename).toBe("Libro-IVA-OCT-2026.xlsx");
+    expect(retainMonthlyCopy).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        format: "PDF",
+        year: 2026,
+        month: 10,
+        environment: "PRODUCCION",
+        filename: pdf.filename,
+        generatedByUserId: adminUserFixture.id,
+        bytes: pdf.bytes,
+      }),
+    );
+    expect(retainMonthlyCopy).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        format: "XLSX",
+        year: 2026,
+        month: 10,
+        environment: "PRODUCCION",
+        filename: xlsx.filename,
+        bytes: xlsx.bytes,
+      }),
+    );
+  });
+
+  it("vuelve a generar el libro en cada descarga mensual", async () => {
+    await billingLibroIvaService.generatePdf(2026, 10);
+    await billingLibroIvaService.generatePdf(2026, 10);
+
+    expect(buildLibroIvaPdf).toHaveBeenCalledTimes(2);
+    expect(retainMonthlyCopy).toHaveBeenCalledTimes(2);
+  });
+
+  it("no archiva el informe Z ni un rango personalizado", async () => {
+    await billingLibroIvaService.generateDailyPdf(2026, 10, 3, "simple");
+    await billingLibroIvaService.generateDailyXlsx(2026, 10, 3, "detailed");
+    await billingLibroIvaService.generateCustomPdf("2026-10-01", "2026-10-15");
+    await billingLibroIvaService.generateCustomXlsx("2026-10-01", "2026-10-15");
+
+    expect(retainMonthlyCopy).not.toHaveBeenCalled();
+  });
+
+  it("si el archivado falla, la descarga mensual sigue devolviendo el archivo generado", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    retainMonthlyCopy.mockRejectedValue(new Error("storage down"));
+
+    const payload = await billingLibroIvaService.generatePdf(2026, 10);
+
+    expect(Array.from(payload.bytes)).toEqual([1]);
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("no intenta archivar cuando falta el permiso de lectura", async () => {
+    vi.mocked(requirePermission).mockRejectedValueOnce(new AuthForbiddenError());
+
+    await expect(billingLibroIvaService.generatePdf(2026, 10)).rejects.toBeInstanceOf(
+      AuthForbiddenError,
+    );
+    expect(buildLibroIvaPdf).not.toHaveBeenCalled();
+    expect(retainMonthlyCopy).not.toHaveBeenCalled();
   });
 });

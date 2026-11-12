@@ -119,12 +119,27 @@ export async function createSignedUploadUrl(
   };
 }
 
+export async function listStorageFileNames(
+  bucket: StorageBucketName,
+  folder: string,
+): Promise<string[]> {
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client.storage.from(bucket).list(folder, {
+    limit: 1000,
+  });
+
+  if (error || !data) {
+    throw new StorageError("No se pudo comprobar el archivo en Storage.");
+  }
+
+  return data.map((entry) => entry.name);
+}
+
 export async function storageObjectExists(
   bucket: StorageBucketName,
   path: string,
 ): Promise<boolean> {
   const normalizedPath = normalizeStoragePath(path);
-  const client = getSupabaseAdminClient();
   const folder = normalizedPath.includes("/")
     ? normalizedPath.slice(0, normalizedPath.lastIndexOf("/"))
     : "";
@@ -132,15 +147,12 @@ export async function storageObjectExists(
     ? normalizedPath.slice(normalizedPath.lastIndexOf("/") + 1)
     : normalizedPath;
 
-  const { data, error } = await client.storage.from(bucket).list(folder, {
-    limit: 1000,
-  });
-
-  if (error || !data) {
+  try {
+    const names = await listStorageFileNames(bucket, folder);
+    return names.includes(fileName);
+  } catch {
     return false;
   }
-
-  return data.some((entry) => entry.name === fileName);
 }
 
 export async function createSignedDownloadUrl(

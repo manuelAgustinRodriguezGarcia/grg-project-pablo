@@ -25,10 +25,10 @@
     background-color 0.2s ease,
     color 0.2s ease,
     box-shadow 0.2s ease,
-    gap 0.25s ease,
-    padding 0.25s ease,
-    margin 0.25s ease,
-    width 0.25s ease;
+    gap 0.34s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.34s cubic-bezier(0.4, 0, 0.2, 1),
+    margin 0.34s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.34s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:focus-visible {
     outline: 2px solid $white;
@@ -98,8 +98,8 @@
   white-space: nowrap;
   opacity: 1;
   transition:
-    opacity 0.2s ease,
-    max-width 0.25s ease;
+    opacity 0.28s ease,
+    max-width 0.34s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .link:not(.linkDock):not(.linkSheet).linkCollapsed {

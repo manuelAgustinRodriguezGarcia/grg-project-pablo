@@ -24,6 +24,8 @@ export {
   requireAnyPermission,
   requirePermissionOrRedirect,
   requireAnyPermissionOrRedirect,
+  requireBillingSectionPreview,
+  requireBillingSectionPreviewOrRedirect,
   requireAdmin,
   requireAdminOrRedirect,
   requireEditor,

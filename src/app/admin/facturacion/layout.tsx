@@ -20,7 +20,10 @@ export default async function FacturacionLayout({
   return (
     <div className={styles.shell}>
       <div className={styles.stickyChrome}>
-        <BillingPillNav userRole={auth.profile.role} />
+        <BillingPillNav
+          userRole={auth.profile.role}
+          userEmail={auth.profile.email}
+        />
       </div>
       <div
         className={styles.content}

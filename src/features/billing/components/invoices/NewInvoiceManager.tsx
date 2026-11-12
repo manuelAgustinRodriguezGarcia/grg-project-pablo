@@ -13,6 +13,7 @@ import {
 } from "@/features/billing/actions/billing-client.actions";
 import { listBillingRubrosAction } from "@/features/billing/actions/billing-rubro.actions";
 import { createBillingInvoiceAction } from "@/features/billing/actions/billing-invoice.actions";
+import { invalidateBillingStatistics } from "@/features/billing/hooks/useBillingStatisticsQueries";
 import type { BillingClientListItem } from "@/features/billing/types/billing-client.types";
 import {
   ClientFormModal,
@@ -615,6 +616,7 @@ export function NewInvoiceManager({
         queryFn: fetchBillingInvoicesList,
         staleTime: 0,
       });
+      void invalidateBillingStatistics(queryClient);
       router.refresh();
       setIsConfirmOpen(false);
       setCreatedInvoice(result.data);

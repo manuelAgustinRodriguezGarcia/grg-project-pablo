@@ -7,10 +7,13 @@ import {
   libroIvaCustomPeriodLabel,
   libroIvaCustomRange,
   libroIvaDayRange,
+  libroIvaMonthAbbreviation,
   libroIvaMonthRange,
+  libroIvaMonthlyFilename,
   libroIvaRowsForLetter,
   parseYearMonthValue,
   sumLibroIvaRows,
+  summarizeLibroIvaIssued,
   toYearMonthValue,
   type LibroIvaInvoiceSource,
   type LibroIvaNoteSource,
@@ -59,6 +62,20 @@ function note(
     ...overrides,
   };
 }
+
+describe("nombre de descarga mensual", () => {
+  it("usa la abreviatura del mes y el año", () => {
+    expect(libroIvaMonthAbbreviation(1)).toBe("ENE");
+    expect(libroIvaMonthAbbreviation(2)).toBe("FEB");
+    expect(libroIvaMonthAbbreviation(10)).toBe("OCT");
+    expect(libroIvaMonthAbbreviation(11)).toBe("NOV");
+    expect(libroIvaMonthAbbreviation(12)).toBe("DIC");
+    expect(libroIvaMonthlyFilename(2026, 10, "pdf")).toBe("Libro-IVA-OCT-2026.pdf");
+    expect(libroIvaMonthlyFilename(2026, 11, "xlsx")).toBe(
+      "Libro-IVA-NOV-2026.xlsx",
+    );
+  });
+});
 
 describe("libroIvaMonthRange", () => {
   it("cubre el mes calendario local", () => {
@@ -111,6 +128,37 @@ describe("buildLibroIvaRows fiscales", () => {
     });
     expect(debit).toMatchObject({ netAmount: 50, ivaAmount: 10.5, total: 60.5 });
     expect(credit?.total).not.toBe(9999);
+  });
+});
+
+describe("summarizeLibroIvaIssued", () => {
+  it("cuenta cada tipo y usa el monto emitido, sin alterar la suma firmada del libro", () => {
+    const rows = buildLibroIvaRows(
+      [
+        invoice({ totalVisualRounded: 1210 }),
+        invoice({
+          invoiceType: "B",
+          invoiceNumber: "0007-00000002",
+          totalVisualRounded: 500,
+        }),
+      ],
+      [
+        note({ amount: 100 }),
+        note({
+          kind: "DEBIT",
+          noteNumber: "0007-00000008",
+          amount: 40,
+        }),
+      ],
+    );
+
+    expect(summarizeLibroIvaIssued(rows)).toEqual({
+      facturasA: { count: 1, total: 1210 },
+      facturasB: { count: 1, total: 500 },
+      notasCredito: { count: 1, total: 100 },
+      notasDebito: { count: 1, total: 40 },
+    });
+    expect(sumLibroIvaRows(rows).total).toBe(1210 + 500 - 100 + 40);
   });
 });
 
