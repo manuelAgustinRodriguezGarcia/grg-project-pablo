@@ -201,14 +201,15 @@ export function combineStatisticsYear(
   const clients = rankClients(slices, statisticsAmountCents(totals.total));
   const rubros = rankRubros(slices, statisticsAmountCents(totals.total));
   const comparable = selectedRows.filter((row) => row.state !== "future");
+  const billed = comparable.filter((row) => statisticsAmountCents(row.totals.total) !== ZERO);
   const best = extremes(comparable, "best");
-  const worst = extremes(comparable, "worst");
+  const worst = extremes(billed, "worst");
   const spread = spreadBetween(best, worst);
   const notes = year.notes.filter((note) => selected.includes(note.month));
   const view: StatisticsSelectionView = {
     totals,
     counts,
-    averageTotal: divideMoney(totals.total, selected.length),
+    averageTotal: divideMoney(totals.total, billedMonthCount(slices)),
     reconciliation: buildReconciliation(slices, clients, rubros, totals),
     chartMonths: year.months.map((month) => ({
       year: month.year,
@@ -712,18 +713,15 @@ function buildConclusions(view: StatisticsSelectionView): string[] {
     );
   }
 
+  const settled = view.selectedMonths.filter((month) => month.state !== "future");
+  const uniformBilling =
+    settled.length >= 2 &&
+    settled.every((month) => month.totals.total === settled[0]?.totals.total);
+
   if (view.best && view.worst && view.best.total !== view.worst.total) {
     facts.push(extremeSentence(view.best.names, "mayor"));
-    const worstIsEmptyTie = statisticsAmountCents(view.worst.total) === ZERO && view.worst.names.length > 2;
-    if (!worstIsEmptyTie) {
-      facts.push(extremeSentence(view.worst.names, "menor"));
-    }
-  } else if (
-    view.selectedMonths.length >= 2 &&
-    view.selectedMonths.every((month) => month.state !== "future") &&
-    view.best &&
-    view.best.total === view.worst?.total
-  ) {
+    facts.push(extremeSentence(view.worst.names, "menor"));
+  } else if (uniformBilling) {
     facts.push("Los meses seleccionados tuvieron la misma facturación.");
   }
 
@@ -850,6 +848,10 @@ function sumCounts(values: readonly StatisticsCountsView[]): StatisticsCountsVie
     }),
     { ...ZERO_COUNTS },
   );
+}
+
+function billedMonthCount(slices: readonly StatisticsYearMonth[]): number {
+  return slices.filter((slice) => statisticsAmountCents(slice.totals.total) !== ZERO).length;
 }
 
 function divideMoney(total: string, count: number): string {

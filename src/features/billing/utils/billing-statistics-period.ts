@@ -28,25 +28,35 @@ export type StatisticsPeriodSelection =
   | { mode: "year"; year: number }
   | { mode: "custom"; from: string; to: string };
 
-const YEAR_SPAN = 7;
+/** Primer año del sistema de facturación. Los anteriores no se consultan. */
+export const BILLING_STATISTICS_FIRST_YEAR = 2026;
 
-export function statisticsYearOptions(
-  anchorYear: number,
-  extraYears: readonly number[] = [],
-): number[] {
+export function statisticsInvoicedYearOptions(invoicedYears: readonly number[]): number[] {
   const years = new Set<number>();
 
-  for (let offset = 0; offset <= YEAR_SPAN; offset += 1) {
-    years.add(anchorYear - offset);
-  }
-
-  for (const year of extraYears) {
-    if (year >= 1000 && year <= 9999) {
+  for (const year of invoicedYears) {
+    if (
+      Number.isInteger(year)
+      && year >= BILLING_STATISTICS_FIRST_YEAR
+      && year <= 9999
+    ) {
       years.add(year);
     }
   }
 
   return [...years].sort((left, right) => right - left);
+}
+
+export function statisticsSelectableYear(
+  initialYear: number,
+  invoicedYears: readonly number[],
+): number {
+  const years = statisticsInvoicedYearOptions(invoicedYears);
+  if (years.length === 0 || years.includes(initialYear)) {
+    return initialYear;
+  }
+
+  return years[0];
 }
 
 export function statisticsPeriodYear(

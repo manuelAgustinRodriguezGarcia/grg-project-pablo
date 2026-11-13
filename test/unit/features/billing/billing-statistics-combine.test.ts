@@ -200,6 +200,34 @@ describe("combinación de meses", () => {
     expect(view?.selectedMonths[0]?.state).toBe("empty");
     expect(view?.selectedMonths[1]?.variation?.skipped).toBe(true);
     expect(view?.totals.total).toBe("55053800.00");
+    expect(view?.averageTotal).toBe("55053800.00");
     expect(combineStatisticsYear(pack, [], { year: 2026, month: 11 })).toBeNull();
+  });
+
+  it("toma como menor facturación el mes más bajo del año que no está en cero", () => {
+    const march = month({
+      month: 3,
+      totals: money("1500.00"),
+      counts: { invoiceCount: 1, creditNoteCount: 0, debitNoteCount: 0, documentCount: 1 },
+    });
+    const june = month({
+      month: 6,
+      totals: money("800.00"),
+      counts: { invoiceCount: 1, creditNoteCount: 0, debitNoteCount: 0, documentCount: 1 },
+    });
+    const view = combineStatisticsYear(
+      packageFor([march, june, october]),
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      { year: 2026, month: 11 },
+    );
+
+    expect(view?.worst).toMatchObject({
+      months: [6],
+      names: ["Junio"],
+      total: "800.00",
+    });
+    expect(view?.best?.names).toEqual(["Octubre"]);
+    expect(view?.conclusions.join(" ")).not.toMatch(/Enero, Febrero/);
+    expect(view?.conclusions.some((line) => line.includes("Junio fue el mes con menor facturación"))).toBe(true);
   });
 });

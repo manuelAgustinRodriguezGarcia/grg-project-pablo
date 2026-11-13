@@ -114,9 +114,6 @@ export function StatisticsNotes({
           </table>
         </div>
       )}
-      <p className={styles.note}>
-        Las notas no tienen líneas de rubro. La factura vinculada muestra los rubros que contenía, no qué parte de ella fue acreditada o debitada.
-      </p>
       {unassigned || !reconciliation.distributionMatchGeneral ? (
         <p className={styles.note}>
           {unassigned

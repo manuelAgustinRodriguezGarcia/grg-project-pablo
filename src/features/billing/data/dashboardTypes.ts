@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export type DashboardQuickLink = {
   href: string;
   label: string;
@@ -22,7 +24,7 @@ export type DashboardKpi = {
   id: string;
   label: string;
   value: string;
-  secondary: string;
+  secondary: ReactNode;
   tone: DashboardKpiTone;
   trendPositive?: boolean;
 };

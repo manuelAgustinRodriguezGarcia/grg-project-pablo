@@ -346,7 +346,7 @@ describe("LibroIvaResumenesManager", () => {
     expect(screen.queryByText("Archivado")).not.toBeInTheDocument();
     expect(await screen.findByText("Datos modificados")).toBeInTheDocument();
     expect(screen.getByText(LIBRO_IVA_FISCAL_CHANGED_WARNING)).toBeInTheDocument();
-    expect(screen.getByText("No verificado")).toBeInTheDocument();
+    expect(screen.queryByText(/verificado/i)).not.toBeInTheDocument();
     expect(screen.queryByText(FILE_HASH)).not.toBeInTheDocument();
     expect(screen.queryByText(PDF_ID)).not.toBeInTheDocument();
     expect(screen.queryByText(/Fiscalmente validado|Aprobado por ARCA|Cierre definitivo/)).not.toBeInTheDocument();
@@ -463,7 +463,7 @@ describe("LibroIvaResumenesManager", () => {
     renderManager();
     const october = await screen.findByRole("article", { name: "OCTUBRE 2026" });
 
-    expect(within(october).getAllByText("No verificado").length).toBeGreaterThan(0);
+    expect(within(october).queryByText(/verificado/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Archivado")).not.toBeInTheDocument();
     expect(screen.queryByText("Archivo no disponible")).not.toBeInTheDocument();
     expect(within(october).getByRole("button", { name: "Descargar PDF" })).toBeEnabled();
@@ -501,7 +501,7 @@ describe("LibroIvaResumenesManager", () => {
 
     const september = screen.getByRole("article", { name: "SEPTIEMBRE 2026" });
     await waitFor(() => {
-      expect(within(september).getByText("No verificado")).toBeInTheDocument();
+      expect(within(september).queryByText(/verificado/i)).not.toBeInTheDocument();
     });
     expect(within(september).queryByText("Archivado")).not.toBeInTheDocument();
     expect(within(september).getByRole("button", { name: "Descargar PDF" })).toBeEnabled();

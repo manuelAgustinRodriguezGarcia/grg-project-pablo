@@ -14,13 +14,26 @@ import {
   selectFullYear,
   selectMonth,
   selectYear,
+  statisticsInvoicedYearOptions,
   statisticsRequestSearch,
   statisticsScopeKey,
+  statisticsSelectableYear,
 } from "@/features/billing/utils/billing-statistics-period";
 
 const november = { mode: "month" as const, year: 2026, month: 11 };
 
 describe("selector de estadísticas", () => {
+  it("ofrece solo años con facturación desde 2026", () => {
+    expect(statisticsInvoicedYearOptions([2023, 2024, 2025, 2026, 2026, 2027])).toEqual([
+      2027,
+      2026,
+    ]);
+    expect(statisticsInvoicedYearOptions([2025, 2024, 999])).toEqual([]);
+    expect(statisticsSelectableYear(2027, [2026])).toBe(2026);
+    expect(statisticsSelectableYear(2026, [2026, 2027])).toBe(2026);
+    expect(statisticsSelectableYear(2026, [])).toBe(2026);
+  });
+
   it("cambia de mes sin perder el año", () => {
     expect(selectMonth(november, 2, 2026)).toEqual({
       mode: "month",

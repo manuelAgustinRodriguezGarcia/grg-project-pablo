@@ -24,21 +24,27 @@ import {
   type StatisticsRankedRubro,
 } from "@/features/billing/utils/billing-statistics-combine";
 import type { StatisticsNavAnalysis } from "@/features/billing/utils/billing-statistics-navigation";
-import { statisticsYearOptions } from "@/features/billing/utils/billing-statistics-period";
+import {
+  statisticsInvoicedYearOptions,
+  statisticsSelectableYear,
+} from "@/features/billing/utils/billing-statistics-period";
 import {
   changeSelectionYear,
   createMonthSelection,
   describeSelectedMonths,
+  isFullYearSelection,
   toggleFullYear,
   toggleSelectedMonth,
   type StatisticsMonthSelection,
 } from "@/features/billing/utils/billing-statistics-selection";
+import { BarChart3, BookUser, ICON_STROKE, Tags } from "@/shared/icons";
 import styles from "@/features/billing/styles/Statistics.module.scss";
 
 type StatisticsManagerProps = {
   fiscalEnvironment: BillingFiscalEnvironment;
   initialYear: number;
   initialMonth: number;
+  invoicedYears?: readonly number[];
   initialSection?: "clients" | "rubros";
   initialAnalysis?: StatisticsNavAnalysis | null;
 };
@@ -91,7 +97,7 @@ function rubroItems(rows: readonly StatisticsRankedRubro[]): StatisticsRankItem[
     total: row.totals.total,
     sharePercent: row.sharePercent,
     shareUnavailableReason: row.shareUnavailableReason,
-    secondary: `${countLabel(row.lineCount, "línea", "líneas")} · ${formatStatisticsQuantity(row.quantity)} unidades`,
+    secondary: `${countLabel(row.invoiceCount, "factura vinculada", "facturas vinculadas")} · ${formatStatisticsQuantity(row.quantity)} unidades`,
   }));
 }
 
@@ -146,7 +152,7 @@ function rubroPanel(rubro: StatisticsRankedRubro): EntityPanelModel {
     vat: rubro.totals.vat,
     sharePercent: rubro.sharePercent,
     shareUnavailableReason: rubro.shareUnavailableReason,
-    secondary: `${countLabel(rubro.lineCount, "línea", "líneas")} · ${formatStatisticsQuantity(rubro.quantity)} unidades · ${countLabel(rubro.invoiceCount, "factura", "facturas")}`,
+    secondary: `${countLabel(rubro.invoiceCount, "factura vinculada", "facturas vinculadas")} · ${formatStatisticsQuantity(rubro.quantity)} unidades`,
     monthly: rubro.monthly,
     comparisonTotal: null,
     comparisonDelta: null,
@@ -159,6 +165,7 @@ export function StatisticsManager({
   fiscalEnvironment,
   initialYear,
   initialMonth,
+  invoicedYears,
   initialSection = "clients",
   initialAnalysis = null,
 }: StatisticsManagerProps) {
@@ -168,15 +175,17 @@ export function StatisticsManager({
     () => ({ year: initialYear, month: initialMonth }),
     [initialYear, initialMonth],
   );
-  const [selection, setSelection] = useState<StatisticsMonthSelection>(() =>
-    createMonthSelection(initialYear, initialMonth),
-  );
+  const availableYears = statisticsInvoicedYearOptions(invoicedYears ?? [initialYear]);
+  const [selection, setSelection] = useState<StatisticsMonthSelection>(() => {
+    const year = statisticsSelectableYear(initialYear, invoicedYears ?? [initialYear]);
+    const created = createMonthSelection(year, initialMonth);
+    return initialAnalysis === "evolucion" ? toggleFullYear(created) : created;
+  });
   const [section, setSection] = useState<"clients" | "rubros">(initialSection);
   const [clientKey, setClientKey] = useState<string | null>(null);
   const [rubroKey, setRubroKey] = useState<string | null>(null);
   const [showAllClients, setShowAllClients] = useState(false);
   const [showAllRubros, setShowAllRubros] = useState(false);
-  const years = statisticsYearOptions(initialYear, [selection.year]);
   const yearQuery = useBillingStatisticsYear({
     environment: fiscalEnvironment,
     year: selection.year,
@@ -223,10 +232,6 @@ export function StatisticsManager({
       data-statistics-section={section === "clients" ? "clientes" : "rubros"}
       data-statistics-analysis={initialAnalysis ?? undefined}
     >
-      <header className={styles.header}>
-        <h1 className={styles.title}>Estadísticas</h1>
-        <p className={styles.subtitle}>Analizá la facturación por clientes, rubros y períodos.</p>
-      </header>
       <p className={styles.srOnly} aria-live="polite">
         {view
           ? `Estadísticas de ${describeSelectedMonths(selection)}`
@@ -240,8 +245,7 @@ export function StatisticsManager({
       <section className={styles.filters} aria-label="Filtros de período">
         <StatisticsPeriodBar
           selection={selection}
-          yearOptions={years}
-          refreshing={yearQuery.isFetching}
+          yearOptions={availableYears}
           onToggleMonth={toggleMonth}
           onToggleFullYear={() => {
             setSelection((current) => toggleFullYear(current));
@@ -253,17 +257,20 @@ export function StatisticsManager({
             setClientKey(null);
             setRubroKey(null);
           }}
-          onRefresh={() => {
-            void yearQuery.refetch();
-          }}
         />
       </section>
 
-      <div className={styles.results} aria-busy={waitingForYear}>
+      <div
+        className={`${styles.results}${selection.months.length === 0 ? ` ${styles.resultsEmpty}` : ""}`}
+        aria-busy={waitingForYear}
+      >
         {selection.months.length === 0 ? (
-          <p className={styles.empty} role="status">
-            Seleccioná uno o más meses para consultar sus estadísticas.
-          </p>
+          <div className={styles.emptyPrompt} role="status">
+            <BarChart3 className={styles.emptyPromptIcon} strokeWidth={ICON_STROKE} aria-hidden />
+            <p className={styles.emptyPromptText}>
+              Seleccioná uno o más meses para consultar sus estadísticas.
+            </p>
+          </div>
         ) : null}
 
         {selection.months.length > 0 && waitingForYear ? (
@@ -286,32 +293,36 @@ export function StatisticsManager({
               averageTotal={view.averageTotal}
               monthCount={view.selectedMonths.length}
             />
-            <StatisticsEvolution
-              monthly={view.chartMonths}
-              selectedMonths={selection.months}
-              caption={caption}
-              onToggleMonth={toggleMonth}
-            />
-            <StatisticsMonthComparison view={view} />
+            {isFullYearSelection(selection.months) ? (
+              <StatisticsEvolution
+                monthly={view.chartMonths}
+                selectedMonths={selection.months}
+                caption={caption}
+                onToggleMonth={toggleMonth}
+              />
+            ) : null}
+            {selection.months.length > 1 ? <StatisticsMonthComparison view={view} /> : null}
             <section className={styles.section} aria-label="Detalle por clientes y rubros">
               <div className={styles.sectionSwitch} role="tablist" aria-label="Estadísticas por">
                 <button
                   type="button"
                   role="tab"
                   aria-selected={section === "clients"}
-                  className={`${styles.monthButton} ${section === "clients" ? styles.monthButtonActive : ""}`}
+                  className={`${styles.sectionTab} ${section === "clients" ? styles.sectionTabActive : ""}`}
                   onClick={() => setSection("clients")}
                 >
-                  Clientes
+                  <BookUser className={styles.sectionTabIcon} strokeWidth={ICON_STROKE} aria-hidden />
+                  Estadísticas de Clientes
                 </button>
                 <button
                   type="button"
                   role="tab"
                   aria-selected={section === "rubros"}
-                  className={`${styles.monthButton} ${section === "rubros" ? styles.monthButtonActive : ""}`}
+                  className={`${styles.sectionTab} ${section === "rubros" ? styles.sectionTabActive : ""}`}
                   onClick={() => setSection("rubros")}
                 >
-                  Rubros
+                  <Tags className={styles.sectionTabIcon} strokeWidth={ICON_STROKE} aria-hidden />
+                  Estadísticas de Rubros
                 </button>
               </div>
 

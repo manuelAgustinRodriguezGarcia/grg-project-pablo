@@ -74,16 +74,29 @@ function groupLibroIvaArchivesByYear(
   return sections;
 }
 
-function statusBadgeClass(kind: LibroIvaArchiveStatusKind): string {
+function visibleArchiveStatus(
+  kind: LibroIvaArchiveStatusKind,
+): "fiscal-changed" | "missing" | null {
   switch (kind) {
     case "archived":
-      return styles.statusBadgeOk;
+    case "unverified":
+      return null;
+    case "fiscal-changed":
+    case "missing":
+      return kind;
+    default: {
+      const unexpected: never = kind;
+      return unexpected;
+    }
+  }
+}
+
+function statusBadgeClass(kind: "fiscal-changed" | "missing"): string {
+  switch (kind) {
     case "fiscal-changed":
       return styles.statusBadgeDebt;
     case "missing":
       return styles.statusBadgeInactive;
-    case "unverified":
-      return styles.statusBadgePartial;
     default: {
       const unexpected: never = kind;
       return unexpected;
@@ -329,17 +342,18 @@ export function LibroIvaResumenesManager({
                     filePresent: filePresence(archive.id),
                     markedMissing: activeMissing.has(archive.id),
                   });
+                  const visibleStatus = visibleArchiveStatus(status);
                   const busy = downloadingIds.has(archive.id);
                   const unavailable = status === "missing";
                   const label = downloadActionLabel(archive.format);
 
                   return (
                     <li key={archive.id} className={resumenes.downloadItem}>
-                      {status === "archived" ? null : (
-                        <span className={`${styles.statusBadge} ${statusBadgeClass(status)}`}>
-                          {LIBRO_IVA_ARCHIVE_STATUS_LABELS[status]}
+                      {visibleStatus ? (
+                        <span className={`${styles.statusBadge} ${statusBadgeClass(visibleStatus)}`}>
+                          {LIBRO_IVA_ARCHIVE_STATUS_LABELS[visibleStatus]}
                         </span>
-                      )}
+                      ) : null}
                       <button
                         type="button"
                         className={resumenes.downloadButton}

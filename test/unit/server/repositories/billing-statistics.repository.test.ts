@@ -2,11 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { billingStatisticsRepository } from "@/server/repositories/billing-statistics.repository";
 
 const invoiceFind = vi.hoisted(() => vi.fn());
+const invoiceFindFirst = vi.hoisted(() => vi.fn());
 const noteFind = vi.hoisted(() => vi.fn());
 
 vi.mock("@/server/database/prisma", () => ({
   prisma: {
-    billingInvoice: { findMany: invoiceFind },
+    billingInvoice: { findMany: invoiceFind, findFirst: invoiceFindFirst },
     billingNote: { findMany: noteFind },
   },
 }));
@@ -91,5 +92,27 @@ describe("repositorio de estadísticas", () => {
     expect(noteFind.mock.calls[2]?.[0].where.fiscalStatus).toBe("AUTORIZADA");
     expect(invoiceFind).toHaveBeenCalledTimes(3);
     expect(noteFind).toHaveBeenCalledTimes(3);
+  });
+
+  it("devuelve solo los años del rango que tienen facturas", async () => {
+    invoiceFindFirst.mockImplementation(async (query: {
+      where: { environment: string; issuedAt: { gte: Date } };
+      select: { id: boolean };
+    }) => {
+      expect(query.where.environment).toBe("PRODUCCION");
+      expect(query.select).toEqual({ id: true });
+      return query.where.issuedAt.gte.getFullYear() === 2026 ? { id: "inv-2026" } : null;
+    });
+
+    await expect(
+      billingStatisticsRepository.findInvoicedYears("PRODUCCION", 2026, 2027),
+    ).resolves.toEqual([2026]);
+    expect(invoiceFindFirst).toHaveBeenCalledTimes(2);
+
+    invoiceFindFirst.mockClear();
+    await expect(
+      billingStatisticsRepository.findInvoicedYears("PRODUCCION", 2027, 2026),
+    ).resolves.toEqual([]);
+    expect(invoiceFindFirst).not.toHaveBeenCalled();
   });
 });

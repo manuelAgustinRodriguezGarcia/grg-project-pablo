@@ -116,7 +116,13 @@ export function formatStatisticsQuantity(value: string): string {
   if (!DECIMAL_2.test(value)) {
     return value;
   }
-  return value.replace(".", ",");
+
+  const cents = statisticsAmountCents(value);
+  const negative = cents < ZERO;
+  const absolute = negative ? -cents : cents;
+  const whole = (absolute + BigInt(50)) / HUNDRED;
+  const grouped = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${negative ? "-" : ""}${grouped}`;
 }
 
 export function formatSharePercent(percent: string | null): string {
@@ -324,7 +330,7 @@ export function rubroEntityPanel(
         vat: entity.totals.vat,
         sharePercent: entity.sharePercent,
         shareUnavailableReason: entity.shareUnavailableReason,
-        secondary: `${countLabel(entity.lineCount, "línea", "líneas")} · ${formatStatisticsQuantity(entity.quantity)} unidades · ${countLabel(entity.invoiceCount, "factura", "facturas")}`,
+        secondary: `${countLabel(entity.invoiceCount, "factura vinculada", "facturas vinculadas")} · ${formatStatisticsQuantity(entity.quantity)} unidades`,
         monthly: entity.monthly,
         comparisonTotal: entity.comparison?.totals.total ?? null,
         comparisonDelta,

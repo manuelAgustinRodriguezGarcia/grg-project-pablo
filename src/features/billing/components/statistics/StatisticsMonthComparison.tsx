@@ -1,31 +1,37 @@
 "use client";
 
-import type { StatisticsSelectionView } from "@/features/billing/utils/billing-statistics-combine";
+import type { StatisticsMonthVariation, StatisticsSelectionView } from "@/features/billing/utils/billing-statistics-combine";
 import {
   formatStatisticsAmount,
-  formatStatisticsDelta,
+  statisticsAmountCents,
 } from "@/features/billing/utils/billing-statistics-display";
+import { CircleArrowDown, CircleArrowUp, ICON_STROKE } from "@/shared/icons";
 import styles from "@/features/billing/styles/Statistics.module.scss";
 
 type StatisticsMonthComparisonProps = {
   view: StatisticsSelectionView;
 };
 
-function stateLabel(state: StatisticsSelectionView["selectedMonths"][number]["state"]): string {
-  switch (state) {
-    case "future":
-      return "Todavía no comenzó";
-    case "partial":
-      return "En curso";
-    case "empty":
-      return "Sin operaciones";
-    case "recorded":
-      return "";
-    default: {
-      const unexpected: never = state;
-      return unexpected;
-    }
+const ZERO = BigInt(0);
+
+function VariationPill({ variation }: { variation: StatisticsMonthVariation }) {
+  const cents = statisticsAmountCents(variation.delta);
+  if (cents === ZERO) {
+    return <>Igual que en {variation.referenceName}</>;
   }
+
+  const increased = cents > ZERO;
+  const Icon = increased ? CircleArrowUp : CircleArrowDown;
+  const unsigned = variation.delta.startsWith("-") ? variation.delta.slice(1) : variation.delta;
+
+  return (
+    <span
+      className={`${styles.variationPill} ${increased ? styles.variationPillUp : styles.variationPillDown}`}
+    >
+      <Icon className={styles.variationIcon} strokeWidth={ICON_STROKE} aria-hidden />
+      {formatStatisticsAmount(unsigned)} {increased ? "más" : "menos"} que en {variation.referenceName}
+    </span>
+  );
 }
 
 export function StatisticsMonthComparison({ view }: StatisticsMonthComparisonProps) {
@@ -63,7 +69,7 @@ export function StatisticsMonthComparison({ view }: StatisticsMonthComparisonPro
         </div>
       </dl>
       <div className={styles.tableScroll}>
-        <table className={styles.compareTable}>
+        <table className={`${styles.compareTable} ${styles.monthCompareTable}`}>
           <caption className={styles.srOnly}>Facturación de los meses seleccionados</caption>
           <thead>
             <tr>
@@ -76,27 +82,18 @@ export function StatisticsMonthComparison({ view }: StatisticsMonthComparisonPro
             </tr>
           </thead>
           <tbody>
-            {view.selectedMonths.map((month) => {
-              const status = stateLabel(month.state);
-              const variation = month.variation
-                ? `${formatStatisticsDelta(month.variation.delta)} respecto de ${month.variation.referenceName}${month.variation.skipped ? " (hay meses sin seleccionar entre ambos)" : ""}${month.variation.percent ? ` · ${month.variation.percent}` : ""}`
-                : "—";
-              return (
+            {view.selectedMonths.map((month) => (
                 <tr key={month.month}>
-                  <th scope="row">
-                    {month.name}
-                    {status ? <span className={styles.rankMeta}> {status}</span> : null}
-                  </th>
+                  <th scope="row">{month.name}</th>
                   <td className={month.totals.total.startsWith("-") ? styles.amountNegative : undefined}>
                     {formatStatisticsAmount(month.totals.total)}
                   </td>
                   <td>{month.counts.invoiceCount}</td>
                   <td>{month.counts.creditNoteCount}</td>
                   <td>{month.counts.debitNoteCount}</td>
-                  <td>{variation}</td>
+                  <td>{month.variation ? <VariationPill variation={month.variation} /> : "—"}</td>
                 </tr>
-              );
-            })}
+              ))}
           </tbody>
         </table>
       </div>

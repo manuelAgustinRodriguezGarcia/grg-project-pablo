@@ -128,6 +128,7 @@ function yearPayload(year: number, months: ReturnType<typeof activeMonth>[]) {
 function renderPage(extra?: {
   initialSection?: "clients" | "rubros";
   initialAnalysis?: "ranking" | "participacion" | "evolucion" | null;
+  invoicedYears?: number[];
 }) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -138,6 +139,7 @@ function renderPage(extra?: {
         fiscalEnvironment="PRODUCCION"
         initialYear={2026}
         initialMonth={11}
+        invoicedYears={extra?.invoicedYears}
         initialSection={extra?.initialSection}
         initialAnalysis={extra?.initialAnalysis}
       />
@@ -159,12 +161,12 @@ beforeEach(() => {
     calls.push(url);
     const year = new URL(url, "http://localhost").searchParams.get("year") ?? "2026";
     const numericYear = Number(year);
-    const body = numericYear === 2025
-      ? yearPayload(2025, [activeMonth({
-          year: 2025,
+    const body = numericYear === 2027
+      ? yearPayload(2027, [activeMonth({
+          year: 2027,
           month: 11,
           total: "20.00",
-          clientName: "Cliente 2025",
+          clientName: "Cliente 2027",
         })])
       : yearPayload(2026, [
           activeMonth({
@@ -204,6 +206,7 @@ describe("estadísticas de facturación", () => {
       </QueryClientProvider>,
     );
 
+    expect(html).toContain("AÑO");
     expect(html).toContain("ENE");
     expect(html).toContain("DIC");
     expect(html).not.toContain("Personalizado");
@@ -213,7 +216,7 @@ describe("estadísticas de facturación", () => {
     renderPage();
     expect(screen.getByRole("button", { name: "Noviembre" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Febrero" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "Año completo" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Ver año completo" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryByRole("button", { name: "Personalizado" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Comparar período" })).not.toBeInTheDocument();
     expect(calls.every((url) => !url.includes("environment="))).toBe(true);
@@ -223,20 +226,25 @@ describe("estadísticas de facturación", () => {
     renderPage();
     expect(await screen.findByRole("button", { name: /SUCESION DE VALLE ROBERTO/ })).toBeInTheDocument();
     expect(screen.getByTestId("statistics-kpis")).toHaveTextContent("165,40");
+    expect(screen.getByTestId("statistics-kpis")).toHaveTextContent("1 factura emitida");
+    expect(screen.queryByRole("region", { name: "Evolución de facturación" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Comparación de meses" })).not.toBeInTheDocument();
     expect(calls).toHaveLength(1);
     expect(calls[0]).toContain("/api/admin/billing/statistics/year?year=2026");
 
     fireEvent.click(screen.getByRole("button", { name: "Febrero" }));
     expect(screen.getByRole("button", { name: "Febrero" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", { name: "Comparación de meses" })).toBeInTheDocument();
     expect(screen.getByTestId("statistics-kpis")).toHaveTextContent("175,40");
     expect(calls).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Noviembre" }));
     expect(screen.getByTestId("statistics-kpis")).toHaveTextContent("10,00");
     expect(screen.getByTestId("statistics-kpis")).not.toHaveTextContent("165,40");
+    expect(screen.queryByRole("region", { name: "Comparación de meses" })).not.toBeInTheDocument();
     expect(calls).toHaveLength(1);
 
-    fireEvent.click(screen.getByRole("tab", { name: "Rubros" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Estadísticas de Rubros" }));
     expect(screen.getByRole("button", { name: /Frenos/ })).toBeInTheDocument();
     expect(calls).toHaveLength(1);
   });
@@ -251,25 +259,36 @@ describe("estadísticas de facturación", () => {
     );
     expect(screen.queryByTestId("statistics-kpis")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Año completo" }));
-    expect(screen.getByRole("button", { name: "Año completo" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Ver año completo" }));
+    expect(screen.getByRole("button", { name: "Ver año completo" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Enero" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("statistics-kpis")).toHaveTextContent("175,40");
+    expect(screen.getByRole("region", { name: "Evolución de facturación" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Comparación de meses" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Enero" }));
-    expect(screen.getByRole("button", { name: "Año completo" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Ver año completo" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("region", { name: "Evolución de facturación" })).not.toBeInTheDocument();
     expect(calls.filter((url) => url.includes("/statistics/year"))).toHaveLength(1);
   });
 
   it("cambia de año sin mostrar el importe del año anterior", async () => {
-    renderPage();
+    renderPage({ invoicedYears: [2023, 2024, 2025, 2026, 2027] });
     expect((await screen.findAllByText(hasAmount("165.40"))).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Año" }));
-    fireEvent.click(screen.getByRole("option", { name: "2025" }));
+    expect(screen.getByText("AÑO")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Elegir año" }));
+    const dialog = screen.getByRole("dialog", { name: "Años con facturación" });
+    expect(dialog).toHaveTextContent("2027");
+    expect(dialog).toHaveTextContent("2026");
+    expect(dialog).not.toHaveTextContent("2025");
+    expect(dialog).not.toHaveTextContent("2024");
+    expect(dialog).not.toHaveTextContent("2023");
+    fireEvent.click(screen.getByRole("button", { name: "2027" }));
 
     expect(screen.queryAllByText(hasAmount("165.40"))).toHaveLength(0);
     expect((await screen.findAllByText(hasAmount("20.00"))).length).toBeGreaterThan(0);
-    expect(calls.some((url) => url.includes("year=2025"))).toBe(true);
+    expect(calls.some((url) => url.includes("year=2027"))).toBe(true);
+    expect(calls.some((url) => url.includes("year=2025"))).toBe(false);
     expect(screen.getByRole("button", { name: "Noviembre" })).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -322,6 +341,17 @@ describe("estadísticas de facturación", () => {
     expect(screen.queryByTestId("statistics-kpis")).not.toBeInTheDocument();
   });
 
+  it("abre la evolución con el año completo ya seleccionado", async () => {
+    const originalScroll = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+
+    renderPage({ initialAnalysis: "evolucion" });
+    expect(screen.getByRole("button", { name: "Ver año completo" })).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByRole("region", { name: "Evolución de facturación" })).toBeInTheDocument();
+
+    HTMLElement.prototype.scrollIntoView = originalScroll;
+  });
+
   it("abre el análisis indicado en la URL", async () => {
     const originalScroll = HTMLElement.prototype.scrollIntoView;
     const scrollIntoView = vi.fn();
@@ -332,7 +362,7 @@ describe("estadísticas de facturación", () => {
       "data-statistics-section",
       "rubros",
     );
-    expect(await screen.findByRole("tab", { name: "Rubros" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("tab", { name: "Estadísticas de Rubros" })).toHaveAttribute("aria-selected", "true");
     await waitFor(() => {
       expect(scrollIntoView).toHaveBeenCalled();
     });

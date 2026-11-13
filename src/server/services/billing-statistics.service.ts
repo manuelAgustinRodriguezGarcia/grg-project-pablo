@@ -1,4 +1,5 @@
 import type { BillingFiscalEnvironment } from "@/generated/prisma/client";
+import { BILLING_STATISTICS_FIRST_YEAR } from "@/features/billing/utils/billing-statistics-period";
 import { requirePermission } from "@/server/auth";
 import { AuthForbiddenError } from "@/server/auth/errors";
 import { canPreviewBillingSections } from "@/shared/auth/billing-section-preview";
@@ -76,6 +77,21 @@ export class BillingStatisticsService {
       aggregate: aggregateStatistics(source),
       source,
     });
+  }
+
+  async listInvoicedYears(now = new Date()): Promise<number[]> {
+    await this.authorize();
+    const lastYear = now.getFullYear();
+    if (lastYear < BILLING_STATISTICS_FIRST_YEAR) {
+      return [];
+    }
+
+    const environment = await readActiveFiscalEnvironment();
+    return billingStatisticsRepository.findInvoicedYears(
+      environment,
+      BILLING_STATISTICS_FIRST_YEAR,
+      lastYear,
+    );
   }
 
   async getRubros(searchParams: URLSearchParams) {

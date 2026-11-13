@@ -9,6 +9,7 @@ import { billingStatisticsService } from "@/server/services/billing-statistics.s
 import type { StatisticsSource } from "@/server/services/billing-statistics/source";
 
 const findSource = vi.hoisted(() => vi.fn());
+const findInvoicedYears = vi.hoisted(() => vi.fn());
 const readEnvironment = vi.hoisted(() => vi.fn());
 
 vi.mock("@/server/auth", () => ({
@@ -22,6 +23,7 @@ vi.mock("@/server/services/billing-fiscal-scope", () => ({
 vi.mock("@/server/repositories/billing-statistics.repository", () => ({
   billingStatisticsRepository: {
     findSource,
+    findInvoicedYears,
   },
 }));
 
@@ -77,6 +79,7 @@ describe("servicio de estadísticas", () => {
     roleState.role = "ADMINISTRADOR";
     readEnvironment.mockResolvedValue("PRODUCCION");
     findSource.mockResolvedValue(source);
+    findInvoicedYears.mockResolvedValue([2026]);
     vi.mocked(requirePermission).mockImplementation(async (permission) => {
       if (!hasPermission(roleState.role, permission)) {
         throw new AuthForbiddenError();
@@ -199,5 +202,19 @@ describe("servicio de estadísticas", () => {
       billingStatisticsService.getYear(new URLSearchParams("year=2026")),
     ).rejects.toBeInstanceOf(AuthForbiddenError);
     expect(findSource).not.toHaveBeenCalled();
+  });
+
+  it("pide los años facturados desde 2026 y no consulta años anteriores", async () => {
+    findInvoicedYears.mockClear();
+    await expect(
+      billingStatisticsService.listInvoicedYears(new Date(2028, 0, 2)),
+    ).resolves.toEqual([2026]);
+    expect(findInvoicedYears).toHaveBeenCalledWith("PRODUCCION", 2026, 2028);
+
+    findInvoicedYears.mockClear();
+    await expect(
+      billingStatisticsService.listInvoicedYears(new Date(2025, 5, 1)),
+    ).resolves.toEqual([]);
+    expect(findInvoicedYears).not.toHaveBeenCalled();
   });
 });

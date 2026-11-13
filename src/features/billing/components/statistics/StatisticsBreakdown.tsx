@@ -13,6 +13,7 @@ import {
   statisticsAmountNumber,
   type StatisticsChartPoint,
 } from "@/features/billing/utils/billing-statistics-display";
+import { getBlueScaleColorsByAmount } from "@/features/billing/utils/dashboard-chart-colors";
 import styles from "@/features/billing/styles/Statistics.module.scss";
 
 export type StatisticsRankItem = {
@@ -81,6 +82,17 @@ export function StatisticsBreakdown({
     totalGroups,
     othersLabel: noun === "clientes" ? "Otros clientes" : "Otros rubros",
   });
+  const piePoints =
+    participation.status === "ready"
+      ? chartPoints(
+          participation.slices.map((slice) => ({
+            key: slice.key,
+            name: slice.label,
+            total: slice.total,
+          })),
+        )
+      : [];
+  const pieColors = getBlueScaleColorsByAmount(piePoints);
   const title = noun === "clientes" ? "Clientes" : "Rubros";
   const maxAbs = visible.reduce((max, item) => {
     const cents = statisticsAmountCents(item.total);
@@ -121,16 +133,19 @@ export function StatisticsBreakdown({
                       aria-pressed={selectedKey === item.key}
                       onClick={() => onSelect(item.key)}
                     >
-                      <span className={styles.rankName}>{item.name}</span>
+                      <span className={styles.rankTitle}>
+                        <span className={styles.rankName}>{item.name}</span>
+                        {item.code ? <span className={styles.rankCode}>{item.code}</span> : null}
+                      </span>
                       <span className={styles.rankMeta}>
-                        {item.code ? `${item.code} · ` : null}
                         {item.historical ? "Identidad histórica · " : null}
                         <span className={negative ? styles.amountNegative : undefined}>
                           {formatStatisticsAmount(item.total)}
                         </span>
-                        {" · "}
-                        <span title={shareText ?? undefined}>{formatSharePercent(item.sharePercent)}</span>
                         {item.secondary ? ` · ${item.secondary}` : null}
+                      </span>
+                      <span className={styles.rankShare} title={shareText ?? undefined}>
+                        {formatSharePercent(item.sharePercent)}
                       </span>
                       <span className={styles.rankTrack} aria-hidden="true">
                         <span
@@ -154,19 +169,17 @@ export function StatisticsBreakdown({
           <h3 className={styles.panelTitle}>Participación</h3>
           {participation.status === "ready" ? (
             <div className={styles.pieLayout}>
-              <StatisticsChartSlot
-                kind="pie"
-                points={chartPoints(participation.slices.map((slice) => ({
-                  key: slice.key,
-                  name: slice.label,
-                  total: slice.total,
-                })))}
-                height={240}
-              />
+              <StatisticsChartSlot kind="pie" points={piePoints} height={240} />
               <ul className={styles.legend} data-testid="participation-legend">
-                {participation.slices.map((slice) => (
+                {participation.slices.map((slice, index) => (
                   <li key={slice.key}>
-                    <span>{slice.label}</span>
+                    <span
+                      className={styles.legendSwatch}
+                      style={{ backgroundColor: pieColors[index] }}
+                      data-testid="participation-swatch"
+                      aria-hidden
+                    />
+                    <span className={styles.legendName}>{slice.label}</span>
                     <strong className={slice.total.startsWith("-") ? styles.amountNegative : undefined}>
                       {formatStatisticsAmount(slice.total)}
                     </strong>

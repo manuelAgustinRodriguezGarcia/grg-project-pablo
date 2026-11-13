@@ -91,6 +91,35 @@ export class BillingStatisticsRepository {
       notes: notes.map(toNoteRecord),
     };
   }
+
+  async findInvoicedYears(
+    environment: BillingFiscalEnvironment,
+    firstYear: number,
+    lastYear: number,
+  ): Promise<number[]> {
+    if (!Number.isInteger(firstYear) || !Number.isInteger(lastYear) || lastYear < firstYear) {
+      return [];
+    }
+
+    const checks = await Promise.all(
+      Array.from({ length: lastYear - firstYear + 1 }, async (_, index) => {
+        const year = lastYear - index;
+        const invoice = await prisma.billingInvoice.findFirst({
+          where: {
+            environment,
+            issuedAt: {
+              gte: new Date(year, 0, 1),
+              lt: new Date(year + 1, 0, 1),
+            },
+          },
+          select: { id: true },
+        });
+        return invoice ? year : null;
+      }),
+    );
+
+    return checks.filter((year): year is number => year !== null);
+  }
 }
 
 function toInvoiceRecord(

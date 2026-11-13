@@ -4,6 +4,7 @@ import { StatisticsManager } from "@/features/billing/components/statistics/Stat
 import { parseStatisticsNavigation } from "@/features/billing/utils/billing-statistics-navigation";
 import { requireBillingSectionPreviewOrRedirect } from "@/server/auth";
 import { readActiveFiscalEnvironment } from "@/server/services/billing-fiscal-scope";
+import { billingStatisticsService } from "@/server/services/billing-statistics.service";
 
 export const metadata: Metadata = {
   title: "Estadísticas",
@@ -34,9 +35,12 @@ export default async function FacturacionEstadisticasPage({
     firstParam(params.analisis),
   );
 
+  const today = new Date();
   let fiscalEnvironment: BillingFiscalEnvironment;
+  let invoicedYears: number[];
   try {
     fiscalEnvironment = await readActiveFiscalEnvironment();
+    invoicedYears = await billingStatisticsService.listInvoicedYears(today);
   } catch (error) {
     const message = error instanceof Error
       ? error.message
@@ -44,13 +48,12 @@ export default async function FacturacionEstadisticasPage({
     return <p role="alert">{message}</p>;
   }
 
-  const today = new Date();
-
   return (
     <StatisticsManager
       fiscalEnvironment={fiscalEnvironment}
       initialYear={today.getFullYear()}
       initialMonth={today.getMonth() + 1}
+      invoicedYears={invoicedYears}
       initialSection={navigation.section}
       initialAnalysis={navigation.analysis}
     />

@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CircleDollarSign, Percent, Receipt } from "@/shared/icons";
+import { Calculator, CircleDollarSign, Percent, Receipt } from "@/shared/icons";
 import { DashboardKpiCard } from "@/features/billing/components/dashboard/DashboardKpiCard";
 import type {
   StatisticsCountsView,
@@ -23,6 +23,15 @@ function moneyTone(total: string): "blue" | "red" {
   return total.startsWith("-") ? "red" : "blue";
 }
 
+function issuedInvoices(count: number) {
+  const label = Math.abs(count) === 1 ? "factura emitida" : "facturas emitidas";
+  return (
+    <span className={styles.issuedInvoices}>
+      <strong>{count}</strong> {label}
+    </span>
+  );
+}
+
 export function StatisticsKpis({
   totals,
   counts,
@@ -43,9 +52,7 @@ export function StatisticsKpis({
             id: "statistics-total",
             label: accumulated ? "Facturación acumulada" : "Facturación total",
             value: formatStatisticsAmount(totals.total),
-            secondary: accumulated
-              ? `Suma de ${monthCount} meses emitidos`
-              : "Facturación emitida, con IVA",
+            secondary: issuedInvoices(counts.invoiceCount),
             tone: moneyTone(totals.total),
           }}
         />
@@ -55,7 +62,7 @@ export function StatisticsKpis({
             id: "statistics-net",
             label: accumulated ? "Neto acumulado" : "Neto sin IVA",
             value: formatStatisticsAmount(totals.net),
-            secondary: "Importe neto registrado",
+            secondary: issuedInvoices(counts.invoiceCount),
             tone: totals.net.startsWith("-") ? "red" : "green",
           }}
         />
@@ -71,12 +78,12 @@ export function StatisticsKpis({
         />
         {accumulated && averageTotal ? (
           <DashboardKpiCard
-            icon={BarChart3}
+            icon={Calculator}
             kpi={{
               id: "statistics-average",
               label: "Promedio mensual",
               value: formatStatisticsAmount(averageTotal),
-              secondary: "Facturación acumulada dividida por los meses elegidos",
+              secondary: "Facturación acumulada dividida por los meses con facturación",
               tone: moneyTone(averageTotal),
             }}
           />
@@ -88,10 +95,8 @@ export function StatisticsKpis({
         </p>
       ) : null}
       <ul className={styles.counts}>
-        <li><span>Facturas</span><strong>{counts.invoiceCount}</strong></li>
         <li><span>Notas de crédito</span><strong>{counts.creditNoteCount}</strong></li>
         <li><span>Notas de débito</span><strong>{counts.debitNoteCount}</strong></li>
-        <li><span>Comprobantes</span><strong>{counts.documentCount}</strong></li>
       </ul>
     </section>
   );
