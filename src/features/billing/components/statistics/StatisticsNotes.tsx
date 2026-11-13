@@ -1,6 +1,13 @@
 "use client";
 
-import { billingInvoiceDetailHref } from "@/features/billing/data/billingNav";
+import { type MouseEvent } from "react";
+import Link from "next/link";
+import { useAdminSectionTransition } from "@/features/admin/components/AdminSectionTransition";
+import { useUnsavedInvoiceDraft } from "@/features/billing/components/invoices/UnsavedInvoiceDraftContext";
+import {
+  billingHighlightedInvoiceHref,
+  billingHighlightedNoteHref,
+} from "@/features/billing/data/billingNav";
 import type {
   StatisticsMoneyView,
   StatisticsReconciliationView,
@@ -54,7 +61,17 @@ export function StatisticsNotes({
   notes,
   reconciliation,
 }: StatisticsNotesProps) {
+  const sectionTransition = useAdminSectionTransition();
+  const unsavedDraft = useUnsavedInvoiceDraft();
   const unassigned = reconciliation.unassigned.total !== "0.00" && reconciliation.unassigned.total !== "-0.00";
+
+  function goToList(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (unsavedDraft?.interceptLeave(event, href, { exact: true })) {
+      return;
+    }
+
+    sectionTransition?.beginNavigation(href, { exact: true });
+  }
 
   return (
     <section className={styles.panel} aria-label="Notas de crédito y débito" data-testid="statistics-notes">
@@ -116,28 +133,35 @@ export function StatisticsNotes({
                   <td>{note.invoiceNumber || "—"}</td>
                   <td className={styles.noteActions}>
                     <span className={styles.noteActionWrap}>
-                      <a
+                      <Link
                         className={styles.noteIconButton}
-                        href={`/api/admin/billing/notes/${note.id}`}
-                        target="_blank"
-                        rel="noreferrer"
+                        href={billingHighlightedNoteHref(note.id)}
                         aria-label="Ver nota"
+                        onClick={(event) => {
+                          goToList(event, billingHighlightedNoteHref(note.id));
+                        }}
                       >
                         <ArrowLeftRight strokeWidth={ICON_STROKE} aria-hidden />
-                      </a>
+                      </Link>
                       <span className={styles.noteActionTooltip} role="tooltip">
                         Ver nota
                       </span>
                     </span>
                     {note.invoiceId ? (
                       <span className={styles.noteActionWrap}>
-                        <a
+                        <Link
                           className={styles.noteIconButton}
-                          href={billingInvoiceDetailHref(note.invoiceId)}
+                          href={billingHighlightedInvoiceHref(note.invoiceId)}
                           aria-label="Ver factura asociada"
+                          onClick={(event) => {
+                            goToList(
+                              event,
+                              billingHighlightedInvoiceHref(note.invoiceId),
+                            );
+                          }}
                         >
                           <ReceiptText strokeWidth={ICON_STROKE} aria-hidden />
-                        </a>
+                        </Link>
                         <span className={styles.noteActionTooltip} role="tooltip">
                           Ver factura asociada
                         </span>

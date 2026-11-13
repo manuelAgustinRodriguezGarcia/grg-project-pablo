@@ -11,6 +11,7 @@ import {
   PAYMENT_STATUS_LABELS,
   fiscalEnvironmentListLabel,
 } from "@/features/billing/types/billing-invoice.types";
+import { useScrollToHighlightedRow } from "@/features/billing/hooks/useScrollToHighlightedRow";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import {
   formatInvoiceIdentification,
@@ -25,6 +26,7 @@ type ComprobantesTableProps = {
   invoices: BillingInvoiceListItem[];
   isLoading: boolean;
   error: string | null;
+  highlightInvoiceId?: string;
   onDetails: (invoice: BillingInvoiceListItem) => void;
   onIssueReceipt: (invoice: BillingInvoiceListItem) => void;
 };
@@ -57,9 +59,11 @@ export function ComprobantesTable({
   invoices,
   isLoading,
   error,
+  highlightInvoiceId,
   onDetails,
   onIssueReceipt,
 }: ComprobantesTableProps) {
+  useScrollToHighlightedRow(highlightInvoiceId, !isLoading);
   if (isLoading) {
     return (
       <section className={styles.tablePanel} aria-label="Listado de facturas">
@@ -135,8 +139,14 @@ export function ComprobantesTable({
                   invoice.clientIdentificationNumber,
                 );
 
+                const highlighted = invoice.id === highlightInvoiceId;
+
                 return (
-                  <tr key={invoice.id}>
+                  <tr
+                    key={invoice.id}
+                    className={highlighted ? styles.listRowHighlight : undefined}
+                    data-list-highlight={highlighted ? highlightInvoiceId : undefined}
+                  >
                     <td>
                       {INVOICE_DATE_FORMATTER.format(new Date(invoice.issuedAt))}
                     </td>
@@ -226,8 +236,18 @@ export function ComprobantesTable({
               invoice.clientIdentificationNumber,
             );
 
+            const highlighted = invoice.id === highlightInvoiceId;
+
             return (
-              <article key={invoice.id} className={styles.clientCard}>
+              <article
+                key={invoice.id}
+                className={
+                  highlighted
+                    ? `${styles.clientCard} ${styles.listRowHighlight}`
+                    : styles.clientCard
+                }
+                data-list-highlight={highlighted ? highlightInvoiceId : undefined}
+              >
                 <div className={styles.clientCardHeader}>
                   <div>
                     <p className={styles.clientCardCode}>

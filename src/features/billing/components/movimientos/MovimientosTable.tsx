@@ -6,6 +6,7 @@ import {
   RECEIPT_ALLOCATION_STATUS_LABELS,
   RECEIPT_PAYMENT_METHOD_LABELS,
 } from "@/features/billing/types/billing-receipt.types";
+import { useScrollToHighlightedRow } from "@/features/billing/hooks/useScrollToHighlightedRow";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import { DocumentActivityBadges } from "@/features/billing/components/invoices/DocumentActivityBadges";
 import { useBillingDocumentActivity } from "@/features/billing/hooks/useBillingDocumentActivity";
@@ -34,6 +35,7 @@ type MovimientosTableProps = {
   kindFilter: MovementKindFilter;
   isLoading: boolean;
   error: string | null;
+  highlightNoteId?: string;
   onOpenInvoice: (invoiceId: string) => void;
   onOpenReceipt: (receiptId: string) => void;
   onAllocate?: (receiptId: string) => void;
@@ -74,6 +76,27 @@ function movementFiscalMeta(movement: BillingMovementListItem): string | null {
     environment: movement.noteEnvironment,
     invoiceType: movement.noteInvoiceType,
   });
+}
+
+function highlightedNoteId(
+  movement: BillingMovementListItem,
+  highlightNoteId: string | undefined,
+): string | undefined {
+  if (!highlightNoteId || movement.id !== highlightNoteId) {
+    return undefined;
+  }
+
+  switch (movement.kind) {
+    case "CREDIT_NOTE":
+    case "DEBIT_NOTE":
+      return highlightNoteId;
+    case "RECEIPT":
+      return undefined;
+    default: {
+      const unexpected: never = movement.kind;
+      return unexpected;
+    }
+  }
 }
 
 function movementRowClass(kind: BillingMovementKind): string | undefined {
@@ -322,11 +345,13 @@ export function MovimientosTable({
   kindFilter,
   isLoading,
   error,
+  highlightNoteId,
   onOpenInvoice,
   onOpenReceipt,
   onAllocate,
 }: MovimientosTableProps) {
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  useScrollToHighlightedRow(highlightNoteId, !isLoading);
 
   if (isLoading) {
     return (
@@ -394,10 +419,20 @@ export function MovimientosTable({
               </tr>
             </thead>
             <tbody>
-              {movements.map((movement) => (
+              {movements.map((movement) => {
+                const highlighted = highlightedNoteId(movement, highlightNoteId);
+                const rowClass = [
+                  movementRowClass(movement.kind),
+                  highlighted ? styles.listRowHighlight : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(" ");
+
+                return (
                 <tr
                   key={`${movement.kind}-${movement.id}`}
-                  className={movementRowClass(movement.kind)}
+                  className={rowClass || undefined}
+                  data-list-highlight={highlighted}
                 >
                   <td>
                     {MOVEMENT_DATE_FORMATTER.format(new Date(movement.issuedAt))}
@@ -453,21 +488,27 @@ export function MovimientosTable({
                     </span>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         <div className={styles.mobileList}>
-          {movements.map((movement) => (
+          {movements.map((movement) => {
+            const highlighted = highlightedNoteId(movement, highlightNoteId);
+
+            return (
             <article
               key={`${movement.kind}-${movement.id}`}
               className={[
                 styles.clientCard,
                 movementRowClass(movement.kind),
+                highlighted ? styles.listRowHighlight : undefined,
               ]
                 .filter(Boolean)
                 .join(" ")}
+              data-list-highlight={highlighted}
             >
               <div className={styles.clientCardHeader}>
                 <div>
@@ -514,7 +555,8 @@ export function MovimientosTable({
                 />
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

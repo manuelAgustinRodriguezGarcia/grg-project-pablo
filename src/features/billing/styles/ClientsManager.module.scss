@@ -921,6 +921,26 @@ $clients-shadow:
       background: rgba($green, 0.13);
     }
   }
+
+  tbody tr.listRowHighlight,
+  tbody tr.movementRowCredit.listRowHighlight,
+  tbody tr.movementRowDebit.listRowHighlight {
+    background: rgba($clients-accent, 0.2);
+    box-shadow: inset 4px 0 0 $clients-accent;
+    animation: listRowHighlightIn 0.9s ease;
+
+    &:hover {
+      background: rgba($clients-accent, 0.28);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    tbody tr.listRowHighlight,
+    tbody tr.movementRowCredit.listRowHighlight,
+    tbody tr.movementRowDebit.listRowHighlight {
+      animation: none;
+    }
+  }
 }
 
 .codeCell {
@@ -2345,6 +2365,22 @@ td.clientIdentityCell {
     background: rgba($green, 0.07);
   }
 
+  .clientCard.listRowHighlight,
+  .clientCard.movementRowCredit.listRowHighlight,
+  .clientCard.movementRowDebit.listRowHighlight {
+    background: rgba($clients-accent, 0.2);
+    box-shadow: inset 4px 0 0 $clients-accent;
+    animation: listRowHighlightIn 0.9s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .clientCard.listRowHighlight,
+    .clientCard.movementRowCredit.listRowHighlight,
+    .clientCard.movementRowDebit.listRowHighlight {
+      animation: none;
+    }
+  }
+
   .clientCardHeader {
     display: flex;
     align-items: flex-start;
@@ -2499,6 +2535,16 @@ td.clientIdentityCell {
 
   .invoiceDetailCard {
     animation: invoiceDetailCardExit 0.22s ease-in forwards;
+  }
+}
+
+@keyframes listRowHighlightIn {
+  from {
+    background: rgba($clients-accent, 0.4);
+  }
+
+  to {
+    background: rgba($clients-accent, 0.2);
   }
 }
 

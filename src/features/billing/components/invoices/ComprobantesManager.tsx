@@ -62,6 +62,7 @@ type ComprobantesManagerProps = {
   fiscalEnvironment: BillingFiscalEnvironment;
   noteProductionEmissionEnabled?: boolean;
   openInvoiceId?: string;
+  highlightInvoiceId?: string;
   initialPaymentStatus?: string;
 };
 
@@ -71,6 +72,7 @@ export function ComprobantesManager({
   fiscalEnvironment,
   noteProductionEmissionEnabled = false,
   openInvoiceId,
+  highlightInvoiceId,
   initialPaymentStatus,
 }: ComprobantesManagerProps) {
   const [query, setQuery] = useState("");
@@ -254,6 +256,7 @@ export function ComprobantesManager({
             invoices={filteredInvoices}
             isLoading={hideInternalLoaders ? false : isLoading}
             error={listError}
+            highlightInvoiceId={highlightInvoiceId}
             onDetails={(invoice) => setSelectedInvoiceId(invoice.id)}
             onIssueReceipt={(invoice) => {
               if (!invoice.clientId || !invoiceCanIssueReceipt(invoice)) {

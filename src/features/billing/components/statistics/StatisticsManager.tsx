@@ -5,7 +5,10 @@ import type { BillingFiscalEnvironment } from "@/generated/prisma/client";
 import { useReportAdminSectionReady } from "@/features/admin/components/AdminSectionTransition";
 import { StatisticsBreakdown, type StatisticsRankItem } from "@/features/billing/components/statistics/StatisticsBreakdown";
 import { StatisticsConclusions } from "@/features/billing/components/statistics/StatisticsConclusions";
-import { StatisticsEntityDetail } from "@/features/billing/components/statistics/StatisticsEntityDetail";
+import {
+  STATISTICS_SELECTED_ENTITY_ID,
+  StatisticsEntityDetail,
+} from "@/features/billing/components/statistics/StatisticsEntityDetail";
 import { StatisticsEvolution } from "@/features/billing/components/statistics/StatisticsEvolution";
 import { StatisticsKpis } from "@/features/billing/components/statistics/StatisticsKpis";
 import { StatisticsMonthComparison } from "@/features/billing/components/statistics/StatisticsMonthComparison";
@@ -267,6 +270,27 @@ export function StatisticsManager({
     sectionRequest.current = false;
     node.scrollIntoView({ block: "start" });
   }, [view, section]);
+
+  const selectedEntityKey = section === "clients" ? clientKey : rubroKey;
+
+  useEffect(() => {
+    if (!selectedEntityKey) {
+      return;
+    }
+
+    const node = document.getElementById(STATISTICS_SELECTED_ENTITY_ID);
+    if (!node) {
+      return;
+    }
+
+    const reduceMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    node.scrollIntoView({
+      block: "start",
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+  }, [section, selectedEntityKey]);
 
   const selectedClient = view?.clients.find((client) => client.key === clientKey) ?? null;
   const selectedRubro = view?.rubros.find((rubro) => rubro.key === rubroKey) ?? null;

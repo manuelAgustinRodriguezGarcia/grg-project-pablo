@@ -18,10 +18,16 @@ type StatisticsEntityDetailProps = {
   onClose: () => void;
 };
 
+export const STATISTICS_SELECTED_ENTITY_ID = "statistics-selected-entity";
+
 export function StatisticsEntityDetail({ panel, onClose }: StatisticsEntityDetailProps) {
   if (!panel.found) {
     return (
-      <section className={styles.entity} aria-label="Detalle">
+      <section
+        id={STATISTICS_SELECTED_ENTITY_ID}
+        className={styles.entity}
+        aria-label="Detalle"
+      >
         <p className={styles.empty}>{panel.missing}</p>
         <button type="button" className={styles.textButton} onClick={onClose}>
           Cerrar detalle
@@ -38,7 +44,11 @@ export function StatisticsEntityDetail({ panel, onClose }: StatisticsEntityDetai
   const shareText = shareUnavailableText(panel.shareUnavailableReason);
 
   return (
-    <section className={styles.entity} aria-label={`Detalle de ${panel.title}`}>
+    <section
+      id={STATISTICS_SELECTED_ENTITY_ID}
+      className={styles.entity}
+      aria-label={`Detalle de ${panel.title}`}
+    >
       <div className={styles.panelHeader}>
         <div>
           <h3 className={styles.panelTitle}>{panel.title}</h3>

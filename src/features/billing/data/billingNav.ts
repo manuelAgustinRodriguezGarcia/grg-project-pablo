@@ -56,6 +56,7 @@ export const BILLING_CLIENT_ID_QUERY = "cliente";
 export const BILLING_CLIENT_HISTORY_QUERY = "historial";
 export const BILLING_INVOICE_ID_QUERY = "factura";
 export const BILLING_PAYMENT_STATUS_QUERY = "estado";
+export const BILLING_LIST_HIGHLIGHT_QUERY = "resaltar";
 
 export function billingClientHistoryHref(clientId: string): string {
   const params = new URLSearchParams({
@@ -70,6 +71,20 @@ export function billingInvoiceDetailHref(invoiceId: string): string {
     [BILLING_INVOICE_ID_QUERY]: invoiceId,
   });
   return `${BILLING_INVOICES_PATH}?${params.toString()}`;
+}
+
+export function billingHighlightedInvoiceHref(invoiceId: string): string {
+  const params = new URLSearchParams({
+    [BILLING_LIST_HIGHLIGHT_QUERY]: invoiceId,
+  });
+  return `${BILLING_INVOICES_PATH}?${params.toString()}`;
+}
+
+export function billingHighlightedNoteHref(noteId: string): string {
+  const params = new URLSearchParams({
+    [BILLING_LIST_HIGHLIGHT_QUERY]: noteId,
+  });
+  return `${BILLING_MOVIMIENTOS_PATH}?${params.toString()}`;
 }
 
 export const BILLING_SECTIONS: BillingSectionConfig[] = [

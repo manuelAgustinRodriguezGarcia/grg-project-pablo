@@ -44,6 +44,7 @@ type MovimientosManagerProps = {
   noteProductionEmissionEnabled?: boolean;
   canManageMovements?: boolean;
   canUpdateMovements?: boolean;
+  highlightNoteId?: string;
 };
 
 export function MovimientosManager({
@@ -55,6 +56,7 @@ export function MovimientosManager({
   noteProductionEmissionEnabled = false,
   canManageMovements = false,
   canUpdateMovements = false,
+  highlightNoteId,
 }: MovimientosManagerProps) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<MovementKindFilter>("all");
@@ -258,6 +260,7 @@ export function MovimientosManager({
             kindFilter={kind}
             isLoading={hideInternalLoaders ? false : isLoading}
             error={listError}
+            highlightNoteId={highlightNoteId}
             onOpenInvoice={setSelectedInvoiceId}
             onOpenReceipt={setSelectedReceiptId}
             onAllocate={

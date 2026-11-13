@@ -5,6 +5,7 @@ import { listBillingInvoicesAction } from "@/features/billing/actions/billing-in
 import { listBillingNotesAction } from "@/features/billing/actions/billing-note.actions";
 import { listBillingReceiptsAction } from "@/features/billing/actions/billing-receipt.actions";
 import { MovimientosManager } from "@/features/billing/components/movimientos/MovimientosManager";
+import { BILLING_LIST_HIGHLIGHT_QUERY } from "@/features/billing/data/billingNav";
 import { isArcaNoteProductionEmissionEnabled } from "@/server/arca/config/production-emission";
 import { requirePermissionOrRedirect } from "@/server/auth";
 import { billingFiscalSettingsRepository } from "@/server/repositories/billing-fiscal-settings.repository";
@@ -13,7 +14,24 @@ export const metadata: Metadata = {
   title: "Movimientos",
 };
 
-export default async function FacturacionMovimientosPage() {
+type FacturacionMovimientosPageProps = {
+  searchParams: Promise<{
+    [BILLING_LIST_HIGHLIGHT_QUERY]?: string | string[];
+  }>;
+};
+
+function firstParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value ?? "";
+}
+
+export default async function FacturacionMovimientosPage({
+  searchParams,
+}: FacturacionMovimientosPageProps) {
+  const params = await searchParams;
   const auth = await requirePermissionOrRedirect("movements.read", "/admin");
   const adminAuth = toAdminUiAuth(auth.profile);
   const [invoicesResult, receiptsResult, notesResult, clientsResult, fiscalSettings] =
@@ -35,6 +53,7 @@ export default async function FacturacionMovimientosPage() {
       noteProductionEmissionEnabled={isArcaNoteProductionEmissionEnabled()}
       canManageMovements={adminAuth.canManageMovements}
       canUpdateMovements={adminAuth.canUpdateMovements}
+      highlightNoteId={firstParam(params[BILLING_LIST_HIGHLIGHT_QUERY]) || undefined}
     />
   );
 }

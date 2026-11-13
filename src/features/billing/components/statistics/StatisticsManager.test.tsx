@@ -299,8 +299,15 @@ describe("estadísticas de facturación", () => {
     const note = await screen.findByRole("link", { name: "Ver nota" });
     const invoice = screen.getByRole("link", { name: "Ver factura asociada" });
 
-    expect(note).toHaveAttribute("href", "/api/admin/billing/notes/note-11");
-    expect(invoice).toHaveAttribute("href", "/admin/facturacion/facturas?factura=fac-11");
+    expect(note).toHaveAttribute(
+      "href",
+      "/admin/facturacion/movimientos?resaltar=note-11",
+    );
+    expect(note).not.toHaveAttribute("target");
+    expect(invoice).toHaveAttribute(
+      "href",
+      "/admin/facturacion/facturas?resaltar=fac-11",
+    );
     expect(screen.getByTestId("statistics-notes")).toHaveTextContent("NC-11");
     expect(screen.getByTestId("statistics-notes")).toHaveTextContent("Nota de crédito");
   });
@@ -369,6 +376,38 @@ describe("estadísticas de facturación", () => {
       expect(scrollIntoView).toHaveBeenCalled();
     });
     expect(scrollIntoView.mock.instances.at(-1)).toHaveAttribute("id", "statistics-analysis-ranking");
+    HTMLElement.prototype.scrollIntoView = originalScroll;
+  });
+
+  it("lleva el detalle a la vista al elegir un cliente o un rubro", async () => {
+    const originalScroll = HTMLElement.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /SUCESION DE VALLE ROBERTO/ }));
+    expect(await screen.findByRole("region", { name: "Detalle de SUCESION DE VALLE ROBERTO" })).toHaveAttribute(
+      "id",
+      "statistics-selected-entity",
+    );
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+    expect(scrollIntoView.mock.instances.at(-1)).toHaveAttribute("id", "statistics-selected-entity");
+    expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: "start" }));
+
+    scrollIntoView.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar detalle" }));
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Estadísticas de Rubros" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Frenos/ }));
+    expect(await screen.findByRole("region", { name: "Detalle de Frenos" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+    expect(scrollIntoView.mock.instances.at(-1)).toHaveAttribute("id", "statistics-selected-entity");
+
     HTMLElement.prototype.scrollIntoView = originalScroll;
   });
 

@@ -4,6 +4,7 @@ import { listBillingInvoicesAction } from "@/features/billing/actions/billing-in
 import { ComprobantesManager } from "@/features/billing/components/invoices/ComprobantesManager";
 import {
   BILLING_INVOICE_ID_QUERY,
+  BILLING_LIST_HIGHLIGHT_QUERY,
   BILLING_PAYMENT_STATUS_QUERY,
 } from "@/features/billing/data/billingNav";
 import { isArcaNoteProductionEmissionEnabled } from "@/server/arca/config/production-emission";
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 type FacturacionFacturasPageProps = {
   searchParams: Promise<{
     [BILLING_INVOICE_ID_QUERY]?: string | string[];
+    [BILLING_LIST_HIGHLIGHT_QUERY]?: string | string[];
     [BILLING_PAYMENT_STATUS_QUERY]?: string | string[];
   }>;
 };
@@ -47,6 +49,9 @@ export default async function FacturacionFacturasPage({
       fiscalEnvironment={fiscalSettings.environment}
       noteProductionEmissionEnabled={isArcaNoteProductionEmissionEnabled()}
       openInvoiceId={firstParam(params[BILLING_INVOICE_ID_QUERY]) || undefined}
+      highlightInvoiceId={
+        firstParam(params[BILLING_LIST_HIGHLIGHT_QUERY]) || undefined
+      }
       initialPaymentStatus={
         firstParam(params[BILLING_PAYMENT_STATUS_QUERY]) || undefined
       }
