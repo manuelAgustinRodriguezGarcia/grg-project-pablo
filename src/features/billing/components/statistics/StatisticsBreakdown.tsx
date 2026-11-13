@@ -133,16 +133,23 @@ export function StatisticsBreakdown({
                       aria-pressed={selectedKey === item.key}
                       onClick={() => onSelect(item.key)}
                     >
-                      <span className={styles.rankTitle}>
-                        <span className={styles.rankName}>{item.name}</span>
-                        {item.code ? <span className={styles.rankCode}>{item.code}</span> : null}
-                      </span>
-                      <span className={styles.rankMeta}>
-                        {item.historical ? "Identidad histórica · " : null}
-                        <span className={negative ? styles.amountNegative : undefined}>
-                          {formatStatisticsAmount(item.total)}
+                      <span className={styles.rankHead}>
+                        <span className={styles.rankTitle}>
+                          <span className={styles.rankName}>{item.name}</span>
+                          {item.code ? <span className={styles.rankCode}>{item.code}</span> : null}
                         </span>
-                        {item.secondary ? ` · ${item.secondary}` : null}
+                        <span className={styles.rankFigures}>
+                          <span className={`${styles.rankAmount} ${negative ? styles.amountNegative : ""}`}>
+                            {formatStatisticsAmount(item.total)}
+                          </span>
+                          {item.historical || item.secondary ? (
+                            <span className={styles.rankMeta}>
+                              {item.historical ? "Identidad histórica" : null}
+                              {item.historical && item.secondary ? " · " : null}
+                              {item.secondary || null}
+                            </span>
+                          ) : null}
+                        </span>
                       </span>
                       <span className={styles.rankShare} title={shareText ?? undefined}>
                         {formatSharePercent(item.sharePercent)}

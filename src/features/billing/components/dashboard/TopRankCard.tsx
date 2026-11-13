@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import type { DashboardTopItem } from "@/features/billing/data/dashboardTypes";
@@ -19,7 +19,7 @@ type TopRankCardProps = {
   rankBy?: RankBy;
   footerHref?: string;
   footerLabel?: string;
-  onFooterClick?: () => void;
+  onFooterNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
   showRankIndex?: boolean;
   scrollableList?: boolean;
   className?: string;
@@ -51,7 +51,7 @@ export function TopRankCard({
   rankBy = "amount",
   footerHref,
   footerLabel,
-  onFooterClick,
+  onFooterNavigate,
   showRankIndex = true,
   scrollableList = false,
   className,
@@ -68,7 +68,7 @@ export function TopRankCard({
   );
   const isGreen = barTone === "green";
   const getBarColor = isGreen ? getGreenScaleColor : getBlueScaleColor;
-  const showFooter = Boolean(footerLabel && (footerHref || onFooterClick));
+  const showFooter = Boolean(footerLabel && footerHref);
 
   const updateScrollHint = useCallback(() => {
     if (!scrollableList) {
@@ -190,19 +190,11 @@ export function TopRankCard({
           </div>
         ) : null}
       </div>
-      {showFooter && onFooterClick ? (
-        <button
-          type="button"
-          className={`${styles.cardFooterButton} ${isGreen ? styles.cardFooterButtonGreen : ""}`}
-          onClick={onFooterClick}
-        >
-          {footerLabel}
-        </button>
-      ) : null}
-      {showFooter && !onFooterClick && footerHref ? (
+      {showFooter && footerHref ? (
         <Link
           href={footerHref}
           className={`${styles.cardFooterLink} ${isGreen ? styles.cardFooterLinkGreen : ""}`}
+          onClick={onFooterNavigate}
         >
           {footerLabel}
         </Link>

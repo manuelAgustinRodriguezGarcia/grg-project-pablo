@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LibroIvaResumenesManager } from "@/features/billing/components/invoices/LibroIvaResumenesManager";
 import { LIBRO_IVA_RESUMENES_TITLE } from "@/features/billing/utils/libro-iva-resumenes";
-import { requireBillingSectionPreviewOrRedirect } from "@/server/auth";
+import { requireBillingStatisticsAndLibrosOrRedirect } from "@/server/auth";
 import { billingFiscalSettingsRepository } from "@/server/repositories/billing-fiscal-settings.repository";
 
 export const metadata: Metadata = {
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function LibrosIvaPage() {
-  await requireBillingSectionPreviewOrRedirect("invoices.read", "/admin");
+  await requireBillingStatisticsAndLibrosOrRedirect("invoices.read", "/admin");
   const settings = await billingFiscalSettingsRepository.getOrCreate();
 
   return <LibroIvaResumenesManager initialEnvironment={settings.environment} />;

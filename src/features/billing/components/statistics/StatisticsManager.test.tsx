@@ -128,6 +128,7 @@ function yearPayload(year: number, months: ReturnType<typeof activeMonth>[]) {
 function renderPage(extra?: {
   initialSection?: "clients" | "rubros";
   initialAnalysis?: "ranking" | "participacion" | "evolucion" | null;
+  initialScrollToSection?: boolean;
   invoicedYears?: number[];
 }) {
   const client = new QueryClient({
@@ -142,6 +143,7 @@ function renderPage(extra?: {
         invoicedYears={extra?.invoicedYears}
         initialSection={extra?.initialSection}
         initialAnalysis={extra?.initialAnalysis}
+        initialScrollToSection={extra?.initialScrollToSection}
       />
     </QueryClientProvider>,
   );
@@ -367,6 +369,23 @@ describe("estadísticas de facturación", () => {
       expect(scrollIntoView).toHaveBeenCalled();
     });
     expect(scrollIntoView.mock.instances.at(-1)).toHaveAttribute("id", "statistics-analysis-ranking");
+    HTMLElement.prototype.scrollIntoView = originalScroll;
+  });
+
+  it("se desplaza hasta clientes o rubros cuando la URL pide la sección", async () => {
+    const originalScroll = HTMLElement.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    renderPage({ initialSection: "rubros", initialScrollToSection: true });
+    expect(await screen.findByRole("tab", { name: "Estadísticas de Rubros" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+    expect(scrollIntoView.mock.instances.at(-1)).toHaveAttribute("id", "statistics-entity-section");
     HTMLElement.prototype.scrollIntoView = originalScroll;
   });
 });

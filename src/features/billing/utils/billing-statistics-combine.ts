@@ -98,18 +98,6 @@ export type StatisticsMonthLeader = {
   total: string | null;
 };
 
-export type StatisticsMover = {
-  key: string;
-  name: string;
-  delta: string;
-  percent: string | null;
-  earlierMonth: number;
-  laterMonth: number;
-  earlierName: string;
-  laterName: string;
-  skipped: boolean;
-};
-
 export type StatisticsExtremes = {
   months: number[];
   names: string[];
@@ -127,15 +115,10 @@ export type StatisticsSelectionView = {
   worst: StatisticsExtremes | null;
   spreadAmount: string | null;
   spreadPercent: string | null;
-  busiest: { months: number[]; names: string[]; invoiceCount: number } | null;
   clients: StatisticsRankedClient[];
   rubros: StatisticsRankedRubro[];
   clientLeaders: StatisticsMonthLeader[];
   rubroLeaders: StatisticsMonthLeader[];
-  clientIncreases: StatisticsMover[];
-  clientDecreases: StatisticsMover[];
-  rubroIncreases: StatisticsMover[];
-  rubroDecreases: StatisticsMover[];
   conclusions: string[];
   notes: StatisticsYearNote[];
   creditNotes: StatisticsMoneyView;
@@ -222,27 +205,16 @@ export function combineStatisticsYear(
     worst,
     spreadAmount: spread?.amount ?? null,
     spreadPercent: spread?.percent ?? null,
-    busiest: busiestMonths(comparable),
     clients,
     rubros,
     clientLeaders: leaders(slices, today, "clients"),
     rubroLeaders: leaders(slices, today, "rubros"),
-    clientIncreases: [],
-    clientDecreases: [],
-    rubroIncreases: [],
-    rubroDecreases: [],
     conclusions: [],
     notes,
     creditNotes: sumMoney(slices.map((slice) => slice.creditNotes)),
     debitNotes: sumMoney(slices.map((slice) => slice.debitNotes)),
   };
 
-  const clientMovement = movers(slices, today, "clients");
-  const rubroMovement = movers(slices, today, "rubros");
-  view.clientIncreases = clientMovement.increases;
-  view.clientDecreases = clientMovement.decreases;
-  view.rubroIncreases = rubroMovement.increases;
-  view.rubroDecreases = rubroMovement.decreases;
   view.conclusions = buildConclusions(view);
   return view;
 }
@@ -358,20 +330,6 @@ function spreadBetween(
     : null;
 
   return { amount, percent };
-}
-
-function busiestMonths(rows: readonly StatisticsSelectedMonth[]) {
-  if (rows.length === 0 || rows.every((row) => row.counts.invoiceCount === 0)) {
-    return null;
-  }
-
-  const max = Math.max(...rows.map((row) => row.counts.invoiceCount));
-  const tied = rows.filter((row) => row.counts.invoiceCount === max);
-  return {
-    months: tied.map((row) => row.month),
-    names: tied.map((row) => row.name),
-    invoiceCount: max,
-  };
 }
 
 function rankClients(
@@ -590,76 +548,6 @@ function leaders(
   });
 }
 
-function movers(
-  slices: readonly StatisticsYearMonth[],
-  today: CalendarToday,
-  kind: "clients" | "rubros",
-): { increases: StatisticsMover[]; decreases: StatisticsMover[] } {
-  const comparable = slices.filter((slice) => monthState(slice, today) !== "future");
-  if (comparable.length < 2) {
-    return { increases: [], decreases: [] };
-  }
-
-  const earlier = comparable[0];
-  const later = comparable[comparable.length - 1];
-  if (!earlier || !later || earlier.month === later.month) {
-    return { increases: [], decreases: [] };
-  }
-
-  const earlierRows = partyMap(earlier, kind);
-  const laterRows = partyMap(later, kind);
-  const keys = new Set([...earlierRows.keys(), ...laterRows.keys()]);
-  const movement: StatisticsMover[] = [];
-
-  for (const key of keys) {
-    const before = earlierRows.get(key);
-    const after = laterRows.get(key);
-    const beforeTotal = before?.total ?? "0.00";
-    const afterTotal = after?.total ?? "0.00";
-    const deltaCents = statisticsAmountCents(afterTotal) - statisticsAmountCents(beforeTotal);
-    if (deltaCents === ZERO) {
-      continue;
-    }
-    if (statisticsAmountCents(beforeTotal) <= ZERO && statisticsAmountCents(afterTotal) <= ZERO) {
-      continue;
-    }
-
-    movement.push({
-      key,
-      name: after?.name ?? before?.name ?? "Sin nombre",
-      delta: centsToAmountString(deltaCents),
-      percent: statisticsGrowthLabel(afterTotal, beforeTotal),
-      earlierMonth: earlier.month,
-      laterMonth: later.month,
-      earlierName: monthName(earlier.month),
-      laterName: monthName(later.month),
-      skipped: later.month - earlier.month > 1,
-    });
-  }
-
-  const increases = movement
-    .filter((item) => statisticsAmountCents(item.delta) > ZERO)
-    .sort((left, right) => statisticsAmountCents(right.delta) > statisticsAmountCents(left.delta) ? 1 : -1);
-  const decreases = movement
-    .filter((item) => statisticsAmountCents(item.delta) < ZERO)
-    .sort((left, right) => statisticsAmountCents(left.delta) < statisticsAmountCents(right.delta) ? -1 : 1);
-
-  return {
-    increases: increases.slice(0, 3),
-    decreases: decreases.slice(0, 3),
-  };
-}
-
-function partyMap(
-  slice: StatisticsYearMonth,
-  kind: "clients" | "rubros",
-): Map<string, { name: string; total: string }> {
-  const entries = kind === "clients"
-    ? slice.clients.map((client) => [client.key, { name: client.clientName, total: client.totals.total }] as const)
-    : slice.rubros.map((rubro) => [rubro.key, { name: rubro.rubroName, total: rubro.totals.total }] as const);
-  return new Map(entries);
-}
-
 function buildReconciliation(
   slices: readonly StatisticsYearMonth[],
   clients: readonly StatisticsRankedClient[],
@@ -727,19 +615,21 @@ function buildConclusions(view: StatisticsSelectionView): string[] {
 
   const topRubro = view.rubros.find((rubro) => statisticsAmountCents(rubro.totals.total) > ZERO);
   if (topRubro) {
+    const amount = formatStatisticsAmount(topRubro.totals.total);
     facts.push(
       topRubro.sharePercent
-        ? `${topRubro.name} fue el rubro con mayor facturación acumulada y concentró el ${formatSharePercent(topRubro.sharePercent)}.`
-        : `${topRubro.name} fue el rubro con mayor facturación acumulada.`,
+        ? `${topRubro.name} fue el rubro con mayor facturación acumulada y concentró ${amount}, el ${formatSharePercent(topRubro.sharePercent)}.`
+        : `${topRubro.name} fue el rubro con mayor facturación acumulada, con ${amount}.`,
     );
   }
 
   const topClient = view.clients.find((client) => statisticsAmountCents(client.totals.total) > ZERO);
   if (topClient) {
+    const amount = formatStatisticsAmount(topClient.totals.total);
     facts.push(
       topClient.sharePercent
-        ? `${topClient.name} concentró el ${formatSharePercent(topClient.sharePercent)} de la facturación del período.`
-        : `${topClient.name} fue el cliente con mayor facturación del período.`,
+        ? `${topClient.name} concentró ${amount}, el ${formatSharePercent(topClient.sharePercent)} de la facturación del período.`
+        : `${topClient.name} fue el cliente con mayor facturación del período, con ${amount}.`,
     );
   }
 

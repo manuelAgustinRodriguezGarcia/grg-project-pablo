@@ -305,7 +305,7 @@ export function clientEntityPanel(entity: StatisticsClientEntity): EntityPanelMo
     vat: entity.totals.vat,
     sharePercent: entity.sharePercent,
     shareUnavailableReason: entity.shareUnavailableReason,
-    secondary: countLabel(entity.counts.documentCount, "comprobante", "comprobantes"),
+    secondary: countLabel(entity.counts.documentCount, "factura", "facturas"),
     monthly: entity.monthly,
     comparisonTotal: entity.comparison?.totals.total ?? null,
     comparisonDelta: entity.comparison?.deltaTotals.total ?? null,

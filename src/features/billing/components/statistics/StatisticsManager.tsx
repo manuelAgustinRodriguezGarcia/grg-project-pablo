@@ -40,6 +40,36 @@ import {
 import { BarChart3, BookUser, ICON_STROKE, Tags } from "@/shared/icons";
 import styles from "@/features/billing/styles/Statistics.module.scss";
 
+const STATISTICS_SKELETON_RANKS = [
+  styles.skeletonRankNameWide,
+  styles.skeletonRankNameMedium,
+  styles.skeletonRankNameShort,
+  styles.skeletonRankNameMedium,
+] as const;
+
+const STATISTICS_SKELETON_BARS = ["92%", "74%", "58%", "41%"] as const;
+
+const STATISTICS_SKELETON_KPIS = [
+  {
+    label: styles.skeletonLabelWide,
+    value: styles.skeletonValueWide,
+    secondary: styles.skeletonSecondaryWide,
+    icon: styles.skeletonIconBlue,
+  },
+  {
+    label: styles.skeletonLabelMedium,
+    value: styles.skeletonValueMedium,
+    secondary: styles.skeletonSecondaryMedium,
+    icon: styles.skeletonIconGreen,
+  },
+  {
+    label: styles.skeletonLabelShort,
+    value: styles.skeletonValueShort,
+    secondary: styles.skeletonSecondaryShort,
+    icon: styles.skeletonIconAmber,
+  },
+] as const;
+
 type StatisticsManagerProps = {
   fiscalEnvironment: BillingFiscalEnvironment;
   initialYear: number;
@@ -47,6 +77,7 @@ type StatisticsManagerProps = {
   invoicedYears?: readonly number[];
   initialSection?: "clients" | "rubros";
   initialAnalysis?: StatisticsNavAnalysis | null;
+  initialScrollToSection?: boolean;
 };
 
 function selectionCaption(selection: StatisticsMonthSelection): string {
@@ -83,7 +114,7 @@ function clientItems(rows: readonly StatisticsRankedClient[]): StatisticsRankIte
     total: row.totals.total,
     sharePercent: row.sharePercent,
     shareUnavailableReason: row.shareUnavailableReason,
-    secondary: countLabel(row.counts.documentCount, "comprobante", "comprobantes"),
+    secondary: countLabel(row.counts.documentCount, "factura", "facturas"),
   }));
 }
 
@@ -132,7 +163,7 @@ function clientPanel(client: StatisticsRankedClient): EntityPanelModel {
     vat: client.totals.vat,
     sharePercent: client.sharePercent,
     shareUnavailableReason: client.shareUnavailableReason,
-    secondary: countLabel(client.counts.documentCount, "comprobante", "comprobantes"),
+    secondary: countLabel(client.counts.documentCount, "factura", "facturas"),
     monthly: client.monthly,
     comparisonTotal: null,
     comparisonDelta: null,
@@ -168,9 +199,11 @@ export function StatisticsManager({
   invoicedYears,
   initialSection = "clients",
   initialAnalysis = null,
+  initialScrollToSection = false,
 }: StatisticsManagerProps) {
   useReportAdminSectionReady(true);
   const analysisRequest = useRef(initialAnalysis);
+  const sectionRequest = useRef(initialScrollToSection);
   const today = useMemo(
     () => ({ year: initialYear, month: initialMonth }),
     [initialYear, initialMonth],
@@ -205,17 +238,33 @@ export function StatisticsManager({
   }
 
   useEffect(() => {
-    const analysis = analysisRequest.current;
-    if (!analysis || !view) {
+    if (!view) {
       return;
     }
 
-    const node = document.getElementById(`statistics-analysis-${analysis}`);
+    const analysis = analysisRequest.current;
+    if (analysis) {
+      const node = document.getElementById(`statistics-analysis-${analysis}`);
+      if (!node) {
+        return;
+      }
+
+      analysisRequest.current = null;
+      sectionRequest.current = false;
+      node.scrollIntoView({ block: "start" });
+      return;
+    }
+
+    if (!sectionRequest.current) {
+      return;
+    }
+
+    const node = document.getElementById("statistics-entity-section");
     if (!node) {
       return;
     }
 
-    analysisRequest.current = null;
+    sectionRequest.current = false;
     node.scrollIntoView({ block: "start" });
   }, [view, section]);
 
@@ -274,11 +323,88 @@ export function StatisticsManager({
         ) : null}
 
         {selection.months.length > 0 && waitingForYear ? (
-          <div className={styles.kpiGrid} aria-hidden>
-            <div className={styles.skeleton} />
-            <div className={styles.skeleton} />
-            <div className={styles.skeleton} />
-          </div>
+          <>
+            <section className={styles.section} aria-hidden>
+              <div className={styles.kpiGrid}>
+                {STATISTICS_SKELETON_KPIS.map((card) => (
+                  <article key={card.icon} className={styles.skeletonCard}>
+                    <div className={styles.skeletonTop}>
+                      <span className={`${styles.skeletonBar} ${card.label}`} />
+                      <span className={`${styles.skeletonIcon} ${card.icon}`} />
+                    </div>
+                    <span className={`${styles.skeletonBar} ${card.value}`} />
+                    <span className={`${styles.skeletonBar} ${card.secondary}`} />
+                  </article>
+                ))}
+              </div>
+              <ul className={styles.counts}>
+                {[0, 1].map((item) => (
+                  <li key={item}>
+                    <span className={`${styles.skeletonBar} ${styles.skeletonCountLabel}`} />
+                    <span className={`${styles.skeletonBar} ${styles.skeletonCountValue}`} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section className={styles.panel} aria-hidden>
+              <div className={styles.skeletonTitleRow}>
+                <span className={styles.skeletonTitleIcon} />
+                <span className={`${styles.skeletonBar} ${styles.skeletonPanelTitle}`} />
+              </div>
+              <div className={styles.skeletonLines}>
+                <span className={`${styles.skeletonBar} ${styles.skeletonLineWide}`} />
+                <span className={`${styles.skeletonBar} ${styles.skeletonLineMedium}`} />
+                <span className={`${styles.skeletonBar} ${styles.skeletonLineShort}`} />
+              </div>
+            </section>
+            <section className={styles.section} aria-hidden>
+              <div className={styles.sectionSwitch}>
+                <span className={`${styles.sectionTab} ${styles.sectionTabActive}`}>
+                  <span className={`${styles.skeletonBar} ${styles.skeletonTabLabel}`} />
+                </span>
+                <span className={styles.sectionTab}>
+                  <span className={`${styles.skeletonBar} ${styles.skeletonTabLabelMuted}`} />
+                </span>
+              </div>
+              <div className={styles.chartSplit}>
+                <section className={styles.panel}>
+                  <span className={`${styles.skeletonBar} ${styles.skeletonPanelTitle}`} />
+                  <div className={styles.rankList}>
+                    {STATISTICS_SKELETON_RANKS.map((nameWidth, index) => (
+                      <div key={nameWidth + STATISTICS_SKELETON_BARS[index]} className={styles.skeletonRank}>
+                        <div className={styles.skeletonRankHead}>
+                          <span className={`${styles.skeletonBar} ${nameWidth}`} />
+                          <span className={`${styles.skeletonBar} ${styles.skeletonRankAmount}`} />
+                        </div>
+                        <span className={`${styles.skeletonBar} ${styles.skeletonRankMeta}`} />
+                        <span className={styles.skeletonRankTrack}>
+                          <span
+                            className={styles.skeletonRankFill}
+                            style={{ width: STATISTICS_SKELETON_BARS[index] }}
+                          />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+                <section className={styles.panel}>
+                  <span className={`${styles.skeletonBar} ${styles.skeletonPanelTitle}`} />
+                  <div className={styles.skeletonDonutWrap}>
+                    <span className={styles.skeletonDonut} />
+                  </div>
+                  <ul className={styles.legend}>
+                    {STATISTICS_SKELETON_RANKS.map((nameWidth, index) => (
+                      <li key={`${nameWidth}-${index}`}>
+                        <span className={styles.skeletonSwatch} />
+                        <span className={`${styles.skeletonBar} ${styles.skeletonLegendName}`} />
+                        <span className={`${styles.skeletonBar} ${styles.skeletonLegendAmount}`} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+            </section>
+          </>
         ) : null}
 
         {selection.months.length > 0 && yearQuery.isError ? (
@@ -293,6 +419,14 @@ export function StatisticsManager({
               averageTotal={view.averageTotal}
               monthCount={view.selectedMonths.length}
             />
+            <StatisticsConclusions
+              conclusions={view.conclusions}
+              names={[
+                ...view.selectedMonths.map((month) => month.name),
+                ...view.clients.map((client) => client.name),
+                ...view.rubros.map((rubro) => rubro.name),
+              ]}
+            />
             {isFullYearSelection(selection.months) ? (
               <StatisticsEvolution
                 monthly={view.chartMonths}
@@ -302,7 +436,11 @@ export function StatisticsManager({
               />
             ) : null}
             {selection.months.length > 1 ? <StatisticsMonthComparison view={view} /> : null}
-            <section className={styles.section} aria-label="Detalle por clientes y rubros">
+            <section
+              id="statistics-entity-section"
+              className={styles.section}
+              aria-label="Detalle por clientes y rubros"
+            >
               <div className={styles.sectionSwitch} role="tablist" aria-label="Estadísticas por">
                 <button
                   type="button"
@@ -347,8 +485,6 @@ export function StatisticsManager({
                     <StatisticsShiftSummary
                       noun="cliente"
                       leaders={view.clientLeaders}
-                      increases={view.clientIncreases}
-                      decreases={view.clientDecreases}
                     />
                   )}
                 />
@@ -373,14 +509,11 @@ export function StatisticsManager({
                     <StatisticsShiftSummary
                       noun="rubro"
                       leaders={view.rubroLeaders}
-                      increases={view.rubroIncreases}
-                      decreases={view.rubroDecreases}
                     />
                   )}
                 />
               )}
             </section>
-            <StatisticsConclusions conclusions={view.conclusions} />
             <StatisticsNotes
               creditCount={view.counts.creditNoteCount}
               debitCount={view.counts.debitNoteCount}

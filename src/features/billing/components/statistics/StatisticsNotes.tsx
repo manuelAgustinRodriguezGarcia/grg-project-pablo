@@ -7,6 +7,7 @@ import type {
   StatisticsYearNote,
 } from "@/features/billing/types/billing-statistics.types";
 import { formatStatisticsAmount } from "@/features/billing/utils/billing-statistics-display";
+import { ArrowLeftRight, ICON_STROKE, ReceiptText } from "@/shared/icons";
 import { formatIsoDateOnlyForDisplay } from "@/shared/utils/date-only";
 import styles from "@/features/billing/styles/Statistics.module.scss";
 
@@ -32,6 +33,19 @@ function noteLabel(kind: StatisticsYearNote["kind"]): string {
   }
 }
 
+function noteKindClass(kind: StatisticsYearNote["kind"]): string {
+  switch (kind) {
+    case "CREDIT":
+      return styles.noteKindCredit;
+    case "DEBIT":
+      return styles.noteKindDebit;
+    default: {
+      const unexpected: never = kind;
+      return unexpected;
+    }
+  }
+}
+
 export function StatisticsNotes({
   creditCount,
   debitCount,
@@ -44,15 +58,18 @@ export function StatisticsNotes({
 
   return (
     <section className={styles.panel} aria-label="Notas de crédito y débito" data-testid="statistics-notes">
-      <h2 className={styles.sectionTitle}>Notas de crédito y débito</h2>
-      <ul className={styles.counts}>
-        <li>
+      <h2 className={`${styles.sectionTitle} ${styles.sectionTitleWithIcon}`}>
+        <ArrowLeftRight className={styles.sectionTitleIcon} strokeWidth={ICON_STROKE} aria-hidden />
+        Notas de crédito y débito
+      </h2>
+      <ul className={`${styles.counts} ${styles.countsRow}`}>
+        <li className={styles.countCredit}>
           <span>Notas de crédito</span>
           <strong>
             {creditCount} — {formatStatisticsAmount(creditNotes.total)}
           </strong>
         </li>
-        <li>
+        <li className={styles.countDebit}>
           <span>Notas de débito</span>
           <strong>
             {debitCount} — {formatStatisticsAmount(debitNotes.total)}
@@ -85,7 +102,11 @@ export function StatisticsNotes({
             <tbody>
               {notes.map((note) => (
                 <tr key={note.id}>
-                  <td>{noteLabel(note.kind)}</td>
+                  <td>
+                    <span className={`${styles.noteKindBadge} ${noteKindClass(note.kind)}`}>
+                      {noteLabel(note.kind)}
+                    </span>
+                  </td>
                   <td>{note.noteNumber}</td>
                   <td>{formatIsoDateOnlyForDisplay(note.issuedOn)}</td>
                   <td>{note.clientName}</td>
@@ -94,18 +115,33 @@ export function StatisticsNotes({
                   </td>
                   <td>{note.invoiceNumber || "—"}</td>
                   <td className={styles.noteActions}>
-                    <a
-                      className={styles.textButton}
-                      href={`/api/admin/billing/notes/${note.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Ver nota
-                    </a>
-                    {note.invoiceId ? (
-                      <a className={styles.textButton} href={billingInvoiceDetailHref(note.invoiceId)}>
-                        Ver factura asociada
+                    <span className={styles.noteActionWrap}>
+                      <a
+                        className={styles.noteIconButton}
+                        href={`/api/admin/billing/notes/${note.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="Ver nota"
+                      >
+                        <ArrowLeftRight strokeWidth={ICON_STROKE} aria-hidden />
                       </a>
+                      <span className={styles.noteActionTooltip} role="tooltip">
+                        Ver nota
+                      </span>
+                    </span>
+                    {note.invoiceId ? (
+                      <span className={styles.noteActionWrap}>
+                        <a
+                          className={styles.noteIconButton}
+                          href={billingInvoiceDetailHref(note.invoiceId)}
+                          aria-label="Ver factura asociada"
+                        >
+                          <ReceiptText strokeWidth={ICON_STROKE} aria-hidden />
+                        </a>
+                        <span className={styles.noteActionTooltip} role="tooltip">
+                          Ver factura asociada
+                        </span>
+                      </span>
                     ) : null}
                   </td>
                 </tr>

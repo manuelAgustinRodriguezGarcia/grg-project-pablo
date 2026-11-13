@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import type { UserRole } from "@/generated/prisma/client";
-import { canPreviewBillingSections } from "@/shared/auth/billing-section-preview";
+import { canAccessBillingStatisticsAndLibros } from "@/shared/auth/billing-section-access";
 import {
   canAccessRoute,
   hasPermission,
@@ -166,25 +166,25 @@ export async function requireAnyPermissionOrRedirect(
   return auth;
 }
 
-export async function requireBillingSectionPreview(
+export async function requireBillingStatisticsAndLibros(
   permission: Permission,
 ): Promise<AuthenticatedUser> {
   const auth = await requirePermission(permission);
 
-  if (!canPreviewBillingSections(auth.profile.email)) {
+  if (!canAccessBillingStatisticsAndLibros(auth.profile.role)) {
     throw new AuthForbiddenError();
   }
 
   return auth;
 }
 
-export async function requireBillingSectionPreviewOrRedirect(
+export async function requireBillingStatisticsAndLibrosOrRedirect(
   permission: Permission,
   redirectTo?: string,
 ): Promise<AuthenticatedUser> {
   const auth = await requirePermissionOrRedirect(permission, redirectTo);
 
-  if (!canPreviewBillingSections(auth.profile.email)) {
+  if (!canAccessBillingStatisticsAndLibros(auth.profile.role)) {
     redirect(resolveForbiddenRedirect(auth.profile.role));
   }
 

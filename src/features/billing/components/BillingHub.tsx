@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState, type MouseEvent } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { useAdminSectionTransition, useReportAdminSectionReady } from "@/features/admin/components/AdminSectionTransition";
 import { BillingGuideModal } from "@/features/billing/components/BillingGuideModal";
-import { StatisticsChoiceModal } from "@/features/billing/components/statistics/StatisticsChoiceModal";
 import { InvoiceTypeChart } from "@/features/billing/components/dashboard/InvoiceTypeChart";
 import { TopRankCard } from "@/features/billing/components/dashboard/TopRankCard";
 import { useUnsavedInvoiceDraft } from "@/features/billing/components/invoices/UnsavedInvoiceDraftContext";
@@ -13,9 +12,9 @@ import {
   billingClientHistoryHref,
   BILLING_CLIENTS_PATH,
   BILLING_DEBTORS_PATH,
+  BILLING_STATISTICS_PATH,
 } from "@/features/billing/data/billingNav";
-import type { StatisticsNavSection } from "@/features/billing/utils/billing-statistics-navigation";
-import { canPreviewBillingSections } from "@/shared/auth/billing-section-preview";
+import { billingStatisticsSectionHref } from "@/features/billing/utils/billing-statistics-navigation";
 import { hasPermission } from "@/shared/auth/permissions";
 import { useBillingInvoicesQuery } from "@/features/billing/hooks/useBillingInvoicesQuery";
 import type { BillingInvoiceListItem } from "@/features/billing/types/billing-invoice.types";
@@ -39,7 +38,6 @@ import styles from "@/features/billing/styles/BillingHub.module.scss";
 type BillingHubProps = {
   initialInvoices?: BillingInvoiceListItem[];
   userRole: UserRole;
-  userEmail?: string | null;
 };
 
 type HubKpiCardProps = {
@@ -112,7 +110,6 @@ function HubKpiCard({
 export function BillingHub({
   initialInvoices = [],
   userRole,
-  userEmail,
 }: BillingHubProps) {
   const invoicesQuery = useBillingInvoicesQuery(initialInvoices);
   const sectionTransition = useAdminSectionTransition();
@@ -122,14 +119,9 @@ export function BillingHub({
     [invoicesQuery.data],
   );
   const [isGuideOpen, setIsGuideOpen] = useState(false);
-  const [statisticsModal, setStatisticsModal] =
-    useState<StatisticsNavSection | null>(null);
-  const canReadStatistics =
-    hasPermission(userRole, "statistics.read") &&
-    canPreviewBillingSections(userEmail);
-  const closeStatisticsModal = useCallback(() => {
-    setStatisticsModal(null);
-  }, []);
+  const canReadStatistics = hasPermission(userRole, "statistics.read");
+  const clientsStatisticsHref = billingStatisticsSectionHref("clientes");
+  const rubrosStatisticsHref = billingStatisticsSectionHref("rubros");
 
   useReportAdminSectionReady(true);
 
@@ -182,6 +174,9 @@ export function BillingHub({
           slices={metrics.invoiceTypeSlices}
           total={metrics.invoiceTypeTotal}
           monthLabel={metrics.monthLabel}
+          footerHref={canReadStatistics ? BILLING_STATISTICS_PATH : undefined}
+          footerLabel={canReadStatistics ? "Ver estadísticas" : undefined}
+          onFooterNavigate={(event) => goToBillingHref(event, BILLING_STATISTICS_PATH)}
         />
 
         <TopRankCard
@@ -190,14 +185,17 @@ export function BillingHub({
           items={metrics.topClients}
           icon={BookUser}
           showRankIndex={false}
-          footerHref={canReadStatistics ? undefined : BILLING_CLIENTS_PATH}
+          footerHref={canReadStatistics ? clientsStatisticsHref : BILLING_CLIENTS_PATH}
           footerLabel={
             canReadStatistics
               ? "Ver estadísticas clientes"
               : "Ver todos los clientes"
           }
-          onFooterClick={
-            canReadStatistics ? () => setStatisticsModal("clientes") : undefined
+          onFooterNavigate={(event) =>
+            goToBillingHref(
+              event,
+              canReadStatistics ? clientsStatisticsHref : BILLING_CLIENTS_PATH,
+            )
           }
           emptyLabel="Todavía no hay clientes facturados este mes."
         />
@@ -211,13 +209,16 @@ export function BillingHub({
           rankBy="amount"
           showRankIndex={false}
           footerHref={
-            canReadStatistics ? undefined : "/admin/facturacion/rubros"
+            canReadStatistics ? rubrosStatisticsHref : "/admin/facturacion/rubros"
           }
           footerLabel={
             canReadStatistics ? "Ver estadísticas rubros" : "Ver todos los rubros"
           }
-          onFooterClick={
-            canReadStatistics ? () => setStatisticsModal("rubros") : undefined
+          onFooterNavigate={(event) =>
+            goToBillingHref(
+              event,
+              canReadStatistics ? rubrosStatisticsHref : "/admin/facturacion/rubros",
+            )
           }
           emptyLabel="Todavía no hay rubros facturados este mes."
         />
@@ -292,12 +293,6 @@ export function BillingHub({
         <BillingGuideModal
           userRole={userRole}
           onClose={() => setIsGuideOpen(false)}
-        />
-      ) : null}
-      {statisticsModal ? (
-        <StatisticsChoiceModal
-          section={statisticsModal}
-          onClose={closeStatisticsModal}
         />
       ) : null}
     </div>

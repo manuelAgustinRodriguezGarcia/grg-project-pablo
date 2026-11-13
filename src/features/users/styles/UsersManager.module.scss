@@ -204,7 +204,8 @@ $users-shadow:
 
 .usersTable {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.875rem;
 
   th,
@@ -218,10 +219,11 @@ $users-shadow:
   th {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 2;
     font-weight: 600;
     color: rgba($navy, 0.75);
-    background: rgba($users-accent, 0.045);
+    background: color-mix(in srgb, $users-accent 4.5%, $white);
+    box-shadow: 0 1px 0 rgba($navy, 0.08);
   }
 }
 

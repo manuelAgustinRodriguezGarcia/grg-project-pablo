@@ -231,10 +231,8 @@ function BillingNavTabWithMenu({
 
 export function BillingPillNav({
   userRole,
-  userEmail,
 }: {
   userRole: UserRole;
-  userEmail?: string | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -244,8 +242,8 @@ export function BillingPillNav({
   const canOpenNewInvoice = hasPermission(userRole, "invoices.read");
   const canOpenSettings = hasPermission(userRole, "settings.read");
   const navTabs = useMemo(
-    () => filterBillingNavTabsForRole(userRole, BILLING_NAV_TABS, userEmail),
-    [userRole, userEmail],
+    () => filterBillingNavTabsForRole(userRole, BILLING_NAV_TABS),
+    [userRole],
   );
   const pendingHref = sectionTransition?.pendingHref ?? null;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

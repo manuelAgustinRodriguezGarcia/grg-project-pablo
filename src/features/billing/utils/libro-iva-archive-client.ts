@@ -5,6 +5,7 @@ import type {
   LibroIvaArchiveSummary,
 } from "@/features/billing/types/libro-iva-archive.types";
 import { filenameFromContentDisposition } from "@/features/billing/utils/libro-iva-resumenes";
+import { printPdfBlob } from "@/features/billing/utils/print-document";
 
 const ARCHIVES_PATH = "/api/admin/billing/libro-iva/archives";
 const PRESENCE_BATCH = 48;
@@ -180,18 +181,27 @@ function saveBlob(blob: Blob, filename: string): void {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }
 
+async function fetchArchiveFile(
+  archive: { id: string },
+  fallback: string,
+): Promise<Response> {
+  return requestArchive(`${archivePath(archive.id)}/file`, fallback);
+}
+
 export async function downloadLibroIvaArchiveFile(archive: {
   id: string;
   fileName: string;
 }): Promise<void> {
-  const response = await requestArchive(
-    `${archivePath(archive.id)}/file`,
-    "No se pudo descargar el archivo.",
-  );
+  const response = await fetchArchiveFile(archive, "No se pudo descargar el archivo.");
   const blob = await response.blob();
   const filename = filenameFromContentDisposition(
     response.headers.get("Content-Disposition"),
     archive.fileName,
   );
   saveBlob(blob, filename);
+}
+
+export async function printLibroIvaArchiveFile(archive: { id: string }): Promise<void> {
+  const response = await fetchArchiveFile(archive, "No se pudo imprimir el archivo.");
+  await printPdfBlob(await response.blob());
 }

@@ -188,7 +188,7 @@ describe("servicio de estadísticas", () => {
     expect(findSource).not.toHaveBeenCalled();
   });
 
-  it("rechaza el paquete anual si el usuario no está en la vista previa", async () => {
+  it("entrega el paquete anual a cualquier administrador", async () => {
     vi.mocked(requirePermission).mockResolvedValue({
       profile: {
         id: "user-2",
@@ -196,12 +196,10 @@ describe("servicio de estadísticas", () => {
         email: "otro@rothamel.com",
       },
     } as Awaited<ReturnType<typeof requirePermission>>);
-    findSource.mockClear();
 
     await expect(
       billingStatisticsService.getYear(new URLSearchParams("year=2026")),
-    ).rejects.toBeInstanceOf(AuthForbiddenError);
-    expect(findSource).not.toHaveBeenCalled();
+    ).resolves.toMatchObject({ year: 2026 });
   });
 
   it("pide los años facturados desde 2026 y no consulta años anteriores", async () => {

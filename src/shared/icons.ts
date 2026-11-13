@@ -54,6 +54,7 @@ export {
   MessageCircle,
   MoveDown,
   MoveUp,
+  NotebookPen,
   Pencil,
   Percent,
   Phone,

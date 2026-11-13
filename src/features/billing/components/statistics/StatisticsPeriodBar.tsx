@@ -134,6 +134,7 @@ export function StatisticsPeriodBar({
           Ver año completo
         </button>
       </div>
+      <p className={`${styles.yearLabel} ${styles.monthGridLabel}`}>SELECCIONE LOS MESES A COMPARAR</p>
       <div className={styles.monthGrid} role="group" aria-label="Meses">
         {STATISTICS_MONTHS.map((item) => {
           const selected = selection.months.includes(item.month);

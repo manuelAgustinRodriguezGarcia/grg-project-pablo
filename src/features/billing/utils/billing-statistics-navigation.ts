@@ -10,11 +10,13 @@ export type StatisticsViewSection = "clients" | "rubros";
 export type StatisticsNavigationTarget = {
   section: StatisticsViewSection;
   analysis: StatisticsNavAnalysis | null;
+  scrollToSection: boolean;
 };
 
 const DEFAULT_TARGET: StatisticsNavigationTarget = {
   section: "clients",
   analysis: null,
+  scrollToSection: false,
 };
 
 const SECTIONS: readonly StatisticsNavSection[] = ["clientes", "rubros"];
@@ -64,10 +66,20 @@ export function parseStatisticsNavigation(
     return DEFAULT_TARGET;
   }
 
+  const analysis = analysisValue ?? null;
+
   return {
     section: sectionValue ? viewSection(sectionValue) : DEFAULT_TARGET.section,
-    analysis: analysisValue ?? null,
+    analysis,
+    scrollToSection: sectionValue !== undefined && analysis === null,
   };
+}
+
+export function billingStatisticsSectionHref(section: StatisticsNavSection): string {
+  const params = new URLSearchParams({
+    [STATISTICS_SECTION_QUERY]: section,
+  });
+  return `${BILLING_STATISTICS_PATH}?${params.toString()}`;
 }
 
 export function billingStatisticsHref(

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type MouseEvent } from "react";
+import Link from "next/link";
 import type { DashboardDonutSlice } from "@/features/billing/data/dashboardTypes";
 import { formatArs } from "@/features/billing/utils/format-ars";
 import { CircleDollarSign, ICON_STROKE } from "@/shared/icons";
@@ -11,6 +12,9 @@ type InvoiceTypeChartProps = {
   total: number;
   monthLabel: string;
   className?: string;
+  footerHref?: string;
+  footerLabel?: string;
+  onFooterNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
 };
 
 export function InvoiceTypeChart({
@@ -18,6 +22,9 @@ export function InvoiceTypeChart({
   total,
   monthLabel,
   className,
+  footerHref,
+  footerLabel,
+  onFooterNavigate,
 }: InvoiceTypeChartProps) {
   const monthName = monthLabel.replace(/\s+\d{4}$/, "");
   const invoiceCount = slices.reduce(
@@ -86,6 +93,15 @@ export function InvoiceTypeChart({
           </p>
         )}
       </div>
+      {footerHref && footerLabel ? (
+        <Link
+          href={footerHref}
+          className={styles.cardFooterLink}
+          onClick={onFooterNavigate}
+        >
+          {footerLabel}
+        </Link>
+      ) : null}
     </section>
   );
 }

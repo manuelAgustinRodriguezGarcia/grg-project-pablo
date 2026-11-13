@@ -202,7 +202,11 @@ describe("archivado de libros de IVA", () => {
     vi.clearAllMocks();
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(requirePermission).mockResolvedValue({
-      profile: { id: USER_ID, email: "agencygrg@gmail.com" },
+      profile: {
+        id: USER_ID,
+        email: "agencygrg@gmail.com",
+        role: "ADMINISTRADOR",
+      },
     } as never);
     vi.mocked(billingFiscalSettingsRepository.getOrCreate).mockResolvedValue({
       environment: "PRODUCCION",

@@ -279,21 +279,97 @@
 .skeletonList {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  min-width: 0;
 }
 
-.skeletonCard {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  padding: 0.9rem;
-  border: 1px solid rgba($navy, 0.08);
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skeletonBar {
+  display: block;
+  border-radius: $radius-sm;
+  background: linear-gradient(
+    90deg,
+    rgba($navy, 0.06) 0%,
+    rgba($navy, 0.13) 50%,
+    rgba($navy, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: libroSkeletonShimmer 1.2s ease-in-out infinite;
+}
+
+.skeletonYear {
+  width: 3.4rem;
+  height: 1.05rem;
+}
+
+.skeletonPill {
+  width: 5.6rem;
+  height: calc(0.44rem + (0.72rem * 1.2));
+  border-radius: 999px;
+}
+
+.skeletonTitle {
+  width: 6.8rem;
+  height: calc(0.92rem * 1.2);
+}
+
+.skeletonActionWide,
+.skeletonActionShort {
+  height: 2.4rem;
   border-radius: $radius-md;
-  background: rgba($white, 0.94);
+}
+
+.skeletonActionWide {
+  width: 9.6rem;
+}
+
+.skeletonActionShort {
+  width: 6.8rem;
+}
+
+.skeletonIssuedLabel {
+  width: 68%;
+  height: calc(0.68rem * 1.3);
+}
+
+.skeletonIssuedAmount {
+  width: 82%;
+  height: calc(1.15rem * 1.2);
+}
+
+.skeletonIssuedQuantity {
+  width: 46%;
+  height: calc(0.72rem * 1.3);
 }
 
 .emptyHint {
   max-width: 28rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonBar {
+    animation: none;
+  }
+}
+
+@keyframes libroSkeletonShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 @media (max-width: 720px) {

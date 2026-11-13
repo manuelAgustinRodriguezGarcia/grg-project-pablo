@@ -8,7 +8,7 @@ import type { LibroIvaIssuedSummary, LibroIvaRow } from "@/features/billing/util
 import { libroIvaMonthRange, summarizeLibroIvaIssued } from "@/features/billing/utils/libro-iva";
 import { requirePermission } from "@/server/auth";
 import { AuthForbiddenError } from "@/server/auth/errors";
-import { canPreviewBillingSections } from "@/shared/auth/billing-section-preview";
+import { canAccessBillingStatisticsAndLibros } from "@/shared/auth/billing-section-access";
 import { billingFiscalSettingsRepository } from "@/server/repositories/billing-fiscal-settings.repository";
 import {
   billingLibroIvaArchiveRepository,
@@ -676,7 +676,7 @@ export class BillingLibroIvaArchiveService {
 
   private async authorizeReader() {
     const auth = await requirePermission("invoices.read");
-    if (!canPreviewBillingSections(auth.profile.email)) {
+    if (!canAccessBillingStatisticsAndLibros(auth.profile.role)) {
       throw new AuthForbiddenError();
     }
   }

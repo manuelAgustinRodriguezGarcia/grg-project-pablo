@@ -2,7 +2,7 @@ import type { BillingFiscalEnvironment } from "@/generated/prisma/client";
 import { BILLING_STATISTICS_FIRST_YEAR } from "@/features/billing/utils/billing-statistics-period";
 import { requirePermission } from "@/server/auth";
 import { AuthForbiddenError } from "@/server/auth/errors";
-import { canPreviewBillingSections } from "@/shared/auth/billing-section-preview";
+import { canAccessBillingStatisticsAndLibros } from "@/shared/auth/billing-section-access";
 import { billingStatisticsRepository } from "@/server/repositories/billing-statistics.repository";
 import { readActiveFiscalEnvironment } from "@/server/services/billing-fiscal-scope";
 import {
@@ -108,7 +108,7 @@ export class BillingStatisticsService {
 
   private async authorize() {
     const auth = await requirePermission("statistics.read");
-    if (!canPreviewBillingSections(auth.profile.email)) {
+    if (!canAccessBillingStatisticsAndLibros(auth.profile.role)) {
       throw new AuthForbiddenError();
     }
   }

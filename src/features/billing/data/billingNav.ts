@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { UserRole } from "@/generated/prisma/client";
 import { BILLING_STATISTICS_PATH } from "@/features/billing/utils/billing-statistics-period";
-import { canPreviewBillingSections } from "@/shared/auth/billing-section-preview";
+import { canAccessBillingStatisticsAndLibros } from "@/shared/auth/billing-section-access";
 import {
   canAccessRoute,
   hasPermission,
@@ -263,7 +263,7 @@ export const BILLING_NAV_TABS: BillingNavTab[] = [
   BILLING_LIBROS_TAB,
 ];
 
-const BILLING_PREVIEW_TAB_HREFS = new Set<string>([
+const BILLING_STATISTICS_AND_LIBROS_HREFS = new Set<string>([
   BILLING_STATISTICS_PATH,
   BILLING_LIBROS_IVA_PATH,
 ]);
@@ -271,13 +271,12 @@ const BILLING_PREVIEW_TAB_HREFS = new Set<string>([
 export function filterBillingNavTabsForRole(
   role: UserRole,
   tabs: readonly BillingNavTab[] = BILLING_NAV_TABS,
-  email?: string | null,
 ): BillingNavTab[] {
   return tabs
     .map((tab) => {
       if (
-        BILLING_PREVIEW_TAB_HREFS.has(tab.href) &&
-        !canPreviewBillingSections(email)
+        BILLING_STATISTICS_AND_LIBROS_HREFS.has(tab.href) &&
+        !canAccessBillingStatisticsAndLibros(role)
       ) {
         return null;
       }

@@ -335,12 +335,14 @@ describe("LibroIvaResumenesManager", () => {
     );
     expect(within(october).getByRole("button", { name: "Descargar PDF" })).toBeInTheDocument();
     expect(within(october).getByRole("button", { name: "Descargar Excel" })).toBeInTheDocument();
+    expect(within(october).getByRole("button", { name: "Imprimir" })).toBeEnabled();
     expect(within(october).queryByText(PDF_NAME)).not.toBeInTheDocument();
     expect(within(october).queryByText("Archivado")).not.toBeInTheDocument();
 
     const september = screen.getByRole("article", { name: "SEPTIEMBRE 2026" });
     expect(within(september).getAllByText("Libro de IVA")).toHaveLength(1);
     expect(within(september).getByRole("button", { name: "Descargar PDF" })).toBeInTheDocument();
+    expect(within(september).getByRole("button", { name: "Imprimir" })).toBeEnabled();
     expect(within(september).queryByRole("button", { name: "Descargar Excel" })).not.toBeInTheDocument();
 
     expect(screen.queryByText("Archivado")).not.toBeInTheDocument();
@@ -447,6 +449,7 @@ describe("LibroIvaResumenesManager", () => {
 
     await waitFor(() => {
       expect(within(september).getByRole("button", { name: "Descargar PDF" })).toBeDisabled();
+      expect(within(september).getByRole("button", { name: "Imprimir" })).toBeDisabled();
     });
     expect(within(september).getByText("Archivo no disponible")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mes" })).toHaveTextContent("Todos los meses");
@@ -484,6 +487,7 @@ describe("LibroIvaResumenesManager", () => {
     const october = screen.getByRole("article", { name: "OCTUBRE 2026" });
     const button = within(october).getByRole("button", { name: "Descargar PDF" });
     await waitFor(() => expect(button).toBeDisabled());
+    expect(within(october).getByRole("button", { name: "Imprimir" })).toBeDisabled();
     expect(screen.getByText("Archivo no disponible")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Descargar Excel" })).toBeEnabled();
     expect(scenario.fileStarts).toBe(0);

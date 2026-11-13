@@ -155,12 +155,7 @@ function desktopTabLabels(): string[] {
 
 describe("BillingPillNav navegación definitiva", () => {
   it("muestra las siete pestañas en orden y conserva los accesos secundarios", () => {
-    render(
-      <BillingPillNav
-        userRole="ADMINISTRADOR"
-        userEmail="agencygrg@gmail.com"
-      />,
-    );
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
 
     expect(desktopTabLabels()).toEqual([
       "Resumen",
@@ -229,14 +224,10 @@ describe("BillingPillNav navegación definitiva", () => {
   });
 
   it("muestra estadísticas y configuración al visitante avanzado", () => {
-    render(
-      <BillingPillNav
-        userRole="VISITANTE_AVANZADO"
-        userEmail="visitagrg@gmail.com"
-      />,
-    );
+    render(<BillingPillNav userRole="VISITANTE_AVANZADO" />);
 
     expect(desktopTabLabels()).toContain("Estadísticas");
+    expect(desktopTabLabels()).toContain("Libros de IVA");
     expect(
       document.querySelector(`a[href="${BILLING_STATISTICS_PATH}"]`),
     ).toBeInTheDocument();
@@ -248,12 +239,7 @@ describe("BillingPillNav navegación definitiva", () => {
 
   it("marca Estadísticas, Libros de IVA y Configuración como sección actual", () => {
     navigation.pathname = BILLING_STATISTICS_PATH;
-    render(
-      <BillingPillNav
-        userRole="ADMINISTRADOR"
-        userEmail="agencygrg@gmail.com"
-      />,
-    );
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
     expect(
       document.querySelector(`[role="list"] a[href="${BILLING_STATISTICS_PATH}"]`),
     ).toHaveAttribute("aria-current", "page");
@@ -264,12 +250,7 @@ describe("BillingPillNav navegación definitiva", () => {
 
     cleanup();
     navigation.pathname = BILLING_LIBROS_IVA_PATH;
-    render(
-      <BillingPillNav
-        userRole="ADMINISTRADOR"
-        userEmail="agencygrg@gmail.com"
-      />,
-    );
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
     const libros = document.querySelector(`a[href="${BILLING_LIBROS_IVA_PATH}"]`);
     expect(libros).toHaveClass("tabActive");
     expect(libros).toHaveAttribute("aria-current", "page");
@@ -280,24 +261,14 @@ describe("BillingPillNav navegación definitiva", () => {
 
     cleanup();
     navigation.pathname = BILLING_LIBRO_IVA_RESUMENES_PATH;
-    render(
-      <BillingPillNav
-        userRole="ADMINISTRADOR"
-        userEmail="agencygrg@gmail.com"
-      />,
-    );
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
     expect(
       document.querySelector(`a[href="${BILLING_LIBROS_IVA_PATH}"]`),
     ).toHaveClass("tabActive");
 
     cleanup();
     navigation.pathname = BILLING_CONFIGURATION_PATH;
-    render(
-      <BillingPillNav
-        userRole="ADMINISTRADOR"
-        userEmail="agencygrg@gmail.com"
-      />,
-    );
+    render(<BillingPillNav userRole="ADMINISTRADOR" />);
     expect(screen.getByRole("link", { name: "Configuración" })).toHaveAttribute(
       "aria-current",
       "page",

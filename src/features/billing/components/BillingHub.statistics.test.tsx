@@ -1,7 +1,7 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BILLING_CLIENTS_PATH } from "@/features/billing/data/billingNav";
+import { BILLING_CLIENTS_PATH, BILLING_STATISTICS_PATH } from "@/features/billing/data/billingNav";
 import { BillingHub } from "./BillingHub";
 
 vi.mock("next/link", () => ({
@@ -28,54 +28,39 @@ afterEach(() => {
 });
 
 describe("accesos de estadísticas en Resumen", () => {
-  it("abre el modal de clientes y el de rubros", () => {
-    render(
-      <BillingHub
-        userRole="ADMINISTRADOR"
-        userEmail="agencygrg@gmail.com"
-      />,
-    );
+  it("abre estadísticas y deja seleccionada la sección de clientes o rubros", () => {
+    render(<BillingHub userRole="ADMINISTRADOR" />);
 
     expect(
       screen.queryByRole("link", { name: "Ver todos los clientes" }),
     ).not.toBeInTheDocument();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Ver estadísticas clientes" }),
-    );
-    expect(
-      screen.getByRole("dialog", { name: "Estadísticas de clientes" }),
-    ).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /facturación|Evolución mensual/ })).toHaveLength(3);
-
-    fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Ver estadísticas rubros" }),
+    expect(screen.getByRole("link", { name: "Ver estadísticas" })).toHaveAttribute(
+      "href",
+      BILLING_STATISTICS_PATH,
     );
     expect(
-      screen.getByRole("link", { name: "Distribución de facturación" }),
-    ).toHaveAttribute(
-      "href",
-      "/admin/facturacion/estadisticas?seccion=rubros&analisis=participacion",
-    );
+      screen.getByRole("link", { name: "Ver estadísticas clientes" }),
+    ).toHaveAttribute("href", `${BILLING_STATISTICS_PATH}?seccion=clientes`);
+    expect(
+      screen.getByRole("link", { name: "Ver estadísticas rubros" }),
+    ).toHaveAttribute("href", `${BILLING_STATISTICS_PATH}?seccion=rubros`);
   });
 
-  it("no muestra accesos de estadísticas a otro administrador", () => {
-    render(
-      <BillingHub userRole="ADMINISTRADOR" userEmail="otro@rothamel.com" />,
-    );
+  it("muestra accesos de estadísticas al visitante avanzado", () => {
+    render(<BillingHub userRole="VISITANTE_AVANZADO" />);
 
-    expect(
-      screen.queryByRole("button", { name: /Ver estadísticas/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver estadísticas" })).toHaveAttribute(
+      "href",
+      BILLING_STATISTICS_PATH,
+    );
   });
 
   it("no muestra accesos de estadísticas a quien no tiene permiso", () => {
     render(<BillingHub userRole="VENDEDOR" />);
 
     expect(
-      screen.queryByRole("button", { name: /Ver estadísticas/ }),
+      screen.queryByRole("link", { name: /Ver estadísticas/ }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ver todos los clientes" })).toHaveAttribute(
       "href",

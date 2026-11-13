@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { BillingFiscalEnvironment } from "@/generated/prisma/client";
 import { StatisticsManager } from "@/features/billing/components/statistics/StatisticsManager";
 import { parseStatisticsNavigation } from "@/features/billing/utils/billing-statistics-navigation";
-import { requireBillingSectionPreviewOrRedirect } from "@/server/auth";
+import { requireBillingStatisticsAndLibrosOrRedirect } from "@/server/auth";
 import { readActiveFiscalEnvironment } from "@/server/services/billing-fiscal-scope";
 import { billingStatisticsService } from "@/server/services/billing-statistics.service";
 
@@ -28,7 +28,7 @@ function firstParam(value: string | string[] | undefined): string | undefined {
 export default async function FacturacionEstadisticasPage({
   searchParams,
 }: FacturacionEstadisticasPageProps) {
-  await requireBillingSectionPreviewOrRedirect("statistics.read", "/admin");
+  await requireBillingStatisticsAndLibrosOrRedirect("statistics.read", "/admin");
   const params = await searchParams;
   const navigation = parseStatisticsNavigation(
     firstParam(params.seccion),
@@ -56,6 +56,7 @@ export default async function FacturacionEstadisticasPage({
       invoicedYears={invoicedYears}
       initialSection={navigation.section}
       initialAnalysis={navigation.analysis}
+      initialScrollToSection={navigation.scrollToSection}
     />
   );
 }

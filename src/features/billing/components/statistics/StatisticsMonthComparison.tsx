@@ -17,7 +17,7 @@ const ZERO = BigInt(0);
 function VariationPill({ variation }: { variation: StatisticsMonthVariation }) {
   const cents = statisticsAmountCents(variation.delta);
   if (cents === ZERO) {
-    return <>Igual que en {variation.referenceName}</>;
+    return <>—</>;
   }
 
   const increased = cents > ZERO;
@@ -56,14 +56,6 @@ export function StatisticsMonthComparison({ view }: StatisticsMonthComparisonPro
           <dd>
             {view.spreadAmount
               ? `${formatStatisticsAmount(view.spreadAmount)}${view.spreadPercent ? ` · ${view.spreadPercent}` : ""}`
-              : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt>Mes con más facturas</dt>
-          <dd>
-            {view.busiest
-              ? `${view.busiest.names.join(", ")} · ${view.busiest.invoiceCount}`
               : "—"}
           </dd>
         </div>

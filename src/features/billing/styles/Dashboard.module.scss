@@ -970,37 +970,6 @@
   color: $green;
 }
 
-.cardFooterButton {
-  margin-top: auto;
-  width: fit-content;
-  max-width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: $blue;
-  font-family: inherit;
-  font-size: 0.8rem;
-  font-weight: 650;
-  line-height: 1.3;
-  text-align: left;
-  cursor: pointer;
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-
-  &:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
-  }
-}
-
-.cardFooterButtonGreen {
-  color: $green;
-}
-
 .unpaidCard {
   border-color: rgba($navy, 0.08);
   background: $white;

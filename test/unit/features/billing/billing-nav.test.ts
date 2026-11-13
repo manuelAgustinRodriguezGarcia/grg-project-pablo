@@ -145,28 +145,12 @@ describe("billing nav tabs", () => {
       "Rubros",
       "Facturas",
       "Movimientos",
-    ]);
-    expect(labelsFor("ADMINISTRADOR", "agencygrg@gmail.com")).toEqual([
-      "Resumen",
-      "Clientes",
-      "Rubros",
-      "Facturas",
-      "Movimientos",
       "Estadísticas",
       "Libros de IVA",
     ]);
-    expect(labelsFor("VISITANTE_AVANZADO", "visitagrg@gmail.com")).toEqual(
-      labelsFor("ADMINISTRADOR", "agencygrg@gmail.com"),
-    );
-    expect(labelsFor("VISITANTE_AVANZADO", "otro@rothamel.com")).toEqual(
-      labelsFor("ADMINISTRADOR"),
-    );
-    expect(labelsFor("VENDEDOR", "agencygrg@gmail.com")).toEqual([
-      "Clientes",
-      "Facturas",
-      "Libros de IVA",
-    ]);
-    expect(labelsFor("VISITANTE", "visitagrg@gmail.com")).toEqual([]);
+    expect(labelsFor("VISITANTE_AVANZADO")).toEqual(labelsFor("ADMINISTRADOR"));
+    expect(labelsFor("VENDEDOR")).toEqual(["Clientes", "Facturas"]);
+    expect(labelsFor("VISITANTE")).toEqual([]);
     expect(
       filterBillingNavTabsForRole("VENDEDOR").some(
         (tab) => tab.permission === "statistics.read",
@@ -175,7 +159,7 @@ describe("billing nav tabs", () => {
     expect(
       filterBillingNavTabsForRole("VENDEDOR").find(
         (tab) => tab.href === BILLING_LIBROS_IVA_PATH,
-      )?.menuItems,
+      ),
     ).toBeUndefined();
   });
 
@@ -203,7 +187,7 @@ describe("billing nav tabs", () => {
       "src/app/admin/facturacion/(secciones)/libros-iva/page.tsx",
       "utf8",
     );
-    expect(home).toContain('requireBillingSectionPreviewOrRedirect("invoices.read"');
+    expect(home).toContain('requireBillingStatisticsAndLibrosOrRedirect("invoices.read"');
     expect(home).toContain("LibroIvaResumenesManager");
 
     const summaries = readFileSync(
@@ -222,10 +206,6 @@ describe("billing nav tabs", () => {
       "src/features/billing/styles/LibroIvaResumenes.module.scss",
       "utf8",
     );
-    const modal = readFileSync(
-      "src/features/billing/styles/StatisticsChoiceModal.module.scss",
-      "utf8",
-    );
 
     expect(nav).toContain("@media (max-width: 1023px)");
     expect(nav).toContain("display: none");
@@ -234,17 +214,11 @@ describe("billing nav tabs", () => {
     expect(nav).toContain(".settingsButton");
     expect(libros).toContain("@media (max-width: 720px)");
     expect(libros).toContain("grid-template-columns: 1fr");
-    expect(modal).toContain("@media (max-width: 560px)");
-    expect(modal).toContain("overflow-wrap: anywhere");
-    expect(modal).toContain("prefers-reduced-motion");
   });
 });
 
 function labelsFor(
   role: "ADMINISTRADOR" | "VISITANTE_AVANZADO" | "VENDEDOR" | "VISITANTE",
-  email?: string,
 ) {
-  return filterBillingNavTabsForRole(role, BILLING_NAV_TABS, email).map(
-    (tab) => tab.label,
-  );
+  return filterBillingNavTabsForRole(role).map((tab) => tab.label);
 }

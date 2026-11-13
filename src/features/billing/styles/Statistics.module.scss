@@ -58,6 +58,18 @@
   font-size: 0.95rem;
 }
 
+.sectionTitleWithIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sectionTitleIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+
 .periodToolbar {
   display: flex;
   flex-wrap: wrap;
@@ -185,6 +197,11 @@
   margin-left: auto;
   padding-inline: 0.75rem;
   white-space: nowrap;
+}
+
+.monthGridLabel {
+  display: block;
+  margin: 0 0 0.45rem;
 }
 
 .monthGrid {
@@ -389,6 +406,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.countsRow {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .issuedInvoices {
   color: #3aa0e8;
   font-weight: 600;
@@ -424,6 +445,52 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: $navy;
+}
+
+.counts strong.amountNegative {
+  color: #dc2626;
+}
+
+.counts .countCredit {
+  color: #b45309;
+  background: rgba(#b45309, 0.12);
+  border-color: rgba(#b45309, 0.2);
+
+  strong {
+    color: #b45309;
+  }
+}
+
+.counts .countDebit {
+  color: $green;
+  background: rgba($green, 0.12);
+  border-color: rgba($green, 0.22);
+
+  strong {
+    color: $green;
+  }
+}
+
+.noteKindBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.noteKindCredit {
+  color: #b45309;
+  background: rgba(#b45309, 0.12);
+}
+
+.noteKindDebit {
+  color: $green;
+  background: rgba($green, 0.12);
 }
 
 .panel,
@@ -561,9 +628,41 @@
   text-align: right;
 }
 
+.rankHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
 .rankTitle {
   display: block;
+  flex: 1 1 auto;
   min-width: 0;
+}
+
+.rankHead .rankFigures {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  min-width: max-content;
+}
+
+.rankHead .rankAmount {
+  font-size: inherit;
+  font-weight: 650;
+  line-height: 1.35;
+  color: $navy;
+  white-space: nowrap;
+}
+
+.rankHead .amountNegative {
+  color: #dc2626;
+}
+
+.rankHead .rankMeta {
+  max-width: none;
+  text-align: right;
 }
 
 .rankCode {
@@ -646,7 +745,7 @@
 .monthCompareTable {
   tbody tr:nth-child(odd) th,
   tbody tr:nth-child(odd) td {
-    background: #aeb4bf;
+    background: #f7f8fa;
   }
 
   tbody tr:nth-child(even) th,
@@ -696,9 +795,94 @@
 
 .noteActions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  white-space: normal;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.noteActionWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.noteIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba($navy, 0.12);
+  border-radius: $radius-md;
+  background: rgba($white, 0.9);
+  color: $navy;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    border-color: rgba($blue, 0.35);
+    background: rgba($blue, 0.06);
+    color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.noteActionTooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.4rem);
+  z-index: 30;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba($navy, 0.1);
+  border-radius: $radius-sm;
+  background: $navy;
+  box-shadow: 0 4px 12px rgba($navy, 0.18);
+  font-family: $font-sans;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: $white;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.15s ease,
+    visibility 0.15s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    right: 0.55rem;
+    width: 0;
+    height: 0;
+    border-left: 0.35rem solid transparent;
+    border-right: 0.35rem solid transparent;
+    border-top: 0.35rem solid $navy;
+  }
+}
+
+.noteActionWrap:hover .noteActionTooltip,
+.noteActionWrap:focus-within .noteActionTooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .shift {
@@ -715,6 +899,11 @@
   padding-left: 1.1rem;
   color: rgba($navy, 0.78);
   font-size: 0.84rem;
+
+  strong {
+    font-weight: 700;
+    color: $navy;
+  }
 }
 
 .amountNegative {
@@ -751,12 +940,279 @@
   background: transparent;
 }
 
-.skeleton {
-  min-height: 5.5rem;
-  border-radius: $radius-md;
-  background: linear-gradient(90deg, rgba($navy, 0.05), rgba($navy, 0.1), rgba($navy, 0.05));
+@mixin statistics-shimmer($base, $peak) {
+  background: linear-gradient(90deg, $base 0%, $peak 50%, $base 100%);
   background-size: 200% 100%;
   animation: statisticsShimmer 1.2s ease-in-out infinite;
+}
+
+.skeletonCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+}
+
+.skeletonTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2rem;
+}
+
+.skeletonBar {
+  display: block;
+  border-radius: $radius-sm;
+  @include statistics-shimmer(rgba($navy, 0.06), rgba($navy, 0.13));
+}
+
+.skeletonIcon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.skeletonIconBlue {
+  @include statistics-shimmer(rgba($blue, 0.14), rgba($blue, 0.32));
+}
+
+.skeletonIconGreen {
+  @include statistics-shimmer(rgba($green, 0.14), rgba($green, 0.32));
+}
+
+.skeletonIconAmber {
+  @include statistics-shimmer(rgba(#d97706, 0.14), rgba(#d97706, 0.32));
+}
+
+.skeletonLabelWide,
+.skeletonLabelMedium,
+.skeletonLabelShort,
+.skeletonValueWide,
+.skeletonValueMedium,
+.skeletonValueShort,
+.skeletonSecondaryWide,
+.skeletonSecondaryMedium,
+.skeletonSecondaryShort,
+.skeletonCountLabel,
+.skeletonCountValue {
+  max-width: 100%;
+}
+
+.skeletonLabelWide,
+.skeletonLabelMedium,
+.skeletonLabelShort {
+  height: 0.8rem;
+}
+
+.skeletonLabelWide {
+  width: 62%;
+}
+
+.skeletonLabelMedium {
+  width: 46%;
+}
+
+.skeletonLabelShort {
+  width: 22%;
+}
+
+.skeletonValueWide,
+.skeletonValueMedium,
+.skeletonValueShort {
+  height: calc(1.45rem * 1.15);
+}
+
+.skeletonValueWide {
+  width: 78%;
+}
+
+.skeletonValueMedium {
+  width: 70%;
+}
+
+.skeletonValueShort {
+  width: 58%;
+}
+
+.skeletonSecondaryWide,
+.skeletonSecondaryMedium,
+.skeletonSecondaryShort {
+  height: calc(0.78rem * 1.2);
+}
+
+.skeletonSecondaryWide,
+.skeletonSecondaryMedium {
+  width: 54%;
+}
+
+.skeletonSecondaryShort {
+  width: 38%;
+}
+
+.skeletonCountLabel {
+  width: 8.5rem;
+  height: calc(0.78rem * 1.2);
+}
+
+.skeletonCountValue {
+  width: 1.75rem;
+  height: calc(0.95rem * 1.2);
+}
+
+.skeletonTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.skeletonTitleIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  @include statistics-shimmer(rgba($navy, 0.08), rgba($navy, 0.16));
+}
+
+.skeletonPanelTitle {
+  width: 13.5rem;
+  height: 1.05rem;
+}
+
+.skeletonLines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-left: 1.1rem;
+}
+
+.skeletonLineWide,
+.skeletonLineMedium,
+.skeletonLineShort {
+  height: 0.84rem;
+}
+
+.skeletonLineWide {
+  width: 92%;
+}
+
+.skeletonLineMedium {
+  width: 78%;
+}
+
+.skeletonLineShort {
+  width: 46%;
+}
+
+.skeletonTabLabel,
+.skeletonTabLabelMuted {
+  width: 13.5rem;
+  height: 1.05rem;
+}
+
+.skeletonTabLabelMuted {
+  width: 12.2rem;
+  opacity: 0.55;
+}
+
+.skeletonRank {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid rgba($navy, 0.08);
+  border-radius: $radius-md;
+  background: $white;
+}
+
+.skeletonRankHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  min-height: 2.55rem;
+}
+
+.skeletonRankNameWide,
+.skeletonRankNameMedium,
+.skeletonRankNameShort,
+.skeletonRankAmount,
+.skeletonRankMeta {
+  height: 0.95rem;
+}
+
+.skeletonRankNameWide {
+  width: 16rem;
+}
+
+.skeletonRankNameMedium {
+  width: 11.5rem;
+}
+
+.skeletonRankNameShort {
+  width: 8rem;
+}
+
+.skeletonRankAmount {
+  width: 7.2rem;
+  margin-left: auto;
+}
+
+.skeletonRankMeta {
+  align-self: flex-end;
+  width: 4.2rem;
+  height: 0.78rem;
+}
+
+.skeletonRankTrack {
+  display: block;
+  width: 100%;
+  height: 0.42rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba($navy, 0.08);
+}
+
+.skeletonRankFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: rgba($blue, 0.55);
+}
+
+.skeletonDonutWrap {
+  display: flex;
+  justify-content: center;
+  padding: 0.4rem 0 0.2rem;
+}
+
+.skeletonDonut {
+  width: 11.5rem;
+  height: 11.5rem;
+  border: 1.55rem solid rgba($navy, 0.1);
+  border-radius: 50%;
+}
+
+.skeletonSwatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: rgba($navy, 0.18);
+}
+
+.skeletonLegendName {
+  width: 8.5rem;
+  height: 0.82rem;
+}
+
+.skeletonLegendAmount {
+  width: 6.2rem;
+  height: 0.82rem;
 }
 
 .srOnly {
@@ -787,6 +1243,7 @@
   .kpiGrid,
   .kpiGridWide,
   .counts,
+  .countsRow,
   .reconcile {
     grid-template-columns: 1fr;
   }
@@ -815,7 +1272,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton,
+  .skeletonBar,
+  .skeletonIconBlue,
+  .skeletonIconGreen,
+  .skeletonIconAmber,
+  .skeletonTitleIcon,
   .monthButton,
   .rankButton {
     animation: none;

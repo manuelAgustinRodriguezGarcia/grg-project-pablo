@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import type { BillingFiscalEnvironment } from "@/generated/prisma/client";
 import { useReportAdminSectionReady } from "@/features/admin/components/AdminSectionTransition";
 import { adminQueryKeys } from "@/features/admin/query-keys";
-import skeletonStyles from "@/features/admin/styles/AdminTableSkeleton.module.scss";
 import { getBillingFiscalSettingsAction } from "@/features/billing/actions/billing-fiscal-settings.actions";
 import {
   useLibroIvaArchivePresenceQuery,
@@ -18,6 +17,7 @@ import type {
 import {
   LibroIvaArchiveRequestError,
   downloadLibroIvaArchiveFile,
+  printLibroIvaArchiveFile,
 } from "@/features/billing/utils/libro-iva-archive-client";
 import { formatArsExact } from "@/features/billing/utils/format-ars";
 import {
@@ -43,6 +43,7 @@ import {
   FileSpreadsheet,
   FileText,
   ICON_STROKE,
+  Printer,
 } from "@/shared/icons";
 import styles from "@/features/billing/styles/ClientsManager.module.scss";
 import resumenes from "@/features/billing/styles/LibroIvaResumenes.module.scss";
@@ -188,8 +189,10 @@ export function LibroIvaResumenesManager({
   const [monthChoice, setMonthChoice] = useState<LibroIvaMonthFilter>("all");
   const [missingIds, setMissingIds] = useState<ReadonlySet<string>>(new Set());
   const [downloadingIds, setDownloadingIds] = useState<ReadonlySet<string>>(new Set());
+  const [printingIds, setPrintingIds] = useState<ReadonlySet<string>>(new Set());
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const downloadsInFlight = useRef(new Set<string>());
+  const printsInFlight = useRef(new Set<string>());
 
   const environmentChanged = environment !== environmentSeen;
   if (environmentChanged) {
@@ -198,6 +201,7 @@ export function LibroIvaResumenesManager({
     setMonthChoice("all");
     setMissingIds(new Set());
     setDownloadError(null);
+    setPrintingIds(new Set());
   }
 
   const activeMonth = environmentChanged ? "all" : monthChoice;
@@ -262,18 +266,81 @@ export function LibroIvaResumenesManager({
     }
   }
 
+  async function printArchive(archive: LibroIvaArchiveSummary) {
+    if (printsInFlight.current.has(archive.id) || activeMissing.has(archive.id)) {
+      return;
+    }
+
+    printsInFlight.current.add(archive.id);
+    setPrintingIds((current) => new Set(current).add(archive.id));
+    setDownloadError(null);
+
+    try {
+      await printLibroIvaArchiveFile(archive);
+    } catch (error) {
+      if (
+        error instanceof LibroIvaArchiveRequestError &&
+        error.code === "ARCHIVE_FILE_MISSING"
+      ) {
+        setMissingIds((current) => new Set(current).add(archive.id));
+      }
+      setDownloadError(
+        error instanceof Error ? error.message : "No se pudo imprimir el archivo.",
+      );
+    } finally {
+      printsInFlight.current.delete(archive.id);
+      setPrintingIds((current) => {
+        const next = new Set(current);
+        next.delete(archive.id);
+        return next;
+      });
+    }
+  }
+
   let results: ReactNode;
   let centerResults = false;
   if (archivesQuery.isPending || (archivesQuery.isFetching && archives.length === 0)) {
     results = (
       <div className={resumenes.skeletonList} role="status" aria-label="Cargando resúmenes">
-        <span className={skeletonStyles.visuallyHidden}>Cargando resúmenes…</span>
-        {[0, 1, 2].map((row) => (
-          <div key={row} className={resumenes.skeletonCard} aria-hidden>
-            <div className={`${skeletonStyles.shimmerBar} ${skeletonStyles.shimmerBarMedium}`} />
-            <div className={`${skeletonStyles.shimmerBar} ${skeletonStyles.shimmerBarFull}`} />
+        <span className={resumenes.srOnly}>Cargando resúmenes…</span>
+        <div className={resumenes.yearBlock} aria-hidden>
+          <div className={resumenes.yearTitle}>
+            <span className={`${resumenes.skeletonBar} ${resumenes.skeletonYear}`} />
+            <span className={resumenes.yearRule} />
           </div>
-        ))}
+          <div className={resumenes.yearBooks}>
+            {[0, 1, 2].map((row) => (
+              <article key={row} className={resumenes.bookCard}>
+                <div className={resumenes.bookHeader}>
+                  <div className={resumenes.bookIdentity}>
+                    <span className={`${resumenes.skeletonBar} ${resumenes.skeletonPill}`} />
+                    <span className={`${resumenes.skeletonBar} ${resumenes.skeletonTitle}`} />
+                  </div>
+                  <ul className={resumenes.downloads}>
+                    <li className={resumenes.downloadItem}>
+                      <span className={`${resumenes.skeletonBar} ${resumenes.skeletonActionWide}`} />
+                    </li>
+                    <li className={resumenes.downloadItem}>
+                      <span className={`${resumenes.skeletonBar} ${resumenes.skeletonActionWide}`} />
+                    </li>
+                    <li className={resumenes.downloadItem}>
+                      <span className={`${resumenes.skeletonBar} ${resumenes.skeletonActionShort}`} />
+                    </li>
+                  </ul>
+                </div>
+                <ul className={resumenes.issuedGrid}>
+                  {ISSUED_ROWS.map((issuedRow) => (
+                    <li key={issuedRow.key} className={resumenes.issuedItem}>
+                      <span className={`${resumenes.skeletonBar} ${resumenes.skeletonIssuedLabel}`} />
+                      <span className={`${resumenes.skeletonBar} ${resumenes.skeletonIssuedAmount}`} />
+                      <span className={`${resumenes.skeletonBar} ${resumenes.skeletonIssuedQuantity}`} />
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
       </div>
     );
   } else if (archivesQuery.isError) {
@@ -325,6 +392,16 @@ export function LibroIvaResumenesManager({
               {section.months.map((group) => {
                 const issued = periodIssued(group.files);
 
+                const pdfArchive = group.files.find((archive) => archive.format === "PDF") ?? null;
+                const pdfMissing = pdfArchive
+                  ? resolveLibroIvaArchiveStatus({
+                      fiscalSourceChanged: pdfArchive.fiscalSourceChanged,
+                      filePresent: filePresence(pdfArchive.id),
+                      markedMissing: activeMissing.has(pdfArchive.id),
+                    }) === "missing"
+                  : false;
+                const printingPdf = pdfArchive ? printingIds.has(pdfArchive.id) : false;
+
                 return (
                 <li key={`${group.year}-${group.month}`} className={resumenes.month}>
                   <article className={resumenes.bookCard} aria-label={group.heading}>
@@ -368,6 +445,21 @@ export function LibroIvaResumenesManager({
                     </li>
                   );
                 })}
+                {pdfArchive ? (
+                  <li className={resumenes.downloadItem}>
+                    <button
+                      type="button"
+                          className={resumenes.downloadButton}
+                          disabled={printingPdf || pdfMissing}
+                          onClick={() => {
+                            void printArchive(pdfArchive);
+                          }}
+                        >
+                          <Printer strokeWidth={ICON_STROKE} aria-hidden />
+                          {printingPdf ? "Abriendo…" : "Imprimir"}
+                    </button>
+                  </li>
+                ) : null}
               </ul>
               </div>
               {issued ? (

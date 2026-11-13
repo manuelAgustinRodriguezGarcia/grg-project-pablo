@@ -5,6 +5,7 @@ import type {
   StatisticsYearResponse,
 } from "@/features/billing/types/billing-statistics.types";
 import { combineStatisticsYear } from "@/features/billing/utils/billing-statistics-combine";
+import { formatStatisticsAmount } from "@/features/billing/utils/billing-statistics-display";
 
 function money(total: string, net = total, vat = "0.00"): StatisticsMoneyView {
   return { net, vat, total, roundingGap: "0.00" };
@@ -172,6 +173,8 @@ describe("combinación de meses", () => {
     expect(view?.selectedMonths[1]?.variation?.skipped).toBe(false);
     expect(view?.conclusions.some((line) => line.includes("Noviembre está en curso"))).toBe(true);
     expect(view?.conclusions.some((line) => line.includes("Rodamientos"))).toBe(true);
+    expect(view?.conclusions.some((line) => line.includes(formatStatisticsAmount(view.rubros[0]?.totals.total ?? "0.00")))).toBe(true);
+    expect(view?.conclusions.some((line) => line.includes(formatStatisticsAmount(view.clients[0]?.totals.total ?? "0.00")))).toBe(true);
     expect(view?.conclusions.join(" ")).not.toMatch(/porque|debido a|cayó por/i);
   });
 
