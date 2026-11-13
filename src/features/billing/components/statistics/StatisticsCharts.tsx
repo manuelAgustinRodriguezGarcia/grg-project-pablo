@@ -66,6 +66,15 @@ function evolutionBarFill(
   return active ? DASHBOARD_BLUE_SCALE[0] : DASHBOARD_BLUE_SCALE[3];
 }
 
+function chartPointMonth(payload: unknown): number | undefined {
+  if (payload == null || typeof payload !== "object" || !("month" in payload)) {
+    return undefined;
+  }
+
+  const month = payload.month;
+  return typeof month === "number" ? month : undefined;
+}
+
 function evolutionHasNegative(points: readonly StatisticsChartPoint[]): boolean {
   return points.some(
     (point) =>
@@ -152,9 +161,10 @@ function EvolutionChart({
           radius={[8, 8, 0, 0]}
           maxBarSize={28}
           cursor={onToggleMonth ? "pointer" : undefined}
-          onClick={(row: StatisticsChartPoint) => {
-            if (onToggleMonth && row.month) {
-              onToggleMonth(row.month);
+          onClick={(row) => {
+            const month = chartPointMonth(row.payload);
+            if (onToggleMonth && month) {
+              onToggleMonth(month);
             }
           }}
         >
